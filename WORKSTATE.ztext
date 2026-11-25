@@ -1,4 +1,4 @@
-ZTEXT00100001a35cb14deea0000000
+ZTEXT00100001bb5f59959aa0000000
 Zero Media 0.14 work state - 2026-11-20
 
 New implementation is exclusively original Zero. The new native image
@@ -108,6 +108,11 @@ hardware. This is not an all-sites browser or completed Chromium rewrite.
 Shared-chat snapshot currently exposes material gathering, not a final idea
 list. The new personal library link requires sign-in and supplies no readable
 file in this workspace; its contents have not been claimed read or implemented.
-GitHub publication is requested for newmokee-gif/zero-os. Repository creation
-was refused with HTTP403 by the connected integration; local upload materials
-are being prepared while the owner enables a repository destination.
+GitHub publication target: https://github.com/newmokee-gif/Zero . The owner
+created the public repository and requested GPL; original source and programs
+are distributed under GNU GPL version3only (GPL-3.0-only). LICENSE contains the
+unchanged official license, also supplied as LICENSE.ztext. The GitHub README
+is publication metadata; implementation remains Zero/Ezero. Release materials
+include system media, all native Linux/Windows tools and language compilers,
+guest applications and complete corresponding source. No private data disks
+or personal correspondence are part of the public source package.

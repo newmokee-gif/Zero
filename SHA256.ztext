@@ -1,13 +1,14 @@
-ZTEXT0010007add3fb6b48690000000
+ZTEXT0010007af468151cb860000000
 ZERO CONTENT INVENTORY 1
-Own source/text/seed files and approved AGENTS.md, relative to the project root.
-SHA256.ztext excludes itself. Private disks, screenshot assets and the private
-unsent correspondence draft are not in the public source archive.
+Own source/text/seed files and approved AGENTS.md, README.md and LICENSE,
+relative to the project root. SHA256.ztext excludes itself. Private disks,
+screenshot assets and the private unsent correspondence draft are not in
+the public source archive. LICENSE is the unmodified official GPLv3 text.
 Hashes below were calculated by the original Zero SHA256 implementation.
 
 file AGENTS.md
-bytes 4284
-sha256 9ad97e2cb1e4dbd4a99fb338b57f251ee4d6ed2249a32633c80bbea3c224a8a4
+bytes 4653
+sha256 b78eb5a9374f9fce43f95d5ceb4bd2f136c3f21e7e51175283ca9bc9e3eb28bf
 
 file BIOS-GRAPHICS.ztext
 bytes 3695
@@ -49,6 +50,14 @@ file LANGUAGE.ztext
 bytes 19656
 sha256 ce5c66d9b04d47d2a695ba101b4327d41d000c8c5f730c5677d7b702916d5c44
 
+file LICENSE
+bytes 35149
+sha256 3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986
+
+file LICENSE.ztext
+bytes 35181
+sha256 71426ca01aabe69af88ace7655b45fa7c572174c2b62e5dfbeed8a5f08e6940f
+
 file MIGRATION.ztext
 bytes 2551
 sha256 10a4f917f442c0307ba91314034141704082022e118f29e66c24908171f1399b
@@ -57,9 +66,13 @@ file PHILOSOPHY.ztext
 bytes 5166
 sha256 e2c0eb3a5c01c4d55a1b61132feaa70502098801967d27f22a332236d16f9fd6
 
+file README.md
+bytes 5390
+sha256 afc902b6598e3b5a914d9889ef5d66cc136848caf38cae1244c720834097b2bb
+
 file README.ztext
-bytes 10582
-sha256 fc61b8ee4b1807ca4ce62f3eeb5e2ca12856e8c4cb22db5c9bb8c9c50e5bff63
+bytes 11040
+sha256 bcef09e0b0ae871d59d884a1804b360243b55c539b1f76dfb141b4efc10b057d
 
 file REAL.ztext
 bytes 9758
@@ -102,8 +115,8 @@ bytes 6060
 sha256 1b81ce79e616f26085eb698fa9df4cddf9a4f9c7c26c0d655b64b7aa1888d4d9
 
 file WORKSTATE.ztext
-bytes 6741
-sha256 0265e4f73f17dcf723b65dcb204fea0d3560e93d58e62356f4c5dc6252ab54e8
+bytes 7125
+sha256 78b340716bcc1d26584b8ba81a337d7a0c4e168020a03ced288b4a4ca4ea3eaa
 
 file X86.ztext
 bytes 8486

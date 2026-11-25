@@ -1,4 +1,4 @@
-ZTEXT001000029369f2677e60000000
+ZTEXT00100002b00f1be983d0000000
 Zero OS 0.13 - original Zero development system, browser and graphical editor
 
 The implementation is written in Zero. Ezero is the easier language built on
@@ -182,3 +182,12 @@ installed as a guest application. No client Python interpreter is included.
 Read browser/engine/README.ztext and VERIFICATION.ztext with zero-text.
 The builder now emits72artifacts in76stages. All unchanged boot/guest artifacts
 are byte-identical to0.14; no new boot/hardware validation is implied.
+
+PUBLICATION AND LICENSE
+
+Project repository: https://github.com/newmokee-gif/Zero
+The owner has selected GNU GPL version3only (GPL-3.0-only) for the original
+project source and distributed programs. LICENSE is the unchanged official
+license document; LICENSE.ztext provides the same text in our own container.
+README.md is GitHub publication metadata. It does not introduce another
+implementation language. Corresponding source accompanies binary releases.
