@@ -1,0 +1,61 @@
+ZTEXT0010000069c6e85d9580000000
+ZERO PUBLIC RELEASE DOWNLOAD INVENTORY
+GPL-3.0-only. SHA-256 from the original Zero implementation.
+CHECKSUMS.ztext excludes itself.
+
+file LICENSE
+bytes 35149
+sha256 3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986
+
+file LICENSE.ztext
+bytes 35181
+sha256 71426ca01aabe69af88ace7655b45fa7c572174c2b62e5dfbeed8a5f08e6940f
+
+file SOURCE-RECEIPT.ztext
+bytes 3151
+sha256 0bebf6a65c6e250392191a28ef28ae1acd340e0a406e4f9e11f2c2d22cc65772
+
+file zero-archive
+bytes 27018
+sha256 6df93d632ae9d913c95aa32af14bcdf5f5f864347611eadf3d883c237d810bbb
+
+file zero-archive.exe
+bytes 36352
+sha256 9aa8e5a82af7daf0b666efb959afb3b8ba4efd61c14a32a6a1bf0698a15bacb4
+
+file zero-native-linux-x64-0.15.zpack
+bytes 1208090
+sha256 d9c1aee7a6a9d4393dab868f65c21c3a9df99347d431a6c8db30b1cc7c342e62
+
+file zero-native-windows-x64-0.15.zpack
+bytes 1403779
+sha256 093461ad2a038bbe67fb9aaa7178ae45cc7d0ce1b33f971e5711fe244a0b3fdc
+
+file zero-os-0.14.iso
+bytes 18890752
+sha256 19bc675ab6e8c374c212386866c615fe2434a69729e918c364ab39ec20b4774b
+
+file zero-os-0.14.zmedia
+bytes 18878464
+sha256 cff6bdf74fc41545c6cbc3087bbb02d8defcdc61bda0bb436b18c5d03adf3325
+
+file zero-programs-0.15.zpack
+bytes 1005401
+sha256 eea141a84b1cafe248774dc662c32914ba3b0aa2aa794521026efe424047defb
+
+file zero-text
+bytes 20192
+sha256 709e63a39f5195500c363f22a133dc86ee42ca9f3b50640af1f880b81e52ef94
+
+file zero-text.exe
+bytes 28160
+sha256 c891e1710a4f55898a5eb113c7d591050807f990f7aedbe344ae3b3a4c364d35
+
+file zero-web-preview.zpix
+bytes 53900
+sha256 2bd6c97b1cb713eef6b428f76f596dd0346cc314e7e537b9e480681f893b7699
+
+file zero-web-source-0.15-preview.zpack
+bytes 40668420
+sha256 15e84ce8a4ef64210996f941e88942c8ac39ee49cfe2384ff69f27a70330490e
+

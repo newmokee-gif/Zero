@@ -1,0 +1,61 @@
+ZTEXT00100000c2f4bf309da0000000
+ZERO WEB SOURCE 0.15 PREVIEW - FINAL GPL PACKAGE RECEIPT
+2026-11-25 Europe/Moscow
+
+Package
+/tmp/zero-support/exports-0.15/zero-web-source-0.15-preview.zpack
+License:GNU GPL version3 only (GPL-3.0-only), selected by the project owner.
+Files:3361
+Source payload:39700388 bytes
+Archive size:40668420 bytes
+SHA256:15e84ce8a4ef64210996f941e88942c8ac39ee49cfe2384ff69f27a70330490e
+The hash was calculated by the original Zero SHA256 implementation.
+
+Final documentation freeze
+This package supersedes the earlier3358-file pre-GPL source package.
+It includes the owner-approved LICENSE, LICENSE.ztext and GitHub README.md,
+the updated AGENTS.md exceptions, and the final README/WORKSTATE documents.
+Only publication/licensing documentation changed after the tested source
+freeze; no implementation or compiled program changed for this refresh.
+Decoded LICENSE.ztext matches LICENSE byte-for-byte.
+
+Inventory
+Project SHA256.ztext was regenerated after DOCS_READY2 with original
+zero-sha256, excluding itself, then encoded and verified with zero-text.
+Inventory bytes:503654
+Inventory SHA256:7bca4ea02aabccb217b18ddfb7b11999496986058662b3256f5426727ef50af1
+All3360 inventory records were independently rehashed from the extracted
+source with zero-sha256; recorded byte counts and hashes match exactly.
+
+Manifest policy
+Includes original.zero,.ezero,.part,.ztext and.zapp source/text/seed files,
+plus explicitly approved AGENTS.md, README.md and official GPL LICENSE.
+Private.zdrive disks, all.zpix screenshot assets and the unsent personal
+OpenAI correspondence draft are excluded from this public source package.
+Excluded local originals were not changed or deleted.
+The3361 entries and40668420byte archive are within the original archive
+tool's4096-file and64MiB bounds. No external archive format was used.
+
+Own archive verification
+Manifest encoded by zero-text. Archive created, verified and extracted by
+original zero-archive from the final72-artifact reference build.
+Fresh extraction destination:
+ /tmp/zero-support/validation-0.15/source-package-gpl/restored-source-gpl
+All3361 extracted files match the frozen project byte-for-byte; the entire
+extracted file list matches the manifest. The export was replaced only after
+these checks, then compared byte-for-byte with the verified private archive.
+The previous restored-source directory, its Git metadata and merged README
+were not modified by this packaging task. No Git/Drive/publication actions
+were performed here; the parent owns repository and release publication.
+
+Build evidence boundary
+The parent completed two byte-identical72-artifact builds in76stages:
+ /tmp/zero-support/validation-0.15/build-final
+ /tmp/zero-support/validation-0.15/build-repeat
+This refresh changes publication metadata only and does not require another
+identical build. Runtime verification and its limits are recorded in
+browser/engine/VERIFICATION.ztext. Native Windows/hardware checks must not
+be inferred from Wine or QEMU results.
+
+This receipt is outside the archive to avoid self-referential hashing.
+Private validation harnesses are not part of the published project sources.
