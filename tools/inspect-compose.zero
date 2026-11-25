@@ -1,0 +1,25 @@
+# Original Zero source composer. Reads named Zero parts; writes source to stdout.
+# Used for inspect.zero and inspect-check.zero; never starts another process.
+:reserve[262145] => @buffer.
+0 => @part. 0 => @used. 0 => @size. 0 => @count. 0 => @n.
+0 => @position. 0 => @status. -1 => @handle.
+? (:argcount[] == 0)+(:argcount[] > 8) [ !exit[64]. ]
+1 -> @part.
+?? @part <= :argcount[] [
+ :fileopen[:argument[@part]|0] -> @handle. ? @handle == -1 [ !exit[66]. ]
+ :filesize[@handle] -> @size. ? (@size == 0)+(@size > 262144-@used) [ !exit[65]. ]
+ 0 -> @count.
+ ?? @count < @size [
+  :fileread[@handle|@buffer+@used+@count|@size-@count] -> @n.
+  ? (@n == 0)+(@n > @size-@count) [ !exit[74]. ] @count+@n -> @count.
+ ]
+ ? (:filesize[@handle] != @size)+(:fileread[@handle|@buffer+262144|1] != 0) [ !exit[74]. ]
+ ? :fileclose[@handle] != 0 [ !exit[74]. ]
+ @used+@size -> @used. @part+1 -> @part.
+]
+0 -> @position.
+?? @position < @used [
+ :write[@buffer+@position|@used-@position] -> @n.
+ ? (@n == 0)+(@n > @used-@position) [ !exit[74]. ] @position+@n -> @position.
+]
+!exit[0].

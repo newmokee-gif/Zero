@@ -1,0 +1,33 @@
+ZTEXT00100000738c61d3d230000000
+ZERO IDEAS - IMPLEMENTATION SOURCE RECORD
+25 November 2026
+
+Readable source: Zero OS - 1000 ideas for the interface, sheet Catalog,
+1000 unique consecutive idea numbers from 1 through 1000.
+https://docs.google.com/spreadsheets/d/11pQHMZPWcllxsOdZq2cZEypE6H2r9ewNQJUltl-6xqU/edit
+Original tab name: Каталог. Original row references: A724:D724, A899:D899.
+
+Idea 723: Format card. Detect an own file's type, version and declared
+length from its header. Implementation: tools/inspect.zero, native Linux
+and Windows command zero-inspect FILE. Five supported signatures:
+ZTEXT001, ZPIX0001, ZPACK001, ZMEDIA01 and ZEROAPP1. No extension inference,
+payload execution, extraction or claim of full content verification.
+
+Idea 898: Capabilities of this browser build. List actual protocols and
+rendering features, accompanied by original diagnostic pages.
+Implementation: zero-web --capabilities, --help and built-in GUI --about;
+browser/engine/capabilities-demo.zero and its Ztext document. The native
+viewer currently has no network fetching protocol. The separate Zero OS
+HTTP reader is explicitly distinguished from this native engine.
+
+Scope: these are native Linux/Windows tool additions. They are not yet
+integrated into guest Zero OS applications. Existing boot/kernel and
+compiler behavior are unchanged. Detailed test evidence accompanies each
+module; implementation and shipped test sources are original Zero.
+
+Unavailable new sources: only titles for ranges 1155-2154, 2155-3154 and
+3155-4154 were received in the conversation. Exact Drive searches did not
+find their files; private ChatGPT Library contents were not accessible.
+The shared conversation snapshot did not contain these completed lists.
+None of those new ranges is claimed read, imported or implemented.
+No background hourly implementation or new automation was established.

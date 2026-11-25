@@ -1,0 +1,96 @@
+ZTEXT001000014eb2e3a53fa0000000
+ZERO WEB: THIS BUILD AND ITS OWN DIAGNOSTIC PAGE
+
+Status
+The native Zero Web engine is an experimental local document preview, implemented
+in Zero. Its bounded HTML/CSS/JavaScript profile is not a full modern web browser.
+The built-in page and the terminal inventory describe implemented functionality
+and explicitly identify missing features. No network capabilities were added.
+
+Commands
+zero-web --about
+  Open the built-in information page with the existing DOM, CSS and raster workers.
+  No INPUT file is required or opened. This command needs the native window system.
+zero-web --capabilities
+  Print the implemented input, rendering, script and platform capabilities.
+zero-web --help
+  Print command syntax and current viewer controls.
+
+--help and --capabilities exit with 0 before document workspace allocation, file
+access or GUI startup. Each takes exactly one argument, the option itself.
+--about also takes no extra arguments. Extra arguments, unknown double-dash
+options and incomplete option names are rejected with exit 64. An existing file
+named like an option can be addressed with a path, for example ./--help.
+
+The existing commands remain available:
+zero-web HTML_OR_ZTEXT
+zero-web --check INPUT
+zero-web --inspect INPUT
+zero-web --render INPUT NEW.zpix
+
+Input is a local file containing HTML or a valid ZTEXT001 wrapper. HTML content
+is external-standard document data, not host implementation code. Documents are
+limited to 65536 bytes and 512 nodes. Zpix output is created exclusively; existing
+files are not overwritten. --check validates acceptance by our bounded profile,
+not complete web standards conformance. --inspect prints visible text after script
+processing. Rejected required syntax exits 65; unsupported features can warn.
+
+Own diagnostic page
+capabilities-demo.zero is an original Zero program that generates the external
+HTML fixture. capabilities-demo.ztext contains the same document in our own
+ZTEXT001 format, generated using zero-text. From the source directory:
+
+zero-web browser/engine/capabilities-demo.ztext
+zero-web --check browser/engine/capabilities-demo.ztext
+zero-web --inspect browser/engine/capabilities-demo.ztext
+zero-web --render browser/engine/capabilities-demo.ztext NEW.zpix
+
+The page gives the expected results beside the examples:
+1. TAG is red bb0000 from a tag selector.
+2. CLASS is green 008800; the later equal-specificity rule wins.
+3. ID is blue 0000bb; an id beats the later class rule.
+4. INLINE is purple aa00aa; inline color beats id and class rules.
+5. The VISIBLE marker is shown; HIDDEN_SENTINEL is absent through display:none.
+6. BR first line and BR second line appear on separate lines.
+7. A script replaces Pending script replacement with:
+   PASS: textContent replaced this line; 1 + 2 = 3
+
+This fixture is a focused visual diagnostic, not a complete conformance suite.
+Run zero-web-check for the existing engine regression tests.
+
+Implemented limits
+CSS supports single tag, .class, #id and * selectors, source order, specificity and
+inline priority. Supported properties are color, background-color, font-size,
+display, padding, margin and width, within the bounded values documented in CSS.
+Layout uses block/inline flow, BR, wrapping and scrolling. The engine draws its
+own 800 by 600 RGB raster using a bitmap font; non-ASCII glyphs use placeholders.
+Script evaluation supports bounded let/const/var, assignments, integer/string
+plus expressions and document.getElementById(...).textContent replacement.
+
+The native preview does not fetch HTTP/HTTPS, implement TLS or navigate URLs.
+It does not implement full HTML5/CSS/ECMAScript, flex/grid, web media, web fonts,
+full Unicode glyphs or Chromium compatibility. Scripts cannot invoke network,
+filesystem, processes, eval or imports. External script sources are rejected.
+No Python interpreter is included. A remote server's language is independent of
+the document it sends. The older Zero OS HTTP text reader is a separate program;
+its capabilities are not attributed to this native preview.
+
+Controls and platforms
+Linux uses the original local X11 wire-protocol frontend, including Xwayland.
+Windows uses the original Win32 frontend. Scroll with Up/Down, PageUp/PageDown,
+Home/End or the mouse wheel. Escape or the native close button closes the viewer.
+
+Validation on 2026-11-25
+Both ELF and PE binaries were built by the existing compiler written in Zero.
+Linux native and Windows x64 under Wine passed exact option/argument checks,
+missing-input handling, existing-file protection and the diagnostic document.
+Headless help and capabilities worked with an unavailable DISPLAY. Linux syscall
+traces confirmed no open/openat, mmap, socket or connect calls for these successful
+headless options or for extra-argument rejection on all three new options.
+The diagnostic text contained the script result and no hidden/pending text or
+profile warning. Linux and Wine Zpix rasters were identical and passed zero-picture.
+The CSS colors, separate BR lines and script result were visually inspected.
+The built-in --about page was opened from /tmp without an input file on Linux/Xvfb
+and Windows/Wine. PageDown/End changed its pixels, Home fully restored them and
+Escape returned 0. All five captured positions matched across both platforms.
+This is virtual display and Wine validation, not a claim of physical Windows tests.

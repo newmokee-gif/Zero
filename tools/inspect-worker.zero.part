@@ -1,0 +1,86 @@
+# No file API, allocation, checksum, execution or payload reads in this worker.
+# Header memory must contain at least min(available,4096) readable bytes.
+# Caller and worker contexts256/352; stack4096..86015.
+:fork[@ic+352|@ic+4096|81920] -> @ix.
+? @ix == 1 [
+ ?? 1 [
+  :load64[@ic] -> @ip. :load64[@ic+8] -> @is. :load64[@ic+16] -> @ia.
+  0 -> @ik. 0 -> @ie. 0 -> @ih. 0 -> @ib. 0 -> @iw. 0 -> @it.
+  0 -> @in. 0 -> @id. 0 -> @iv. 0 -> @iy.
+  "Unknown or truncated file signature.\n" -> @im.
+  ? (@ia < 8)+(@is < 8)+(@ia > 4096)+(@ia > @is) [ 65 -> @ie. ]
+  ? @ie == 0 [
+   :load64[@ip] -> @iv.
+   ? @iv == 0x313030545845545a [ 1 -> @ik. 32 -> @ih. ]
+   ? @iv == 0x313030305849505a [ 2 -> @ik. 64 -> @ih. ]
+   ? @iv == 0x3130304b4341505a [ 3 -> @ik. 64 -> @ih. ]
+   ? @iv == 0x3130414944454d5a [ 4 -> @ik. 4096 -> @ih. ]
+   ? @iv == 0x315050414f52455a [ 5 -> @ik. 64 -> @ih. ]
+   ? @ik == 0 [ 65 -> @ie. ]
+   ? (@ik != 0)*((@is < @ih)+(@ia < @ih)) [ "Truncated format header.\n" -> @im. 65 -> @ie. ]
+  ]
+  ? (@ik == 1)*(@ie == 0) [
+   "Invalid ZTEXT001 hex, reserved bytes or declared length.\n" -> @im.
+   0 -> @ij.
+   ?? @ij < 2 [
+    0 -> @iv. 0 -> @ii.
+    ?? @ii < 8 [
+     :load8[@ip+8+@ij*8+@ii] -> @ix. 99 -> @iy.
+     ? (@ix >= 48)*(@ix <= 57) [ @ix-48 -> @iy. ]
+     ? (@ix >= 97)*(@ix <= 102) [ @ix-87 -> @iy. ]
+     ? @iy > 15 [ 65 -> @ie. ]
+     @iv*16+@iy -> @iv. @ii+1 -> @ii.
+    ]
+    ? @ij == 0 [ @iv -> @ib. ] @ij+1 -> @ij.
+   ]
+   ? (:load64[@ip+24] != 0x0a30303030303030)+(@ib > 1048576)+(@is != @ib+32) [ 65 -> @ie. ]
+  ]
+  ? (@ik == 2)*(@ie == 0) [
+   "Invalid ZPIX0001 dimensions, encoding, reserved bytes or declared length.\n" -> @im.
+   :load32[@ip+8] -> @iw. :load32[@ip+12] -> @it. :load64[@ip+32] -> @ib.
+   ? (@is < 68)+(@is > 33554432)+(@iw == 0)+(@iw > 3840)+(@it == 0)+(@it > 2160) [ 65 -> @ie. ]
+   ? (:load32[@ip+16] != 3)+(:load32[@ip+20] != 1)+(:load32[@ip+44] != 0)+(:load64[@ip+56] != 0) [ 65 -> @ie. ]
+   ? (:load64[@ip+24] != @iw*@it)+(:load64[@ip+48] != @is)+(@ib != @is-64)+(:bitand[@ib|3] != 0) [ 65 -> @ie. ]
+   ? @ie == 0 [
+    :shr[@ib|2] -> @iv.
+    ? (@iv > @iw*@it)+(@iv*255 < @iw*@it) [ 65 -> @ie. ]
+   ]
+  ]
+  ? (@ik == 3)*(@ie == 0) [
+   "Invalid ZPACK001 version, file count, index, reserved bytes or declared length.\n" -> @im.
+   :load64[@ip+16] -> @in. :load64[@ip+24] -> @id.
+   ? (@is > 67108864)+(:load64[@ip+8] != 1)+(@in > 4096)+(:load64[@ip+32] != @is) [ 65 -> @ie. ]
+   ? (:load64[@ip+40] > 4294967295)+(:load64[@ip+48] != 0)+(:load64[@ip+56] != 0) [ 65 -> @ie. ]
+   ? @ie == 0 [
+    ? (@id != @in*288)+(@id > @is-64)+((@in == 0)*(@is != 64)) [ 65 -> @ie. ]
+    ? @ie == 0 [ @is-64-@id -> @ib. ]
+   ]
+  ]
+  ? (@ik == 4)*(@ie == 0) [
+   "Invalid ZMEDIA01 version, sector size, reserved bytes or declared length.\n" -> @im.
+   :load64[@ip+32] -> @ib.
+   ? (:load64[@ip+8] != 1)+(:load64[@ip+16] != 4096)+(:load64[@ip+24] != 512)+(:load64[@ip+40] != 0) [ 65 -> @ie. ]
+   ? (@ib < 512)+(@ib > 268435456)+(:bitand[@ib|511] != 0) [ 65 -> @ie. ]
+   ? @ie == 0 [ ? @is != @ib+4096 [ 65 -> @ie. ] ]
+   80 -> @ii. ?? (@ii < 4096)*(@ie == 0) [ ? :load8[@ip+@ii] != 0 [ 65 -> @ie. ] @ii+1 -> @ii. ]
+  ]
+  ? (@ik == 5)*(@ie == 0) [
+   "Invalid ZEROAPP1 architecture, ABI, stack, entry, reserved bytes or declared length.\n" -> @im.
+   :load64[@ip+8] -> @iy.
+   ? (@is <= 64)+((@iy != 32)*(@iy != 64))+(:load64[@ip+16] != @is)+(:load64[@ip+24] != 64) [ 65 -> @ie. ]
+   ? (:load64[@ip+32] != 4198400)+(:load64[@ip+40] != 1)+(:load64[@ip+48] != 0)+(:load64[@ip+56] != 0) [ 65 -> @ie. ]
+   @is-64 -> @ib.
+  ]
+  !store64[@ic+24|@ie]. !store64[@ic+128|@im].
+  # Zero outputs on failure: callers cannot consume partially trusted metadata.
+  32 -> @ii. ?? @ii <= 120 [ !store64[@ic+@ii|0]. @ii+8 -> @ii. ]
+  ? @ie == 0 [
+   !store64[@ic+32|@ik]. !store64[@ic+40|1]. !store64[@ic+48|@ih].
+   !store64[@ic+56|@is]. !store64[@ic+64|@ib].
+   ? @ik == 5 [ !store64[@ic+72|@iy]. ]
+   !store64[@ic+80|@iw]. !store64[@ic+88|@it].
+   !store64[@ic+96|@in]. !store64[@ic+104|@id].
+  ]
+  !switch[@ic+352|@ic+256].
+ ]
+]

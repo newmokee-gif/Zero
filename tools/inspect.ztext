@@ -1,0 +1,143 @@
+ZTEXT0010000210bcac7fef00000000
+Zero Inspect - original header cards, idea723
+
+Usage
+  zero-inspect FILE
+  zero-inspect.exe FILE
+
+Native Linux x86-64 and Windows x86-64 command. The command accepts exactly
+one path; extension and filename do not select the format. It opens an existing
+regular file read-only, obtains its size, reads its signature and only the
+required header, checks the size again, and closes it before printing a card.
+Nothing is written to the input and no executable payload is run. A path can
+contain spaces or UTF-8 characters when passed as one command-line argument.
+The software's messages and card labels are English; row numbers start at1.
+
+The program reads at most4096 bytes: 32 for Ztext,64 for Zpix/Zpack/Zapp,
+4096 for Zmedia. Unknown signatures need only8 bytes. Workspace is110000
+bytes, including the shared validator's continuation stack. File size does
+not affect workspace size. No whole-file allocation, decoding, extraction,
+process launcher, external runtime or payload scan is used.
+
+Successful output ends with Header checked and Content checksum not checked.
+For Zapp the more precise message is Content checksum: not present in this
+format, followed by Executable content not checked; application was not run.
+For Zpack the additional message is Index checksum, paths and entries not
+checked. A successful card is NOT an integrity certificate, a trust decision,
+or a promise that the file can be opened, rendered, extracted or executed.
+Concurrent same-size content changes cannot be detected by this header-only
+reader. The file should remain unchanged while it is inspected.
+
+Header contracts
+All binary integers below are unsigned little-endian. Offsets are technical
+byte offsets from the file start; they are not visible list numbering.
+
+ZTEXT001,32-byte header, format version1 encoded in the signature:
+  8..15 payload byte count as8 lowercase hexadecimal ASCII digits.
+  16..23 declared FNV1a32 as8 lowercase hexadecimal ASCII digits.
+  24..30 seven ASCII zeroes,31 LF. Payload0..1048576 bytes.
+  Actual file bytes must equal32+payload. UTF-8, forbidden NUL and FNV are
+  not checked. Card reports declared payload and derived expected total.
+
+ZPIX0001,64-byte header, format version1 encoded in the signature:
+  u32 width8:1..3840; height12:1..2160; channels16=3; encoding20=1.
+  u64 pixels24=width*height; encoded payload32; full length48.
+  u32 checksum40, reserved44=0; u64 reserved56=0.
+  Actual bytes68..33554432; payload=actual-64 and divisible by4.
+  The number of4-byte run records cannot exceed pixels, and255 times that
+  number cannot be smaller than pixels. This rejects impossible lengths.
+  RGB run contents and decoded-RGB checksum are not checked. Card includes
+  dimensions, channel count and encoding; encoding is not mislabeled version.
+
+ZPACK001,64-byte header:
+  u64 version8=1; files16:0..4096; index bytes24=files*288;
+  complete archive bytes32; index FNV1a32 stored in u64 at40;
+  u64 reserved48=0,56=0. FNV upper32 bits must be zero.
+  Actual bytes64..67108864 and equal declared complete length. Index must
+  fit after the header. With zero files, actual length must be exactly64.
+  Index checksum, entry paths, offsets, flags and file checksums are not
+  checked. Card distinguishes complete archive size and derived payload.
+
+ZMEDIA01,4096-byte header:
+  u64 version8=1; header bytes16=4096; sector bytes24=512;
+  payload bytes32:512..268435456, divisible by512; flags40=0.
+  Bytes48..79 hold declared SHA256; bytes80..4095 must all be zero.
+  Actual file bytes must equal4096+payload. SHA256 and bootability are not
+  checked. The maximum image is inspected with the same bounded workspace.
+
+ZEROAPP1,64-byte header, format version1 encoded in the signature:
+  u64 architecture8=32 or64; complete image bytes16; entry offset24=64;
+  minimum stack bytes32=4198400; ABI version40=1; reserved48=0,56=0.
+  Complete length must equal actual length and exceed64. No universal size
+  ceiling is invented: individual loaders impose their own buffer limits.
+  There is no checksum field. The minimum stack field is not a load address.
+  Card reports architecture, ABI, entry offset and required stack bytes.
+
+Exit contract
+  0  Supported signature and consistent header/length; payload unchecked.
+  64 Wrong argument count or unavailable host platform.
+  65 Unknown signature, truncated header, unsupported format version or
+     architecture, malformed field/reserved bytes or inconsistent length.
+  66 Input cannot be opened as an accessible regular file.
+  74 Size/read/close/stdout failure, early EOF or detected file-size change.
+Malformed input never prints Header checked or partially trusted metadata.
+Errors are English text on stdout; callers should also inspect the exit code.
+The underlying own file API rejects final links/reparse points recognized by
+the host; ancestor directory links are outside that API's guarantee. Wine's
+Z: mapping can expose a Unix symlink as an ordinary Windows file. This is not
+a path-confinement tool and does not claim to detect that emulation behavior.
+
+Original source and shared regression tests
+  tools/inspect-head.zero.part   descriptor, bounded workspace and locals
+  tools/inspect-worker.zero.part same memory-only validator in both programs
+  tools/inspect-cli.zero.part    file reading and card output
+  tools/inspect-check-main.zero.part test cases and fixture creation
+  tools/inspect-compose.zero    original source composer, stdout only
+  tools/inspect.zero            composed CLI source
+  tools/inspect-check.zero      composed test source
+
+Compile the composer with the existing own Zero compiler. From project root:
+  inspect-compose tools/inspect-head.zero.part tools/inspect-worker.zero.part
+    tools/inspect-cli.zero.part > tools/inspect.zero
+  inspect-compose tools/inspect-head.zero.part tools/inspect-worker.zero.part
+    tools/inspect-check-main.zero.part > tools/inspect-check.zero
+Each displayed composer invocation is one command, wrapped here for reading.
+Use zero --host or zero --windows with the composed source on stdin.
+The composer does not invoke a compiler or any other program itself.
+
+Run zero-inspect-check with no arguments for13757 shared-parser checks.
+An optional NEW_DIRECTORY runs the same checks and writes36 fixtures there,
+using exclusive creation and preserving existing directories/files. Six base
+fixtures use extension .renamed: text, picture, archive, media, app64, app32.
+Each has .bad-header, .bad-length, .bad-magic and .truncated variants, plus
+.unchecked-content. The last intentionally corrupts an unchecked checksum
+or application byte and MUST still receive a header-only card. Fixtures are
+generated by Zero, not copied from a third-party codec or runtime.
+
+The suite checks every header-byte corruption, every available-header
+truncation and every actual-file truncation of the canonical fixtures.
+It covers empty text/archive, maximum text/image/archive/media bounds,
+count4096/4097, overflow-sized count/index/payload, invalid hex, impossible
+RLE record counts, both app architectures and u64-limit app sizes without
+large allocations. Repeated valid/invalid calls also check output resets.
+
+Validation completed2026-11-25
+  Linux:13757 checks passed;36 CLI fixture cards matched expected exits.
+  Windows x86-64 under Wine:13757 checks passed;36 CLI fixture cards matched.
+  Canonical text/picture/archive/media fixtures additionally passed their
+  own complete zero-text/zero-picture/zero-archive/zero-media verifiers.
+  Linux: missing/extra args, missing file, directory, final symlink and
+  unreadable file returned64/66 as appropriate. Full stdout and injected
+  read EIO, early EOF and close EIO returned74:10 CLI/I/O cases total.
+  Wine: missing/extra args, missing file and directory returned64/66.
+  Wine fixture creation and inspection succeeded in a path containing
+  Cyrillic letters and spaces. Backslash Windows paths were also checked.
+  Linux syscall trace of a real18878464-byte Zmedia showed only8+4088
+  input bytes read. Existing text, picture, archive and both app headers
+  were inspected without modification.
+Windows evidence is Wine compatibility testing, not a native Windows
+machine or hardware test. Unix symlink behavior through Wine is documented
+above; no native Windows reparse-point test is claimed. Linux syscall fault
+injection and Wine are external validation tools, not shipped dependencies.
+
+License: GPL-3.0-only, as specified by the repository's official LICENSE.

@@ -1,4 +1,4 @@
-ZTEXT0010007af468151cb860000000
+ZTEXT0010007b4c5e6a3cafe0000000
 ZERO CONTENT INVENTORY 1
 Own source/text/seed files and approved AGENTS.md, README.md and LICENSE,
 relative to the project root. SHA256.ztext excludes itself. Private disks,
@@ -34,6 +34,10 @@ file DRIVES.ztext
 bytes 5413
 sha256 b46a16a59024dc3bc850d60500c8842a42ccc516f37fb96f742d37762fbc27fe
 
+file IDEAS.ztext
+bytes 1880
+sha256 ad0201ddf21ce181f03957c75441b13bf468e4191cfebb2be4d47c790e02803a
+
 file IMAGE.ztext
 bytes 7207
 sha256 c2760ff765bcb995a11271c646793ed6ec816f10cca2f49859fded174ce39f86
@@ -67,12 +71,12 @@ bytes 5166
 sha256 e2c0eb3a5c01c4d55a1b61132feaa70502098801967d27f22a332236d16f9fd6
 
 file README.md
-bytes 5390
-sha256 afc902b6598e3b5a914d9889ef5d66cc136848caf38cae1244c720834097b2bb
+bytes 6616
+sha256 b5f51b696ab3fdd82022da18f7d09b1fa511be58f50df1815329232d019af57a
 
 file README.ztext
-bytes 11040
-sha256 bcef09e0b0ae871d59d884a1804b360243b55c539b1f76dfb141b4efc10b057d
+bytes 13318
+sha256 16fb5da00324819ee525a9af2f4d73a423ee18669e174fca11210e39ac88230c
 
 file REAL.ztext
 bytes 9758
@@ -115,8 +119,8 @@ bytes 6060
 sha256 1b81ce79e616f26085eb698fa9df4cddf9a4f9c7c26c0d655b64b7aa1888d4d9
 
 file WORKSTATE.ztext
-bytes 7125
-sha256 78b340716bcc1d26584b8ba81a337d7a0c4e168020a03ced288b4a4ca4ea3eaa
+bytes 9403
+sha256 bdf4c86cf61c755334603d9eaba3867b97edc2589b4ff3be17626c26144e15e5
 
 file X86.ztext
 bytes 8486
@@ -214,6 +218,10 @@ file browser/address.zero.part
 bytes 5093
 sha256 d0f7ee9cdfd121c6425e5f42ceee6ae8e8ee496c10229268ad0bc76ece28525b
 
+file browser/engine/CAPABILITIES.ztext
+bytes 5387
+sha256 d23eb3bb34544fe63153ce1ac6516724bef180eba730b4f6a8a039760f8f026f
+
 file browser/engine/CSS.ztext
 bytes 3892
 sha256 9f33b70bbffa064b65073e3897d2cc4ec40f827d1e96f13e6e6839b0d26babfb
@@ -237,6 +245,14 @@ sha256 ec4591500445890e362571abc72bd83da6d1bc63dbb11eb80fa0a1b97a57ab69
 file browser/engine/VERIFICATION.ztext
 bytes 2653
 sha256 c0af9d80b1654907d43b9d7e6dfe1a4f1c57265a5930660098bb5eb11cd41f0e
+
+file browser/engine/capabilities-demo.zero
+bytes 1835
+sha256 507ba6185d633230230ddb639899f3e5e0546e06e9c21c17532f76d77e76f400
+
+file browser/engine/capabilities-demo.ztext
+bytes 1637
+sha256 10f0bec663fb6153d4ed6c45f7d65a01c71f98ec1471c958ae44de4cdaac3cbf
 
 file browser/engine/compose.zero
 bytes 3468
@@ -323,8 +339,8 @@ bytes 25
 sha256 53ac562cdf83c7a9d7ee75bb0280303f3538a35ff0bf74cf3e3e001129db287f
 
 file browser/engine/host-input.zero.part
-bytes 2541
-sha256 c81f0a758ed9f4ce538fc51f05a547fbb2e2419805b11625392075c5eeeaac41
+bytes 8703
+sha256 3e089ba98c89ce8ee43e36065a48127816e39112e1f1331912399dccfef20cce
 
 file browser/engine/host-run.zero.part
 bytes 3096
@@ -351,8 +367,8 @@ bytes 7351
 sha256 a7fe51c297766fa76971634829750d923f4f4c81e9733982990ca6fc19155d7f
 
 file browser/engine/web.zero
-bytes 80644
-sha256 ee1f4dd0fd7f4dfb2ea35c54cc0c39ff4e40e5c5d928eae1926e02414ed6c387
+bytes 86806
+sha256 7ef94b72d5990d71cadf922fd2e2c8a94720cbbd458463c3e791c3bc5c2cddeb
 
 file browser/html-check-head.zero.part
 bytes 418
@@ -12543,12 +12559,12 @@ bytes 3247
 sha256 1dc27615ef1818b723d897f928d66635345219065b9557db895d4bfd3a099a54
 
 file tools/build.zero
-bytes 18806
-sha256 01876b014c27249442e12731b73746b6f7227a89c0fd47fbec05cda5817d4a31
+bytes 19450
+sha256 f9f58704ba1745cd8fd4deeec53c6e5de5d17ab3287a099a9de2e4081cee60d7
 
 file tools/build.ztext
-bytes 5529
-sha256 56a1a97d60ce4b3f56ce2c232cd7ee4404271f80638bb5c837b309c271733e8a
+bytes 5966
+sha256 0fafa624e8693390ac98ff3883677275c30f0ebdce254a3c6376e835483bdafd
 
 file tools/check.zero
 bytes 27535
@@ -12561,6 +12577,38 @@ sha256 8de9624f9059a99718140b370f00d39ed088637ac353e9cc4a096264ea233a6f
 file tools/compiler-cli.ztext
 bytes 3171
 sha256 f3a0a4483e5ce82d0cf9606784f31f97619437895bb863dc6a72dd94116e84bc
+
+file tools/inspect-check-main.zero.part
+bytes 10783
+sha256 84523de35480b4f26444906fbc90fc79c1115eb49acefa2a3a6e4268b4cd351d
+
+file tools/inspect-check.zero
+bytes 15433
+sha256 c8c1068d699a376c3fd8477f1021936a0e7c0417ffee5338780c39992a916984
+
+file tools/inspect-cli.zero.part
+bytes 6192
+sha256 6d0c4f640a298e8baddf0a3017daa21faf3634e7ef27adea0d1b70bbc8dc767e
+
+file tools/inspect-compose.zero
+bytes 1067
+sha256 f0815147bc5f9f5f41ba3799fd787369f589dfbb9521d376a48309c1b8bf64c7
+
+file tools/inspect-head.zero.part
+bytes 598
+sha256 142ce0e930280c7dffa0c8b1c793ba885f70d39ce6ba67646bb9b7b28ed89b42
+
+file tools/inspect-worker.zero.part
+bytes 4052
+sha256 34d3d11e11532f93e8e77b2cde40ffe1fe2704422c47150b029c3adf99d0dd18
+
+file tools/inspect.zero
+bytes 10842
+sha256 274157c7e36a83ca13df22ffec2febf3a3aad7012d7fb851f1dd4dd121b67c09
+
+file tools/inspect.ztext
+bytes 8491
+sha256 80bc3aaace65c94e32f493af46a18b28c25135e899a383c1e4a6a4d3bb21e787
 
 file tools/integrate.zero
 bytes 15550
@@ -12643,8 +12691,8 @@ bytes 1528
 sha256 89777fc7856b193b5131dd218ed591d9295570b2fb3e9045254c1c760c1d907b
 
 file verification.ztext
-bytes 4887
-sha256 133b7f0c42b64539190f12e8e61fe6e4f123136e47a85e85432a2d028031fe83
+bytes 7165
+sha256 708115c0dd7e4f9eedef24712ec0b18aa44b27213761cf50e2e2b785fb5e14d7
 
 file verification/anime-0.7.1/results.ztext
 bytes 2273

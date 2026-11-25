@@ -1,0 +1,303 @@
+# Original bounded header inspector, shared by CLI and regression checks.
+# Descriptor: header0, actual file bytes8, available header bytes16;
+# status24, kind32, version40, header bytes48, total56, payload64,
+# architecture72, width80, height88, files96, index bytes104, message128.
+# Kinds: 1 Ztext, 2 Zpix, 3 Zpack, 4 Zmedia, 5 Zapp.
+# Status0 means header consistency only, never payload integrity.
+:reserve[110000] => @ic.
+0 => @ip. 0 => @is. 0 => @ia. 0 => @ik. 0 => @ie.
+0 => @ih. 0 => @in. 0 => @ii. 0 => @ij. 0 => @iv.
+0 => @ib. 0 => @id. 0 => @iw. 0 => @it. 0 => @im.
+0 => @ix. 0 => @iy.
+# No file API, allocation, checksum, execution or payload reads in this worker.
+# Header memory must contain at least min(available,4096) readable bytes.
+# Caller and worker contexts256/352; stack4096..86015.
+:fork[@ic+352|@ic+4096|81920] -> @ix.
+? @ix == 1 [
+ ?? 1 [
+  :load64[@ic] -> @ip. :load64[@ic+8] -> @is. :load64[@ic+16] -> @ia.
+  0 -> @ik. 0 -> @ie. 0 -> @ih. 0 -> @ib. 0 -> @iw. 0 -> @it.
+  0 -> @in. 0 -> @id. 0 -> @iv. 0 -> @iy.
+  "Unknown or truncated file signature.\n" -> @im.
+  ? (@ia < 8)+(@is < 8)+(@ia > 4096)+(@ia > @is) [ 65 -> @ie. ]
+  ? @ie == 0 [
+   :load64[@ip] -> @iv.
+   ? @iv == 0x313030545845545a [ 1 -> @ik. 32 -> @ih. ]
+   ? @iv == 0x313030305849505a [ 2 -> @ik. 64 -> @ih. ]
+   ? @iv == 0x3130304b4341505a [ 3 -> @ik. 64 -> @ih. ]
+   ? @iv == 0x3130414944454d5a [ 4 -> @ik. 4096 -> @ih. ]
+   ? @iv == 0x315050414f52455a [ 5 -> @ik. 64 -> @ih. ]
+   ? @ik == 0 [ 65 -> @ie. ]
+   ? (@ik != 0)*((@is < @ih)+(@ia < @ih)) [ "Truncated format header.\n" -> @im. 65 -> @ie. ]
+  ]
+  ? (@ik == 1)*(@ie == 0) [
+   "Invalid ZTEXT001 hex, reserved bytes or declared length.\n" -> @im.
+   0 -> @ij.
+   ?? @ij < 2 [
+    0 -> @iv. 0 -> @ii.
+    ?? @ii < 8 [
+     :load8[@ip+8+@ij*8+@ii] -> @ix. 99 -> @iy.
+     ? (@ix >= 48)*(@ix <= 57) [ @ix-48 -> @iy. ]
+     ? (@ix >= 97)*(@ix <= 102) [ @ix-87 -> @iy. ]
+     ? @iy > 15 [ 65 -> @ie. ]
+     @iv*16+@iy -> @iv. @ii+1 -> @ii.
+    ]
+    ? @ij == 0 [ @iv -> @ib. ] @ij+1 -> @ij.
+   ]
+   ? (:load64[@ip+24] != 0x0a30303030303030)+(@ib > 1048576)+(@is != @ib+32) [ 65 -> @ie. ]
+  ]
+  ? (@ik == 2)*(@ie == 0) [
+   "Invalid ZPIX0001 dimensions, encoding, reserved bytes or declared length.\n" -> @im.
+   :load32[@ip+8] -> @iw. :load32[@ip+12] -> @it. :load64[@ip+32] -> @ib.
+   ? (@is < 68)+(@is > 33554432)+(@iw == 0)+(@iw > 3840)+(@it == 0)+(@it > 2160) [ 65 -> @ie. ]
+   ? (:load32[@ip+16] != 3)+(:load32[@ip+20] != 1)+(:load32[@ip+44] != 0)+(:load64[@ip+56] != 0) [ 65 -> @ie. ]
+   ? (:load64[@ip+24] != @iw*@it)+(:load64[@ip+48] != @is)+(@ib != @is-64)+(:bitand[@ib|3] != 0) [ 65 -> @ie. ]
+   ? @ie == 0 [
+    :shr[@ib|2] -> @iv.
+    ? (@iv > @iw*@it)+(@iv*255 < @iw*@it) [ 65 -> @ie. ]
+   ]
+  ]
+  ? (@ik == 3)*(@ie == 0) [
+   "Invalid ZPACK001 version, file count, index, reserved bytes or declared length.\n" -> @im.
+   :load64[@ip+16] -> @in. :load64[@ip+24] -> @id.
+   ? (@is > 67108864)+(:load64[@ip+8] != 1)+(@in > 4096)+(:load64[@ip+32] != @is) [ 65 -> @ie. ]
+   ? (:load64[@ip+40] > 4294967295)+(:load64[@ip+48] != 0)+(:load64[@ip+56] != 0) [ 65 -> @ie. ]
+   ? @ie == 0 [
+    ? (@id != @in*288)+(@id > @is-64)+((@in == 0)*(@is != 64)) [ 65 -> @ie. ]
+    ? @ie == 0 [ @is-64-@id -> @ib. ]
+   ]
+  ]
+  ? (@ik == 4)*(@ie == 0) [
+   "Invalid ZMEDIA01 version, sector size, reserved bytes or declared length.\n" -> @im.
+   :load64[@ip+32] -> @ib.
+   ? (:load64[@ip+8] != 1)+(:load64[@ip+16] != 4096)+(:load64[@ip+24] != 512)+(:load64[@ip+40] != 0) [ 65 -> @ie. ]
+   ? (@ib < 512)+(@ib > 268435456)+(:bitand[@ib|511] != 0) [ 65 -> @ie. ]
+   ? @ie == 0 [ ? @is != @ib+4096 [ 65 -> @ie. ] ]
+   80 -> @ii. ?? (@ii < 4096)*(@ie == 0) [ ? :load8[@ip+@ii] != 0 [ 65 -> @ie. ] @ii+1 -> @ii. ]
+  ]
+  ? (@ik == 5)*(@ie == 0) [
+   "Invalid ZEROAPP1 architecture, ABI, stack, entry, reserved bytes or declared length.\n" -> @im.
+   :load64[@ip+8] -> @iy.
+   ? (@is <= 64)+((@iy != 32)*(@iy != 64))+(:load64[@ip+16] != @is)+(:load64[@ip+24] != 64) [ 65 -> @ie. ]
+   ? (:load64[@ip+32] != 4198400)+(:load64[@ip+40] != 1)+(:load64[@ip+48] != 0)+(:load64[@ip+56] != 0) [ 65 -> @ie. ]
+   @is-64 -> @ib.
+  ]
+  !store64[@ic+24|@ie]. !store64[@ic+128|@im].
+  # Zero outputs on failure: callers cannot consume partially trusted metadata.
+  32 -> @ii. ?? @ii <= 120 [ !store64[@ic+@ii|0]. @ii+8 -> @ii. ]
+  ? @ie == 0 [
+   !store64[@ic+32|@ik]. !store64[@ic+40|1]. !store64[@ic+48|@ih].
+   !store64[@ic+56|@is]. !store64[@ic+64|@ib].
+   ? @ik == 5 [ !store64[@ic+72|@iy]. ]
+   !store64[@ic+80|@iw]. !store64[@ic+88|@it].
+   !store64[@ic+96|@in]. !store64[@ic+104|@id].
+  ]
+  !switch[@ic+352|@ic+256].
+ ]
+]
+# Own header-contract checks. Optional NEW_DIRECTORY receives original fixtures.
+# No process is started. Tests call the exact worker used by zero-inspect.
+0 => @test. 0 => @case. 0 => @kind. 0 => @header. 0 => @actual.
+0 => @expected. 0 => @i. 0 => @j. 0 => @saved. 0 => @checks.
+0 => @failures. 0 => @literal. 0 => @path. 0 => @root. 0 => @length.
+0 => @name. 0 => @n. 0 => @used. 0 => @bytes. 0 => @hash.
+0 => @c. 0 => @digit. 0 => @value. 0 => @power. 0 => @started.
+0 => @error. 0 => @message. -1 => @handle.
+@ic+90112 -> @test. @ic+100000 -> @path.
+? :argcount[] > 1 [ !exit[64]. ]
+? :argcount[] == 1 [
+ :argument[1] -> @root.
+ ?? (:load8[@root+@length] != 0)*(@length < 2048) [ !store8[@path+@length|:load8[@root+@length]]. @length+1 -> @length. ]
+ ? (@length == 0)+(@length >= 2048) [ !exit[64]. ]
+ ? :makedir[@root] != 0 [ !exit[73]. ]
+ !store8[@path+@length|47]. @length+1 -> @length.
+]
+1 -> @kind.
+?? @kind <= 6 [
+ # The sixth fixture is the32-bit application counterpart of the fifth.
+ 0 -> @i. ?? @i < 8192 [ !store8[@test+@i|0]. @i+1 -> @i. ]
+ 64 -> @header. 65 -> @actual. "app64.renamed" -> @name.
+ ? @kind == 1 [
+  32 -> @header. 35 -> @actual. "text.renamed" -> @name.
+  "ZTEXT001000000031a47e90b0000000\nabc" -> @literal.
+  0 -> @i. ?? @i < 35 [ !store8[@test+@i|:load8[@literal+@i]]. @i+1 -> @i. ]
+ ]
+ ? @kind == 2 [
+  68 -> @actual. "picture.renamed" -> @name.
+  !store64[@test|0x313030305849505a]. !store32[@test+8|1]. !store32[@test+12|1].
+  !store32[@test+16|3]. !store32[@test+20|1]. !store64[@test+24|1].
+  !store64[@test+32|4]. !store64[@test+48|68]. !store8[@test+64|1].
+  2166136261 -> @hash. 0 -> @i. ?? @i < 3 [ :bitand[@hash*16777619|4294967295] -> @hash. @i+1 -> @i. ]
+  !store32[@test+40|@hash].
+ ]
+ ? @kind == 3 [
+  64 -> @actual. "archive.renamed" -> @name.
+  !store64[@test|0x3130304b4341505a]. !store64[@test+8|1]. !store64[@test+32|64]. !store64[@test+40|2166136261].
+ ]
+ ? @kind == 4 [
+  4096 -> @header. 4608 -> @actual. "media.renamed" -> @name.
+  !store64[@test|0x3130414944454d5a]. !store64[@test+8|1]. !store64[@test+16|4096].
+  !store64[@test+24|512]. !store64[@test+32|512].
+  # SHA256 of512 zero bytes, a fixed known vector; the card never verifies it.
+  "076a27c79e5ace2a3d47f9dd2e83e4ff6ea8872b3c2218f66c92b89b55f36560" -> @literal.
+  0 -> @i. ?? @i < 64 [
+   :load8[@literal+@i] -> @c. @c-48 -> @digit. ? @c >= 97 [ @c-87 -> @digit. ]
+   ? :bitand[@i|1] == 0 [ @digit*16 -> @value. ] ~ [ !store8[@test+48+:shr[@i|1]|@value+@digit]. ]
+   @i+1 -> @i.
+  ]
+ ]
+ ? @kind >= 5 [
+  64 -> @value. ? @kind == 6 [ 32 -> @value. "app32.renamed" -> @name. ]
+  !store64[@test|0x315050414f52455a]. !store64[@test+8|@value]. !store64[@test+16|65].
+  !store64[@test+24|64]. !store64[@test+32|4198400]. !store64[@test+40|1]. !store8[@test+64|195].
+ ]
+ !store64[@ic|@test]. !store64[@ic+8|@actual]. !store64[@ic+16|@header].
+ !switch[@ic+256|@ic+352]. @checks+1 -> @checks.
+ @kind -> @expected. ? @kind == 6 [ 5 -> @expected. ]
+ ? (:load64[@ic+24] != 0)+(:load64[@ic+32] != @expected)+(:load64[@ic+40] != 1)+(:load64[@ic+48] != @header)+(:load64[@ic+56] != @actual) [ @failures+1 -> @failures. ]
+ ? @kind >= 5 [ ? :load64[@ic+72] != @value [ @failures+1 -> @failures. ] ]
+ # Every header byte is altered. Checksums intentionally remain unverified.
+ 0 -> @i.
+ ?? @i < @header [
+  :load8[@test+@i] -> @saved. !store8[@test+@i|:bitxor[@saved|128]].
+  65 -> @expected.
+  ? (@kind == 2)*(@i >= 40)*(@i < 44) [ 0 -> @expected. ]
+  ? (@kind == 3)*(@i >= 40)*(@i < 44) [ 0 -> @expected. ]
+  ? (@kind == 4)*(@i >= 48)*(@i < 80) [ 0 -> @expected. ]
+  !switch[@ic+256|@ic+352]. @checks+1 -> @checks.
+  ? :load64[@ic+24] != @expected [ @failures+1 -> @failures. ]
+  ? @expected [ ? (:load64[@ic+32] != 0)+(:load64[@ic+56] != 0)+(:load64[@ic+64] != 0) [ @failures+1 -> @failures. ] ]
+  !store8[@test+@i|@saved]. @i+1 -> @i.
+ ]
+ # Every truncated in-memory header; the claimed file size remains complete.
+ 0 -> @i.
+ ?? @i < @header [
+  !store64[@ic+16|@i]. !switch[@ic+256|@ic+352]. @checks+1 -> @checks.
+  ? :load64[@ic+24] != 65 [ @failures+1 -> @failures. ] @i+1 -> @i.
+ ]
+ # Every actual file truncation, plus one trailing byte.
+ 0 -> @i.
+ ?? @i < @actual [
+  @header -> @n. ? @i < @n [ @i -> @n. ]
+  !store64[@ic+8|@i]. !store64[@ic+16|@n]. !switch[@ic+256|@ic+352]. @checks+1 -> @checks.
+  ? :load64[@ic+24] != 65 [ @failures+1 -> @failures. ] @i+1 -> @i.
+ ]
+ !store64[@ic+8|@actual+1]. !store64[@ic+16|@header]. !switch[@ic+256|@ic+352]. @checks+1 -> @checks.
+ ? :load64[@ic+24] != 65 [ @failures+1 -> @failures. ]
+ !store64[@ic+8|@actual].
+ # Emit valid and deliberately damaged fixtures, never overwriting a path.
+ ? @root [
+  1 -> @case.
+  ?? @case <= 6 [
+   "" -> @literal. @actual -> @bytes. 0 -> @c.
+   ? @case == 2 [
+    ".bad-header" -> @literal. 48 -> @c.
+    ? @kind == 1 [ 24 -> @c. ] ? @kind == 2 [ 44 -> @c. ] ? @kind == 4 [ 4095 -> @c. ]
+   ]
+   ? @case == 3 [
+    ".bad-length" -> @literal. 16 -> @c.
+    ? @kind == 1 [ 15 -> @c. ] ? @kind == 2 [ 48 -> @c. ] ? (@kind == 3)+(@kind == 4) [ 32 -> @c. ]
+   ]
+   ? @case == 4 [ ".bad-magic" -> @literal. ]
+   ? @case == 5 [ ".truncated" -> @literal. @header-1 -> @bytes. ]
+   ? @case == 6 [
+    ".unchecked-content" -> @literal. 40 -> @c.
+    ? @kind == 1 [ 16 -> @c. ] ? @kind == 4 [ 48 -> @c. ] ? @kind >= 5 [ 64 -> @c. ]
+   ]
+   :load8[@test+@c] -> @saved.
+   ? (@case != 1)*(@case != 5) [ !store8[@test+@c|:bitxor[@saved|1]]. ]
+   0 -> @i. ?? :load8[@name+@i] [ !store8[@path+@length+@i|:load8[@name+@i]]. @i+1 -> @i. ]
+   0 -> @j. ?? :load8[@literal+@j] [ !store8[@path+@length+@i+@j|:load8[@literal+@j]]. @j+1 -> @j. ] !store8[@path+@length+@i+@j|0].
+   :fileopen[@path|1] -> @handle. ? @handle == -1 [ !exit[73]. ]
+   0 -> @used. ?? @used < @bytes [
+    :filewrite[@handle|@test+@used|@bytes-@used] -> @n.
+    ? (@n == 0)+(@n > @bytes-@used) [ !exit[74]. ] @used+@n -> @used.
+   ]
+   ? :filesync[@handle] != 0 [ !exit[74]. ] ? :fileclose[@handle] != 0 [ !exit[74]. ]
+   !store8[@test+@c|@saved]. @case+1 -> @case.
+  ]
+ ]
+ # Additional arithmetic edges; only bounded header memory exists even when
+ # the simulated file is256MiB or the app length is near the u64 limit.
+ 1 -> @case.
+ ?? @case <= 12 [
+  65 -> @expected. @actual -> @bytes.
+  ? @kind == 1 [
+   "00000003" -> @literal.
+   ? @case == 1 [ "00000000" -> @literal. 32 -> @bytes. 0 -> @expected. ]
+   ? @case == 2 [ "00100000" -> @literal. 1048608 -> @bytes. 0 -> @expected. ]
+   ? @case == 3 [ "00100001" -> @literal. 1048609 -> @bytes. ]
+   ? @case == 4 [ "ffffffff" -> @literal. 4294967327 -> @bytes. ]
+   ? @case == 5 [ "0000000A" -> @literal. 42 -> @bytes. ]
+   ? @case == 6 [ "0000000g" -> @literal. ]
+   ? @case > 6 [ 0 -> @expected. ]
+   0 -> @j. ?? @j < 8 [ !store8[@test+8+@j|:load8[@literal+@j]]. @j+1 -> @j. ]
+   ? @case == 7 [ !store8[@test+16|48]. ]
+  ]
+  ? @kind == 2 [
+   !store32[@test+8|1]. !store32[@test+12|1]. !store64[@test+24|1]. !store64[@test+32|4]. !store64[@test+48|68].
+   ? @case == 1 [ !store32[@test+8|0]. ]
+   ? @case == 2 [ !store32[@test+8|3841]. !store64[@test+24|3841]. ]
+   ? @case == 3 [ !store32[@test+12|2161]. !store64[@test+24|2161]. ]
+   ? @case == 4 [ !store32[@test+8|256]. !store64[@test+24|256]. ]
+   ? @case == 5 [ !store64[@test+32|8]. !store64[@test+48|72]. 72 -> @bytes. ]
+   ? @case == 6 [ !store32[@test+8|256]. !store64[@test+24|256]. !store64[@test+32|8]. !store64[@test+48|72]. 72 -> @bytes. 0 -> @expected. ]
+   ? @case == 7 [ !store32[@test+8|3840]. !store32[@test+12|2160]. !store64[@test+24|8294400]. !store64[@test+32|33177600]. !store64[@test+48|33177664]. 33177664 -> @bytes. 0 -> @expected. ]
+   ? @case == 8 [ !store64[@test+32|0xffffffffffffffff]. ]
+   ? @case == 9 [ !store64[@test+24|0x100000001]. ]
+   ? @case == 10 [ !store64[@test+32|5]. !store64[@test+48|69]. 69 -> @bytes. ]
+   ? @case == 11 [ !store64[@test+48|0x100000044]. ]
+   ? @case == 12 [ 0 -> @expected. ]
+  ]
+  ? @kind == 3 [
+   !store64[@test+16|0]. !store64[@test+24|0]. !store64[@test+32|64].
+   ? @case == 1 [ 0 -> @expected. ]
+   ? @case == 2 [ !store64[@test+16|4096]. !store64[@test+24|1179648]. !store64[@test+32|1179712]. 1179712 -> @bytes. 0 -> @expected. ]
+   ? @case == 3 [ !store64[@test+16|4097]. !store64[@test+24|1179936]. !store64[@test+32|1180000]. 1180000 -> @bytes. ]
+   ? @case == 4 [ !store64[@test+16|0xffffffffffffffff]. !store64[@test+24|0xfffffffffffffee0]. ]
+   ? @case == 5 [ !store64[@test+32|65]. 65 -> @bytes. ]
+   ? @case == 6 [ !store64[@test+16|1]. !store64[@test+24|288]. !store64[@test+32|352]. 352 -> @bytes. 0 -> @expected. ]
+   ? @case == 7 [ !store64[@test+16|1]. !store64[@test+24|288]. !store64[@test+32|351]. 351 -> @bytes. ]
+   ? @case == 8 [ !store64[@test+16|1]. !store64[@test+24|288]. !store64[@test+32|67108864]. 67108864 -> @bytes. 0 -> @expected. ]
+   ? @case == 9 [ !store64[@test+16|1]. !store64[@test+24|288]. !store64[@test+32|67108865]. 67108865 -> @bytes. ]
+   ? @case == 10 [ !store64[@test+24|0x100000000]. ]
+   ? @case > 10 [ 0 -> @expected. ]
+  ]
+  ? @kind == 4 [
+   512 -> @value.
+   ? @case == 1 [ 268435456 -> @value. 268439552 -> @bytes. 0 -> @expected. ]
+   ? @case == 2 [ 268435968 -> @value. 268440064 -> @bytes. ]
+   ? @case == 3 [ 0 -> @value. 4096 -> @bytes. ]
+   ? @case == 4 [ 511 -> @value. 4607 -> @bytes. ]
+   ? @case == 5 [ 513 -> @value. 4609 -> @bytes. ]
+   ? @case == 6 [ 0xfffffffffffff200 -> @value. ]
+   ? @case > 6 [ 0 -> @expected. ]
+   !store64[@test+32|@value].
+  ]
+  ? @kind >= 5 [
+   64 -> @value. ? @kind == 6 [ 32 -> @value. ]
+   !store64[@test+8|@value]. !store64[@test+16|65].
+   ? @case == 1 [ !store64[@test+8|8]. ]
+   ? @case == 2 [ !store64[@test+8|0]. ]
+   ? @case == 3 [ !store64[@test+8|128]. ]
+   ? @case == 4 [ !store64[@test+16|64]. 64 -> @bytes. ]
+   ? @case == 5 [ !store64[@test+16|0xffffffffffffffff]. 0xffffffffffffffff -> @bytes. 0 -> @expected. ]
+   ? @case == 6 [ !store64[@test+16|0x100000001]. 0x100000001 -> @bytes. 0 -> @expected. ]
+   ? @case > 6 [ 0 -> @expected. ]
+  ]
+  !store64[@ic+8|@bytes]. !switch[@ic+256|@ic+352]. @checks+1 -> @checks.
+  ? :load64[@ic+24] != @expected [ @failures+1 -> @failures. ]
+  @case+1 -> @case.
+ ]
+ @kind+1 -> @kind.
+]
+"Header checks passed: " -> @message. ? @failures [ "Header checks FAILED: " -> @message. ]
+0 -> @i. ?? :load8[@message+@i] [ !put[:load8[@message+@i]]. @i+1 -> @i. ]
+@checks -> @value. ? @failures [ @failures -> @value. ]
+100000 -> @power. 0 -> @started.
+0 -> @i. ?? @i < 6 [
+ ? @i == 1 [ 10000 -> @power. ] ? @i == 2 [ 1000 -> @power. ] ? @i == 3 [ 100 -> @power. ] ? @i == 4 [ 10 -> @power. ] ? @i == 5 [ 1 -> @power. ]
+ 0 -> @digit. ?? @value >= @power [ @value-@power -> @value. @digit+1 -> @digit. ]
+ ? @digit+@started+(@i == 5) [ !put[48+@digit]. 1 -> @started. ] @i+1 -> @i.
+]
+!put[10]. ? @failures [ !exit[1]. ] !exit[0].

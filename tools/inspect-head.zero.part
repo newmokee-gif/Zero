@@ -1,0 +1,11 @@
+# Original bounded header inspector, shared by CLI and regression checks.
+# Descriptor: header0, actual file bytes8, available header bytes16;
+# status24, kind32, version40, header bytes48, total56, payload64,
+# architecture72, width80, height88, files96, index bytes104, message128.
+# Kinds: 1 Ztext, 2 Zpix, 3 Zpack, 4 Zmedia, 5 Zapp.
+# Status0 means header consistency only, never payload integrity.
+:reserve[110000] => @ic.
+0 => @ip. 0 => @is. 0 => @ia. 0 => @ik. 0 => @ie.
+0 => @ih. 0 => @in. 0 => @ii. 0 => @ij. 0 => @iv.
+0 => @ib. 0 => @id. 0 => @iw. 0 => @it. 0 => @im.
+0 => @ix. 0 => @iy.

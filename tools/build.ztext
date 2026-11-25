@@ -1,4 +1,4 @@
-ZTEXT00100001579af3d75550000000
+ZTEXT0010000172e5e22971a0000000
 ZERO NATIVE PROJECT BUILDER
 
 tools/build.zero is the complete original Zero implementation. The native
@@ -23,7 +23,7 @@ strings, preserving separators and every quoted byte, then enforces the own
 compiler's 524288-byte input limit. This is source composition, not translation
 to another programming language. Kernel binary slot bounds remain explicit.
 
-The complete build produces72artifacts in76stages: the two native compiler targets, BIOS, IA32/AMD64
+The complete build produces 78 artifacts in 82 stages: the two native compiler targets, BIOS, IA32/AMD64
 UEFI loaders, the folder loader, both kernels, the six guest compiler apps,
 the compiler bundle, and a real BIOS/UEFI optical zero.iso. It also builds
 native Linux/Windows variants of the build, composition, checking, compiler
@@ -86,3 +86,10 @@ must come from a trusted original project: executing a compiler seed and
 compiling arbitrary unsafe Zero source is not a sandbox. Do not edit inputs
 concurrently during a build. Bounded reads detect size changes and short I/O;
 they do not provide an atomic snapshot of the entire project directory.
+
+0.16 addition: Linux and Windows zero-inspect, zero-inspect-check and
+zero-inspect-compose. The inspector reads at most 4096 header bytes and
+never runs or extracts input. It reports header consistency separately
+from content integrity. See tools/inspect.ztext. Zero Web adds --help,
+--capabilities and a built-in --about page through the existing renderer.
+See browser/engine/CAPABILITIES.ztext. Boot and guest code are unchanged.

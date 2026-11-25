@@ -80,7 +80,7 @@
 
 # Stage0 reads the owned compiler seed. Stages1/2 establish its app fixed point.
 # Each subsequent compile runs that own compiler inside this native process.
-?? (@stage < 76)*(@error == 0) [
+?? (@stage < 82)*(@error == 0) [
  @stage -> @step.
  ? @stage >= 24 [ @stage-2 -> @step. ]
  ? @stage == 22 [ 47 -> @step. ]
@@ -170,6 +170,12 @@
  ? @step == 73 [ "browser/engine/compose.zero" -> @file. "--windows" -> @target. "zero-web-compose.exe" -> @name. ]
  ? @step == 74 [ "browser/engine/engine-check.zero" -> @file. "zero-web-check" -> @name. 1 -> @executable. ]
  ? @step == 75 [ "browser/engine/engine-check.zero" -> @file. "--windows" -> @target. "zero-web-check.exe" -> @name. ]
+ ? @step == 76 [ "tools/inspect.zero" -> @file. "zero-inspect" -> @name. 1 -> @executable. ]
+ ? @step == 77 [ "tools/inspect.zero" -> @file. "--windows" -> @target. "zero-inspect.exe" -> @name. ]
+ ? @step == 78 [ "tools/inspect-check.zero" -> @file. "zero-inspect-check" -> @name. 1 -> @executable. ]
+ ? @step == 79 [ "tools/inspect-check.zero" -> @file. "--windows" -> @target. "zero-inspect-check.exe" -> @name. ]
+ ? @step == 80 [ "tools/inspect-compose.zero" -> @file. "zero-inspect-compose" -> @name. 1 -> @executable. ]
+ ? @step == 81 [ "tools/inspect-compose.zero" -> @file. "--windows" -> @target. "zero-inspect-compose.exe" -> @name. ]
  ? ((@step == 9)+(@step == 10))*(@kernelpath != 0) [ @kernelpath -> @file. ]
 
  # Bounded exact file read. A source must not grow or shrink during the read.

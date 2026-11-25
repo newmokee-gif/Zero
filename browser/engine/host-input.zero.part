@@ -1,13 +1,28 @@
 # Native document preview front end. HTML is external input, never host code.
 # Owned ZTEXT001 may wrap the same HTML. All output files are exclusive creates.
-:hostalloc[4194304] -> @web.
-? @web == 0 [ !exit[71]. ]
-0 -> @v0. ?? @v0 < 4194304 [ !store64[@web+@v0|0]. @v0+8 -> @v0. ]
-!store64[@web|@web+1507328]. !store64[@web+40|800]. !store64[@web+48|600].
+# --help and --capabilities exit before workspace allocation, file access or GUI.
+? :argcount[] == 1 [
+ :argument[1] -> @v0. 1 -> @v1.
+ ?? @v1 <= 2 [
+  "--help" -> @v2. ? @v1 == 2 [ "--capabilities" -> @v2. ]
+  0 -> @v3. 1 -> @v4.
+  ?? :load8[@v2+@v3]*@v4 [ ? :load8[@v0+@v3] != :load8[@v2+@v3] [ 0 -> @v4. ] ~ [ @v3+1 -> @v3. ] ]
+  ? @v4 [ ? :load8[@v0+@v3] == 0 [
+   "Zero Web - experimental local document preview\nUsage:\n  zero-web HTML_OR_ZTEXT\n  zero-web --about\n  zero-web --render INPUT NEW.zpix\n  zero-web --inspect INPUT\n  zero-web --check INPUT\n  zero-web --capabilities\n  zero-web --help\n\n--about opens the built-in capabilities page using our renderer.\n--render creates a new Zpix; existing files are never overwritten.\n--inspect prints visible text after bounded script processing.\n--check checks this implemented profile, not full web compatibility.\nINPUT is a local HTML or ZTEXT001 file, not an HTTP/HTTPS URL.\nEach command accepts exactly the arguments shown.\n\nViewer: Up/Down, PageUp/PageDown, Home/End, mouse wheel.\nClose with Escape or the native window close button.\nLinux needs local X11 (including Xwayland); Windows uses Win32.\n--help and --capabilities need no input file or graphical display.\n\nOwn diagnostic page: browser/engine/capabilities-demo.ztext\nRun zero-web-check for the engine regression checks.\n" -> @v5.
+   ? @v1 == 2 [
+    "Zero Web capabilities - experimental local document preview\n\nInput: local HTML or ZTEXT001; at most 65536 document bytes and 512 nodes.\nNetwork protocols: none in this native preview. No HTTP, HTTPS or TLS fetching.\nHTML: bounded element/text tree, id/class/style, entities, style and script data.\nCSS: single tag, .class, #id and * selectors; source order, specificity and inline priority.\nCSS properties: color, background-color, font-size, display, padding, margin, width.\nLayout: bounded block/inline flow, BR line breaks, word wrapping and scrolling.\nDrawing: own 800 x 600 RGB raster and bitmap font; non-ASCII glyphs use placeholders.\nJavaScript: bounded let/const/var, assignment, integer/string + expressions and\n  document.getElementById(...).textContent; not full ECMAScript or a browser DOM.\nScripts have no network, filesystem, process, eval or import interface.\nExternal script sources are rejected. No Python interpreter is included.\nPython on a remote server is separate from the documents a browser receives.\nGUI: local X11/Xwayland on Linux; Win32 on Windows; keyboard/wheel scrolling.\nOutput: visible-text inspection, supported-profile check, exclusive-create Zpix raster.\n\nNot implemented: URL navigation, TLS, full HTML5/CSS/ECMAScript, CSS flex/grid,\nweb media playback, web fonts, full Unicode glyphs or Chromium compatibility.\nUnsupported page features can be rejected or reported with a profile warning.\nThis list describes the native preview, not the separate Zero OS HTTP text reader.\n\nBuilt-in information page: zero-web --about\nOwn diagnostic page: zero-web browser/engine/capabilities-demo.ztext\nIt exercises CSS priority, display:none, BR and JavaScript textContent.\nHeadless diagnostics: --check INPUT, --inspect INPUT, --render INPUT NEW.zpix\nEngine regression checks: zero-web-check\n" -> @v5.
+   ]
+   0 -> @v6. ?? :load8[@v5+@v6] [ !put[:load8[@v5+@v6]]. @v6+1 -> @v6. ] !exit[0].
+  ] ] @v1+1 -> @v1.
+ ]
+]
 1 -> @v0. 0 -> @v1.
 ? :argcount[] == 1 [
  :argument[1] -> @v1.
  ? :load8[@v1] == 45 [ ? :load8[@v1+1] == 45 [ 0 -> @v0. ] ]
+ "--about" -> @v2. 0 -> @v3. 1 -> @v4.
+ ?? :load8[@v2+@v3]*@v4 [ ? :load8[@v1+@v3] != :load8[@v2+@v3] [ 0 -> @v4. ] ~ [ @v3+1 -> @v3. ] ]
+ ? @v4 [ ? :load8[@v1+@v3] == 0 [ 5 -> @v0. ] ]
 ] ~ [
  0 -> @v0.
  ? (:argcount[] == 2)+(:argcount[] == 3) [
@@ -21,12 +36,22 @@
   ] :argument[2] -> @v1.
  ]
 ]
-? (@v0 == 0)+((@v0 == 2)*(:argcount[] != 3))+((@v0 >= 3)*(:argcount[] != 2)) [
- "Usage: zero-web HTML_OR_ZTEXT | --render INPUT NEW.zpix | --inspect INPUT | --check INPUT\n" -> @v0.
+? (@v0 == 0)+((@v0 == 2)*(:argcount[] != 3))+((@v0 >= 3)*(@v0 <= 4)*(:argcount[] != 2)) [
+ "Usage: zero-web HTML_OR_ZTEXT | --about | --render INPUT NEW.zpix | --inspect INPUT | --check INPUT | --capabilities | --help\n" -> @v0.
  0 -> @v1. ?? :load8[@v0+@v1] [ !put[:load8[@v0+@v1]]. @v1+1 -> @v1. ] !exit[64].
 ]
+:hostalloc[4194304] -> @web.
+? @web == 0 [ !exit[71]. ]
+0 -> @v2. ?? @v2 < 4194304 [ !store64[@web+@v2|0]. @v2+8 -> @v2. ]
+!store64[@web|@web+1507328]. !store64[@web+40|800]. !store64[@web+48|600].
 !store64[@web+64|@v1]. !store64[@web+72|@v0].
 ? @v0 == 2 [ !store64[@web+112|:argument[3]]. ]
+? @v0 == 5 [
+ # Built-in data is parsed, styled and drawn by the same workers as local pages.
+ "<!doctype html><html><head><title>Zero Web capabilities</title><style>body { background-color: #edf2f7; padding: 16px; } h1 { color: #0f766e; font-size: 28px; margin: 8px; } h2 { color: #0f766e; font-size: 20px; margin: 8px; } p { color: #243047; font-size: 16px; margin: 8px; } .card { background-color: #ffffff; padding: 12px; margin: 8px; }</style></head><body><h1>Zero Web: this build</h1><p>Experimental local document preview written in Zero.</p><div class=card><h2>Input and protocols</h2><p>Local HTML and ZTEXT001. Up to 65536 document bytes and 512 nodes.</p><p>Network fetching: none. No HTTP, HTTPS, TLS or URL navigation.</p><p>The separate Zero OS HTTP text reader is not this native engine.</p></div><div class=card><h2>Our rendering profile</h2><p>HTML element and text tree; id, class, style, entities.</p><p>CSS tag, .class, #id and * selectors; source order, specificity, inline priority.</p><p>Color, background-color, font-size, display, padding, margin and width.</p><p>Block and inline flow, BR line breaks, wrapping and scrolling.</p><p>Own 800 x 600 raster and bitmap font. Non-ASCII glyphs use placeholders.</p></div><div class=card><h2>Bounded JavaScript</h2><p>let, const, var, assignment, integer and string + expressions.</p><p>document.getElementById(...).textContent updates page text.</p><p>No network, file, process, eval or import interface. External scripts rejected.</p><p>No Python interpreter. Server-side Python is separate from page content.</p></div><div class=card><h2>Own diagnostic page</h2><p>From the source directory, run:</p><p>zero-web browser/engine/capabilities-demo.ztext</p><p>Check CSS priority, hidden text, BR lines and script replacement there.</p><p>Run zero-web-check for engine regression checks.</p><p>Headless commands: --check INPUT, --inspect INPUT, --render INPUT NEW.zpix.</p></div><div class=card><h2>Limits and controls</h2><p>Not full HTML5, CSS or ECMAScript. No flex, grid, web media, web fonts or Chromium compatibility.</p><p>Unsupported features may be rejected or produce a profile warning.</p><p>Linux: local X11 or Xwayland. Windows: Win32.</p><p>Scroll: Up/Down, PageUp/PageDown, Home/End or mouse wheel.</p><p>Close: Escape or the window close button.</p><p>Terminal information: zero-web --help or zero-web --capabilities.</p></div></body></html>" -> @v1.
+ 0 -> @v2. ?? :load8[@v1+@v2] [ @v2+1 -> @v2. ]
+ !store64[@web|@v1]. !store64[@web+8|@v2]. !store64[@web+64|0]. !store64[@web+72|1].
+] ~ [
 :fileopen[@v1|0] -> @v2.
 ? @v2 == -1 [ !exit[66]. ]
 :filesize[@v2] -> @v3. 0 -> @v4. 0 -> @v6.
@@ -64,3 +89,4 @@
  ]
 ]
 ? :load64[@web+8] > 65536 [ !exit[65]. ]
+]

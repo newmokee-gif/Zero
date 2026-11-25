@@ -1,0 +1,116 @@
+# Read-only native interface: a maximum of4096 header bytes are read.
+0 => @error. 0 => @message. 0 => @source. 0 => @size. 0 => @need.
+0 => @used. 0 => @n. 0 => @kind. 0 => @i. 0 => @j. 0 => @status.
+0 => @rows. 0 => @row. 0 => @label. 0 => @value. 0 => @power.
+0 => @digit. 0 => @started. 0 => @out. 0 => @length. 0 => @phase.
+0 => @literal. 0 => @table. -1 => @handle.
+"Usage: zero-inspect FILE\nRead-only header card for Ztext, Zpix, Zpack, Zmedia and Zero applications.\n" -> @message.
+? (:argcount[] != 1)+((:host[] != 1)*(:host[] != 2)) [ 64 -> @error. ]
+? @error == 0 [
+ :argument[1] -> @source. :fileopen[@source|0] -> @handle.
+ ? @handle == -1 [ "Cannot open regular input file; missing, inaccessible, directory or symbolic-link inputs are rejected.\n" -> @message. 66 -> @error. ]
+]
+? @error == 0 [
+ :filesize[@handle] -> @size.
+ ? @size == -1 [ "Cannot obtain input file size.\n" -> @message. 74 -> @error. ]
+ 8 -> @need. ? @size < @need [ @size -> @need. ]
+ 1 -> @phase.
+ ?? (@phase <= 2)*(@error == 0) [
+  ?? (@used < @need)*(@error == 0) [
+   :fileread[@handle|@ic+90112+@used|@need-@used] -> @n.
+   ? (@n == 0)+(@n > @need-@used) [ "Cannot read complete header; input may have changed.\n" -> @message. 74 -> @error. ] ~ [ @used+@n -> @used. ]
+  ]
+  ? (@phase == 1)*(@used == 8)*(@error == 0) [
+   :load64[@ic+90112] -> @kind.
+   ? @kind == 0x313030545845545a [ 32 -> @need. ]
+   ? (@kind == 0x313030305849505a)+(@kind == 0x3130304b4341505a)+(@kind == 0x315050414f52455a) [ 64 -> @need. ]
+   ? @kind == 0x3130414944454d5a [ 4096 -> @need. ]
+   ? @size < @need [ @size -> @need. ]
+  ]
+  @phase+1 -> @phase.
+ ]
+ ? @error == 0 [ ? :filesize[@handle] != @size [ "Input size changed while reading the header.\n" -> @message. 74 -> @error. ] ]
+]
+? @handle != -1 [
+ :fileclose[@handle] -> @status. -1 -> @handle.
+ ? (@status != 0)*(@error == 0) [ "Cannot close input file.\n" -> @message. 74 -> @error. ]
+]
+? @error == 0 [
+ !store64[@ic|@ic+90112]. !store64[@ic+8|@size]. !store64[@ic+16|@used].
+ !switch[@ic+256|@ic+352]. :load64[@ic+24] -> @error. :load64[@ic+128] -> @message.
+]
+@ic+95000 -> @out. 0 -> @length.
+? @error == 0 [
+ :load64[@ic+32] -> @kind. @ic+87000 -> @table.
+ # Each row stores a label, value and flag(1literal,0decimal).
+ "ZTEXT001" -> @literal.
+ ? @kind == 2 [ "ZPIX0001" -> @literal. ]
+ ? @kind == 3 [ "ZPACK001" -> @literal. ]
+ ? @kind == 4 [ "ZMEDIA01" -> @literal. ]
+ ? @kind == 5 [ "ZEROAPP1" -> @literal. ]
+ !store64[@table|"Format: "]. !store64[@table+8|@literal]. !store64[@table+16|1].
+ "Version (signature): " -> @label. ? (@kind == 3)+(@kind == 4) [ "Version: " -> @label. ]
+ !store64[@table+24|@label]. !store64[@table+32|1]. !store64[@table+40|0].
+ !store64[@table+48|"Header bytes: "]. !store64[@table+56|:load64[@ic+48]]. !store64[@table+64|0].
+ !store64[@table+72|"Actual file bytes: "]. !store64[@table+80|@size]. !store64[@table+88|0].
+ "Declared total bytes: " -> @label. ? (@kind == 1)+(@kind == 4) [ "Expected total bytes (derived): " -> @label. ]
+ !store64[@table+96|@label]. !store64[@table+104|:load64[@ic+56]]. !store64[@table+112|0].
+ "Declared payload bytes: " -> @label. ? (@kind == 3)+(@kind == 5) [ "Payload bytes (derived): " -> @label. ]
+ !store64[@table+120|@label]. !store64[@table+128|:load64[@ic+64]]. !store64[@table+136|0].
+ 6 -> @rows.
+ ? @kind == 2 [
+  !store64[@table+144|"Width: "]. !store64[@table+152|:load64[@ic+80]]. !store64[@table+160|0].
+  !store64[@table+168|"Height: "]. !store64[@table+176|:load64[@ic+88]]. !store64[@table+184|0].
+  !store64[@table+192|"Channels: "]. !store64[@table+200|3]. !store64[@table+208|0].
+  !store64[@table+216|"Encoding: "]. !store64[@table+224|1]. !store64[@table+232|0]. 10 -> @rows.
+ ]
+ ? @kind == 3 [
+  !store64[@table+144|"Files: "]. !store64[@table+152|:load64[@ic+96]]. !store64[@table+160|0].
+  !store64[@table+168|"Index bytes: "]. !store64[@table+176|:load64[@ic+104]]. !store64[@table+184|0]. 8 -> @rows.
+ ]
+ ? @kind == 4 [
+  !store64[@table+144|"Sector bytes: "]. !store64[@table+152|512]. !store64[@table+160|0]. 7 -> @rows.
+ ]
+ ? @kind == 5 [
+  !store64[@table+144|"Architecture bits: "]. !store64[@table+152|:load64[@ic+72]]. !store64[@table+160|0].
+  !store64[@table+168|"ABI version: "]. !store64[@table+176|1]. !store64[@table+184|0].
+  !store64[@table+192|"Entry offset: "]. !store64[@table+200|64]. !store64[@table+208|0].
+  !store64[@table+216|"Minimum stack bytes: "]. !store64[@table+224|4198400]. !store64[@table+232|0]. 10 -> @rows.
+ ]
+ 1 -> @power. 0 -> @i.
+ ?? @i < 20 [ !store64[@ic+88000+@i*8|@power]. @power*10 -> @power. @i+1 -> @i. ]
+ 0 -> @row.
+ ?? @row < @rows [
+  0 -> @phase.
+  ?? @phase < 2 [
+   @row+1 -> @value. ? @phase == 1 [ :load64[@table+@row*24+8] -> @value. ]
+   ? (@phase == 0)+(:load64[@table+@row*24+16] == 0) [
+    20 -> @i. 0 -> @started.
+    ?? @i [
+     @i-1 -> @i. :load64[@ic+88000+@i*8] -> @power. 0 -> @digit.
+     ?? @value >= @power [ @value-@power -> @value. @digit+1 -> @digit. ]
+     ? @started+@digit+(@i == 0) [ !store8[@out+@length|48+@digit]. @length+1 -> @length. 1 -> @started. ]
+    ]
+   ] ~ [
+    0 -> @i. ?? :load8[@value+@i] [ !store8[@out+@length|:load8[@value+@i]]. @length+1 -> @length. @i+1 -> @i. ]
+   ]
+   ? @phase == 0 [
+    !store8[@out+@length|46]. !store8[@out+@length+1|32]. @length+2 -> @length.
+    :load64[@table+@row*24] -> @label. 0 -> @i.
+    ?? :load8[@label+@i] [ !store8[@out+@length|:load8[@label+@i]]. @length+1 -> @length. @i+1 -> @i. ]
+   ]
+   @phase+1 -> @phase.
+  ]
+  !store8[@out+@length|10]. @length+1 -> @length. @row+1 -> @row.
+ ]
+ "Header checked\nContent checksum not checked\nPayload structure not checked\n" -> @message.
+ ? @kind == 3 [ "Header checked\nContent checksum not checked\nIndex checksum, paths and entries not checked\n" -> @message. ]
+ ? @kind == 5 [ "Header checked\nContent checksum: not present in this format\nExecutable content not checked; application was not run\n" -> @message. ]
+]
+0 -> @i. ?? :load8[@message+@i] [ !store8[@out+@length|:load8[@message+@i]]. @length+1 -> @length. @i+1 -> @i. ]
+0 -> @used.
+?? @used < @length [
+ :write[@out+@used|@length-@used] -> @n.
+ ? (@n == 0)+(@n > @length-@used) [ !exit[74]. ] @used+@n -> @used.
+]
+!exit[@error].

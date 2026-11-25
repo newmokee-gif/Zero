@@ -1,4 +1,45 @@
-ZTEXT00100002b00f1be983d0000000
+ZTEXT001000033e625f1d61b0000000
+ZERO TOOLS 0.16 PREVIEW - 25 NOVEMBER 2026
+
+Two additions from the accessible idea catalogue 1-1000 are now implemented
+in original Zero for native Linux x86-64 and Windows x64. Idea 723 adds the
+read-only zero-inspect header card for five own formats. It reads at most
+4096 bytes, validates header consistency and declared lengths, and reports
+that payload structure and integrity remain unchecked. It never executes
+or extracts input. See tools/inspect.ztext.
+
+Idea 898 adds zero-web --help and --capabilities without opening a document
+or graphical display, and zero-web --about as a built-in graphical page
+through the existing DOM/CSS/raster pipeline. The original diagnostic page
+browser/engine/capabilities-demo.ztext exercises CSS cascade, display:none,
+BR line breaks and JavaScript textContent. See browser/engine/CAPABILITIES.ztext.
+
+The build now has 82 stages and 78 outputs. A second build with its freshly
+built own builder reproduced every artifact byte for byte. All 68 previous
+artifacts other than the builder/browser pairs are unchanged, including
+both kernels, all boot components, ISO, guest apps and compilers. No new
+boot behavior or physical hardware validation is claimed by this update.
+
+The inspector parser passed 13757 original Zero checks on Linux and Windows
+under Wine. New browser CLI checks passed 34 Linux/35 Wine scenarios. GUI about
+page scrolling, Home and Escape passed on Linux/Xvfb and Windows/Wine, with
+five exact cross-platform pixel matches. The engine integration 35 checks
+passed in the final build. Module docs give the remaining test details.
+
+These are native tool additions, not guest kernel integration. The native
+browser still has no HTTP/HTTPS fetching, TLS or full web compatibility.
+Source IDEAS.ztext identifies the real catalogue and limits: the newer
+1155-4154 lists were received only by title and are not claimed implemented.
+No background task or new hourly automation was created.
+
+Existing user data disks are unchanged. Raw SHA256:
+c730241fb30f5516867c751006951a2878f360319195ee975411a05f040f27e8
+VDI SHA256:
+7f58fb36c934405757da797ca65f2dddef3858e69107f43e2cae59d14c89bc5f
+
+GPL-3.0-only. Repository: https://github.com/newmokee-gif/Zero
+Prior work records follow chronologically; this section describes 0.16.
+
 Zero OS 0.13 - original Zero development system, browser and graphical editor
 
 The implementation is written in Zero. Ezero is the easier language built on

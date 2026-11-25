@@ -1,0 +1,48 @@
+ZTEXT00100000a3e716229270000000
+ZERO NATIVE KITS 0.16 - PACKAGE VALIDATION
+Date: 2026-11-25
+License: GPL-3.0-only
+
+Prepared from /tmp/zero-support/validation-0.16/build-final and the original
+source project. No source files, Git history or remote publication were changed
+by this packaging task. Packages use the own Zero text and archive programs.
+
+Linux kit: /tmp/zero-support/exports-0.16/linux-x64
+Windows kit: /tmp/zero-support/exports-0.16/windows-x64
+Each contains 39 files: 27 native programs, 5 compiler/runtime companions,
+2 language examples, 2 browser documents, README.ztext, LICENSE and LICENSE.ztext.
+The raw stdin compiler is zero-native-compiler; zero and ezero are path-based
+compiler CLIs. The diagnostic document is at browser/engine/capabilities-demo.ztext.
+
+File: zero-native-linux-x64-0.16.zpack
+Bytes: 1263908
+SHA256: 4fcd82c643baccd51c90122df3f1b2f1faa824fb436b6420f830ebfeb3f4a1a2
+
+File: zero-native-windows-x64-0.16.zpack
+Bytes: 1476476
+SHA256: 019dc012066e4857c31dbe2ba49a23adb3f2933696ed6eaaba44a59ca73e4233
+
+Validation completed:
+1. Original Zero archive verification passed for both packages.
+2. Linux package extracted by native zero-archive; Windows package extracted
+   by zero-archive.exe under Wine. All 39 files per kit exactly match input.
+3. Linux extracted executable modes are 0700 and data modes 0600. Windows kit
+   manifest stores ordinary data entries; Windows execution follows host rules.
+4. Packaged Zero and Ezero compilers compile their hello examples. All four
+   resulting Linux/Windows programs run and print exactly three Hello lines.
+5. Browser demo and capabilities-demo accepted on both host editions.
+6. Browser integration checks: 35 passed on each host edition.
+7. Header parser checks: 13757 passed on each host edition.
+8. Browser --help, --capabilities, --inspect and --render outputs are identical
+   between Linux and Windows/Wine, including the diagnostic Zpix bytes.
+9. Packaged inspector reads actual Ztext, Zpix, Zpack, Zmedia and Zero application
+   headers on both hosts, with identical output and honest header-only status.
+10. Packaged inspector composer reproduces tools/inspect.zero exactly on both
+    hosts from the same three original Zero source parts.
+11. Own zero-text verifies packaged README and diagnostic document on both hosts.
+
+External packaging/validation orchestration and logs remain outside the project:
+/tmp/zero-support/validation-0.16/native-kits
+Own source/format implementations alone are distributed. Wine is an external
+test environment. No native physical Windows or Debian/Arch installation test
+was performed; no physical storage devices were touched.
