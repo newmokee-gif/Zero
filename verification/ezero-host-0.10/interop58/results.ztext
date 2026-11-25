@@ -1,0 +1,5 @@
+ZTEXT001000001156c146a690000000
+58/58 private Ezero interoperability checks passed.
+Original Zero frontend/runtime, native file APIs, and guest64 loader executed.
+Guest32 fixtures compiled; guest32 execution is a separate verifier responsibility.
+Existing files preserved; no file/argument text was executed.

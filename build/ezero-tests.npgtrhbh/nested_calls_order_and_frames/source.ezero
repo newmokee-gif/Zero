@@ -1,0 +1,8 @@
+mark :: n [
+ n => show
+ n => return
+]
+combine :: a | b [
+ a * 10 + b => return
+]
+100 + combine(mark(1) | mark(2)) => show

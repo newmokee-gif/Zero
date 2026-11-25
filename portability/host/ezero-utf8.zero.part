@@ -1,0 +1,29 @@
+# Validate external text: ez_src/ez_limit bytes, strict UTF-8, no embedded NUL.
+# Scratch i,j,x,y,z only; retain outer argument counter k and allocation need.
+0 -> @ez_i.
+?? (@ez_i < @ez_limit) * (@ez_error == 0) [
+ :load8[@ez_src + @ez_i] -> @ez_x.
+ ? @ez_x < 128 [
+  ? @ez_x == 0 [ 18 -> @ez_error. ]
+  @ez_i + 1 -> @ez_i.
+ ] ~ [
+  0 -> @ez_y.
+  ? (@ez_x >= 194) * (@ez_x <= 223) [ 2 -> @ez_y. ]
+  ? (@ez_x >= 224) * (@ez_x <= 239) [ 3 -> @ez_y. ]
+  ? (@ez_x >= 240) * (@ez_x <= 244) [ 4 -> @ez_y. ]
+  ? (@ez_y == 0) + (@ez_i + @ez_y > @ez_limit) [ 18 -> @ez_error. ]
+  1 -> @ez_j.
+  ?? (@ez_j < @ez_y) * (@ez_error == 0) [
+   :load8[@ez_src + @ez_i + @ez_j] -> @ez_z.
+   ? (@ez_z < 128) + (@ez_z > 191) [ 18 -> @ez_error. ]
+   ? @ez_j == 1 [
+    ? (@ez_x == 224) * (@ez_z < 160) [ 18 -> @ez_error. ]
+    ? (@ez_x == 237) * (@ez_z > 159) [ 18 -> @ez_error. ]
+    ? (@ez_x == 240) * (@ez_z < 144) [ 18 -> @ez_error. ]
+    ? (@ez_x == 244) * (@ez_z > 143) [ 18 -> @ez_error. ]
+   ]
+   @ez_j + 1 -> @ez_j.
+  ]
+  @ez_i + @ez_y -> @ez_i.
+ ]
+]

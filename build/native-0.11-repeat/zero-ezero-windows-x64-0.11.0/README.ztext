@@ -1,0 +1,69 @@
+ZTEXT00100000da42bb114ba0000000
+ZERO / EZERO 0.11.0 — NATIVE windows X64 TOOLKIT
+
+The compiler, Ezero runtime, setup tool, updater, SHA256 and UEFI loader are
+original Zero programs. The toolkit needs no shell script, Python, CMD,
+PowerShell, external compiler or foreign language runtime. Keep lib/ beside
+the native zero and ezero commands. Linux uses direct Linux syscalls;
+Windows uses Windows operating-system APIs. Windows execution verification
+uses Wine; this is not a claim of testing on a native Windows installation.
+
+On Linux, run ./zero and ./ezero. On Windows, run zero.exe and ezero.exe.
+Paths with spaces use the normal quoting rules of the invoking terminal.
+
+    zero examples/hello.zero hello
+    ezero examples/banana.ezero banana
+    zero --help
+
+Default output matches the host platform. Windows output names usually end
+in .exe. Explicit targets include --host, --windows, --efi, --efi32, --real,
+--raw, --raw32, --app64 and --app32. Other targets need their own execution
+environment. Existing output paths are refused. Compilation runs our own
+compiler/frontend/packer applications in process, without a subprocess.
+
+Ezero provides unquoted text, inferred numeric values, lists indexed from 1,
+functions and automatic memory management. lines(text) splits text into lines;
+join(text_list | separator) combines text values. Host-file conveniences are
+readfile, writefile (new files only), fileexists, arguments and host. See the
+language/API documents and examples for exact size and type rules.
+
+Prepare ISO/storage files in a new directory:
+    zero-setup prepare zero.iso NEW_DIRECTORY
+    zero-setup status NEW_DIRECTORY
+    zero-setup remove NEW_DIRECTORY
+
+Deploy the supplied own UEFI x64 loader alongside the ISO:
+    zero-setup deploy zero.iso ZEROX64.EFI NEW_DIRECTORY
+
+The deployed loader reads system.iso from its own directory through firmware
+file services. To boot it, that directory must be on a filesystem the firmware
+can read (normally FAT), and the firmware must launch ZEROX64.EFI. Deploy does
+not format a partition or register a firmware/Windows/Linux boot-menu entry.
+An arbitrary NTFS/ext4/Btrfs host folder is not automatically bootable.
+storage.data is prepared ZeroFS content, not a file-backed live OS disk.
+See source/installer/README.txt and source/installer/boot/README.txt.
+
+Local update preparation:
+    zero-update init zero.iso 1 NEW_STORE
+    zero-update publish next-zero.iso 2 NEW_INBOX
+    zero-update check NEW_INBOX NEW_STORE
+    zero-update status NEW_STORE
+    zero-update verify NEW_STORE
+    zero-update rollback NEW_STORE
+
+Release counters start at 1. Local preparation does not activate the booted
+OS. There is no Internet release server, publisher signature or TLS transport.
+Use trusted local releases. See source/updater/README.txt for periodic local
+checks, recovery commands, locking and exact persistence limitations.
+
+Rebuild from included original source with the same native tool:
+    zero source/compiler.zero rebuilt-compiler
+    zero source/compiler-cli.zero rebuilt-command
+    zero source/installer/setup.zero rebuilt-setup
+    zero source/installer/boot/loader.zero rebuilt-loader.efi --efi
+    zero source/updater/update.zero rebuilt-update
+
+The direct stream compiler reference is source/compiler-seed (or .exe).
+SHA256SUMS.txt covers every package file; BUILD-INPUTS.sha256 records source
+inputs. zero-sha256 computes SHA256 without an external hash program.
+The ISO is distributed separately; these archives contain no disk images.

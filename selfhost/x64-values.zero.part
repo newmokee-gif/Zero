@@ -1,0 +1,19 @@
+# Original value-operation encodings, authored directly as Zero data.
+# 75 host_pread: four pushed values fd,buffer,count,offset; syscall17.
+!store64[@templates + 1200 | "415a5a5e5fb8110000000f05"].
+!store64[@templates + 1208 | 12].
+# 76 host_pwrite: four pushed values fd,buffer,count,offset; syscall18.
+!store64[@templates + 1216 | "415a5a5e5fb8120000000f05"].
+!store64[@templates + 1224 | 12].
+# 77 bitxor: RAX = RCX XOR RAX.
+!store64[@templates + 1232 | "4831c8"].
+!store64[@templates + 1240 | 3].
+# 78 bitand: RAX = RCX AND RAX.
+!store64[@templates + 1248 | "4821c8"].
+!store64[@templates + 1256 | 3].
+# 79 shr: logical u64 shift; count >=64 returns0.
+!store64[@templates + 1264 | "48914883f940730548d3e8eb0231c0"].
+!store64[@templates + 1272 | 15].
+# 81 host_fsync: unary RAX descriptor, syscall74, returns0 or negative errno.
+!store64[@templates + 1296 | "4889c7b84a0000000f05"].
+!store64[@templates + 1304 | 10].

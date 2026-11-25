@@ -1,0 +1,45 @@
+:reserve[65536] => @memory.
+180 => @state.
+0 => @current.
+0 => @disk_select.
+0 => @io_lba.
+0 => @io_buffer.
+0 => @io_count.
+0 => @io_write.
+0 => @io_return.
+0 => @io_ok.
+0 => @i.
+0 => @j.
+0 => @k.
+0 => @c0.
+0 => @c1.
+0 => @c2.
+0 => @c3.
+0 => @c4.
+0 => @c5.
+0 => @pointer.
+0 => @valid.
+0 => @checksum.
+0 => @status.
+0 => @temporary.
+0 => @character.
+0 => @ready.
+0 => @done.
+0 => @timeout.
+0 -> @i. ?? @i < 65536 [ !store8[@memory + @i| 0]. @i + 1 -> @i. ]
+? :read[@memory + 65500| 4] != 4 [ !exit[81]. ]
+0 -> @i. ?? @i < 4 [
+ !store64[@memory + 25472 + @i * 32| 2048].
+ !store64[@memory + 25480 + @i * 32| :load8[@memory + 65500 + @i]].
+ @i + 1 -> @i.
+]
+!store64[@memory + 24824| 0x123456789abcdef0].
+!store64[@memory + 25456| 0xfedcba9876543210].
+!store64[@memory + 25504| 724992]. !store64[@memory + 25568| 73728].
+!store64[@memory + 25712| "123456789"]. !store64[@memory + 25720| 9].
+!store64[@memory + 25728| 0xcbf43926]. !store64[@memory + 25736| 149].
+?? @state != 199 [
+ @state -> @current.
+ ? @current == 149 [
+  ? :load64[@memory + 25744] != 1 [ !exit[88]. ] 150 -> @state.
+ ]

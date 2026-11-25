@@ -1,0 +1,22 @@
+ZTEXT001000004e3123688c20000000
+Ezero examples
+
+These are source examples for the first hosted Ezero implementation.
+Run from the project root with bash ezero/run.sh ezero/examples/hello.ezero.
+The Ezero frontend, runtime and Zero compiler also support native guest
+execution through the memory-stream ABI. This shell command remains a hosted
+file workflow; it does not open source files inside the guest. See
+../README.txt and ../../portability/guest/ABI.txt.
+
+hello.ezero / hello.zero: identical three-line output through two languages.
+banana.ezero: unquoted Russian text, a typed phrase and one-based indexing.
+values.ezero: inferred values, reassignment, text concatenation, conditions.
+lists.ezero: list iteration, accumulation, indexing and nested mixed values.
+functions.ezero: parameters, returned text and recursive local call frames.
+memory.ezero: temporary objects reclaimed while retained values survive.
+host-files.ezero: host arguments and exclusive creation of a new text file.
+text.ezero: LF/CRLF lines, one-based line selection and joining text lists.
+
+No Ezero example manually allocates memory, traverses character pointers,
+declares a value type or invokes a foreign runtime. The Ezero executable
+contains the original Zero runtime and its own instruction data.

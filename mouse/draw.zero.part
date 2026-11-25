@@ -1,0 +1,27 @@
+# Worker outer-loop end, after all scene writes. Physical coordinates avoid
+# coupling pointer bounds to the 2x desktop layout used at 1920x1080.
+? :load64[@console + 2520] * (:load64[@console] == 2) * (@valid == 0) * (:load64[@console + 2584] == 0) * (:load64[@console + 2088] == @current) [
+ !store64[@console + 2592|:load64[@console + 2552]].
+ !store64[@console + 2600|:load64[@console + 2560]].
+ 0 -> @i. 0 -> @c5.
+ ?? @i < 17 [
+  0 -> @j.
+  ?? @j < 12 [
+   :load8[:load64[@console + 2648] + @i * 12 + @j] -> @c2.
+   ? @c2 != 48 [
+    :load64[@console + 2592] + @j -> @c0. :load64[@console + 2600] + @i -> @c1.
+    ? (@c0 < :load64[@console + 16]) * (@c1 < :load64[@console + 24]) [
+     :load64[@console + 8] + (@c1 * :load64[@console + 32] + @c0) * 4 -> @c3.
+     !store32[@console + 2656 + @c5 * 4|:load32[@c3]].
+     0x151515 -> @c4. ? @c2 == 50 [ 0xf2f2f2 -> @c4. ]
+     !store32[@c3|@c4].
+    ]
+    @c5 + 1 -> @c5.
+   ]
+   @j + 1 -> @j.
+  ]
+  @i + 1 -> @i.
+ ]
+ !store64[@console + 2608|:load64[@console + 2576]].
+ !store64[@console + 2584|1].
+]

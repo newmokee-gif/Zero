@@ -1,0 +1,33 @@
+  1 -> @io_ok. 0 -> @c3.
+  ? @disk_select <= 3 [
+   :load64[@memory + 25472 + @disk_select * 32] -> @c3.
+   ? @io_write != 3 [
+    ? :load64[@memory + 25480 + @disk_select * 32] == 0 [ 0 -> @io_ok. ]
+   ]
+  ] ~ [ 0 -> @io_ok. ]
+  ? @io_write > 3 [ 0 -> @io_ok. ]
+  ? @io_write == 3 [ ? @io_count != 1 [ 0 -> @io_ok. ] ]
+  ? @io_write != 2 [
+   ? @io_buffer < @memory [ 0 -> @io_ok. ]
+   ? @io_buffer + @io_count * 512 < @io_buffer [ 0 -> @io_ok. ]
+   ? @io_buffer + @io_count * 512 > @memory + 65536 [ 0 -> @io_ok. ]
+  ]
+  ? @io_write < 2 [
+   ? @io_count == 0 [ 0 -> @io_ok. ]
+   ? @io_count > 32 [ 0 -> @io_ok. ]
+   ? @io_lba >= 268435456 [ 0 -> @io_ok. ]
+   ? @io_lba + @io_count > @c3 [ 0 -> @io_ok. ]
+   ? @io_lba + @io_count < @io_lba [ 0 -> @io_ok. ]
+   ? (@io_return >= 200) * (@io_return < 600) [
+    ? @io_lba < :load64[@memory + 24656] [ 0 -> @io_ok. ]
+    ? @io_lba - :load64[@memory + 24656] + @io_count > :load64[@memory + 24664] [ 0 -> @io_ok. ]
+   ]
+  ]
+  ? (@io_write == 1) + (@io_write == 2) [
+   ? @io_return < 100 [
+    ? @disk_select != 0 [ 0 -> @io_ok. ]
+    ? @io_write == 1 [ ? @io_lba + @io_count > 18 [ 0 -> @io_ok. ] ]
+   ] ~ [
+    ? (@io_return < 200) + (@io_return >= 600) [ 0 -> @io_ok. ]
+   ]
+  ]

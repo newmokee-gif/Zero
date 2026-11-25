@@ -1,0 +1,65 @@
+ZTEXT00100000f0d03bda1e40000000
+ZERO OS0.9 NETWORK/WIFI INTEGRATION CANDIDATE - ALL FOUR MODES PASS
+Date:2026-11-16 UTC
+
+Exact candidate ISO:17776640 bytes
+SHA256:bfcff263a4df655f9eb1760dd70de1538304a9902776bced8fbd89c23062e3c6
+Path:build/network-candidate.qby3zn9o/zero.iso
+This is an integration candidate, not the final release. The requested default
+in-guest compiler bundle is still a separate pending integration at this point.
+
+Actual QEMU pc/TCG runs:BIOS64,BIOS32(-lm,-pae),AMD64 OVMF,IA32 OVMF(-lm).
+All use128MiB RAM,standardVGA1920x1080 and emulated AMD PCnet with user NAT.
+No data disks are attached. All four VMs exited and the ISO hash stayed unchanged.
+
+Each run independently verifies:
+- Actual DHCP Discover/Offer/Request/ACK exchange before ANY terminal input.
+  The later net command only reads state. BIOS read-only memory also confirms
+  state4,IP10.0.2.15,mask255.255.255.0,gateway10.0.2.2,DNS10.0.2.3.
+- Native1920x1080 framebuffer screenshots.
+- pause2 stops computation without stopping the network worker. A QMP cable
+  disconnect clears all published IPv4 configuration; reconnect triggers a
+  second complete DHCP exchange automatically, with no reconnect command.
+- HTTP/1.0 200 from an independent host-only fixture while computation remains
+  paused. The real guest TCP client sends GET and receives the fixture marker.
+- Real public DNS resolution of10.0.2.2.nip.io, followed by another actual HTTP
+  fetch to the LOCAL fixture through that resolved address. This is DNS plus
+  local HTTP evidence, not a claim of public Internet HTTP reachability.
+- The production wifi command opens the native fullscreen modal and truthfully
+  reports no PCI wireless adapter. Real PS/2 Up/Down,F1,F5,q and Enter do not
+  change the modal or leak q into terminal input; Escape restores the terminal.
+  The two terminal sessions and tile layout remain intact. BIOS snapshots
+  confirm production marker0,network-count0,correct error phase and all64
+  password bytes zero before/after closure.
+- Independently decoded PCAP has no invalid guest IPv4/TCP checksums.
+  Each mode contains8 DHCP messages(two complete exchanges),2 DNS packets and
+  2 real HTTP GET requests. Host fixture logs confirm all8 requested paths.
+
+Visible evidence
+bios64/wifi-no-adapter.png and dns-http-response.png were visually inspected:
+legible text, correct FullHD rendering, clear status, no frame corruption.
+All four modes' no-adapter modal images have identical RGB pixel hashes;
+wifi-modal-parity.json records that independent comparison. The modal currently
+shows000WINDOWS in its header although the two underlying sessions survive;
+this cosmetic label issue was reported to the root for the final integration.
+
+Environment and limits
+external-http-host-probe.json records that host TCP toexample.com:80 returns
+ENETUNREACH. Public Internet HTTP is therefore not claimed by this run.
+Native VirtualBox and physical hardware were not tested. QEMU has no native
+WiFi radio; PCnet/NAT traffic is Ethernet. Real wireless association, WPA2,
+SSID scans and passwords are not exercised by these four VMs. Separate hosted
+WiFi UI fixtures are explicitly labelled SIMULATION/NO RADIO/NO PACKETS.
+
+Historical failure
+Earlier candidate39980079 completed automatic DHCP on all four architectures,
+but its registered net command emitted no status because NET COMMANDS had been
+removed by another integration region refresh. Root corrected the marker
+placement and checked all source integrations before building this candidate.
+That earlier failed run is preserved separately and is not final success data.
+
+Evidence
+matrix.json; per-mode result.json,actions.jsonl,serial transcripts,readonly
+state JSON,packet summaries and nativePNG captures. RawPCAP,PPM,memory dumps,
+pflash variables and sockets are internal test artifacts. No user disk was
+read,written,formatted or attached by this task.

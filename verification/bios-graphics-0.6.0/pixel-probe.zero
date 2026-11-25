@@ -1,0 +1,51 @@
+# Independent BIOS framebuffer probe. Draw every pixel with explicit RGB data.
+:arg0[] => @boot.
+:load64[@boot+48] => @kind.
+:load64[@boot+56] => @frame.
+:load64[@boot+64] => @width.
+:load64[@boot+72] => @height.
+:load64[@boot+80] => @stride.
+:load64[@boot+88] => @format.
+0 => @x.
+0 => @y.
+0 => @red.
+0 => @green.
+0 => @color.
+0 => @i.
+0 => @status.
+0 => @wait.
+"BIOS GRAPHICS PROBE FAIL\r\n" => @message.
+? @kind == 2 [
+ ? @frame >= 0x100000 [
+  ? @width >= 640 [ ? @height >= 480 [
+   ? @stride >= @width [ ? @format <= 1 [
+    ?? @y < @height [
+     @y -> @green.
+     ?? @green >= 256 [ @green-256 -> @green. ]
+     0 -> @x.
+     ?? @x < @width [
+      @x -> @red.
+      ?? @red >= 256 [ @red-256 -> @red. ]
+      @red+@green*256+128*65536 -> @color.
+      ? @format == 1 [ 128+@green*256+@red*65536 -> @color. ]
+      !store32[@frame+(@y*@stride+@x)*4|@color].
+      @x+1 -> @x.
+     ]
+     @y+1 -> @y.
+    ]
+    "BIOS GRAPHICS PROBE PASS\r\n" -> @message.
+   ] ]
+  ] ]
+ ]
+]
+?? :load8[@message+@i] != 0 [
+ 0 -> @wait. 0 -> @status.
+ ?? (@status < 32)*(@wait < 1000000) [
+  :in8[0x3fd] -> @status.
+  ?? @status >= 64 [ @status-64 -> @status. ]
+  @wait+1 -> @wait.
+ ]
+ !out8[0x3f8|:load8[@message+@i]].
+ @i+1 -> @i.
+]
+!halt.

@@ -1,0 +1,60 @@
+ZTEXT00100000dfe267876280000000
+Supported external volume profiles and private validation fixtures
+
+The current release distributes only the genuine ISO9660/El Torito boot ISO.
+It does not include raw IMG, VDI or other writable hard-disk images. Optical
+media are read-only; saving files requires a separate writable disk created
+in the user's VM manager or an existing disk preserved from an earlier setup.
+For a new dedicated primary-master virtual disk, use disks, GO A:| and the
+explicit format ZERO command inside Zero. This erases and initializes that
+new disk's ZeroFS area; it is not a recovery command. See VIRTUALBOX.ztext.
+
+User-owned ext4, NTFS and Btrfs volumes may be attached at other legacy IDE
+positions if they already match the supported profiles. Use disks to confirm
+their letters before access; discovery order determines A: through Z:.
+A physical disk may expose several primary MBR or GPT partitions. Unknown,
+unsupported or corrupt volumes are reported without automatic conversion,
+formatting or repair. There is no guest formatter for these three foreign
+filesystems, and no general-purpose compatibility claim.
+
+Current bounds
+All three backends implement root-file read, create, save/create-or-replace
+and remove, with names of at most31 ASCII bytes and contents of at most400
+bytes. Directory trees, unrestricted allocation, crash recovery and many
+on-disk feature combinations remain unsupported. Exact constraints are in
+fs/ext4-profile.ztext, fs/ntfs-profile.ztext and fs/btrfs-profile.ztext.
+- ext4: a clean single block group,4096-byte blocks, compatible inode sizes,
+  filetype and optional depth-zero extents, no journal or metadata checksums.
+- NTFS:3.1,4096-byte clusters, resident file data, existing MFT allocation,
+  a single leaf root index, and unused formatter journal restart pages.
+  Initialized Windows journals are refused even with a clean volume flag.
+- Btrfs: a single device, SINGLE chunks, CRC32C, supported feature masks,
+  level-zero metadata trees, inline files, and no free-space-tree.
+Default modern formatter settings and arbitrary existing Windows/Linux
+volumes commonly fall outside these profiles. Unsupported profiles must not
+be presented as working support or silently reformatted to fit.
+
+Examples after an existing compatible volume has been attached and identified:
+  disks
+  GO B:|
+  save note Hello on this volume
+  read note
+  watch
+These are command examples, not a promise that B:| exists on an ISO-only VM.
+Keep the same user-owned writable disk across complete restarts and ISO
+upgrades. Changing or discarding that disk loses access to its saved files.
+
+Private test evidence
+Development used disposable compatible ext4/NTFS/Btrfs images, a three-partition
+MBR fixture, and a GPT ext4 fixture with the read-only attribute. Standard host
+formatting and checking tools made and validated filesystem fixtures; our own
+Zero fixture builder authored partition tables and CRCs. These external tools
+are test infrastructure and are not part of the guest implementation.
+The integrated ISO was tested against those private devices; details and
+remaining limits are recorded in verification.ztext and the verification tree.
+Historical VBoxManage container conversions and exact RAW roundtrips remain
+private evidence. They do not make a VDI a current deliverable or establish
+native VirtualBox guest execution, which was unavailable in this workspace.
+Fixture scripts describe reproducible tests; generated IMG/VDI files are
+excluded from the current source distribution. No existing user disk is
+deleted or replaced by this distribution change.

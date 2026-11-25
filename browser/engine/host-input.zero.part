@@ -1,0 +1,66 @@
+# Native document preview front end. HTML is external input, never host code.
+# Owned ZTEXT001 may wrap the same HTML. All output files are exclusive creates.
+:hostalloc[4194304] -> @web.
+? @web == 0 [ !exit[71]. ]
+0 -> @v0. ?? @v0 < 4194304 [ !store64[@web+@v0|0]. @v0+8 -> @v0. ]
+!store64[@web|@web+1507328]. !store64[@web+40|800]. !store64[@web+48|600].
+1 -> @v0. 0 -> @v1.
+? :argcount[] == 1 [
+ :argument[1] -> @v1.
+ ? :load8[@v1] == 45 [ ? :load8[@v1+1] == 45 [ 0 -> @v0. ] ]
+] ~ [
+ 0 -> @v0.
+ ? (:argcount[] == 2)+(:argcount[] == 3) [
+  :argument[1] -> @v2. 2 -> @v3.
+  ?? @v3 <= 4 [
+   "--render" -> @v4. ? @v3 == 3 [ "--inspect" -> @v4. ] ? @v3 == 4 [ "--check" -> @v4. ]
+   0 -> @v5. 1 -> @v6.
+   ?? :load8[@v4+@v5]*@v6 [ ? :load8[@v2+@v5] != :load8[@v4+@v5] [ 0 -> @v6. ] ~ [ @v5+1 -> @v5. ] ]
+   ? @v6 [ ? :load8[@v2+@v5] == 0 [ @v3 -> @v0. ] ]
+   @v3+1 -> @v3.
+  ] :argument[2] -> @v1.
+ ]
+]
+? (@v0 == 0)+((@v0 == 2)*(:argcount[] != 3))+((@v0 >= 3)*(:argcount[] != 2)) [
+ "Usage: zero-web HTML_OR_ZTEXT | --render INPUT NEW.zpix | --inspect INPUT | --check INPUT\n" -> @v0.
+ 0 -> @v1. ?? :load8[@v0+@v1] [ !put[:load8[@v0+@v1]]. @v1+1 -> @v1. ] !exit[64].
+]
+!store64[@web+64|@v1]. !store64[@web+72|@v0].
+? @v0 == 2 [ !store64[@web+112|:argument[3]]. ]
+:fileopen[@v1|0] -> @v2.
+? @v2 == -1 [ !exit[66]. ]
+:filesize[@v2] -> @v3. 0 -> @v4. 0 -> @v6.
+? @v3 > 65568 [ 65 -> @v6. ]
+?? (@v4 < @v3)*(@v6 == 0) [
+ :fileread[@v2|@web+1507328+@v4|@v3-@v4] -> @v5.
+ ? (@v5 == 0)+(@v5 > @v3-@v4) [ 74 -> @v6. ] ~ [ @v4+@v5 -> @v4. ]
+]
+? @v6 == 0 [
+ ? (:fileread[@v2|@web+1576960|1] != 0)+(:filesize[@v2] != @v3) [ 74 -> @v6. ]
+]
+? :fileclose[@v2] != 0 [ 74 -> @v6. ]
+? @v6 [ !exit[@v6]. ]
+!store64[@web+8|@v3].
+? @v3 >= 8 [
+ ? :load64[@web+1507328] == 0x313030545845545a [
+  ? @v3 < 32 [ !exit[65]. ]
+  @web+1507328 -> @v0. 8 -> @v1. 0 -> @v2. 0 -> @v4.
+  ?? @v1 < 24 [
+   :load8[@v0+@v1] -> @v5. 99 -> @v6.
+   ? (@v5 >= 48)*(@v5 <= 57) [ @v5-48 -> @v6. ]
+   ? (@v5 >= 97)*(@v5 <= 102) [ @v5-87 -> @v6. ]
+   ? @v6 > 15 [ !exit[65]. ]
+   ? @v1 < 16 [ @v2*16+@v6 -> @v2. ] ~ [ @v4*16+@v6 -> @v4. ] @v1+1 -> @v1.
+  ]
+  ?? @v1 < 31 [ ? :load8[@v0+@v1] != 48 [ !exit[65]. ] @v1+1 -> @v1. ]
+  ? (:load8[@v0+31] != 10)+(@v2+32 != @v3) [ !exit[65]. ]
+  2166136261 -> @v5. 32 -> @v1.
+  ?? @v1 < @v3 [
+   ? :load8[@v0+@v1] == 0 [ !exit[65]. ]
+   :bitand[:bitxor[@v5|:load8[@v0+@v1]]*16777619|0xffffffff] -> @v5. @v1+1 -> @v1.
+  ]
+  ? @v5 != @v4 [ !exit[65]. ]
+  !store64[@web|@v0+32]. !store64[@web+8|@v2].
+ ]
+]
+? :load64[@web+8] > 65536 [ !exit[65]. ]

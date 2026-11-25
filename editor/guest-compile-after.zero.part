@@ -1,0 +1,11 @@
+# Place immediately after the same shared compiler-command block.
+? @boot_information*(@current == 760)*(:load64[@console+2416] == 3) [
+ :load64[@console+2400]+163840 -> @c5.
+ 0 -> @i.
+ ? @message [
+  ?? (:load8[@message+@i] != 0)*(@i < 1023) [ !store8[@c5+1024+@i|:load8[@message+@i]]. @i+1 -> @i. ]
+ ]
+ !store8[@c5+1024+@i|0]. !store64[@c5+104|@i].
+ !store64[@c5+64|8]. ? @state == 12 [ !store64[@c5+64|7]. ]
+ !store64[@c5+56|1]. 10 -> @state. 0 -> @message. 0 -> @operation.
+]

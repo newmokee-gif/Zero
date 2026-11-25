@@ -1,0 +1,38 @@
+ZTEXT001000007b5f44e113b0000000
+NATIVE ZERO PICTURE COMMAND
+
+tools/picture.zero is the original Zero implementation for Linux x86-64 and
+Windows x64. It invokes no process, external image codec or language runtime.
+
+  zero-picture make INPUT.ppm NEW.zpix
+  zero-picture verify FILE.zpix
+  zero-picture read FILE.zpix NEW.ppm
+  zero-picture raw FILE.zpix NEW.rgb
+
+The P6 PPM import/export and raw RGB output are explicit interoperability
+operations. Project image assets use our own .zpix container. The native
+command does not open a window and is not a desktop image viewer.
+
+P6 import requires decimal dimensions within 1..3840 by 1..2160, maxval 255,
+three bytes per pixel and an exact raster length. Comments and whitespace are
+accepted between header tokens. The final raster separator is one whitespace
+byte or CRLF; an initial LF pixel after a single CR separator is preserved by
+checking the exact expected raster size. Extra frames, trailing bytes, other
+PPM encodings, 16-bit channels and incomplete RGB rasters are rejected.
+
+Validation finishes before any output path is opened. Existing paths are
+refused. New outputs are written completely, flushed and closed; a failed
+write/flush/close removes only the newly created partial file. Input sources
+are never changed. File flushing does not promise directory-metadata durability.
+
+The native command owns 67112960 bytes of workspace. It reads at most 32 MiB,
+checks exact file size and premature EOF, and rejects a detected size change.
+Do not modify an input concurrently; same-size edits are not an atomic snapshot.
+Format bounds and reusable decoder contract are specified in media/ZPIX.ztext.
+
+To recompose the shared decoder using only our own native Zero tool:
+  zero-integrate PROJECT_DIRECTORY NEW_PICTURE.zero --picture
+  zero-integrate PROJECT_DIRECTORY NEW_CHECK.zero --picture-check
+
+The original Zero regression executable is zero-picture-check. The native
+builder emits Linux/Windows command and regression executables together.

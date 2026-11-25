@@ -1,0 +1,75 @@
+ZTEXT001000011e76f762c7e0000000
+ZERO OS development plan
+
+This is a plan, not a list of completed features. A feature is complete only
+when its source is integrated, the system builds, and relevant tests pass.
+All guest implementation and the compiler remain original Zero code.
+External specifications describe compatibility formats, not code to copy.
+
+Established storage foundation
+1. Bounded, validated read/create/update/delete for ext4, NTFS and Btrfs.
+2. Independent volume roots A:| through Z:|, GO and disk inventory.
+3. Partition discovery with strict bounds, integrity checks and no writes.
+4. BIOS and UEFI boot of the larger kernel on x86-32 and x86-64.
+5. Cross-volume isolation, persistent-write and filesystem-integrity tests.
+
+Next storage work
+6. Directories, GO into directories, per-volume current directories.
+7. Binary files and streaming reads/writes beyond the current400-byte limit.
+8. Rename, copy, move, file information and available-space reporting.
+9. Larger ext4 profiles, journal replay and checksummed metadata support.
+10. NTFS cluster allocation, nonresident data and directory index splitting.
+11. Larger Btrfs trees, snapshots, data checksums and further chunk profiles.
+12. Recovery tools, transaction fault injection and power-loss tests.
+13. Explicit disk/partition creation tools with preview of affected sectors.
+14. Persistent volume identifiers and saved letter assignments.
+15. AHCI, NVMe and USB storage, followed by removable-device handling.
+
+Language and compiler
+Priority: Zero capabilities and reusable system functions; Ezero convenience.
+16. Named Zero procedures, structured records and explicit module interfaces.
+17. Source-position diagnostics and readable compile errors, especially in
+    the beginner Ezero workflow; multiline editing and file-based execution.
+18. Persistent source/project compilation inside Zero OS. Native Zero/Ezero
+    compiler execution via memory streams is implemented; file/process APIs
+    and protected application execution remain further work.
+19. In-system editor, reproducible builds and documented bootstrap provenance.
+20. Allocation bounds checking and improved runtime fault reports.
+
+Kernel and applications
+21. Interrupt-driven timer/input and preemptive scheduling.
+22. Protected user processes, virtual memory, exceptions and process cleanup.
+23. Executable loading, arguments, exit statuses and task control.
+24. Synchronization primitives, asynchronous disk queues and later multicore.
+25. Mouse input, arbitrary GUI applications, text editing, selectable fonts
+    and clipboard. Keyboard terminal windows are implemented in0.8.0.
+26. Double buffering and a retained graphics API for smooth animation.
+27. Original image decoder, audio mixer and basic media applications.
+28. Clock/calendar, power management and clean shutdown/restart.
+29. Broader network adapters, physical WiFi drivers, TLS and richer protocols.
+    PCnet automatic DHCP, DNS and bounded TCP/HTTP are implemented.
+30. Users, permissions, application capabilities and update verification.
+
+Acceptance rules
+Test ordinary use, malformed input, resource exhaustion and restart behavior.
+Filesystem writes additionally require independent format-integrity checks.
+Keep tests on private image copies and preserve existing user data disks.
+Reject unsupported features explicitly instead of guessing on disk formats.
+Record tested VM/firmware/CPU combinations; do not imply untested hardware.
+Revisit this ordering as prerequisites and actual failures become known.
+
+Current0.11 follow-through
+Implemented: native Zero/Ezero host file/argument/memory APIs, standalone
+compiler CLIs, keyboard application menu/system/storage/network, dedicated
+host-directory preparation, original SHA256 and local staged-release rollback.
+Added: UEFI x64 sibling-ISO boot on firmware-readable volumes, v2 deployment,
+Zero filesync/hostwait, local periodic update checking and non-destructive
+recovery into a new store, Ezero lines/join text conveniences.
+Still required for true Wubi: early NTFS/ext4/Btrfs host filesystem loading,
+host-file-backed block device, boot-menu registration and transactional rollback.
+Still required for rolling automatic updates: installed A/B boot state,
+verified startup selection/fallback, signed release manifests/trusted keys,
+configured authenticated transport, startup scheduling and durable directory
+metadata publication. Native file flushing and process-local waits now exist.
+Physical WiFi connection still needs original chipset drivers and security.
+These are unfinished implementations, not advertised completed features.

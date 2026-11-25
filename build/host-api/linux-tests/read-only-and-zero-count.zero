@@ -1,0 +1,7 @@
+
+:reserve[16] => @b. :fileopen["file" | 0] => @h.
+? @h == -1 [ !exit[1]. ]
+? :fileread[@h | 0 | 0] != 0 [ !exit[2]. ]
+? :filewrite[@h | @b | 1] != -1 [ !exit[3]. ]
+? :fileread[@h | @b | 16] != 3 [ !exit[4]. ]
+? :fileclose[@h] != 0 [ !exit[5]. ] !exit[0].

@@ -1,0 +1,45 @@
+ZTEXT001000008e1490fa5be0000000
+IA32 cooperative-thread verification
+Date: 2026-11-15 UTC
+
+Candidate: build/selfhost-core-threads-v2-stage2
+SHA256: 3f9da290f0afc54da61c02297ca9a385b70a49da45fc5094688f966904ad98c6
+Extension: selfhost/ia32-thread-tables.zero.part
+SHA256: 6abdc079517149763db2363ee1a80185f40c63e658a34487db998b224efa3a61
+Templates: prologue53, fork466, switch579 bytes.
+Fork publishes context version1 only after copying header, locals and operands.
+
+Positive source: review-tests/threads/raw.zero
+Source SHA256: 307388dbb083647b68f8f1d3464a434e34356995c751fee90e29b03a8db78f74
+Raw32 image:11937 bytes
+Raw32 SHA256: be54c469b93dc13dc460f075857d33285f8e6ec4e13dbd7cc2d892eb01b3231d
+Observed exact output: THREADS OK followed by newline.
+QEMU exit status1 is the requested ISA debug-exit value0.
+Checks include two workers with128 rounds each, nested-expression fork,
+copied full-u64 locals, separate native stacks and allocator cursors,
+shared counters, stack canaries, and arg0/arg1 preservation.
+
+Eight negative fixtures from review-tests/threads/raw-invalid/ all pass:
+misaligned stack, misaligned context, partially overlapping contexts,
+same context, undersized stack, overlapping stack/context, uninitialized
+target, and high/wrapping pointer. Each VM's first exception is vector6
+(#UD) at an emitted guard. QEMU exits0 after the subsequent triple fault;
+no debug-exit99 or timeout is counted as success. See guards.tsv and traces.
+
+Existing full-u64 IA32 regression also passes exact:
+ABCDEFGHIJKLMN0123OP followed by newline.
+Its harness is review-tests/selfhost-targets/run-ia32-vm.sh.
+
+The same thread source compiles as EFI32 to13312 bytes. Its first11937
+.text bytes are identical to the tested raw32 image. This verifies backend
+encoding parity; this standalone fixture was not booted through EFI firmware.
+
+VM: QEMU TCG pc,128MiB, CPU qemu64,-lm,-pae; long mode and PAE disabled.
+SeaBIOS boots a disposable copy of build/zero.iso with only its128KiB
+kernel32 slot at LBA104 patched. No persistent data disk is attached.
+Debug console port0xe9; ISA debug-exit port0xf4.
+Negative runs use QEMU -d int to record the actual invalid-opcode exception.
+
+All executable test programs are Zero. Existing Zero compiles the fixtures.
+No assembler, linker or foreign compiler was invoked.
+

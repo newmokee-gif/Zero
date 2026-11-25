@@ -1,0 +1,12 @@
+host() == 0 => when [
+ Host files are unavailable here => show
+] ~ [
+ arguments() => paths
+ size(paths) == 2 => when [
+  readfile(paths[1]) => content
+  writefile(paths[2] | content) => written
+  Saved written bytes => show
+ ] ~ [
+  Supply source and new destination filenames => show
+ ]
+]

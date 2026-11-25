@@ -1,0 +1,7 @@
+ZTEXT0010000018b293cb0410000000
+26 behavioral fixtures passed.
+15 screens rendered by original Zero at 1920x1080.
+All fixtures enforce secret-tail zeroing, close erasure, and memory guards.
+Simulation backend: no radio, firmware, packets, or actual connection.
+fixture.zero sha256=5c2f1eac27d772efaec3729d8aa92d84d8840af4f362a515414429eca2859890
+compiler sha256=7a24c5e3d23bbeb6df6b25a30f99efe26e82aa9f9c835d4aba45000a61d75cb6

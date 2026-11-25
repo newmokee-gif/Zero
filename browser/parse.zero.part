@@ -1,0 +1,36 @@
+# A separately compiled original Zero HTML reader keeps kernel code bounded.
+:load64[@boot_information+128] -> @c1. :load64[@boot_information+144] -> @c2.
+1 -> @valid. 339968 -> @k. 6 -> @j.
+? :load64[@boot_information+104] == 32 [ 819200 -> @k. 7 -> @j. ]
+? (@c1 == 0)+(@c2 == 0)+(:load64[@boot_information+136] != 1048576)+(:load64[@boot_information+152] != 8388608) [ 0 -> @valid. ]
+? @valid [
+ ? (:load64[@c1] != 0x31304c444e42525a)+(:load64[@c1+24] != 8) [ 0 -> @valid. ]
+ @c1+128+@j*32 -> @pointer. @c1+@k -> @c3.
+ ? (:load64[@pointer] != @k)+(:load64[@pointer+24] != 4)+(:load64[@pointer+16] != :load64[@boot_information+104]) [ 0 -> @valid. ]
+ ? (:load64[@c3] != 0x315050414f52455a)+(:load64[@c3+8] != :load64[@boot_information+104])+(:load64[@c3+16] <= 64)+(:load64[@c3+16] > 143360)+(:load64[@c3+16] != :load64[@pointer+8])+(:load64[@c3+24] != 64) [ 0 -> @valid. ]
+ ? (:load64[@c3+32] != 4198400)+(:load64[@c3+40] != 1)+(:load64[@c3+48] != 0)+(:load64[@c3+56] != 0) [ 0 -> @valid. ]
+]
+? @valid [
+ 0 -> @i. ?? @i < 192 [ !store64[@c2+@i|0]. @i+8 -> @i. ]
+ !store64[@c2|1]. !store64[@c2+8|@c2+8388608].
+ !store64[@c2+168|@c2+2097152]. !store64[@c2+176|6291456].
+ !store64[@c2+16|:load64[@c0+696]]. !store64[@c2+24|:load64[@c0+680]].
+ !store64[@c2+40|@c5+8192]. !store64[@c2+48|49344].
+ !store64[@c2+64|1]. !store64[@c2+72|"zero-browser"].
+ ? :load64[@c0+704] == 2 [ !store64[@c2+64|2]. !store64[@c2+80|"--plain"]. ]
+ :call[@c3+64|@c2|0|0|0|0] -> @status.
+ ? (@status != 0)+(:load64[@c2+88] != 0)+(:load64[@c2+56] < 16576)+(:load64[@c2+56] > 49344) [ 0 -> @valid. ]
+ ? @valid [
+  @c5+8192 -> @c3.
+  ? (:load64[@c3] != 0x313030574f52425a)+(:load64[@c3+8] != 1)+(:load64[@c3+16] > 32768)+(:load64[@c3+24] > 32)+(:load64[@c3+40] != 0)+(:load64[@c3+48] != 78) [ 0 -> @valid. ]
+  ? :load64[@c2+56] != 16576+:load64[@c3+16] [ 0 -> @valid. ]
+ ]
+]
+? @valid [
+ !store64[@c5+8|3]. !store64[@c5+16|0]. !store64[@c5+32|1]. !store64[@c5+96|1].
+ !store8[@c5+8192+16576+:load64[@c5+8192+16]|0].
+] ~ [
+ !store64[@c5+8|4]. "This page is invalid, too large, or the HTML reader is unavailable." -> @text.
+ 0 -> @i. ?? :load8[@text+@i] [ !store8[@c5+640+@i|:load8[@text+@i]]. @i+1 -> @i. ] !store8[@c5+640+@i|0].
+]
+!store64[@c5+56|1].

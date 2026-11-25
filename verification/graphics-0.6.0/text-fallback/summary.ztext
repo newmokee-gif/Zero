@@ -1,0 +1,25 @@
+ZTEXT001000003ce2b9334bd0000000
+PASS command: info
+PASS command: tasks
+PASS command: tasks
+PASS compute progress: 4286 -> 19032
+PASS command: pixel 0 0 1 2 3
+PASS command: portrait
+PASS command: pause 0
+PASS command: pause 2
+PASS command: tasks
+PASS command: tasks
+PASS command: resume 2
+PASS command: tasks
+PASS paused counter stable34221; resumed37721
+PASS command: format ZERO
+PASS command: create review
+PASS command: save review Persisted in text mode
+PASS command: read review
+PASS command: watch
+PASS command: read review
+PASS command: pause 0
+PASS legacy ISA VGA text fallback, IA32 without long mode/PAE; terminal, tasks, pause/resume, graceful pixel absence, and persistent private-disk file verified across reboot.
+VM stopped; private artifacts/tmp/zero-text-fallback.lk7MWz
+0911d7448ecf8890671676f414d8ad327d8ee303409a833ee77540be7fb62f92  /tmp/zero-text-fallback.lk7MWz/boot.iso
+3447199bdda088647516cf1a68e1a973aa9fb23ce25e5854db7cf297edea5e45  /tmp/zero-text-fallback.lk7MWz/private-data.img

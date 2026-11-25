@@ -1,0 +1,318 @@
+ZTEXT00100004ca82be4bafc0000000
+Zero - shared language and target contract
+
+SYNTAX.ztext defines the data-first source grammar used by all current runtime
+sources. compiler.zero is the unified compiler written in Zero. It emits
+x86-64 Linux ELF, raw64 and PE32+ EFI code, raw32 and PE32 IA32 EFI code
+while preserving full u64 values, a restricted real-mode u32 subset for
+bios.zero, native Windows x64 console PE files, and ZEROAPP1 guest applications
+for Zero OS on x64/IA32. It emits native code directly without an assembler
+or linker. Ezero is a separate high-level language implemented on this Zero
+foundation; its inferred values/phrases/functions do not change Zero grammar.
+See X86.ztext and REAL.ztext for the differing target/entry contracts.
+
+Source and statements
+Identifiers are case-sensitive ASCII names, at most 31 bytes; references and
+binding targets use @name. Comments start with # and continue to newline.
+Whitespace is space/tab/CR/LF. Integers use decimal or 0x hexadecimal syntax.
+Strings are NUL-terminated ASCII, at most 4095 data bytes, with escapes
+\n \r \t \\ \". String values are pointers to read-only embedded bytes.
+
+    10 => @name.
+    @name + 1 -> @name.
+    ? @name == 11 [ !put[65]. ] ~ [ !put[66]. ]
+    ?? @name < 20 [ @name + 1 -> @name. ]
+
+=> declares a unique top-level variable after evaluating its initializer.
+-> assigns an existing variable. Declarations inside blocks are rejected.
+Names persist to program end and cannot shadow another name. All operation
+names are reserved across targets, even where the operation is unavailable;
+retired keywords are also reserved. ? is a conditional
+and ?? is a loop; the optional ~ block is the conditional's alternative.
+Control blocks use square brackets and do not take a trailing period.
+
+Expressions
+From high to low precedence: grouping/literals/@references/:operations,
+unary -, multiplication *, left-associative +/-, and one unsigned comparison
+(== != < <= > >=). Zero is false; any other value is true. Comparisons return
+0 or 1. The x86-64 and protected-mode IA32 compilers use u64 values with
+modulo 2^64 arithmetic; the real-mode subset uses u32 and modulo 2^32.
+There is no signed coercion or division. Literal overflow for a target is
+rejected. There are no user-defined functions, named types, imports or inline
+assembly. Parentheses group arithmetic; operation arguments use [ ] and |.
+
+:bitxor[@left | @right] and :bitand[@left | @right] operate on all value bits.
+:shr[@value | @count] performs an unsigned logical right shift. Counts>=64
+return 0 on x64/IA32, and counts>=32 return 0 in real mode. IA32 preserves full
+u64 count semantics, so any nonzero high count word returns 0. These use the
+normal operation brackets; no new infix punctuation or precedence is added.
+
+General value operations
+:load8[@address], :load16[@address], :load32[@address], :load64[@address]
+read the indicated width; smaller loads zero-extend to the target value width.
+:reserve[@size] allocates from the target's fixed arena with 16-byte alignment.
+Allocations are not automatically zero-filled or freed. Overflow/exhaustion
+traps with UD2. There are no general pointer bounds checks or exception
+recovery; source must supply valid owned/mapped addresses.
+The raw/UEFI x86-64/IA32 arena is 64 KiB. Real mode has an 8 KiB low-memory
+arena and does not support load64/store64. Hosted arena size is documented
+below; it is independent of the kernel and firmware arena contracts.
+
+Linux x86-64 ELF targets
+build/zero < source > executable
+build/zero --host < source > executable
+
+Both emit native ELF64 directly with a 4 MiB allocation arena. Earlier hosted
+versions used 64 KiB and 1 MiB; raw/UEFI arena sizes are unchanged.
+Default mode disallows memory stores;
+--host permits stores in owned process memory for image-building tools.
+!put[@value]. writes one low byte, retries EINTR and exits 74 on other errors.
+!exit[@value]. exits using the low 8 bits of its argument.
+:read[@address | @count] and :write[@address | @count] perform one Linux
+stdin/stdout syscall, returning a byte count or negative errno encoded in u64.
+Callers handle partial I/O, EOF and errors. read writes into the supplied
+buffer. Falling off hosted source exits0. Host SIGPIPE behavior applies.
+:pread[@fd | @buffer | @count | @offset] and :pwrite with the same arguments
+perform one positioned Linux I/O call using a full 64-bit offset. They do not
+change the descriptor's current position. :fsync[@fd] flushes the descriptor.
+Each returns the direct u64 representation of the syscall result, including
+negative errno; the caller handles EINTR, short transfers and failures.
+Descriptors are supplied by the host invocation; no file-opening API is added.
+A generated executable may need chmod +x. The IA32 compiler has no hosted
+ELF target and does not accept these Linux operations.
+
+Windows x64 console target
+build/zero --windows < source > program.exe
+
+This emits an original native PE64 console application with a 4 MiB Zero arena
+and a committed 16 MiB Windows stack. It directly imports KERNEL32, with no CRT,
+Linux dependency, assembler or foreign-language runtime. read/write use binary
+standard handles; counts above 0x7fffffff return unsigned -22, EOF returns 0,
+other I/O errors return unsigned -5, and short transfers remain visible.
+put exits 74 on a failed single-byte write; exit uses its low 8 status bits.
+Memory operations, bit operations and cooperative fork/switch are supported;
+ports, BIOS/UEFI operations and Unix pread/pwrite/fsync are rejected.
+Native startup converts GetCommandLineW to UTF-8 and parses at most 4095 bytes
+and 63 user arguments (excluding the executable). Its own parser handles
+spaces/tabs, quote grouping, empty arguments and backslashes preceding quotes.
+Malformed quoting or an exceeded bound exits 64. See
+portability/host/windows-README.ztext for precise host behavior and test scope.
+Tests use Wine; native Microsoft Windows execution remains unverified.
+
+Zero OS application targets
+build/zero --app64 < source > program.zeroapp
+build/zero --app32 < source > program.zeroapp
+
+Both produce native position-independent ZEROAPP1 images with a 64-byte header,
+full u64 language values and a 4 MiB owned application arena. They use bounded
+memory input/output streams supplied by Zero OS instead of Linux/Windows or
+firmware services. read returns available input bytes and then 0 at EOF; write
+returns a short count or unsigned -28 when full; put exits 74 when full.
+exit or fallthrough returns to the caller. Memory, bit operations and arg0/arg1
+are available; ports, firmware, foreign calls, fork/switch and positioned file
+I/O are rejected. The caller must validate the image, architecture, context,
+stack region and buffer ownership. There is no process isolation or preemption;
+unsafe Zero stores or non-yielding programs can affect the shared kernel.
+The precise 192-byte context, ZEROAPP1 header and entry/return contracts are in
+portability/guest/ABI.ztext. Host ELF/PE executables are not guest app images.
+
+Native host services (Linux ELF and Windows PE)
+All operations below use ':' and return a value, including file mutations.
+:host[] returns 1 for Linux, 2 for Windows and 0 on every guest/firmware target.
+:argcount[] counts user arguments, excluding the executable name.
+:argument[index] uses one-based user indices and returns a persistent pointer
+to a NUL-terminated argument, or 0 for an invalid index. Windows converts wide
+arguments to UTF-8; Linux preserves the supplied bytes. The original process
+frame is retained across cooperative fork/switch, so child argument access
+remains valid. :program[] returns the absolute executable path or 0, rather
+than trusting argv0. Cache it: Linux consumes 4096 arena bytes per successful
+call; Windows supplies a stable startup buffer.
+
+:fileopen[path | mode] returns an opaque handle or unsigned -1:
+  0 read existing
+  1 exclusive create for writing
+  2 create or truncate for writing
+  3 read/write existing
+  4 exclusive create executable output for writing
+Linux new-file modes 1/2 use 0600 and mode 4 uses 0700, reduced by umask; truncating
+an existing file preserves its permissions. Windows uses normal file ACLs.
+Paths are nonzero NUL-terminated strings of at most 4095 bytes. Linux passes
+filesystem bytes directly; Windows validates UTF-8 and uses wide file APIs.
+Opening requires a regular file and rejects a final symlink/reparse point.
+Type validation precedes mode 2 truncation; Linux FIFO probes do not block.
+Ancestor links still follow normal OS resolution; this is not a sandbox.
+
+:fileread[handle | buffer | count] returns bytes read, 0 at EOF, or unsigned -1.
+:filewrite[handle | buffer | count] returns bytes written or unsigned -1.
+Short transfers remain visible; callers loop to complete a whole file.
+Linux retries interrupted file reads/writes. Windows count is at most 0x7fffffff.
+:filesize[handle] returns bytes without changing the offset, or unsigned -1.
+:fileclose[handle] returns 0 or unsigned -1; Linux does not retry failed close.
+:filesync[handle] requests synchronization of the opened file using Linux
+fsync (with EINTR retry) or Windows FlushFileBuffers, returning0 or unsigned-1.
+It neither closes the handle nor changes its offset. Portable callers use an
+owned writable regular-file handle. This requests a file flush, not directory
+or rename durability, an atomic transaction, or proof of power-loss safety.
+:filedelete[path] removes a file; :makedir[path] creates one directory;
+:dirempty[path] removes only an empty directory. :filemove[source | destination]
+atomically renames on the same filesystem without replacing an existing
+entry or falling back to copy/delete. These mutations return 0 or unsigned -1.
+Errors are normalized: -1 alone cannot distinguish missing from inaccessible.
+
+:hostwait[milliseconds] suspends the current native thread for an interval in
+0..86400000 inclusive, returning0. Larger unsigned values immediately return
+unsigned-1. Linux retries interrupted nanosleep with the remaining timespec;
+other native failures return unsigned-1. Windows uses Sleep. Scheduling may
+lengthen the delay. Zero is allowed and may yield to the native scheduler.
+This is not a wall clock, a deadline guarantee, a background service, or a
+switch between Zero cooperative tasks.
+
+:hostalloc[bytes] obtains an OS allocation with read/write protection, returning
+a page-aligned pointer or 0. :hostprotect[address | bytes | execute] selects
+read/execute when execute=1 or read/write when execute=0, returning0 or
+unsigned -1; other execute values fail. It never requests writable executable
+pages. :hostfree[address | bytes] releases an owned allocation, returning0 or
+unsigned -1. Caller ownership, valid ranges and lifetimes are explicit; these
+operations add no pointer tracking or process isolation. Windows frees the
+complete original allocation; Linux uses the supplied unmap length.
+The existing :call uses the Microsoft x64 ABI in --host/--windows, suitable
+for Zero's own application entry contract. It is not an implicit bridge to
+Linux functions using a different calling convention.
+
+--app64/--app32 accept these 18 operations for a shared Ezero runtime. host,
+argcount, argument, program and hostalloc return 0; file operations,
+hostprotect, hostfree and hostwait return unsigned -1 after evaluating operands.
+They perform no host filesystem access or sleeping. Raw/EFI/real accept only host[] from
+this extension and reject its other operations. Native call remains rejected
+by guest applications. See portability/host/ABI.ztext for IDs and emission ABI.
+
+Memory and port effects
+!store8[@address | @value]. writes the low 8 bits. !store16, !store32 and
+!store64 use the same argument form and their corresponding widths.
+:in8[@port] / :in16[@port] / :in32[@port] read zero-extended port values.
+!out8[@port | @value]. / !out16[@port | @value]. / !out32[@port | @value].
+use the low 16 port bits and the low 8/16/32 value bits respectively. All widths
+work on raw/UEFI x64/IA32 and real mode. Linux, Windows and ZEROAPP1
+application targets reject hardware port operations.
+See selfhost/port32.ztext for the dword extension and native PCI probe evidence.
+
+Raw and UEFI x86-64 targets
+build/zero --raw < source > kernel.bin
+build/zero --efi < source > BOOTX64.EFI
+
+:arg0[] and :arg1[] return initial RCX/RDX. UEFI supplies the image handle
+and system-table pointer; the raw kernel receives our handoff in arg0.
+!disable. disables maskable interrupts. !halt. disables interrupts and loops
+in HLT. :call[@fn | @a1 | @a2 | @a3 | @a4 | @a5] evaluates left-to-right and
+uses the Microsoft x64 ABI, with stack alignment, shadow space and a fifth
+stack argument. The callee must follow that ABI; the result is RAX.
+:call7[@fn | @a1 | @a2 | @a3 | @a4 | @a5 | @a6 | @a7] extends this
+firmware call to seven arguments on --raw and --efi. The first four use
+RCX/RDX/R8/R9; the last three use stack slots after 32-byte shadow space.
+Both calls align the stack and preserve the caller operand stack and Zero
+arena state, including when calls are nested inside expressions. The callee
+must preserve Microsoft x64 nonvolatile registers. call7 remains available
+on IA32 raw/EFI with its existing IA32 ABI; other targets reject call7.
+!enter[@entry | @arg | @stack_top]. disables interrupts, installs an aligned
+stack, puts arg in RCX and jumps to entry. It never returns.
+Falling off raw/EFI source halts. Hosted put/exit/read/write/pread/pwrite/fsync
+are rejected.
+Ports, arg0/arg1, enter, disable and halt are unavailable in Linux targets.
+The explicit Microsoft-ABI call operation is also supported by --host and
+--windows for owned native code; default ELF continues to reject call.
+
+Real-mode BIOS block transfer
+:biosmove[descriptor_table | word_count] invokes BIOS INT15/AH87 only on the
+--real target. The caller owns a 48-byte descriptor table at a physical address
+<=0xffd0; word_count is 1..32768. Invalid arguments return 0xffffffff before a
+firmware call. Success returns 0; CF failure returns BIOS AH or 256 if AH is 0.
+The shim preserves general/segment registers and EFLAGS except the EAX result,
+then clears DF. The caller supplies all descriptors and usable-memory policy,
+handles firmware failure, and reenables A20 before direct high-memory access.
+See portability/guest/biosmove/README.ztext for exact table fields and verified
+4/8/32MiB copies. Other BIOS implementations can have 24-bit limitations; this
+is not a universal 4 GiB transfer guarantee. Every non-real target rejects it.
+
+Protected-mode IA32 targets
+build/zero --raw32 < source > kernel32.bin
+build/zero --efi32 < source > BOOTIA32.EFI
+
+Values remain full u64, represented by paired 32-bit registers. Pointer values
+must fit 32 bits. Entry args and firmware calls use an explicit IA32 cdecl ABI.
+:call supplies five 32-bit stack words; the additional :call7 operation supplies
+seven words, including split by-value firmware UINT64 parameters when needed.
+Firmware return EAX is zero-extended, so EFI_STATUS errors have bit 31 set.
+These are explicit ABI operations, not an implicit reduction of language values.
+See X86.ztext and UEFI32.ztext before using them. No PAE or long mode is required
+by generated IA32 kernel code.
+
+Cooperative native continuations
+:fork[@context | @stack_base | @stack_bytes] creates a suspended child.
+The parent receives 0. When !switch[@from_context | @to_context]. first
+activates the child, the same fork expression receives 1 in that child.
+switch saves the current continuation and restores an initialized one.
+These operations exist in Linux/Windows hosted x64, raw/UEFI x64 and
+raw/UEFI IA32 targets; real mode and ZEROAPP1 application targets reject them.
+All arguments evaluate left-to-right.
+
+A context is 80 bytes aligned to 8, with ten u64 fields: program counter,
+native SP, native BP, arena cursor, arg0, arg1, flags, resume result, arena
+base and version. IA32 clears each high half. Version 1 is published only
+after initialization. Callers must provide owned valid memory; a context
+must not overlap its child stack, and switch needs distinct context records.
+The child stack base is 16-byte aligned and its size at least 81920 bytes.
+Runtime guards check address arithmetic, live-stack room and relevant
+overlaps; detected violations trap with UD2. These are not memory protection.
+
+fork copies the 512-byte variable frame and live expression operands onto
+the child's independent stack. The child has a new private 64 KiB allocation
+arena. Existing pointer values remain unchanged and reference shared memory;
+they are not guessed or relocated. This also applies to a hosted parent with
+a 4 MiB arena. The caller controls when to switch and how to schedule workers.
+There are no implicit timer interrupts, preemption, address-space isolation
+or SMP synchronization. See selfhost/CORE.ztext for the exact native ABI.
+
+Entry, storage and limits
+Raw64 requires long mode/CPL0 and valid mappings. Raw32 requires protected
+mode/CPL0 and flat accessible code/data segments; paging may be disabled.
+Both require at least 80 KiB below the entry stack pointer for the 64 KiB arena,
+64 eight-byte variables, saved entry state and temporary stack. Our loaders
+provide a stack pool containing the main stack and two child-stack regions:
+UEFI allocates 1 MiB. BIOS validates its high-memory pool using E820 records;
+the selected addresses and boot-image slots are loader policy in BIOS.ztext.
+Raw/firmware top-level programs never return. Hosted exit and ZEROAPP1
+return behavior follow their separate target contracts.
+
+Source limit 524288 bytes; token limit 240000; output limit 524288 bytes,
+including executable metadata; 64 variables; 64 nested blocks; 64 expression levels including the
+leaf. Thus 63 nested parentheses plus the leaf reach the expression limit.
+EFI headers/padding/relocations count toward output size. Real-mode output
+has a separate 16 KiB bound described in REAL.ztext.
+
+Errors and implementation boundary
+Compile errors return 1 and emit no stdout. This compiler version does not
+yet print a source diagnostic; callers must check its exit status.
+All source validation finishes before output writing begins. An I/O failure
+can leave partial output.
+Native compiler launchers are themselves Zero and load the original Zero/Ezero
+application images through the host memory services; no shell, Python or
+foreign-language runtime is required by those launchers. The complete boot ISO
+is built in process by the original tools/build.zero.
+The compiler source is entirely Zero and can be built for Linux x86-64,
+Windows x64 or the ZEROAPP1 guest ABI. The Linux Zero-built seed rebuilds
+compiler.zero, with a second generation compared byte for byte. The same
+source and grammar drive all output targets; target choices are explicit.
+Neither the compiler nor generated Zero code passes through an assembler
+or linker in the current build. Compiler
+templates encode language primitives, instructions, entry/firmware ABIs and
+file metadata. Loader, table, device and filesystem policy stays in Zero.
+
+Native GUI interfaces (0.13)
+hostsyscall[number|a1|a2|a3|a4|a5|a6] performs an x86-64 Linux system call;
+hostlibrary[name], hostsymbol[library|name] and
+hostcall12[address|a1|a2|a3|a4|a5|a6|a7|a8|a9|a10|a11|a12] expose documented
+Windows x64 library interfaces. Arguments and results are raw integer/pointer
+values. These are unsafe native interoperability primitives, not a sandbox.
+Opposite-host operations return failure values. Guest and firmware targets
+reject these host-only primitives. The original GUI editor uses them without
+importing a GUI toolkit, foreign compiler or foreign source.

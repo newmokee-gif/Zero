@@ -1,0 +1,32 @@
+? @boot_information * (@current == 740) [
+ :load64[@console + 2400] -> @c0.
+ ? (:load64[@c0 + 392] == :load64[@console + 2464]) * (:load64[@c0 + 400] >= 2) [
+  9 -> @state.
+  ? :load64[@c0 + 400] == 2 [
+   :load64[@c0 + 688] -> @message. :load64[@c0 + 416] -> @c2. 0 -> @i.
+   # Legacy fetch prints a safe ASCII view; decoded browser body remains unchanged.
+   ?? @i < @c2 [
+    :load8[@message + @i] -> @c1.
+    ? ((@c1 >= 32) * (@c1 <= 126) + (@c1 == 9) + (@c1 == 10) + (@c1 == 13)) == 0 [ !store8[@message + @i|63]. ]
+    @i + 1 -> @i.
+   ]
+   !store8[@message + @c2|0].
+  ] ~ [
+   :load64[@c0 + 408] -> @c1.
+   "HTTP request failed.\r\n" -> @message.
+   ? @c1 == 1 [ "Network went offline; automatic reconnection continues.\r\n" -> @message. ]
+   ? @c1 == 2 [ "Invalid HTTP address. Use HOST[:PORT][/PATH]; HTTPS is not supported yet.\r\n" -> @message. ]
+   ? @c1 == 3 [ "DHCP did not provide a DNS server.\r\n" -> @message. ]
+   ? @c1 == 4 [ "No route or ARP reply.\r\n" -> @message. ]
+   ? @c1 == 5 [ "DNS lookup failed.\r\n" -> @message. ]
+   ? @c1 == 6 [ "TCP connection timed out.\r\n" -> @message. ]
+   ? @c1 == 7 [ "TCP connection was reset.\r\n" -> @message. ]
+   ? @c1 == 8 [ "HTTP request timed out.\r\n" -> @message. ]
+   ? @c1 == 9 [ "HTTP response exceeds65535 bytes.\r\n" -> @message. ]
+   ? @c1 == 10 [ "Incomplete or invalid HTTP response.\r\n" -> @message. ]
+   ? @c1 == 12 [ "Unsupported or duplicate HTTP transfer encoding.\r\n" -> @message. ]
+   ? @c1 == 13 [ "Compressed HTTP content is not supported yet.\r\n" -> @message. ]
+   ? @c1 == 15 [ "Interim HTTP responses are not supported yet.\r\n" -> @message. ]
+  ]
+ ]
+]

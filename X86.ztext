@@ -1,0 +1,146 @@
+ZTEXT0010000210682b6f1210000000
+Current original Zero workflow (0.12)
+
+Use the native tools on Linux or their .exe versions on Windows:
+  zero-integrate PROJECT_DIRECTORY NEW_KERNEL.zero
+  zero-build PROJECT_DIRECTORY NEW_OUTPUT_DIRECTORY NEW_KERNEL.zero
+  zero-check PROJECT_DIRECTORY NEW_TEST_DIRECTORY
+All destination paths must be new. The integrator preserves authored sources;
+the builder checks its compiler fixed point and builds the original targets;
+the verifier checks language behavior and host file operations in process.
+See tools/integrate.ztext, tools/build.ztext and checks/README.ztext.
+Read these documents with zero-text read FILE.
+
+The notes below preserve earlier implementation and test history. Any old
+shell/Python runner names, generated artifacts, JSON reports or commands are
+historical references: they were removed from the active project and are not
+current runnable instructions or current-release validation. Native host
+checks do not replace BIOS/UEFI, persistence or physical-hardware testing.
+
+Historical implementation notes
+
+Zero 0.7.0 IA32 target
+
+compiler.zero is written in Zero and runs on Linux x86-64. Its IA32 target
+emits native i386 machine code directly. It uses no assembler, linker,
+foreign compiler backend, guest runtime, OS stub or
+arithmetic library. The protected-mode kernel remains kernel.zero, shared
+with the x86-64 build. Its disk format and u64 generation/checksum semantics
+therefore remain the same on both CPU modes.
+
+Build the compiler and system
+bash build.sh
+
+Targets
+build/zero --raw32 < kernel.zero > build/kernel32.bin
+build/zero --efi32 < loader32.zero > build/BOOTIA32.EFI
+The IA32 target requires an explicit option; the compiler defaults to Linux
+x86-64 ELF. Linux put/exit/read/write/pread/pwrite/fsync operations are not supported in an
+IA32 target. The compiler runs
+on a Linux x86-64 build host; the emitted code runs on an IA32 target.
+
+Grammar and values
+The same current Zero syntax is used: value => @name. declarations, value
+-> @name. assignments, @references, ? condition [ ... ] ~ [ ... ] branches,
+?? condition [ ... ] loops, :operation[arguments separated by |] expressions,
+and !operation[arguments]. effects. Argument-free effects end with a period.
+See LANGUAGE.ztext for the shared grammar. Legacy var/if/while/C-style calls
+and brace/semicolon syntax are not accepted.
+
+Values remain unsigned u64, including on the 32-bit target. Arithmetic wraps
+modulo2^64; comparisons are unsigned and produce0 or1. The backend represents
+a value in EDX:EAX, with EAX holding the low32bits. Addition and subtraction
+propagate carry/borrow, multiplication computes the complete low64bits, and
+comparison examines the high32bits before the low32bits. A condition is true
+if either half is nonzero. There is no implicit conversion to signed values.
+:bitxor[left | right] and :bitand[left | right] combine both32-bit halves.
+:shr[value | count] returns the logical u64 right shift. Counts0..31 use
+cross-word shifting; counts32..63 use the original high word as the low result.
+Counts>=64, including any nonzero high count word, return0. This matches x64
+semantics and does not truncate counts to the hardware's low5 bits.
+
+Memory and I/O
+load8/16/32 zero-extend to u64; load64 reads both little-endian halves.
+store8/16/32 write the low requested bits; store64 writes both halves.
+64-bit accesses are two IA32 operations and are not atomic. The current
+kernel switches cooperatively on one CPU with interrupts disabled, so no
+worker interrupts another between those two operations. This does not supply
+cross-CPU atomicity or SMP synchronization. Memory addresses must fit32bits; a nonzero high half
+traps with UD2. There are no general pointer bounds or exception recovery.
+Port I/O uses the low16 port bits and low8/16 value bits as on x86-64.
+
+reserve uses the same64KiB arena and16-byte alignment. A size with nonzero
+high32bits, rounding overflow, address wrap or arena exhaustion traps with
+UD2. The private frame contains64 eight-byte variable slots, saved entry
+arguments and an arena cursor. Generated code needs at least80KiB below its
+entry stack pointer. Both the BIOS and IA32 UEFI loader provide a larger
+dedicated kernel stack. No SSE, MMX, floating-point, PAE or long mode is
+required by the generated kernel. CPU/platform boot requirements are separate.
+
+Entry and firmware ABI
+Raw32 and EFI32 both use the IA32 C entry layout: a return address at ESP,
+arg0 at ESP+4, arg1 at ESP+8. Initial arguments are32bit values zero-extended
+to Zero u64 and preserved in private frame slots. The raw kernel receives
+its handoff pointer as arg0. These top-level Zero programs never return.
+
+:call[function | a1 | a2 | a3 | a4 | a5] supplies five32bit stack words.
+:call7[function | a1 | a2 | a3 | a4 | a5 | a6 | a7] supplies seven words.
+These are explicit IA32 ABI interfaces: each argument contributes its low
+32bits, not a full source-language u64. The function address must fit32bits.
+Arguments are evaluated left-to-right, put on the target stack in C order,
+and ESP is16-byte aligned immediately before CALL. The callee must preserve
+EBX, ESI, EDI and EBP according to IA32 C ABI; EAX/ECX/EDX are volatile. The
+caller restores its stack and returns EAX zero-extended to u64. Thus an
+EFI_STATUS error has bit31 set, not bit63. Other 64-bit-return C ABIs are not
+implemented by these firmware-call primitives.
+
+UEFI functions with by-value UINT64 arguments need explicit word expansion.
+EFI_FILE_PROTOCOL.Open is called with seven words: This, NewHandle, Path,
+OpenMode low, OpenMode high, Attributes low, Attributes high. call7 handles
+this without hiding file policy in the compiler. SetWatchdogTimer consumes
+five words because its WatchdogCode is UINT64. loader32.zero implements the
+firmware protocol and structure offsets in Zero source.
+
+!enter[entry | arg | stack_top]. disables interrupts, installs an aligned
+stack, provides a halt-return address, arg0=arg and arg1=0, and jumps to the
+entry. All three values must fit32bits. It provides only the architectural
+entry ABI; allocation, display setup and ExitBootServices remain loader code.
+
+Native cooperative threads
+:fork[@context | @stack_base | @stack_bytes] and
+!switch[@from_context | @to_context]. have the same source contract as x64.
+The child copies the complete 512-byte u64 variable frame and live operands,
+receives a fresh 64 KiB arena and resumes with fork result 1; the parent
+receives 0. The private frame header holds arg0, arg1, arena cursor and
+baseline at offsets 0,4,8,12. Full u64 variable values remain intact.
+Context records are 80 bytes, aligned to 8; IA32 writes zero in high halves
+of the native-state fields. Child stacks need 16-byte alignment, at least
+81920 bytes and valid nonoverlapping ownership as detailed in LANGUAGE.ztext.
+Existing pointer values remain shared. These primitives provide stack and
+continuation mechanics, while all scheduling policy is Zero source.
+
+PE32 output
+Machine014c, optional-header size224/magic010b, subsystem10, two sections,
+4096-byte section alignment and512-byte file alignment. Both code and
+embedded literal addresses are position-independent. The relocation table
+contains a valid no-op ABSOLUTE block so firmware can load at another base.
+No import table or linked guest runtime is present. File metadata and code
+remain within the compiler's393216-byte overall output bound; the image
+builder additionally enforces its smaller per-artifact slots.
+
+Verification
+An actual BIOS32 boot under QEMU with long mode and PAE disabled reached the
+shared kernel and mounted the existing ZeroFS disk. A generated regression
+program then passed wide arithmetic, memory, control flow, string and entry
+ABI checks, emitting exactly ABCDEFGHIJKLMN0123OP followed by LF before using
+QEMU's test-only exit port. That port is not part of the production kernel.
+See the release verification report for actual IA32 UEFI integration checks,
+compiler rejection cases, platform limits and exact delivered artifact hashes.
+Independent0.7 tests also passed110 bit/shift assertions under IA32 with long
+mode and PAE disabled; see verification/compiler-fs/values/ia32-vm.
+
+Dword port I/O
+:in32[port] and !out32[port | value]. are available on raw32/EFI32 as well as
+x64 and real mode. Both use the low16 port bits. Input clears EDX after the
+32-bit read, producing the full-u64 zero-extended result; output uses the
+low32 value bits. No PAE or long mode is required. See selfhost/port32.ztext.

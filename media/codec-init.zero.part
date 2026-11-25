@@ -1,0 +1,39 @@
+"Usage: zero-media make RAW NEW.zmedia | verify FILE | info FILE | extract FILE NEW_RAW\n" -> @message.
+? (:host[] != 1)*(:host[] != 2) [ 64 -> @error. ]
+? (:argcount[] < 2)+(:argcount[] > 3) [ 64 -> @error. ]
+? @error == 0 [
+ :argument[1] -> @option. :argument[2] -> @source. 1 -> @phase.
+ ?? @phase <= 4 [
+  "make" -> @literal. ? @phase == 2 [ "verify" -> @literal. ] ? @phase == 3 [ "info" -> @literal. ] ? @phase == 4 [ "extract" -> @literal. ]
+  0 -> @i. 1 -> @same.
+  ?? :load8[@literal+@i]*@same [ ? :load8[@option+@i] != :load8[@literal+@i] [ 0 -> @same. ] ~ [ @i+1 -> @i. ] ]
+  ? @same [ ? :load8[@option+@i] == 0 [ @phase -> @mode. ] ]
+  @phase+1 -> @phase.
+ ]
+ ? (@mode == 0)+(((@mode == 1)+(@mode == 4))*(:argcount[] != 3))+(((@mode == 2)+(@mode == 3))*(:argcount[] != 2)) [ 64 -> @error. ]
+ ? (@mode == 1)+(@mode == 4) [ :argument[3] -> @dest. ]
+]
+? @error == 0 [
+ :fileopen[@source|0] -> @handle. ? @handle == -1 [ 66 -> @error. "Cannot open a regular source file.\n" -> @message. ]
+]
+? @error == 0 [
+ :filesize[@handle] -> @size.
+ ? @mode == 1 [
+  ? (@size < 512)+(@size > 268435456)+(:bitand[@size|511] != 0) [ 65 -> @error. "Raw image must be512-byte aligned, from512bytes to256MiB.\n" -> @message. ]
+ ] ~ [
+  ? (@size < 4608)+(@size > 268439552) [ 65 -> @error. "Zmedia input size is outside supported bounds.\n" -> @message. ]
+ ]
+]
+? @error == 0 [
+ @size+8192+90112 -> @capacity. :hostalloc[@capacity] -> @memory.
+ ? @memory == 0 [ 70 -> @error. "Cannot allocate bounded image workspace.\n" -> @message. ] ~ [
+  @memory -> @zm. @memory+90112 -> @scratch. @memory+94208 -> @buffer. @buffer -> @input.
+  ? @mode == 1 [ @buffer+4096 -> @input. ]
+ ]
+]
+# Exit early before initializing a worker if allocation or arguments failed.
+? @error [
+ ? @handle != -1 [ :fileclose[@handle] -> @status. ]
+ 0 -> @i. ?? :load8[@message+@i] [ !put[:load8[@message+@i]]. @i+1 -> @i. ]
+ !exit[@error].
+]

@@ -1,0 +1,356 @@
+# Original bounded HTML tree worker. ASCII-insensitive tag/attribute names,
+# strict UTF-8, own entity decoding and raw script/style handling.
+# This is a deterministic profile, not HTML5 tree-construction compatibility.
+:fork[@web+1152|@web+1048576|81920] -> @v0.
+? @v0 == 1 [
+ !switch[@web+1152|@web+1024].
+ ?? 1 [
+  ? :load64[@web+16] == 0 [
+   :load64[@web] -> @v0. :load64[@web+8] -> @v1.
+   0 -> @v2. 0 -> @v3. 0 -> @v4. 0 -> @v5. 1 -> @v22.
+   !store64[@web+32|0].
+   ? (@v0 == 0)+(@v1 > 65536)+(@v0+@v1 < @v0) [ !store64[@web+16|65]. ]
+   # Validate all input before touching the node table. Reject literal NUL.
+   0 -> @v7.
+   ?? (@v7 < @v1)*(:load64[@web+16] == 0) [
+    :load8[@v0+@v7] -> @v6. 0 -> @v29.
+    ? @v6 == 0 [ !store64[@web+16|65]. ]
+    ? @v6 >= 128 [
+     ? (@v6 >= 194)*(@v6 <= 223) [ 1 -> @v29. ] ~ [
+      ? (@v6 >= 224)*(@v6 <= 239) [ 2 -> @v29. ] ~ [
+       ? (@v6 >= 240)*(@v6 <= 244) [ 3 -> @v29. ] ~ [ !store64[@web+16|65]. ]
+      ]
+     ]
+    ]
+    ? @v29 >= @v1-@v7 [ !store64[@web+16|65]. ]
+    ? @v29*(:load64[@web+16] == 0) [
+     :load8[@v0+@v7+1] -> @v10.
+     ? ((@v6 == 224)*(@v10 < 160))+((@v6 == 237)*(@v10 > 159))+((@v6 == 240)*(@v10 < 144))+((@v6 == 244)*(@v10 > 143)) [ !store64[@web+16|65]. ]
+     1 -> @v8. ?? @v8 <= @v29 [
+      :load8[@v0+@v7+@v8] -> @v10.
+      ? (@v10 < 128)+(@v10 > 191) [ !store64[@web+16|65]. ]
+      @v8+1 -> @v8.
+     ]
+    ]
+    @v7+@v29+1 -> @v7.
+   ]
+   ?? (@v22 != 0)*(:load64[@web+16] == 0) [
+    # Main tokenizer: comments/declarations, tags, or a run of text.
+    ? @v22 == 1 [
+     ? @v2 >= @v1 [ 0 -> @v22. ] ~ [
+      :load8[@v0+@v2] -> @v6. 0 -> @v31. 0 -> @v13.
+      ? (@v6 == 60)*(@v1-@v2 >= 4) [
+       ? :load32[@v0+@v2] == 0x2d2d213c [
+        @v2+4 -> @v2. 0 -> @v31.
+        ?? (@v2 < @v1)*(@v31 == 0) [
+         ? @v1-@v2 >= 3 [
+          ? (:load16[@v0+@v2] == 0x2d2d)*(:load8[@v0+@v2+2] == 62) [ @v2+3 -> @v2. 1 -> @v31. ]
+         ]
+         ? @v31 == 0 [ @v2+1 -> @v2. ]
+        ]
+        2 -> @v31. 1 -> @v13.
+       ]
+      ]
+      ? (@v31 == 0)*(@v6 == 60)*(@v2+1 < @v1) [
+       :load8[@v0+@v2+1] -> @v10.
+       ? ((@v10 >= 65)*(@v10 <= 90))+((@v10 >= 97)*(@v10 <= 122))+(@v10 == 47)+(@v10 == 33)+(@v10 == 63) [ 1 -> @v31. ]
+      ]
+      ? @v31 == 1 [
+       1 -> @v13.
+       @v2+1 -> @v7. 0 -> @v16. 0 -> @v21.
+       ?? (@v7 < @v1)*(@v16 == 0) [
+        :load8[@v0+@v7] -> @v6.
+        ? @v21 [ ? @v6 == @v21 [ 0 -> @v21. ] ] ~ [
+         ? (@v6 == 34)+(@v6 == 39) [ @v6 -> @v21. ]
+         ? @v6 == 62 [ @v7 -> @v16. ]
+        ] @v7+1 -> @v7.
+       ]
+       ? @v16 == 0 [ !store64[@web+16|65]. ] ~ [
+        @v2+1 -> @v15. 0 -> @v14.
+        :load8[@v0+@v15] -> @v6.
+        ? (@v6 == 33)+(@v6 == 63) [ @v16+1 -> @v2. ] ~ [
+         ? @v6 == 47 [ 1 -> @v14. @v15+1 -> @v15. ]
+         @v15 -> @v17. 0 -> @v18. 1 -> @v31.
+         ?? (@v17 < @v16)*@v31 [
+          :load8[@v0+@v17] -> @v6. ? (@v6 >= 65)*(@v6 <= 90) [ @v6+32 -> @v6. ]
+          ? ((@v6 >= 97)*(@v6 <= 122))+((@v6 >= 48)*(@v6 <= 57))+(@v6 == 45)+(@v6 == 58) [
+           ? @v18 < 15 [ !store8[@web+600000+@v18|@v6]. ] ~ [ !store64[@web+16|65]. ]
+           @v18+1 -> @v18. @v17+1 -> @v17.
+          ] ~ [ 0 -> @v31. ]
+         ]
+         ? (@v18 == 0)+(@v18 > 15) [ !store64[@web+16|65]. ] ~ [
+          !store8[@web+600000+@v18|0].
+          # Never turn an unsupported extended tag name such as script!
+          # into the executable script element by treating its suffix as attrs.
+          ? @v17 < @v16 [
+           :load8[@v0+@v17] -> @v6.
+           ? (@v6 != 32)*(@v6 != 9)*(@v6 != 10)*(@v6 != 13)*(@v6 != 12)*(@v6 != 47) [ !store64[@web+16|65]. ]
+          ]
+          ? @v14 [
+           # Pop only through a matching ancestor; unmatched closing tags ignored.
+           @v3 -> @v7. 0 -> @v31.
+           ?? @v7*(@v31 == 0) [
+            @web+4096+(@v7-1)*1024 -> @v12. 0 -> @v8. 1 -> @v10.
+            ?? @v8 <= @v18 [
+             ? :load8[@v12+16+@v8] != :load8[@web+600000+@v8] [ 0 -> @v10. ] @v8+1 -> @v8.
+            ]
+            ? @v10 [ :load64[@v12] -> @v3. 1 -> @v31. ]
+            :load64[@v12] -> @v7.
+           ]
+           @v16+1 -> @v2.
+          ] ~ [
+           ? @v4 >= 512 [ !store64[@web+16|28]. ] ~ [
+            @web+4096+@v4*1024 -> @v5. @v4+1 -> @v4.
+            0 -> @v7. ?? @v7 < 1024 [ !store64[@v5+@v7|0]. @v7+8 -> @v7. ]
+            !store64[@v5|@v3]. !store64[@v5+8|1].
+            0 -> @v7. ?? @v7 <= @v18 [ !store8[@v5+16+@v7|:load8[@web+600000+@v7]]. @v7+1 -> @v7. ]
+            ? @v18 == 5 [ ? (:load32[@v5+16] == 0x6c797473)*(:load8[@v5+20] == 101) [ !store64[@v5+8|3]. ] ]
+            ? @v18 == 6 [ ? (:load32[@v5+16] == 0x69726373)*(:load16[@v5+20] == 0x7470) [ !store64[@v5+8|4]. ] ]
+            # These contexts require inert/foreign/raw-text algorithms not
+            # supplied by this profile. Reject before any script can run in
+            # a context where a standards browser would keep it inactive.
+            "template svg math iframe xmp noembed noframes plaintext noscript " -> @v12.
+            0 -> @v7.
+            ?? :load8[@v12+@v7] [
+             0 -> @v8. 1 -> @v10.
+             ?? :load8[@v12+@v7] != 32 [
+              ? @v8 >= 15 [ 0 -> @v10. ] ~ [ ? :load8[@v12+@v7] != :load8[@v5+16+@v8] [ 0 -> @v10. ] ]
+              @v7+1 -> @v7. @v8+1 -> @v8.
+             ]
+             ? @v10 [ ? :load8[@v5+16+@v8] == 0 [ !store64[@web+16|65]. ] ] @v7+1 -> @v7.
+            ]
+            2 -> @v22.
+           ]
+          ]
+         ]
+        ]
+       ]
+      ]
+      ? @v13 == 0 [
+       # Text runs stop before '<'; literal '<' starts a one-character run.
+       @v2 -> @v25. @v2+1 -> @v26. 1 -> @v31.
+       ?? (@v26 < @v1)*@v31 [
+        ? :load8[@v0+@v26] != 60 [ @v26+1 -> @v26. ] ~ [ 0 -> @v31. ]
+       ]
+       5 -> @v22.
+      ]
+     ]
+    ]
+    # Begin a text node, or another chunk of a long run.
+    ? @v22 == 5 [
+     ? @v4 >= 512 [ !store64[@web+16|28]. ] ~ [
+      @web+4096+@v4*1024 -> @v5. @v4+1 -> @v4.
+      0 -> @v7. ?? @v7 < 1024 [ !store64[@v5+@v7|0]. @v7+8 -> @v7. ]
+      !store64[@v5|@v3]. !store64[@v5+8|2].
+      @v5+512 -> @v23. 512 -> @v24. 0 -> @v27. 4 -> @v30. 50 -> @v22.
+      !store64[@v5+480|@v23].
+     ]
+    ]
+    # Parse one attribute. First known attribute of each name wins.
+    ? @v22 == 2 [
+     1 -> @v31.
+     ?? (@v17 < @v16)*@v31 [
+      :load8[@v0+@v17] -> @v6.
+      ? (@v6 == 32)+(@v6 == 9)+(@v6 == 10)+(@v6 == 13)+(@v6 == 12)+(@v6 == 47) [ @v17+1 -> @v17. ] ~ [ 0 -> @v31. ]
+     ]
+     ? @v17 >= @v16 [ 3 -> @v22. ] ~ [
+      0 -> @v18. 1 -> @v31.
+      ?? (@v17 < @v16)*@v31 [
+       :load8[@v0+@v17] -> @v6.
+       ? (@v6 <= 32)+(@v6 == 61)+(@v6 == 47) [ 0 -> @v31. ] ~ [
+        ? (@v6 >= 65)*(@v6 <= 90) [ @v6+32 -> @v6. ]
+        ? @v18 < 63 [ !store8[@web+600032+@v18|@v6]. ]
+        @v18+1 -> @v18. @v17+1 -> @v17.
+       ]
+      ]
+      ? @v18 == 0 [ !store64[@web+16|65]. @v17+1 -> @v17. ]
+      ? @v18 < 64 [ !store8[@web+600032+@v18|0]. ]
+      # External scripts need a loader and origin policy. Until those exist,
+      # reject src even without a value; never execute its fallback as inline.
+      ? (@v18 == 3)*(:load64[@v5+8] == 4) [
+       ? (:load16[@web+600032] == 0x7273)*(:load8[@web+600034] == 99) [ !store64[@web+16|65]. ]
+      ]
+      # Mark the first attribute before checking '=', since a boolean form
+      # is already the first occurrence with an empty value in this profile.
+      0 -> @v23. 0 -> @v24. 0 -> @v10.
+      ? @v18 == 2 [ ? :load16[@web+600032] == 0x6469 [ @v5+32 -> @v23. 64 -> @v24. 1 -> @v10. ] ]
+      ? @v18 == 5 [
+       ? (:load32[@web+600032] == 0x73616c63)*(:load8[@web+600036] == 115)*(:load64[@v5+8] != 4) [ @v5+96 -> @v23. 128 -> @v24. 2 -> @v10. ]
+       ? (:load32[@web+600032] == 0x6c797473)*(:load8[@web+600036] == 101) [ @v5+224 -> @v23. 256 -> @v24. 4 -> @v10. ]
+      ]
+      ? (@v18 == 4)*(:load64[@v5+8] == 4) [
+       ? :load32[@web+600032] == 0x65707974 [ @v5+96 -> @v23. 128 -> @v24. 8 -> @v10. ]
+      ]
+      ? @v23 [
+       ? :bitand[:load64[@v5+504]|@v10] == 0 [ !store64[@v5+504|:load64[@v5+504]+@v10]. ] ~ [ 0 -> @v23. ]
+      ]
+      1 -> @v31. ?? (@v17 < @v16)*@v31 [
+       ? :load8[@v0+@v17] <= 32 [ @v17+1 -> @v17. ] ~ [ 0 -> @v31. ]
+      ]
+      ? @v17 < @v16 [
+       ? :load8[@v0+@v17] == 61 [
+        @v17+1 -> @v17. 1 -> @v31.
+        ?? (@v17 < @v16)*@v31 [
+         ? :load8[@v0+@v17] <= 32 [ @v17+1 -> @v17. ] ~ [ 0 -> @v31. ]
+        ]
+        0 -> @v21.
+        ? @v17 < @v16 [
+         :load8[@v0+@v17] -> @v6. ? (@v6 == 34)+(@v6 == 39) [ @v6 -> @v21. @v17+1 -> @v17. ]
+        ]
+        @v17 -> @v19. 1 -> @v31.
+        ?? (@v17 < @v16)*@v31 [
+         :load8[@v0+@v17] -> @v6.
+         ? (@v21*(@v6 == @v21))+((@v21 == 0)*(@v6 <= 32)) [ 0 -> @v31. ] ~ [ @v17+1 -> @v17. ]
+        ]
+        @v17 -> @v20. ? @v21 [ ? @v17 < @v16 [ @v17+1 -> @v17. ] ]
+        ? @v23 [
+         @v19 -> @v25. @v20 -> @v26. 0 -> @v27. 2 -> @v30. 50 -> @v22.
+        ]
+       ]
+      ]
+     ]
+    ]
+    # Finish opening element. Raw bodies are never tokenized as markup.
+    ? @v22 == 3 [
+     !store64[@v5+504|0]. @v16+1 -> @v2. 1 -> @v22.
+     0 -> @v14.
+     ? (:load64[@v5+8] == 3)+(:load64[@v5+8] == 4) [ 1 -> @v14. ]
+     ? (:load32[@v5+16] == 0x6c746974)*(:load16[@v5+20] == 0x0065) [ 2 -> @v14. ]
+     ? (:load64[@v5+16] == 0x6165726174786574)*(:load8[@v5+24] == 0) [ 2 -> @v14. ]
+     ? @v14 [
+      @v2 -> @v19. @v2 -> @v7. 0 -> @v31.
+      0 -> @v18. ?? :load8[@v5+16+@v18] [ @v18+1 -> @v18. ]
+      ?? (@v7 < @v1)*(@v31 == 0) [
+       ? @v1-@v7 >= @v18+3 [
+        ? :load16[@v0+@v7] == 0x2f3c [
+         0 -> @v8. 1 -> @v10.
+         ?? @v8 < @v18 [
+          :load8[@v0+@v7+2+@v8] -> @v6. ? (@v6 >= 65)*(@v6 <= 90) [ @v6+32 -> @v6. ]
+          ? @v6 != :load8[@v5+16+@v8] [ 0 -> @v10. ] @v8+1 -> @v8.
+         ]
+         :load8[@v0+@v7+2+@v18] -> @v6.
+         ? (@v6 > 32)*(@v6 != 62)*(@v6 != 47) [ 0 -> @v10. ]
+         ? @v10 [
+          @v7+2+@v18 -> @v8. 0 -> @v21.
+          ?? (@v8 < @v1)*(@v31 == 0) [
+           :load8[@v0+@v8] -> @v6.
+           ? @v21 [ ? @v6 == @v21 [ 0 -> @v21. ] ] ~ [
+            ? (@v6 == 34)+(@v6 == 39) [ @v6 -> @v21. ]
+            ? @v6 == 62 [ 1 -> @v31. @v8+1 -> @v2. ]
+           ] @v8+1 -> @v8.
+          ]
+          # An incomplete matching close consumes the rest as raw text;
+          # do not rescan the same suffix for every later candidate.
+          ? @v31 == 0 [ @v1 -> @v7. ]
+         ]
+        ]
+       ]
+       ? @v31 == 0 [ @v7+1 -> @v7. ]
+      ]
+      ? @v31 == 0 [ @v1 -> @v2. @v1 -> @v7. ]
+      ? @v14 == 1 [
+       !store64[@v5+480|@v0+@v19]. !store64[@v5+488|@v7-@v19].
+      ] ~ [
+       # title/textarea RCDATA: only their own closing tag is markup.
+       # Decode entities into ordinary child nodes, then consume that close
+       # in the normal tokenizer so ancestor handling stays shared.
+       @v4 -> @v3. @v19 -> @v25. @v7 -> @v26. @v19 -> @v2.
+       ? @v25 < @v26 [ 5 -> @v22. ] ~ [ @v7 -> @v2. ]
+      ]
+     ] ~ [
+      # Void elements do not change the parent. In HTML a trailing slash does
+      # not close an ordinary nonvoid element; foreign content is unsupported.
+      "area base br col embed hr img input link meta param source track wbr " -> @v12.
+      0 -> @v7. 0 -> @v31.
+      ?? :load8[@v12+@v7] [
+       0 -> @v8. 1 -> @v10.
+       ?? :load8[@v12+@v7] != 32 [
+        ? @v8 >= 15 [ 0 -> @v10. ] ~ [ ? :load8[@v12+@v7] != :load8[@v5+16+@v8] [ 0 -> @v10. ] ]
+        @v7+1 -> @v7. @v8+1 -> @v8.
+       ]
+       ? @v10 [ ? :load8[@v5+16+@v8] == 0 [ 1 -> @v31. ] ] @v7+1 -> @v7.
+      ]
+      ? @v31 == 0 [ @v4 -> @v3. ]
+     ]
+    ]
+    # Common text/attribute decoder. It never evaluates text as Zero code.
+    ? @v22 == 50 [
+     0 -> @v13.
+     ?? (@v25 < @v26)*(:load64[@web+16] == 0)*(@v13 == 0) [
+      @v25 -> @v7. :load8[@v0+@v25] -> @v28. @v25+1 -> @v25.
+      ? @v28 == 38 [
+       @v25 -> @v8. 0 -> @v9.
+       ?? (@v8 < @v26)*(@v8-@v25 < 16)*(@v9 == 0) [
+        :load8[@v0+@v8] -> @v6.
+        ? @v6 == 59 [ @v8 -> @v9. ]
+        ? (@v6 <= 32)+(@v6 == 60)+(@v6 == 38) [ @v25+16 -> @v8. ] ~ [ @v8+1 -> @v8. ]
+       ]
+       0 -> @v31.
+       ? @v9 [
+        @v9-@v25 -> @v11.
+        ? @v11 == 2 [
+         ? :load16[@v0+@v25] == 0x746c [ 60 -> @v28. 1 -> @v31. ]
+         ? :load16[@v0+@v25] == 0x7467 [ 62 -> @v28. 1 -> @v31. ]
+        ]
+        ? @v11 == 3 [ ? (:load16[@v0+@v25] == 0x6d61)*(:load8[@v0+@v25+2] == 112) [ 38 -> @v28. 1 -> @v31. ] ]
+        ? @v11 == 4 [
+         :load32[@v0+@v25] -> @v6.
+         ? @v6 == 0x746f7571 [ 34 -> @v28. 1 -> @v31. ]
+         ? @v6 == 0x736f7061 [ 39 -> @v28. 1 -> @v31. ]
+         ? @v6 == 0x7073626e [ 160 -> @v28. 1 -> @v31. ]
+        ]
+        ? @v11 > 1 [
+         ? :load8[@v0+@v25] == 35 [
+          0 -> @v28. 10 -> @v10. @v25+1 -> @v8. 1 -> @v31.
+          :load8[@v0+@v8] -> @v6.
+          ? (@v6 == 120)+(@v6 == 88) [ 16 -> @v10. @v8+1 -> @v8. ]
+          ? @v8 == @v9 [ 0 -> @v31. ]
+          ?? (@v8 < @v9)*@v31 [
+           :load8[@v0+@v8] -> @v6. 99 -> @v11.
+           ? (@v6 >= 48)*(@v6 <= 57) [ @v6-48 -> @v11. ]
+           ? (@v6 >= 65)*(@v6 <= 70)*(@v10 == 16) [ @v6-55 -> @v11. ]
+           ? (@v6 >= 97)*(@v6 <= 102)*(@v10 == 16) [ @v6-87 -> @v11. ]
+           ? @v11 >= @v10 [ 0 -> @v31. ] ~ [
+            @v28*@v10+@v11 -> @v28. ? @v28 > 1114111 [ 0 -> @v31. ]
+           ] @v8+1 -> @v8.
+          ]
+          ? (@v28 == 0)+((@v28 >= 55296)*(@v28 <= 57343)) [ 65533 -> @v28. ]
+         ]
+        ]
+       ]
+       ? @v31 [ @v9+1 -> @v25. ] ~ [
+        38 -> @v28. ? :bitand[:load64[@web+24]|1] == 0 [ !store64[@web+24|:load64[@web+24]+1]. ]
+       ]
+      ] ~ [
+       ? @v28 >= 128 [
+        1 -> @v29. :bitand[@v28|31] -> @v6.
+        ? @v28 >= 224 [ 2 -> @v29. :bitand[@v28|15] -> @v6. ]
+        ? @v28 >= 240 [ 3 -> @v29. :bitand[@v28|7] -> @v6. ]
+        0 -> @v8. ?? @v8 < @v29 [ @v6*64+:load8[@v0+@v25]-128 -> @v6. @v25+1 -> @v25. @v8+1 -> @v8. ]
+        @v6 -> @v28.
+       ]
+      ]
+      ? @v28 == 13 [ ? @v25 < @v26 [ ? :load8[@v0+@v25] == 10 [ @v25+1 -> @v25. ] ] 10 -> @v28. ]
+      # Scalar encoding uses scratch and atomically reserves its complete width.
+      1 -> @v29. !store8[@web+600128|@v28].
+      ? @v28 >= 128 [ 2 -> @v29. !store8[@web+600128|192+:shr[@v28|6]]. !store8[@web+600129|128+:bitand[@v28|63]]. ]
+      ? @v28 >= 2048 [ 3 -> @v29. !store8[@web+600128|224+:shr[@v28|12]]. !store8[@web+600129|128+:bitand[:shr[@v28|6]|63]]. !store8[@web+600130|128+:bitand[@v28|63]]. ]
+      ? @v28 >= 65536 [ 4 -> @v29. !store8[@web+600128|240+:shr[@v28|18]]. !store8[@web+600129|128+:bitand[:shr[@v28|12]|63]]. !store8[@web+600130|128+:bitand[:shr[@v28|6]|63]]. !store8[@web+600131|128+:bitand[@v28|63]]. ]
+      ? @v27+@v29 >= @v24 [
+       ? @v30 == 4 [ @v7 -> @v25. 1 -> @v13. ] ~ [ !store64[@web+16|65]. ]
+      ] ~ [
+       0 -> @v8. ?? @v8 < @v29 [ !store8[@v23+@v27|:load8[@web+600128+@v8]]. @v27+1 -> @v27. @v8+1 -> @v8. ]
+      ]
+     ]
+     !store8[@v23+@v27|0]. @v30 -> @v22.
+    ]
+    ? @v22 == 4 [
+     !store64[@v5+488|@v27]. @v25 -> @v2.
+     ? @v25 < @v26 [ 5 -> @v22. ] ~ [ 1 -> @v22. ]
+    ]
+   ]
+   ? :load64[@web+16] == 0 [ !store64[@web+32|@v4]. ] ~ [ !store64[@web+32|0]. ]
+  ]
+  !switch[@web+1152|@web+1024].
+ ]
+]

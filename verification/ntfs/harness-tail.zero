@@ -1,0 +1,12 @@
+]
+"result=" -> @pointer. 0 -> @i. ?? :load8[@pointer + @i] [ !put[:load8[@pointer + @i]]. @i + 1 -> @i. ]
+:load64[@memory + 24640] -> @status.
+? @status >= 10 [ !put[49]. !put[@status - 10 + 48]. ] ~ [ !put[@status + 48]. ]
+" writes=" -> @pointer. 0 -> @i. ?? :load8[@pointer + @i] [ !put[:load8[@pointer + @i]]. @i + 1 -> @i. ]
+? @writes >= 10 [ !put[49]. !put[@writes - 10 + 48]. ] ~ [ !put[@writes + 48]. ]
+" flushes=" -> @pointer. 0 -> @i. ?? :load8[@pointer + @i] [ !put[:load8[@pointer + @i]]. @i + 1 -> @i. ]
+!put[@flushes + 48]. !put[10].
+? @status == 0 [
+ 0 -> @i. ?? @i < :load64[@memory + 24632] [ !put[:load8[@memory + 14336 + @i]]. @i + 1 -> @i. ]
+]
+!exit[@status].

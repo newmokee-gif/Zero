@@ -1,0 +1,5 @@
+
+? :fileopen["directory" | 0] != -1 [ !exit[1]. ]
+? :fileopen["fifo" | 0] != -1 [ !exit[2]. ]
+? :fileopen["fifo" | 2] != -1 [ !exit[3]. ]
+? :fileopen["/dev/null" | 0] != -1 [ !exit[4]. ] !exit[0].

@@ -1,0 +1,5 @@
+40 => base
+answer :: [
+ base + 2 => return
+]
+answer() => show

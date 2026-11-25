@@ -1,0 +1,2 @@
+lines("A\rB\r") => show
+lines("A\r\r\n") => show

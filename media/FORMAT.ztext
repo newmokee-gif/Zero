@@ -1,0 +1,85 @@
+ZTEXT001000011c22cac1ce60000000
+Zmedia version1
+==============
+
+Zmedia is Zero's own bounded disk-image container, file suffix .zmedia.
+It is not ISO9660 and is not an ISO renamed. Its4096-byte header precedes a
+complete512-sector disk payload. The flash writer validates the full container,
+then writes only the payload to the target medium. PC firmware sees that disk
+layout, not the Zmedia header. Firmware compatibility is supplied by the original
+Zero BIOS/UEFI loaders and compatible disk partition/boot structures.
+
+All integral fields are unsigned little-endian64-bit values.
+Offset0: eight literal ASCII bytes ZMEDIA01.
+Offset8: format version, exactly1.
+Offset16: header length, exactly4096.
+Offset24: logical payload sector size, exactly512.
+Offset32: payload bytes,512 through268435456 inclusive; multiple of512.
+Offset40: flags, exactly0 in version1.
+Offset48:32 bytes of SHA-256 digest of the complete payload.
+Offset80 through4095: reserved; every byte must be zero.
+Offset4096: payload begins. Exact file size must be4096+payload bytes.
+
+No trailing extension, compression, encryption or alternate byte order is
+accepted in version1. Unknown versions, nonzero reserved bytes, odd lengths,
+truncation and checksum mismatch are errors. Digest verifies content integrity;
+it is not a signature, publisher identity or protection against intentional
+replacement of both image and digest.
+
+Native codec
+------------
+zero-media make RAW NEW.zmedia
+zero-media verify FILE.zmedia
+zero-media info FILE.zmedia
+zero-media extract FILE.zmedia NEW_RAW
+
+The same Zero source builds Linux x86_64 ELF and Windows x86_64 PE. File I/O uses
+our compiler's direct OS interoperability primitives. No external executable or
+third-party codec is invoked. The input must be a regular file; final symlinks
+and reparse points are rejected. Destination creation is exclusive. Existing
+outputs are preserved. After write and flush, all output bytes and EOF are read
+back and compared. An output that fails verification is retained for inspection;
+the codec will not unlink a path that another process may have replaced.
+The source should remain unchanged while captured into memory. File length and
+EOF are checked before and after reading; no filesystem snapshot is claimed.
+
+Memory is bounded by payload plus98304 bytes for make; container size plus98304
+for verify/info/extract. The current release deliberately limits images to256MiB.
+The codec never opens a block device and never writes a physical disk. Physical
+recording is the separate zero-flash program with target identity checks.
+
+Shared worker ABI
+-----------------
+Include format-declarations.zero.part (12 vars). Set @zm to a zeroed90112-byte
+arena, then include format-worker.zero.part once to create the coroutine.
+Descriptor words: input pointer at0; input length8; operation16; status24;
+verified payload pointer32; verified payload length40; computed digest48..79.
+Operation0 validates a complete container. Operation1 hashes raw memory with
+length0..268435456. Raw empty input is allowed. Other operations fail.
+Initialize inputs, then !switch[@zm+128|@zm+224].
+Status0 is success;65 is invalid input. Failed validation leaves output pointer
+and length zero. A computed digest may be present on a checksum failure.
+Caller and worker coroutine contexts occupy128 and224; SHA scratch512..1151;
+worker stack4096..86015 (81920bytes). The full arena is90112bytes.
+The caller owns allocated input memory and must keep it stable through the call.
+This worker performs no host file I/O and uses the same logic in firmware.
+
+Source reconstruction
+---------------------
+Build media/compose-codec.zero with the original Zero compiler.
+compose-codec PROJECT_DIRECTORY NEW_SOURCE.zero reconstructs media/codec.zero.
+Adding --check reconstructs media/check.zero. Both outputs were compared exactly.
+Compile codec.zero --host or --windows. The supported CLI compiler uses
+zero SOURCE OUTPUT --host (or --windows). The raw bootstrap compiler accepts
+zero --host < SOURCE > OUTPUT; those shell redirections are host operations.
+
+Verification
+------------
+media/check.zero runs8712 assertions against the exact shared worker:
+4 published SHA vectors (empty,abc,56-byte standard vector,one million a bytes);
+1 valid envelope and returned pointer/length;
+4096 single-byte changes covering every header byte;
+4608 truncations of a4608-byte valid envelope;
+1 appended byte;1 payload bit flip;1 invalid operation.
+All8712 passed natively on Linux and through Windows/Wine.
+Independent CLI and SHA edge-vector results are recorded separately.

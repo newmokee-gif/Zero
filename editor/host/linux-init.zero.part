@@ -1,0 +1,168 @@
+# Original X11 wire protocol client. No Xlib, toolkit or external GUI process.
+# Local DISPLAY and MIT-MAGIC-COOKIE-1 are read from this process's environment.
+? @platform == 1 [
+ @e + 327680 -> @a. :fileopen["/proc/self/environ" | 0] -> @fd. 0 -> @n.
+ ? @fd != -1 [ :fileread[@fd | @a | 65535] -> @n. :fileclose[@fd] -> @c. -1 -> @fd. ]
+ ? @n > 65535 [ 0 -> @n. ] !store8[@a + @n | 0].
+ 0 -> @i. ?? @i < @n [
+  @i -> @j. ?? (@j < @n) * (:load8[@a + @j] != 0) [ @j + 1 -> @j. ]
+  ? @j - @i > 8 [ ? :load64[@a + @i] == 0x3d59414c50534944 [ !store64[@e + 32 | @a + @i + 8]. ] ]
+  ? @j - @i > 11 [
+   ? (:load64[@a + @i] == 0x49524f4854554158) * (:load16[@a + @i + 8] == 0x5954) * (:load8[@a + @i + 10] == 61) [ !store64[@e + 40 | @a + @i + 11]. ]
+  ]
+  ? @j - @i > 5 [ ? (:load32[@a + @i] == 0x454d4f48) * (:load8[@a + @i + 4] == 61) [ !store64[@e + 48 | @a + @i + 5]. ] ]
+  @j + 1 -> @i.
+ ]
+ :load64[@e + 32] -> @a. "0" -> @b. 1 -> @d.
+ ? @a != 0 [
+  ? :load32[@a] == 0x78696e75 [ @a + 4 -> @a. ]
+  ? :load8[@a] != 58 [ "Linux editor needs a local X11 DISPLAY (Xwayland is supported)." -> @status. 0 -> @running. 1 -> @failed. ] ~ [
+   @a + 1 -> @b. 0 -> @d. ?? (:load8[@b + @d] >= 48) * (:load8[@b + @d] <= 57) * (@d < 6) [ @d + 1 -> @d. ]
+   ? (@d == 0) + (@d > 5) [ 0 -> @running. 1 -> @failed. "Invalid DISPLAY number." -> @status. ]
+   ? :load8[@b + @d] != 0 [
+    ? (:load8[@b + @d] != 46) + (:load8[@b + @d + 1] != 48) + (:load8[@b + @d + 2] != 0) [ 0 -> @running. 1 -> @failed. "Only X11 screen zero is supported." -> @status. ]
+   ]
+  ]
+ ]
+ !store64[@e + 56 | @b]. !store64[@e + 64 | @d].
+ !store16[@e + 80 | 1]. "/tmp/.X11-unix/X" -> @a. 0 -> @i.
+ ?? :load8[@a + @i] [ !store8[@e + 82 + @i | :load8[@a + @i]]. @i + 1 -> @i. ]
+ 0 -> @j. ?? @j < @d [ !store8[@e + 82 + @i | :load8[@b + @j]]. @j + 1 -> @j. @i + 1 -> @i. ]
+ !store8[@e + 82 + @i | 0]. !store64[@e + 72 | @i + 3].
+ ? @running [
+  :hostsyscall[41 | 1 | 0x80001 | 0 | 0 | 0 | 0] -> @sock.
+  ? @sock > 2147483647 [ "Cannot create the X11 socket." -> @status. 0 -> @running. 1 -> @failed. ] ~ [
+   ? :hostsyscall[42 | @sock | @e + 80 | :load64[@e + 72] | 0 | 0 | 0] != 0 [ "Cannot connect to the local X11 display." -> @status. 0 -> @running. 1 -> @failed. ]
+  ]
+ ]
+ # Cookie source. An absent authority file also permits local access-controlled
+ # servers that explicitly grant this process's operating-system account access.
+ 0 -> @compilebytes. :load64[@e + 40] -> @a.
+ ? @a == 0 [
+  :load64[@e + 48] -> @b. ? @b != 0 [
+   @e + 300000 -> @a. 0 -> @i. ?? (:load8[@b + @i] != 0) * (@i < 4000) [ !store8[@a + @i | :load8[@b + @i]]. @i + 1 -> @i. ]
+   "/.Xauthority" -> @b. 0 -> @j. ?? :load8[@b + @j] [ !store8[@a + @i | :load8[@b + @j]]. @j + 1 -> @j. @i + 1 -> @i. ] !store8[@a + @i | 0].
+  ]
+ ]
+ ? @a != 0 [
+  :fileopen[@a | 0] -> @fd. ? @fd != -1 [
+   :fileread[@fd | @e + 393216 | 65536] -> @n. :fileclose[@fd] -> @c. -1 -> @fd.
+   ? @n > 65536 [ 0 -> @n. ] 0 -> @i. @e + 393216 -> @a.
+   ?? @i + 2 <= @n [
+    @i + 2 -> @i. 0 -> @k. 1 -> @mask. 0 -> @target.
+    ?? (@k < 4) * (@i + 2 <= @n) [
+     :load8[@a + @i] * 256 + :load8[@a + @i + 1] -> @c. @i + 2 -> @i.
+     ? @i + @c > @n [ @n + 1 -> @i. 0 -> @mask. ] ~ [
+      ? @k == 1 [
+       ? @c != :load64[@e + 64] [ 0 -> @mask. ] ~ [
+        0 -> @j. ?? @j < @c [ ? :load8[@a + @i + @j] != :load8[:load64[@e + 56] + @j] [ 0 -> @mask. ] @j + 1 -> @j. ]
+       ]
+      ]
+      ? @k == 2 [
+       ? @c != 18 [ 0 -> @mask. ] ~ [ "MIT-MAGIC-COOKIE-1" -> @b. 0 -> @j. ?? @j < 18 [ ? :load8[@a + @i + @j] != :load8[@b + @j] [ 0 -> @mask. ] @j + 1 -> @j. ] ]
+      ]
+      ? (@k == 3) * (@c == 16) * @mask [ @a + @i -> @target. ]
+      @i + @c -> @i.
+     ] @k + 1 -> @k.
+    ]
+    ? @target != 0 [ 0 -> @j. ?? @j < 16 [ !store8[@e + 256 + @j | :load8[@target + @j]]. @j + 1 -> @j. ] 16 -> @compilebytes. ]
+    ? @k < 4 [ @n + 1 -> @i. ]
+   ]
+  ]
+ ]
+ 0 -> @i. ?? @i < 64 [ !store8[@wire + @i | 0]. @i + 1 -> @i. ]
+ !store8[@wire | 108]. !store16[@wire + 2 | 11]. 12 -> @target.
+ ? @compilebytes == 16 [
+  !store16[@wire + 6 | 18]. !store16[@wire + 8 | 16]. "MIT-MAGIC-COOKIE-1" -> @a.
+  0 -> @i. ?? @i < 18 [ !store8[@wire + 12 + @i | :load8[@a + @i]]. @i + 1 -> @i. ]
+  0 -> @i. ?? @i < 16 [ !store8[@wire + 32 + @i | :load8[@e + 256 + @i]]. @i + 1 -> @i. ] 48 -> @target.
+ ]
+ # Startup transactions: connect handshake, setup body, keyboard mapping reply.
+ 0 -> @k. ?? (@k < 4) * @running [
+  ? (@k == 0) + (@k == 2) [
+   0 -> @n. ?? (@n < @target) * @running [
+    :hostsyscall[44 | @sock | @wire + @n | @target - @n | 16384 | 0 | 0] -> @c.
+    ? (@c == 0) + (@c > @target - @n) [ 0 -> @running. 1 -> @failed. "X11 request failed." -> @status. ] ~ [ @n + @c -> @n. ]
+   ]
+   8 -> @target. ? @k == 2 [ 32 -> @target. ]
+  ]
+  0 -> @n. ?? (@n < @target) * @running [
+   !store32[@e + 240 | @sock]. !store16[@e + 244 | 1]. !store16[@e + 246 | 0].
+   :hostsyscall[7 | @e + 240 | 1 | 3000 | 0 | 0 | 0] -> @c.
+   ? @c != 1 [ 0 -> @running. 1 -> @failed. "X11 server did not complete startup." -> @status. ] ~ [
+    :hostsyscall[0 | @sock | @wire + @n | @target - @n | 0 | 0 | 0] -> @c.
+    ? (@c == 0) + (@c > @target - @n) [ 0 -> @running. 1 -> @failed. "X11 connection ended during startup." -> @status. ] ~ [ @n + @c -> @n. ]
+   ]
+  ]
+  ? @k == 0 [
+   ? :load8[@wire] != 1 [ 0 -> @running. 1 -> @failed. "X11 authentication failed; check DISPLAY and XAUTHORITY." -> @status. ]
+   :load16[@wire + 6] * 4 -> @target. ? (@target < 32) + (@target > 262144) [ 0 -> @running. 1 -> @failed. ]
+  ]
+  ? @k == 1 [
+   :load32[@wire + 4] -> @base. :load32[@wire + 8] -> @mask.
+   ? (:bitand[@mask | 7] != 7) + (:load8[@wire + 22] != 0) + (:load8[@wire + 20] == 0) + (:load16[@wire + 18] < 61446) [ "Unsupported X11 pixel layout or request limit." -> @status. 0 -> @running. 1 -> @failed. ]
+   :load16[@wire + 16] -> @i. :bitand[@i + 3 | 0xfffffffffffffffc] + 32 -> @i.
+   0 -> @j. 0 -> @c.
+   ?? @j < :load8[@wire + 21] [
+    ? @i + @j * 8 + 8 <= @target [
+     ? (:load8[@wire + @i + @j * 8] == 24) * (:load8[@wire + @i + @j * 8 + 1] == 32) * (:load8[@wire + @i + @j * 8 + 2] == 32) [ 1 -> @c. ]
+    ] @j + 1 -> @j.
+   ]
+   ? @c == 0 [ 0 -> @running. 1 -> @failed. "X11 screen needs 32-bit padded TrueColor pixels." -> @status. ]
+   @i + :load8[@wire + 21] * 8 -> @i.
+   ? @i + 40 > @target [ 0 -> @running. 1 -> @failed. "Truncated X11 screen description." -> @status. ] ~ [
+    :load32[@wire + @i] -> @root. :load32[@wire + @i + 32] -> @d. :load8[@wire + @i + 38] -> @depth.
+    !store64[@e + 280 | @d].
+    ? @depth != 24 [ 0 -> @running. 1 -> @failed. "This editor requires a 24-bit X11 TrueColor screen." -> @status. ]
+   ]
+   :load8[@wire + 26] -> @i. :load8[@wire + 27] -> @j.
+   !store64[@e + 288 | @i]. !store64[@e + 296 | @j - @i + 1].
+   !store8[@wire | 101]. !store8[@wire + 1 | 0]. !store16[@wire + 2 | 2]. !store8[@wire + 4 | @i]. !store8[@wire + 5 | @j - @i + 1]. !store16[@wire + 6 | 0]. 8 -> @target.
+  ]
+  ? @k == 2 [
+   ? :load8[@wire] != 1 [ 0 -> @running. 1 -> @failed. ] :load8[@wire + 1] -> @keycols.
+   :load32[@wire + 4] * 4 -> @target.
+   ? (@keycols == 0) + (@target > 65536) + (@target != :load64[@e + 296] * @keycols * 4) [ 0 -> @running. 1 -> @failed. "Invalid X11 keyboard map." -> @status. ]
+  ]
+  ? @k == 3 [ 0 -> @i. ?? @i < @target [ !store8[@keys + @i | :load8[@wire + @i]]. @i + 1 -> @i. ] ]
+  @k + 1 -> @k.
+ ]
+ ? @running [
+  @base + 1 -> @window. @base + 2 -> @gc.
+  0 -> @i. ?? @i < 256 [ !store8[@wire + @i | 0]. @i + 1 -> @i. ]
+  !store8[@wire | 1]. !store8[@wire + 1 | @depth]. !store16[@wire + 2 | 10]. !store32[@wire + 4 | @window]. !store32[@wire + 8 | @root].
+  !store16[@wire + 12 | 30]. !store16[@wire + 14 | 30]. !store16[@wire + 16 | 1280]. !store16[@wire + 18 | 800]. !store16[@wire + 22 | 1].
+  !store32[@wire + 24 | :load64[@e + 280]]. !store32[@wire + 28 | 2050]. !store32[@wire + 32 | 0x141824]. !store32[@wire + 36 | 163845].
+  !store8[@wire + 40 | 55]. !store16[@wire + 42 | 4]. !store32[@wire + 44 | @gc]. !store32[@wire + 48 | @window].
+  !store8[@wire + 56 | 18]. !store16[@wire + 58 | 15]. !store32[@wire + 60 | @window]. !store32[@wire + 64 | 39]. !store32[@wire + 68 | 31]. !store8[@wire + 72 | 8]. !store32[@wire + 76 | 34].
+  "Zero Studio - original Zero editor" -> @a. 0 -> @i. ?? @i < 34 [ !store8[@wire + 80 + @i | :load8[@a + @i]]. @i + 1 -> @i. ]
+  :hostsyscall[44 | @sock | @wire | 116 | 16384 | 0 | 0] -> @c. ? @c != 116 [ 0 -> @running. 1 -> @failed. "X11 window creation failed." -> @status. ]
+  # Advertise WM_DELETE_WINDOW before mapping: close receives our normal unsaved
+  # guard instead of the window manager terminating the process.
+  0 -> @k. ?? (@k < 2) * @running [
+   "WM_PROTOCOLS" -> @a. 12 -> @b. ? @k == 1 [ "WM_DELETE_WINDOW" -> @a. 16 -> @b. ]
+   !store8[@wire | 16]. !store8[@wire + 1 | 0]. !store16[@wire + 2 | :shr[@b + 8 | 2]]. !store16[@wire + 4 | @b]. !store16[@wire + 6 | 0].
+   0 -> @i. ?? @i < @b [ !store8[@wire + 8 + @i | :load8[@a + @i]]. @i + 1 -> @i. ]
+   :hostsyscall[44 | @sock | @wire | @b + 8 | 16384 | 0 | 0] -> @c.
+   ? @c != @b + 8 [ 0 -> @running. 1 -> @failed. ]
+   0 -> @n. ?? (@n < 32) * @running [
+    !store32[@e + 240 | @sock]. !store16[@e + 244 | 1]. !store16[@e + 246 | 0].
+    :hostsyscall[7 | @e + 240 | 1 | 3000 | 0 | 0 | 0] -> @c.
+    ? @c != 1 [ 0 -> @running. 1 -> @failed. ] ~ [
+     :hostsyscall[0 | @sock | @wire + @n | 32 - @n | 0 | 0 | 0] -> @c.
+     ? (@c == 0) + (@c > 32 - @n) [ 0 -> @running. 1 -> @failed. ] ~ [ @n + @c -> @n. ]
+    ]
+   ]
+   ? :load8[@wire] != 1 [ 0 -> @running. 1 -> @failed. ]
+   !store64[@e + 304 + @k * 8 | :load32[@wire + 8]]. @k + 1 -> @k.
+  ]
+  ? @running [
+   !store8[@wire | 18]. !store8[@wire + 1 | 0]. !store16[@wire + 2 | 7]. !store32[@wire + 4 | @window]. !store32[@wire + 8 | :load64[@e + 304]].
+   !store32[@wire + 12 | 4]. !store8[@wire + 16 | 32]. !store8[@wire + 17 | 0]. !store16[@wire + 18 | 0]. !store32[@wire + 20 | 1]. !store32[@wire + 24 | :load64[@e + 312]].
+   !store8[@wire + 28 | 8]. !store8[@wire + 29 | 0]. !store16[@wire + 30 | 2]. !store32[@wire + 32 | @window].
+   :hostsyscall[44 | @sock | @wire | 36 | 16384 | 0 | 0] -> @c. ? @c != 36 [ 0 -> @running. 1 -> @failed. ]
+  ]
+  ? @running == 0 [ "Cannot register the X11 window-close protocol." -> @status. ]
+ ]
+ 0 -> @compilebytes.
+]

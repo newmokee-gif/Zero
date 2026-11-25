@@ -1,0 +1,48 @@
+ZTEXT001000009ec7d2167670000000
+Original Zero text format and native reader
+
+tools/text.zero is original Zero source for zero-text on Linux and
+zero-text.exe on Windows. It uses native Zero file operations and no external
+codec, process, script or interpreter.
+
+Commands
+  zero-text make INPUT NEW_ZTEXT
+  zero-text read FILE
+  zero-text verify FILE
+  zero-text selftest
+
+make wraps an existing UTF-8 source as our .ztext format. It refuses an existing
+destination, flushes the new file, closes it, reads it back and compares every
+byte and exact EOF. If writing or verification fails, it removes only its own
+new incomplete output. Inputs and existing destinations are preserved.
+read validates the entire container before outputting any payload bytes.
+verify validates silently and returns success only for a complete valid file.
+The maximum payload is 1048576 bytes; empty payloads are valid.
+selftest runs 51 original-Zero cases through the same production decoder: UTF-8
+boundaries, overlong encodings, surrogates, invalid/truncated continuations, NUL,
+malformed header fields, checksum/length errors, partial files and 1MiB bounds.
+Case numbers are displayed from one. Exit0 means all passed; exit1 means failure.
+
+ZTEXT001 wire contract
+The header is exactly 32 bytes:
+  bytes 0..7: ASCII ZTEXT001
+  bytes 8..15: payload byte length, exactly eight lowercase hexadecimal digits
+  bytes 16..23: payload FNV1a32 checksum, eight lowercase hexadecimal digits
+  bytes 24..30: seven ASCII zero digits
+  byte 31: LF (10)
+Only the UTF-8 payload follows; no trailing bytes are permitted. FNV1a32 starts
+at 2166136261, XORs each payload byte, then multiplies by 16777619 modulo 2^32.
+This detects accidental corruption; it is not an authenticity signature.
+UTF-8 is decoded as Unicode scalar values: overlong encodings, isolated or
+missing continuation bytes, surrogates, values above U+10FFFF, and NUL are
+rejected. Tab, carriage return, newline and other non-NUL ASCII are accepted.
+The format adds no implicit newline and does not normalize Unicode or CR/LF.
+
+The payload Hello followed by LF has byte length 00000006 and checksum
+81218953. An empty payload has length 00000000 and checksum 811c9dc5.
+
+Status codes: 0 success; 64 usage/unsupported host; 65 malformed text or limit;
+66 input missing/unreadable; 70 allocation; 73 destination already exists or
+cannot be created; 74 short/changing input, output flush, or read-back failure.
+Diagnostic text is emitted only on failure. Native tools use at most about
+2 MiB of mapped working memory and byte-preserving output.

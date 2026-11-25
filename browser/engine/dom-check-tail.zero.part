@@ -1,0 +1,187 @@
+# Prime the child yield once; each subsequent switch runs one parse.
+!switch[@web+1024|@web+1152].
+1 -> @dt_case.
+?? @dt_case <= 170 [
+ "Hello" -> @dt_source. 1 -> @dt_count. 0 -> @dt_error.
+ "Hello" -> @dt_expected. 1 -> @dt_node.
+ !store64[@web+16|0]. !store64[@web+24|0]. !store64[@web+32|0].
+ !store64[@web+4088|0xa5a5a5a5a5a5a5a5].
+ !store64[@web+528384|0xa5a5a5a5a5a5a5a5].
+ !store64[@web+599992|0xa5a5a5a5a5a5a5a5].
+ !store64[@web+640000|0xa5a5a5a5a5a5a5a5].
+ ? @dt_case == 1 [ "" -> @dt_source. 0 -> @dt_count. 0 -> @dt_node. ]
+ ? @dt_case == 3 [ "<html><head><style>p{color:red}</style></head><body><p id=x>Hello &amp; world</p><script>let x=1;</script></body></html>" -> @dt_source. 7 -> @dt_count. 6 -> @dt_node. "Hello & world" -> @dt_expected. ]
+ ? @dt_case == 4 [ "<p id='a&amp;b' class=one style=\"color:red\">Hello</p>" -> @dt_source. 2 -> @dt_count. 2 -> @dt_node. ]
+ ? @dt_case == 5 [ "<SCRIPT>a</scripture>b</ScRiPt><p>c</p>" -> @dt_source. 3 -> @dt_count. 1 -> @dt_node. "a</scripture>b" -> @dt_expected. ]
+ ? @dt_case == 6 [ "<style>a<b{}\"</STYLE >Hello" -> @dt_source. 2 -> @dt_count. 2 -> @dt_node. ]
+ ? @dt_case == 7 [ "<!-- <p>hidden</p> -->Hello<!--end" -> @dt_source. ]
+ ? @dt_case == 8 [ "<!DOCTYPE html><p>Hello</p>" -> @dt_source. 2 -> @dt_count. 2 -> @dt_node. ]
+ ? @dt_case == 9 [ "<body><br><img><input><p>Hello</p></body>" -> @dt_source. 6 -> @dt_count. 6 -> @dt_node. ]
+ ? @dt_case == 10 [ "</none>Hello" -> @dt_source. ]
+ ? @dt_case == 11 [ "<div><b>Hello</div>End" -> @dt_source. 4 -> @dt_count. 4 -> @dt_node. "End" -> @dt_expected. ]
+ ? @dt_case == 12 [ "&#65;&#x3B1;&#128578;" -> @dt_source. @web+1600000 -> @dt_expected. !store64[@dt_expected|0x0082999ff0b1ce41]. ]
+ ? (@dt_case >= 13)*(@dt_case <= 18) [ 65 -> @dt_error. 0 -> @dt_count. 0 -> @dt_node. ]
+ ? @dt_case == 18 [ "<p id='unterminated>" -> @dt_source. ]
+ ? (@dt_case >= 19)*(@dt_case <= 22) [ 0 -> @dt_node. ]
+ ? @dt_case == 19 [ 2 -> @dt_count. ]
+ ? @dt_case == 21 [ 2 -> @dt_count. ]
+ ? @dt_case == 22 [ 2 -> @dt_count. ]
+ ? (@dt_case >= 23)*(@dt_case <= 28) [ 1 -> @dt_count. 0 -> @dt_node. ]
+ ? (@dt_case == 24)+(@dt_case == 26)+(@dt_case == 28) [ 65 -> @dt_error. 0 -> @dt_count. ]
+ ? @dt_case == 29 [ "<abcdefghijklmno>Hello</abcdefghijklmno>" -> @dt_source. 2 -> @dt_count. 2 -> @dt_node. ]
+ ? @dt_case == 30 [ "<abcdefghijklmnop>Hello" -> @dt_source. 65 -> @dt_error. 0 -> @dt_count. 0 -> @dt_node. ]
+ ? @dt_case == 31 [ 512 -> @dt_count. 0 -> @dt_node. ]
+ ? @dt_case == 32 [ 28 -> @dt_error. 0 -> @dt_count. 0 -> @dt_node. ]
+ ? @dt_case == 33 [ "<script>never closed <p>" -> @dt_source. "never closed <p>" -> @dt_expected. ]
+ ? @dt_case == 34 [ "A&unknown;B" -> @dt_source. @dt_source -> @dt_expected. ]
+ ? @dt_case == 35 [ "<p id=one id=two class=a class=b style='color:red' style='color:blue'>Hello</p>" -> @dt_source. 2 -> @dt_count. 2 -> @dt_node. ]
+ ? @dt_case == 36 [ "<script class=ignored type='text/python'>print(1)</script>" -> @dt_source. "print(1)" -> @dt_expected. ]
+ ? @dt_case == 37 [ "&#0;&#55296;&#x110000;" -> @dt_source. @web+1600000 -> @dt_expected. !store32[@dt_expected|0xefbdbfef]. !store16[@dt_expected+4|0xbdbf]. "&#x110000;" -> @dt_ptr. 0 -> @dt_i. ?? @dt_i < 11 [ !store8[@dt_expected+6+@dt_i|:load8[@dt_ptr+@dt_i]]. @dt_i+1 -> @dt_i. ] ]
+ ? @dt_case == 38 [ "<script>if (a < b) { c='</scripture>'; }</script>" -> @dt_source. "if (a < b) { c='</scripture>'; }" -> @dt_expected. ]
+ ? @dt_case == 39 [ "1 < 2" -> @dt_source. 2 -> @dt_count. 2 -> @dt_node. "< 2" -> @dt_expected. ]
+ ? @dt_case == 40 [ "A\r\nB\rC" -> @dt_source. "A\nB\nC" -> @dt_expected. ]
+ ? @dt_case == 41 [ 65 -> @dt_error. 0 -> @dt_count. 0 -> @dt_node. ]
+ ? @dt_case == 42 [ 77 -> @dt_error. 0 -> @dt_count. 0 -> @dt_node. ]
+ ? @dt_case == 43 [ "<P ID = \"x>y\" ClAsS='a b' STYLE='color:red'>Hello</P>" -> @dt_source. 2 -> @dt_count. 2 -> @dt_node. ]
+ ? @dt_case == 44 [ "<p id='&#945;'>&lt;&gt;&amp;&quot;&apos;&nbsp;</p>" -> @dt_source. 2 -> @dt_count. 2 -> @dt_node. @web+1600000 -> @dt_expected. !store32[@dt_expected|0x22263e3c]. !store8[@dt_expected+4|39]. !store16[@dt_expected+5|0xa0c2]. !store8[@dt_expected+7|0]. ]
+ ? @dt_case == 45 [ "<!--unterminated" -> @dt_source. 0 -> @dt_count. 0 -> @dt_node. ]
+ ? @dt_case == 46 [ "<p><br/><hr><wbr>done</p>" -> @dt_source. 5 -> @dt_count. 5 -> @dt_node. "done" -> @dt_expected. ]
+ ? @dt_case == 47 [ "<style>a</stylex>b</style><script>c</scriptx>d</script>" -> @dt_source. 2 -> @dt_count. 2 -> @dt_node. "c</scriptx>d" -> @dt_expected. ]
+ ? @dt_case == 48 [ "<p id id=x>Hello</p>" -> @dt_source. 2 -> @dt_count. 2 -> @dt_node. ]
+ ? @dt_case == 49 [ "<script type type='text/python'>print(1)</script>" -> @dt_source. "print(1)" -> @dt_expected. ]
+ ? @dt_case == 50 [ "<script src=x>document.title='local';</script>" -> @dt_source. ]
+ ? @dt_case == 51 [ "<script src>document.title='local';</script>" -> @dt_source. ]
+ ? @dt_case == 52 [ "<script src=''>document.title='local';</script>" -> @dt_source. ]
+ ? @dt_case == 53 [ "<ScRiPt SrC = x>document.title='local';</ScRiPt>" -> @dt_source. ]
+ ? (@dt_case >= 50)*(@dt_case <= 53) [ 65 -> @dt_error. 0 -> @dt_count. 0 -> @dt_node. ]
+ ? @dt_case == 54 [ "<p class class=x style style='color:red'>Hello</p>" -> @dt_source. 2 -> @dt_count. 2 -> @dt_node. ]
+ ? @dt_case == 55 [ "<title>A &amp; <script>x</script></title><p>B</p>" -> @dt_source. 4 -> @dt_count. 2 -> @dt_node. "A & <script>x</script>" -> @dt_expected. ]
+ ? @dt_case == 56 [ "<textarea>1 < 2 &gt; 0</textarea>" -> @dt_source. 2 -> @dt_count. 2 -> @dt_node. "1 < 2 > 0" -> @dt_expected. ]
+ ? @dt_case == 57 [ "<title></title>Hello" -> @dt_source. 2 -> @dt_count. 2 -> @dt_node. ]
+ ? @dt_case == 58 [ "<TITLE>Unclosed <b>text" -> @dt_source. 2 -> @dt_count. 2 -> @dt_node. "Unclosed <b>text" -> @dt_expected. ]
+ ? (@dt_case >= 59)*(@dt_case <= 67) [ 65 -> @dt_error. 0 -> @dt_count. 0 -> @dt_node. ]
+ ? @dt_case == 59 [ "<template><script>x</script></template>" -> @dt_source. ]
+ ? @dt_case == 60 [ "<svg><script>x</script></svg>" -> @dt_source. ]
+ ? @dt_case == 61 [ "<math><script>x</script></math>" -> @dt_source. ]
+ ? @dt_case == 62 [ "<iframe><script>x</script></iframe>" -> @dt_source. ]
+ ? @dt_case == 63 [ "<xmp><script>x</script></xmp>" -> @dt_source. ]
+ ? @dt_case == 64 [ "<noembed><script>x</script></noembed>" -> @dt_source. ]
+ ? @dt_case == 65 [ "<noframes><script>x</script></noframes>" -> @dt_source. ]
+ ? @dt_case == 66 [ "<plaintext><script>x</script>" -> @dt_source. ]
+ ? @dt_case == 67 [ "<noscript><script>x</script></noscript>" -> @dt_source. ]
+ ? @dt_case == 68 [ "<div/>Hello" -> @dt_source. 2 -> @dt_count. 2 -> @dt_node. ]
+ ? @dt_case == 69 [ "<script!>document.title='wrong';</script!>" -> @dt_source. 65 -> @dt_error. 0 -> @dt_count. 0 -> @dt_node. ]
+ ? @dt_case == 70 [ "<script.foo>document.title='wrong';</script.foo>" -> @dt_source. 65 -> @dt_error. 0 -> @dt_count. 0 -> @dt_node. ]
+ @web+1507328 -> @dt_ptr. 0 -> @dt_len.
+ ?? :load8[@dt_source+@dt_len] [ !store8[@dt_ptr+@dt_len|:load8[@dt_source+@dt_len]]. @dt_len+1 -> @dt_len. ]
+ ? @dt_case == 13 [ !store16[@dt_ptr|0x80c0]. 2 -> @dt_len. ]
+ ? @dt_case == 14 [ !store16[@dt_ptr|0x82e2]. 2 -> @dt_len. ]
+ ? @dt_case == 15 [ !store32[@dt_ptr|0x0080a0ed]. 3 -> @dt_len. ]
+ ? @dt_case == 16 [ 65537 -> @dt_len. ]
+ ? @dt_case == 17 [ !store8[@dt_ptr|0]. 1 -> @dt_len. ]
+ ? (@dt_case >= 19)*(@dt_case <= 22) [
+  511 -> @dt_len. ? @dt_case == 19 [ 1022 -> @dt_len. ] ? @dt_case == 21 [ 512 -> @dt_len. ] ? @dt_case == 22 [ 510 -> @dt_len. ]
+  0 -> @dt_i. ?? @dt_i < @dt_len [ !store8[@dt_ptr+@dt_i|65]. @dt_i+1 -> @dt_i. ]
+  ? @dt_case == 22 [ !store32[@dt_ptr+510|0x82999ff0]. 514 -> @dt_len. ]
+ ]
+ ? (@dt_case >= 23)*(@dt_case <= 28) [
+  "<p id='" -> @dt_source. 63 -> @dt_n.
+  ? (@dt_case == 25)+(@dt_case == 26) [ "<p class='" -> @dt_source. 127 -> @dt_n. ]
+  ? (@dt_case == 27)+(@dt_case == 28) [ "<p style='" -> @dt_source. 255 -> @dt_n. ]
+  ? (@dt_case == 24)+(@dt_case == 26)+(@dt_case == 28) [ @dt_n+1 -> @dt_n. ]
+  0 -> @dt_len. ?? :load8[@dt_source+@dt_len] [ !store8[@dt_ptr+@dt_len|:load8[@dt_source+@dt_len]]. @dt_len+1 -> @dt_len. ]
+  0 -> @dt_i. ?? @dt_i < @dt_n [ !store8[@dt_ptr+@dt_len|120]. @dt_len+1 -> @dt_len. @dt_i+1 -> @dt_i. ]
+  !store16[@dt_ptr+@dt_len|0x3e27]. @dt_len+2 -> @dt_len.
+ ]
+ ? (@dt_case == 31)+(@dt_case == 32) [
+  512 -> @dt_n. ? @dt_case == 32 [ 513 -> @dt_n. ]
+  0 -> @dt_len. 0 -> @dt_i. ?? @dt_i < @dt_n [ !store32[@dt_ptr+@dt_len|0x3e72623c]. @dt_len+4 -> @dt_len. @dt_i+1 -> @dt_i. ]
+ ]
+ ? @dt_case >= 71 [
+  -1 -> @dt_count. -1 -> @dt_error. 0 -> @dt_node. 256 -> @dt_len.
+  "<>/&;='\"abcdefghijklmnopqrstuvwxyz0123456789 \n\t" -> @dt_source.
+  0 -> @dt_n. ?? :load8[@dt_source+@dt_n] [ @dt_n+1 -> @dt_n. ]
+  0 -> @dt_i. ?? @dt_i < @dt_len [
+   :bitand[@dt_seed*1664525+1013904223|0xffffffff] -> @dt_seed.
+   :bitand[:shr[@dt_seed|16]|255] -> @dt_j. ?? @dt_j >= @dt_n [ @dt_j-@dt_n -> @dt_j. ]
+   !store8[@dt_ptr+@dt_i|:load8[@dt_source+@dt_j]]. @dt_i+1 -> @dt_i.
+  ]
+ ]
+ !store64[@web|@dt_ptr]. !store64[@web+8|@dt_len].
+ ? @dt_case == 41 [ !store64[@web|-4]. !store64[@web+8|8]. ]
+ ? @dt_case == 42 [ !store64[@web+16|77]. ]
+ 2166136261 -> @dt_hash. 0 -> @dt_i.
+ ?? @dt_i < @dt_len [ :bitand[(@dt_hash*16777619)+:load8[@dt_ptr+@dt_i]|0xffffffff] -> @dt_hash. @dt_i+1 -> @dt_i. ]
+ !switch[@web+1024|@web+1152].
+ 0 -> @dt_after.
+ ? @dt_error != -1 [ ? :load64[@web+16] != @dt_error [ 1 -> @dt_after. ] ] ~ [
+  ? (:load64[@web+16] != 0)*(:load64[@web+16] != 28)*(:load64[@web+16] != 65) [ 1 -> @dt_after. ]
+ ]
+ ? @dt_count != -1 [ ? :load64[@web+32] != @dt_count [ 1 -> @dt_after. ] ]
+ ? :load64[@web+4088] != 0xa5a5a5a5a5a5a5a5 [ 1 -> @dt_after. ]
+ ? :load64[@web+528384] != 0xa5a5a5a5a5a5a5a5 [ 1 -> @dt_after. ]
+ ? :load64[@web+599992] != 0xa5a5a5a5a5a5a5a5 [ 1 -> @dt_after. ]
+ ? :load64[@web+640000] != 0xa5a5a5a5a5a5a5a5 [ 1 -> @dt_after. ]
+ 2166136261 -> @dt_n. 0 -> @dt_i.
+ ?? @dt_i < @dt_len [ :bitand[(@dt_n*16777619)+:load8[@dt_ptr+@dt_i]|0xffffffff] -> @dt_n. @dt_i+1 -> @dt_i. ]
+ ? @dt_hash != @dt_n [ 1 -> @dt_after. ]
+ ? @dt_node*(:load64[@web+16] == 0) [
+  @web+4096+(@dt_node-1)*1024 -> @dt_n. :load64[@dt_n+480] -> @dt_source.
+  0 -> @dt_i. ?? :load8[@dt_expected+@dt_i] [ @dt_i+1 -> @dt_i. ]
+  ? @dt_i != :load64[@dt_n+488] [ 1 -> @dt_after. ] ~ [
+   0 -> @dt_j. ?? @dt_j < @dt_i [ ? :load8[@dt_expected+@dt_j] != :load8[@dt_source+@dt_j] [ 1 -> @dt_after. ] @dt_j+1 -> @dt_j. ]
+  ]
+ ]
+ # Invariants for every successful parse, including all fuzz inputs.
+ ? :load64[@web+16] == 0 [
+  1 -> @dt_i. ?? @dt_i <= :load64[@web+32] [
+   @web+4096+(@dt_i-1)*1024 -> @dt_n.
+   ? :load64[@dt_n] >= @dt_i [ 1 -> @dt_after. ]
+   ? (:load64[@dt_n+8] < 1)+(:load64[@dt_n+8] > 4) [ 1 -> @dt_after. ]
+   ? :load64[@dt_n+8] == 2 [
+    ? :load64[@dt_n+488] > 511 [ 1 -> @dt_after. ] ~ [ ? :load8[@dt_n+512+:load64[@dt_n+488]] != 0 [ 1 -> @dt_after. ] ]
+    ? :load64[@dt_n+480] != @dt_n+512 [ 1 -> @dt_after. ]
+   ]
+   @dt_i+1 -> @dt_i.
+  ]
+ ]
+ ? (@dt_case == 3)*(:load64[@web+16] == 0) [
+  ? :load64[@web+4096+3*1024] != 1 [ 1 -> @dt_after. ]
+  ? :load64[@web+4096+6*1024] != 4 [ 1 -> @dt_after. ]
+ ]
+ ? (@dt_case == 4)*(:load64[@web+16] == 0) [
+  ? :load32[@web+4096+32] != 0x00622661 [ 1 -> @dt_after. ]
+  ? :load32[@web+4096+96] != 0x00656e6f [ 1 -> @dt_after. ]
+ ]
+ ? (@dt_case == 9)*(:load64[@web+16] == 0) [ ? :load64[@web+4096+4*1024] != 1 [ 1 -> @dt_after. ] ]
+ ? (@dt_case == 11)*(:load64[@web+16] == 0) [ ? :load64[@web+4096+3*1024] != 0 [ 1 -> @dt_after. ] ]
+ ? (@dt_case == 22)*(:load64[@web+16] == 0) [
+  ? :load64[@web+4096+488] != 510 [ 1 -> @dt_after. ]
+  ? :load64[@web+4096+1024+488] != 4 [ 1 -> @dt_after. ]
+ ]
+ ? (@dt_case == 35)*(:load64[@web+16] == 0) [
+  ? :load32[@web+4096+32] != 0x00656e6f [ 1 -> @dt_after. ]
+  ? :load16[@web+4096+96] != 0x0061 [ 1 -> @dt_after. ]
+ ]
+ ? (@dt_case == 36)*(:load64[@web+16] == 0) [
+  ? :load64[@web+4096+96] != 0x7479702f74786574 [ 1 -> @dt_after. ]
+ ]
+ ? (@dt_case == 48)*(:load64[@web+16] == 0) [ ? :load8[@web+4096+32] != 0 [ 1 -> @dt_after. ] ]
+ ? (@dt_case == 49)*(:load64[@web+16] == 0) [ ? :load8[@web+4096+96] != 0 [ 1 -> @dt_after. ] ]
+ ? (@dt_case == 54)*(:load64[@web+16] == 0) [
+  ? :load8[@web+4096+96] != 0 [ 1 -> @dt_after. ]
+  ? :load8[@web+4096+224] != 0 [ 1 -> @dt_after. ]
+ ]
+ ? (@dt_case == 68)*(:load64[@web+16] == 0) [ ? :load64[@web+4096+1024] != 1 [ 1 -> @dt_after. ] ]
+ ? @dt_after [
+  @dt_errors+1 -> @dt_errors. "DOM case failed: " -> @dt_source. 0 -> @dt_i.
+  ?? :load8[@dt_source+@dt_i] [ !put[:load8[@dt_source+@dt_i]]. @dt_i+1 -> @dt_i. ]
+  @dt_case -> @dt_n. 0 -> @dt_i. ?? @dt_n >= 100 [ @dt_n-100 -> @dt_n. @dt_i+1 -> @dt_i. ] !put[48+@dt_i].
+  0 -> @dt_i. ?? @dt_n >= 10 [ @dt_n-10 -> @dt_n. @dt_i+1 -> @dt_i. ] !put[48+@dt_i]. !put[48+@dt_n]. !put[10].
+ ]
+ @dt_case+1 -> @dt_case.
+]
+? @dt_errors [ !exit[1]. ]
+"170 original Zero DOM checks passed.\n" -> @dt_source. 0 -> @dt_i.
+?? :load8[@dt_source+@dt_i] [ !put[:load8[@dt_source+@dt_i]]. @dt_i+1 -> @dt_i. ]
+:hostfree[@web|4194304] -> @dt_i.

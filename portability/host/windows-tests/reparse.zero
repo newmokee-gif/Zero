@@ -1,0 +1,3 @@
+? :fileopen[:argument[1] | 0] != 18446744073709551615 [ !exit[1]. ]
+? :fileopen[:argument[1] | 2] != 18446744073709551615 [ !exit[2]. ]
+? :filedelete[:argument[1]] != 18446744073709551615 [ !exit[3]. ]

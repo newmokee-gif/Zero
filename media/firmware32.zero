@@ -1,0 +1,673 @@
+# Shared Zmedia validator and original SHA-256 memory worker.
+0 => @zm. 0 => @zi. 0 => @zj. 0 => @zk. 0 => @zp. 0 => @zq.
+0 => @zr. 0 => @zs. 0 => @zt. 0 => @zu. 0 => @zv. 0 => @zw.
+# Zero Flash firmware edition. Original Zero source; firmware supplies device I/O.
+# Runs BEFORE ExitBootServices, independently of the Zero kernel's ATA drivers.
+:reserve[1024] => @s.
+0 => @u.
+:arg0[] => @image.
+:arg1[] => @system.
+:load32[@system+60] => @services.
+0 => @status. 0 => @code. 0 => @i. 0 => @j. 0 => @k.
+0 => @p. 0 => @q. 0 => @r. 0 => @n. 0 => @t.
+0 => @x. 0 => @y. 0 => @z. 0 => @done. 0 => @selected.
+0 => @phase. 0 => @block. 0 => @last. 0 => @bytes.
+0 => @value. 0 => @align. 0 => @handle. 0 => @count.
+0 => @media. 0 => @source. 0 => @protocol. 0 => @out. 0 => @in.
+# Firmware entry arenas are64KiB; worker arenas are explicit firmware allocations.
+!store64[@s|0]. !store64[@s+8|0]. !store64[@s+16|0].
+!store64[@s|0xffffffff]. :call[:load32[@services+32]|1|2|16|@s|0] -> @status.
+? @status == 0 [ 1 -> @count. !store64[@s+8|0xffffffff]. :call[:load32[@services+32]|1|2|32|@s+8|0] -> @status. ]
+? @status == 0 [ 2 -> @count. !store64[@s+16|0xffffffff]. :call[:load32[@services+32]|1|2|22|@s+16|0] -> @status. ]
+? @status [
+ ? @count >= 2 [ :call[:load32[@services+36]|:load64[@s+8]|0|32|0|0] -> @code. ]
+ ? @count >= 1 [ :call[:load32[@services+36]|:load64[@s]|0|16|0|0] -> @code. ]
+ :call[:load32[@services+120]|@image|@status|0|0|0] -> @code. !halt.
+]
+:load64[@s] -> @p. :load64[@s+8] -> @u. :load64[@s+16] -> @zm. @p -> @s.
+0 -> @i. ?? @i < 65536 [ !store64[@s+@i|0]. @i+8 -> @i. ]
+0 -> @i. ?? @i < 131072 [ !store64[@u+@i|0]. @i+8 -> @i. ]
+0 -> @i. ?? @i < 90112 [ !store64[@zm+@i|0]. @i+8 -> @i. ]
+!store64[@s|@image]. !store64[@s+8|@system]. !store64[@s+16|@services].
+!store64[@s+24|:load32[@system+44]]. !store64[@s+32|:load32[@system+36]].
+# s: source40,path48,root56,file64,allocation72,size80,payloadbytes88,payload96.
+# handles104,count112,target120,mediaid128,last136,sourcepathlen144,block152.
+# I/O160,targethandle168,targetpath176,eligiblecount184,diagnostic192.
+# guid1024,result1056,size1064,pointer1072; candidates4096..6143,32x64.
+# UI coroutine operations1 ASCII output,2 unsigned decimal,3 bounded ASCII input.
+:fork[@u+224|@u+32768|81920] -> @code.
+? @code == 1 [
+ ?? 1 [
+  :load64[@s+24] -> @out. :load64[@s+32] -> @in.
+  :load64[@u] -> @phase.
+  ? @phase == 1 [
+   :load64[@u+8] -> @p. 0 -> @i.
+   ?? :load8[@p+@i] [
+    0 -> @j.
+    ?? (:load8[@p+@i] != 0)*(@j < 255) [
+     !store16[@u+1024+@j*2|:load8[@p+@i]]. @i+1 -> @i. @j+1 -> @j.
+    ]
+    !store16[@u+1024+@j*2|0].
+    :call[:load32[@out+4]|@out|@u+1024|0|0|0] -> @code.
+   ]
+  ]
+  ? @phase == 2 [
+   :load64[@u+16] -> @value. 10000000000000000000 -> @x. 0 -> @j. 0 -> @z.
+   ?? @x [
+    0 -> @y. ?? @value >= @x [ @value-@x -> @value. @y+1 -> @y. ]
+    ? @y+@z+(@x == 1) [ !store16[@u+1024+@j*2|48+@y]. @j+1 -> @j. 1 -> @z. ]
+    # Decimal divisor reduction without division; 20 fixed powers.
+    1 -> @p. 0 -> @q. ?? @p < @x [ @p -> @q. @p*10 -> @p. ] @q -> @x.
+   ]
+   !store16[@u+1024+@j*2|0].
+   :call[:load32[@out+4]|@out|@u+1024|0|0|0] -> @code.
+  ]
+  ? @phase == 3 [
+   0 -> @i. 0 -> @done. !store64[@u+24|0].
+   ?? @done == 0 [
+    :call[:load32[@in+4]|@in|@u+2048|0|0|0] -> @code.
+    ? @code == 0 [
+     :load16[@u+2050] -> @value.
+     ? :load16[@u+2048] == 23 [ !store64[@u+24|-1]. 1 -> @done. ]
+     ? @value == 13 [ 1 -> @done. ]
+     ? (@value == 8)*(@i != 0) [
+      @i-1 -> @i. !store16[@u+1024|8]. !store16[@u+1026|32]. !store16[@u+1028|8]. !store16[@u+1030|0].
+      :call[:load32[@out+4]|@out|@u+1024|0|0|0] -> @code.
+     ]
+     ? (@value >= 32)*(@value <= 126)*(@i < 63) [
+      !store8[@u+4096+@i|@value]. @i+1 -> @i.
+      !store16[@u+1024|@value]. !store16[@u+1026|0].
+      :call[:load32[@out+4]|@out|@u+1024|0|0|0] -> @code.
+     ]
+    ] ~ [
+     ? @code != 0x80000006 [ !store64[@u+24|-1]. 1 -> @done. ] ~ [
+      :call[:load32[@services+136]|1000|0|0|0|0] -> @code.
+     ]
+    ]
+   ]
+   !store8[@u+4096+@i|0]. ? :load64[@u+24] != -1 [ !store64[@u+24|@i]. ]
+   !store16[@u+1024|13]. !store16[@u+1026|10]. !store16[@u+1028|0].
+   :call[:load32[@out+4]|@out|@u+1024|0|0|0] -> @code.
+  ]
+  ? @phase == 4 [
+   :load64[@u+8] -> @p. 0 -> @i. 0 -> @done. 0 -> @z.
+   !store64[@u+24|-1]. !store64[@u+32|0].
+   ? @p == 0 [ 1 -> @done. ]
+   ?? @done == 0 [
+    ? @i > 4092 [ 1 -> @done. ] ~ [
+     :load16[@p+@i+2] -> @n.
+     ? (@n < 4)+(@n > 4096-@i) [ 1 -> @done. ] ~ [
+      ? :load8[@p+@i] == 127 [
+       ? (:load8[@p+@i+1] == 255)*(@n == 4) [ !store64[@u+24|@i]. !store64[@u+32|@z]. ]
+       1 -> @done.
+      ] ~ [
+       ? :load8[@p+@i] == 3 [
+        :load8[@p+@i+1] -> @x.
+        ? ((@x == 5)*(@n == 6))+((@x == 15)*(@n == 11))+((@x == 16)*(@n >= 10)) [ 1 -> @z. ]
+       ]
+       @i+@n -> @i.
+      ]
+     ]
+    ]
+   ]
+  ]
+  ? @phase == 5 [
+   :load64[@u+8] -> @p. :load64[@u+16] -> @n. 0 -> @i.
+   "0123456789abcdef" -> @r.
+   ?? @i < @n [
+    0 -> @j.
+    ?? (@i < @n)*(@j < 250) [
+     :load8[@p+@i] -> @x.
+     !store16[@u+1024+@j*2|:load8[@r+:shr[@x|4]]].
+     !store16[@u+1026+@j*2|:load8[@r+:bitand[@x|15]]].
+     @j+2 -> @j. @i+1 -> @i.
+    ]
+    !store16[@u+1024+@j*2|0].
+    :call[:load32[@out+4]|@out|@u+1024|0|0|0] -> @code.
+   ]
+  ]
+  !switch[@u+224|@u+128].
+ ]
+]
+# Caller supplies zeroed90112byte arena@zm before including this block.
+# Descriptor input0,size8,mode16(0envelope,1rawSHA),result24,payload32,size40,digest48.
+# Caller and worker contexts128/224; stack4096..86015; scratch512..1151.
+# Invoke !switch[@zm+128|@zm+224]. No host services are used by this worker.
+:fork[@zm+224|@zm+4096|81920] -> @zs.
+? @zs == 1 [
+ !store32[@zm+512|0x428a2f98].
+ !store32[@zm+516|0x71374491].
+ !store32[@zm+520|0xb5c0fbcf].
+ !store32[@zm+524|0xe9b5dba5].
+ !store32[@zm+528|0x3956c25b].
+ !store32[@zm+532|0x59f111f1].
+ !store32[@zm+536|0x923f82a4].
+ !store32[@zm+540|0xab1c5ed5].
+ !store32[@zm+544|0xd807aa98].
+ !store32[@zm+548|0x12835b01].
+ !store32[@zm+552|0x243185be].
+ !store32[@zm+556|0x550c7dc3].
+ !store32[@zm+560|0x72be5d74].
+ !store32[@zm+564|0x80deb1fe].
+ !store32[@zm+568|0x9bdc06a7].
+ !store32[@zm+572|0xc19bf174].
+ !store32[@zm+576|0xe49b69c1].
+ !store32[@zm+580|0xefbe4786].
+ !store32[@zm+584|0xfc19dc6].
+ !store32[@zm+588|0x240ca1cc].
+ !store32[@zm+592|0x2de92c6f].
+ !store32[@zm+596|0x4a7484aa].
+ !store32[@zm+600|0x5cb0a9dc].
+ !store32[@zm+604|0x76f988da].
+ !store32[@zm+608|0x983e5152].
+ !store32[@zm+612|0xa831c66d].
+ !store32[@zm+616|0xb00327c8].
+ !store32[@zm+620|0xbf597fc7].
+ !store32[@zm+624|0xc6e00bf3].
+ !store32[@zm+628|0xd5a79147].
+ !store32[@zm+632|0x6ca6351].
+ !store32[@zm+636|0x14292967].
+ !store32[@zm+640|0x27b70a85].
+ !store32[@zm+644|0x2e1b2138].
+ !store32[@zm+648|0x4d2c6dfc].
+ !store32[@zm+652|0x53380d13].
+ !store32[@zm+656|0x650a7354].
+ !store32[@zm+660|0x766a0abb].
+ !store32[@zm+664|0x81c2c92e].
+ !store32[@zm+668|0x92722c85].
+ !store32[@zm+672|0xa2bfe8a1].
+ !store32[@zm+676|0xa81a664b].
+ !store32[@zm+680|0xc24b8b70].
+ !store32[@zm+684|0xc76c51a3].
+ !store32[@zm+688|0xd192e819].
+ !store32[@zm+692|0xd6990624].
+ !store32[@zm+696|0xf40e3585].
+ !store32[@zm+700|0x106aa070].
+ !store32[@zm+704|0x19a4c116].
+ !store32[@zm+708|0x1e376c08].
+ !store32[@zm+712|0x2748774c].
+ !store32[@zm+716|0x34b0bcb5].
+ !store32[@zm+720|0x391c0cb3].
+ !store32[@zm+724|0x4ed8aa4a].
+ !store32[@zm+728|0x5b9cca4f].
+ !store32[@zm+732|0x682e6ff3].
+ !store32[@zm+736|0x748f82ee].
+ !store32[@zm+740|0x78a5636f].
+ !store32[@zm+744|0x84c87814].
+ !store32[@zm+748|0x8cc70208].
+ !store32[@zm+752|0x90befffa].
+ !store32[@zm+756|0xa4506ceb].
+ !store32[@zm+760|0xbef9a3f7].
+ !store32[@zm+764|0xc67178f2].
+ ?? 1 [
+  !store64[@zm+24|0]. !store64[@zm+32|0]. !store64[@zm+40|0].
+  0 -> @zi. ?? @zi < 32 [ !store8[@zm+48+@zi|0]. @zi+1 -> @zi. ]
+  :load64[@zm] -> @zp. :load64[@zm+8] -> @zq.
+  ? :load64[@zm+16] > 1 [ !store64[@zm+24|65]. ]
+  ? @zp+@zq < @zp [ !store64[@zm+24|65]. ]
+  ? :load64[@zm+16] == 0 [
+   ? (@zq < 4096)+(@zq > 268439552)+(@zp == 0) [ !store64[@zm+24|65]. ]
+   ? :load64[@zm+24] == 0 [
+    ? (:load64[@zp] != 0x3130414944454d5a)+(:load64[@zp+8] != 1)+(:load64[@zp+16] != 4096)+(:load64[@zp+24] != 512)+(:load64[@zp+40] != 0) [ !store64[@zm+24|65]. ]
+    :load64[@zp+32] -> @zr.
+    ? (@zr < 512)+(@zr > 268435456)+(:bitand[@zr|511] != 0)+(@zr != @zq-4096) [ !store64[@zm+24|65]. ]
+    80 -> @zi. ?? @zi < 4096 [ ? :load8[@zp+@zi] != 0 [ !store64[@zm+24|65]. ] @zi+1 -> @zi. ]
+    @zp+4096 -> @zp. @zr -> @zq.
+   ]
+  ] ~ [
+   ? (@zq > 268435456)+((@zq != 0)*(@zp == 0)) [ !store64[@zm+24|65]. ]
+  ]
+  ? :load64[@zm+24] == 0 [
+   !store32[@zm+768|0x6a09e667]. !store32[@zm+772|0xbb67ae85].
+   !store32[@zm+776|0x3c6ef372]. !store32[@zm+780|0xa54ff53a].
+   !store32[@zm+784|0x510e527f]. !store32[@zm+788|0x9b05688c].
+   !store32[@zm+792|0x1f83d9ab]. !store32[@zm+796|0x5be0cd19].
+   (:shr[@zq|6]+1)*64 -> @zs. ? :bitand[@zq|63] >= 56 [ @zs+64 -> @zs. ]
+   0 -> @zr.
+   ?? @zr < @zs [
+    @zp+@zr -> @zw.
+    ? @zr+64 > @zq [
+     @zm+1088 -> @zw. 0 -> @zi.
+     ?? @zi < 64 [
+      0 -> @zk.
+      ? @zr+@zi < @zq [ :load8[@zp+@zr+@zi] -> @zk. ]
+      ? @zr+@zi == @zq [ 128 -> @zk. ]
+      ? @zr+@zi >= @zs-8 [ :bitand[:shr[@zq*8|(@zs-1-@zr-@zi)*8]|255] -> @zk. ]
+      !store8[@zw+@zi|@zk]. @zi+1 -> @zi.
+     ]
+    ]
+    0 -> @zi.
+    ?? @zi < 16 [
+     @zw+@zi*4 -> @zj.
+     :load8[@zj]*16777216+:load8[@zj+1]*65536+:load8[@zj+2]*256+:load8[@zj+3] -> @zk.
+     !store32[@zm+800+@zi*4|@zk]. @zi+1 -> @zi.
+    ]
+    ?? @zi < 64 [
+     :load32[@zm+800+(@zi-15)*4] -> @zk.
+     :bitxor[:bitxor[:shr[@zk|7]|:bitand[@zk*33554432|0xffffffff]]|:bitxor[:shr[@zk|18]|:bitand[@zk*16384|0xffffffff]]] -> @zu.
+     :bitxor[@zu|:shr[@zk|3]] -> @zu.
+     :load32[@zm+800+(@zi-2)*4] -> @zk.
+     :bitxor[:bitxor[:shr[@zk|17]|:bitand[@zk*32768|0xffffffff]]|:bitxor[:shr[@zk|19]|:bitand[@zk*8192|0xffffffff]]] -> @zv.
+     :bitxor[@zv|:shr[@zk|10]] -> @zv.
+     !store32[@zm+800+@zi*4|:load32[@zm+800+(@zi-16)*4]+@zu+:load32[@zm+800+(@zi-7)*4]+@zv].
+     @zi+1 -> @zi.
+    ]
+    0 -> @zi. ?? @zi < 32 [ !store32[@zm+1056+@zi|:load32[@zm+768+@zi]]. @zi+4 -> @zi. ]
+    0 -> @zi.
+    ?? @zi < 64 [
+     :load32[@zm+1072] -> @zk.
+     :bitxor[:bitxor[:shr[@zk|6]|:bitand[@zk*67108864|0xffffffff]]|:bitxor[:shr[@zk|11]|:bitand[@zk*2097152|0xffffffff]]] -> @zu.
+     :bitxor[@zu|:bitxor[:shr[@zk|25]|:bitand[@zk*128|0xffffffff]]] -> @zu.
+     :bitxor[:bitand[@zk|:load32[@zm+1076]]|:bitand[:bitxor[@zk|0xffffffff]|:load32[@zm+1080]]] -> @zv.
+     :load32[@zm+1084]+@zu+@zv+:load32[@zm+512+@zi*4]+:load32[@zm+800+@zi*4] -> @zt.
+     :load32[@zm+1056] -> @zk.
+     :bitxor[:bitxor[:shr[@zk|2]|:bitand[@zk*1073741824|0xffffffff]]|:bitxor[:shr[@zk|13]|:bitand[@zk*524288|0xffffffff]]] -> @zu.
+     :bitxor[@zu|:bitxor[:shr[@zk|22]|:bitand[@zk*1024|0xffffffff]]] -> @zu.
+     :bitxor[:bitxor[:bitand[@zk|:load32[@zm+1060]]|:bitand[@zk|:load32[@zm+1064]]]|:bitand[:load32[@zm+1060]|:load32[@zm+1064]]] -> @zv.
+     !store32[@zm+1084|:load32[@zm+1080]]. !store32[@zm+1080|:load32[@zm+1076]].
+     !store32[@zm+1076|:load32[@zm+1072]]. !store32[@zm+1072|:load32[@zm+1068]+@zt].
+     !store32[@zm+1068|:load32[@zm+1064]]. !store32[@zm+1064|:load32[@zm+1060]].
+     !store32[@zm+1060|@zk]. !store32[@zm+1056|@zt+@zu+@zv]. @zi+1 -> @zi.
+    ]
+    0 -> @zi. ?? @zi < 32 [ !store32[@zm+768+@zi|:load32[@zm+768+@zi]+:load32[@zm+1056+@zi]]. @zi+4 -> @zi. ]
+    @zr+64 -> @zr.
+   ]
+   0 -> @zi. ?? @zi < 32 [
+    :bitand[@zi|3] -> @zj. :bitand[@zi|0xfffffffc] -> @zk.
+    !store8[@zm+48+@zi|:shr[:load32[@zm+768+@zk]|(3-@zj)*8]]. @zi+1 -> @zi.
+   ]
+   ? :load64[@zm+16] == 0 [
+    :load64[@zm] -> @zr. 0 -> @zi.
+    ?? @zi < 32 [ ? :load8[@zm+48+@zi] != :load8[@zr+48+@zi] [ !store64[@zm+24|65]. ] @zi+1 -> @zi. ]
+   ]
+   ? :load64[@zm+24] == 0 [ !store64[@zm+32|@zp]. !store64[@zm+40|@zq]. ]
+  ]
+  !switch[@zm+224|@zm+128].
+ ]
+]
+!store64[@u|1]. !store64[@u+8|"Zero Flash - firmware edition\r\nFinds \\system.zmedia on firmware-readable volumes.\r\nOnly removable USB whole disks with 512-byte sectors are eligible.\r\nThis utility runs before Zero OS starts.\r\n\r\n"]. !switch[@u+128|@u+224].
+:call[:load32[@services+140]|0|0|0|0|0] -> @status.
+!store64[@s+192|1].
+# Firmware may connect only the boot USB port. Ask existing firmware drivers
+# to connect device-path controllers recursively before enumerating volumes.
+? @status == 0 [
+ !store64[@s+1024|0x11d26d3f09576e91]. !store64[@s+1032|0x3b7269c9a000398e].
+ :call[:load32[@services+168]|2|@s+1024|0|@s+304|@s+312] -> @status.
+ ? :load64[@s+304] > 1024 [ 1 -> @status. ]
+]
+0 -> @i.
+?? (@status == 0)*(@i < :load64[@s+304]) [
+ :load32[:load64[@s+312]+@i*4] -> @handle.
+ :call[:load32[@services+144]|@handle|0|0|1|0] -> @code.
+ @i+1 -> @i.
+]
+? :load64[@s+312] [
+ :call[:load32[@services+48]|:load64[@s+312]|0|0|0|0] -> @code.
+ !store64[@s+312|0].
+]
+# Identify and exclude the complete source device path, including its ancestors.
+? @status == 0 [
+ !store64[@s+1024|0x11d295625b1b31a1]. !store64[@s+1032|0x3b7269c9a0003f8e].
+ :call[:load32[@services+88]|@image|@s+1024|@s+1056|0|0] -> @status.
+]
+? @status == 0 [
+ :load64[@s+1056] -> @p. :load32[@p+12] -> @source. !store64[@s+40|@source].
+ !store64[@s+1024|0x11d26d3f09576e91]. !store64[@s+1032|0x3b7269c9a000398e].
+ :call[:load32[@services+88]|@source|@s+1024|@s+1056|0|0] -> @status.
+]
+? @status == 0 [
+ !store64[@s+48|:load64[@s+1056]].
+ !store64[@u|4]. !store64[@u+8|:load64[@s+48]]. !switch[@u+128|@u+224].
+ ? (:load64[@u+24] == -1)+(:load64[@u+24] == 0) [ 1 -> @status. ] ~ [ !store64[@s+144|:load64[@u+24]]. ]
+]
+# Preserve the boot-utility disk identity separately from the selected source.
+!store64[@s+208|:load64[@s+48]]. !store64[@s+216|:load64[@s+144]].
+# Firmware SimpleFS source discovery. Zero or one source does not require guessing.
+? @status == 0 [
+ !store64[@s+192|2].
+ !store64[@s+1024|0x11d26459964e5b22]. !store64[@s+1032|0x3b7269c9a000398e].
+ :call[:load32[@services+168]|2|@s+1024|0|@s+224|@s+232] -> @status.
+ ? :load64[@s+224] > 1024 [ 1 -> @status. ]
+]
+0 -> @i.
+?? (@status == 0)*(@i < :load64[@s+224]) [
+ :load32[:load64[@s+232]+@i*4] -> @handle. 1 -> @done.
+ !store64[@s+1024|0x11d26459964e5b22]. !store64[@s+1032|0x3b7269c9a000398e].
+ :call[:load32[@services+88]|@handle|@s+1024|@s+1056|0|0] -> @code.
+ ? @code [ 0 -> @done. ] ~ [
+  :load64[@s+1056] -> @p.
+  :call[:load32[@p+8]|@p|@s+56|0|0|0] -> @code.
+  ? @code [ 0 -> @done. ]
+ ]
+ ? @done [
+  "\\system.zmedia" -> @p. 0 -> @j.
+  ?? :load8[@p+@j] [ !store16[@s+2048+@j*2|:load8[@p+@j]]. @j+1 -> @j. ]
+  !store16[@s+2048+@j*2|0]. :load64[@s+56] -> @p.
+  :call7[:load32[@p+8]|@p|@s+64|@s+2048|1|0|0|0] -> @code.
+  ? @code [ 0 -> @done. ]
+ ]
+ ? @done [
+  :load64[@s+64] -> @p.
+  !store64[@s+1024|0x11d26d3f09576e92]. !store64[@s+1032|0x3b7269c9a000398e].
+  !store64[@s+1064|512].
+  :call[:load32[@p+36]|@p|@s+1024|@s+1064|@s+2048|0] -> @code.
+  ? @code [ 0 -> @done. ] ~ [
+   ? (:load64[@s+1064] < 80)+(:load64[@s+1064] > 512)+(:bitand[:load64[@s+2120]|16] != 0) [ 0 -> @done. ]
+   :load64[@s+2056] -> @bytes.
+   ? (@bytes < 4608)+(@bytes > 268439552) [ 0 -> @done. ]
+  ]
+ ]
+ ? :load64[@s+64] [
+  :load64[@s+64] -> @p. :call[:load32[@p+12]|@p|0|0|0|0] -> @code.
+  ? @code [ 0 -> @done. ] !store64[@s+64|0].
+ ]
+ ? :load64[@s+56] [
+  :load64[@s+56] -> @p. :call[:load32[@p+12]|@p|0|0|0|0] -> @code.
+  ? @code [ 0 -> @done. ] !store64[@s+56|0].
+ ]
+ ? @done [
+  !store64[@s+1024|0x11d26d3f09576e91]. !store64[@s+1032|0x3b7269c9a000398e].
+  :call[:load32[@services+88]|@handle|@s+1024|@s+1056|0|0] -> @code.
+  ? @code [ 0 -> @done. ] ~ [
+   :load64[@s+1056] -> @p.
+   !store64[@u|4]. !store64[@u+8|@p]. !switch[@u+128|@u+224].
+   :load64[@u+24] -> @n. ? (@n == -1)+(@n == 0) [ 0 -> @done. ]
+  ]
+ ]
+ ? @done [
+  :load64[@s+240] -> @selected.
+  ? @selected >= 32 [ 1 -> @status. ] ~ [
+   @s+16384+@selected*32 -> @q.
+   !store64[@q|@handle]. !store64[@q+8|@p]. !store64[@q+16|@bytes]. !store64[@q+24|@n].
+   !store64[@s+240|@selected+1].
+   !store64[@u|1]. !store64[@u+8|"Source "]. !switch[@u+128|@u+224].
+   !store64[@u|2]. !store64[@u+16|@selected+1]. !switch[@u+128|@u+224].
+   !store64[@u|1]. !store64[@u+8|": system.zmedia, bytes="]. !switch[@u+128|@u+224].
+   !store64[@u|2]. !store64[@u+16|@bytes]. !switch[@u+128|@u+224].
+   !store64[@u|1]. !store64[@u+8|", path="]. !switch[@u+128|@u+224].
+   !store64[@u|5]. !store64[@u+8|@p]. !store64[@u+16|@n]. !switch[@u+128|@u+224].
+   !store64[@u|1]. !store64[@u+8|"\r\n"]. !switch[@u+128|@u+224].
+  ]
+ ]
+ @i+1 -> @i.
+]
+? (@status == 0)*(:load64[@s+240] == 0) [
+ !store64[@u|1]. !store64[@u+8|"No system.zmedia found. Put it at the root of a firmware-readable volume.\r\n"]. !switch[@u+128|@u+224]. 1 -> @status.
+]
+1 -> @selected.
+? (@status == 0)*(:load64[@s+240] > 1) [
+ !store64[@u|1]. !store64[@u+8|"Select source number (Escape cancels): "]. !switch[@u+128|@u+224].
+ !store64[@u|3]. !switch[@u+128|@u+224].
+ :load64[@u+24] -> @n. 0 -> @selected. 0 -> @i.
+ ? (@n == 0)+(@n > 2) [ 1 -> @status. ]
+ ?? (@status == 0)*(@i < @n) [
+  :load8[@u+4096+@i] -> @x.
+  ? (@x < 48)+(@x > 57) [ 1 -> @status. ] ~ [ @selected*10+@x-48 -> @selected. ] @i+1 -> @i.
+ ]
+ ? (@selected == 0)+(@selected > :load64[@s+240]) [ 1 -> @status. ]
+]
+? @status == 0 [
+ @s+16384+(@selected-1)*32 -> @q. :load64[@q] -> @source.
+ !store64[@s+40|@source]. !store64[@s+48|:load64[@q+8]]. !store64[@s+144|:load64[@q+24]].
+]
+
+# Read the complete source once; later writes never reread mutable source bytes.
+? @status == 0 [
+ !store64[@s+192|2].
+ !store64[@s+1024|0x11d26459964e5b22]. !store64[@s+1032|0x3b7269c9a000398e].
+ :call[:load32[@services+88]|@source|@s+1024|@s+1056|0|0] -> @status.
+]
+? @status == 0 [
+ :load64[@s+1056] -> @p.
+ :call[:load32[@p+8]|@p|@s+56|0|0|0] -> @status.
+]
+? @status == 0 [
+ "\\system.zmedia" -> @p. 0 -> @i.
+ ?? :load8[@p+@i] [ !store16[@s+2048+@i*2|:load8[@p+@i]]. @i+1 -> @i. ]
+ !store16[@s+2048+@i*2|0]. :load64[@s+56] -> @p.
+ :call7[:load32[@p+8]|@p|@s+64|@s+2048|1|0|0|0] -> @status.
+]
+? @status == 0 [
+ :load64[@s+64] -> @p.
+ !store64[@s+1024|0x11d26d3f09576e92]. !store64[@s+1032|0x3b7269c9a000398e].
+ !store64[@s+1064|512].
+ :call[:load32[@p+36]|@p|@s+1024|@s+1064|@s+2048|0] -> @status.
+ ? @status == 0 [
+  ? (:load64[@s+1064] < 80)+(:load64[@s+1064] > 512)+(:bitand[:load64[@s+2120]|16] != 0) [ 1 -> @status. ]
+  :load64[@s+2056] -> @bytes.
+  ? (@bytes < 4608)+(@bytes > 268439552) [ 1 -> @status. ]
+  !store64[@s+80|@bytes].
+ ]
+]
+? @status == 0 [
+ !store64[@s+192|3].
+ :call[:load32[@services+44]|2|@bytes|@s+72|0|0] -> @status.
+ ? :load64[@s+72] == 0 [ 1 -> @status. ]
+]
+0 -> @i.
+?? (@status == 0)*(@i < @bytes) [
+ @bytes-@i -> @n. ? @n > 1048576 [ 1048576 -> @n. ]
+ !store64[@s+1064|@n]. :load64[@s+64] -> @p.
+ :call[:load32[@p+20]|@p|@s+1064|:load64[@s+72]+@i|0|0] -> @status.
+ ? @status == 0 [
+  :load64[@s+1064] -> @n.
+  ? (@n == 0)+(@n > @bytes-@i)+(@n > 1048576) [ 1 -> @status. ] ~ [ @i+@n -> @i. ]
+ ]
+]
+? @status == 0 [
+ !store64[@s+1064|1]. :load64[@s+64] -> @p.
+ :call[:load32[@p+20]|@p|@s+1064|@s+2048|0|0] -> @status.
+ ? :load64[@s+1064] != 0 [ 1 -> @status. ]
+]
+? @status == 0 [
+ !store64[@s+192|4].
+ !store64[@u|1]. !store64[@u+8|"Checking image integrity...\r\n"]. !switch[@u+128|@u+224].
+ !store64[@zm|:load64[@s+72]]. !store64[@zm+8|:load64[@s+80]]. !store64[@zm+16|0].
+ !switch[@zm+128|@zm+224].
+ ? :load64[@zm+24] != 0 [ 1 -> @status. ] ~ [
+  !store64[@s+96|:load64[@zm+32]]. !store64[@s+88|:load64[@zm+40]].
+ ]
+]
+? :load64[@s+64] [
+ :load64[@s+64] -> @p. :call[:load32[@p+12]|@p|0|0|0|0] -> @code.
+ ? @code [ 1 -> @status. ] !store64[@s+64|0].
+]
+? :load64[@s+56] [
+ :load64[@s+56] -> @p. :call[:load32[@p+12]|@p|0|0|0|0] -> @code.
+ ? @code [ 1 -> @status. ] !store64[@s+56|0].
+]
+# Enumerate Block I/O; exact known fields are checked again after confirmation.
+? @status == 0 [
+ !store64[@s+192|5].
+ !store64[@s+1024|0x11d26459964e5b21]. !store64[@s+1032|0x3b7269c9a000398e].
+ :call[:load32[@services+168]|2|@s+1024|0|@s+112|@s+104] -> @status.
+ ? :load64[@s+112] > 1024 [ 1 -> @status. ]
+]
+0 -> @i.
+?? (@status == 0)*(@i < :load64[@s+112]) [
+ :load32[:load64[@s+104]+@i*4] -> @handle. 1 -> @done.
+ !store64[@s+1024|0x11d26459964e5b21]. !store64[@s+1032|0x3b7269c9a000398e].
+ :call[:load32[@services+88]|@handle|@s+1024|@s+1056|0|0] -> @code.
+ ? @code [ 0 -> @done. ] ~ [
+  :load64[@s+1056] -> @protocol. :load32[@protocol+8] -> @media.
+  ? @media == 0 [ 0 -> @done. ] ~ [
+   ? (:load8[@media+4] != 1)+(:load8[@media+5] != 1)+(:load8[@media+6] != 0)+(:load8[@media+7] != 0) [ 0 -> @done. ]
+   ? :load32[@media+12] != 512 [ 0 -> @done. ]
+   :load32[@media+16] -> @align.
+   ? (@align > 4096)+((@align != 0)*(:bitand[@align|@align-1] != 0)) [ 0 -> @done. ]
+   :load64[@media+24] -> @last.
+   ? (@last >= 0x7fffffffffffff)+(@last < :shr[:load64[@s+88]|9]-1) [ 0 -> @done. ]
+  ]
+ ]
+ ? @done [
+  !store64[@s+1024|0x11d26d3f09576e91]. !store64[@s+1032|0x3b7269c9a000398e].
+  :call[:load32[@services+88]|@handle|@s+1024|@s+1056|0|0] -> @code.
+  ? @code [ 0 -> @done. ] ~ [
+   :load64[@s+1056] -> @p.
+   !store64[@u|4]. !store64[@u+8|@p]. !switch[@u+128|@u+224].
+   :load64[@u+24] -> @n.
+   ? (@n == -1)+(@n == 0)+(:load64[@u+32] != 1) [ 0 -> @done. ]
+   # A target path prefix of the loaded image volume is the source disk.
+   ? @done*(@n <= :load64[@s+144]) [
+    0 -> @j. 1 -> @x. :load64[@s+48] -> @q.
+    ?? (@j < @n)*@x [ ? :load8[@p+@j] != :load8[@q+@j] [ 0 -> @x. ] @j+1 -> @j. ]
+    ? @x [ 0 -> @done. ]
+   ]
+   ? @done*(@n <= :load64[@s+216]) [
+    0 -> @j. 1 -> @x. :load64[@s+208] -> @q.
+    ?? (@j < @n)*@x [ ? :load8[@p+@j] != :load8[@q+@j] [ 0 -> @x. ] @j+1 -> @j. ]
+    ? @x [ 0 -> @done. ]
+   ]
+  ]
+ ]
+ ? @done [
+  :load64[@s+184] -> @selected.
+  ? @selected >= 32 [ 1 -> @status. ] ~ [
+   @s+4096+@selected*64 -> @q.
+   !store64[@q|@handle]. !store64[@q+8|@protocol]. !store64[@q+16|@media].
+   !store64[@q+24|:load32[@media]]. !store64[@q+32|@last]. !store64[@q+40|@p]. !store64[@q+48|@n].
+   !store64[@s+184|@selected+1].
+   !store64[@u|2]. !store64[@u+16|@selected+1]. !switch[@u+128|@u+224].
+   !store64[@u|1]. !store64[@u+8|". USB disk, bytes="]. !switch[@u+128|@u+224].
+   !store64[@u|2]. !store64[@u+16|(@last+1)*512]. !switch[@u+128|@u+224].
+   !store64[@u|1]. !store64[@u+8|", media ID="]. !switch[@u+128|@u+224].
+   !store64[@u|2]. !store64[@u+16|:load32[@media]]. !switch[@u+128|@u+224].
+   !store64[@u|1]. !store64[@u+8|", path="]. !switch[@u+128|@u+224].
+   0 -> @j. "0123456789abcdef" -> @r.
+   ?? @j < @n [
+    :load8[@p+@j] -> @x.
+    !store8[@s+8192+@j*2|:load8[@r+:shr[@x|4]]]. !store8[@s+8193+@j*2|:load8[@r+:bitand[@x|15]]].
+    @j+1 -> @j.
+   ]
+   !store8[@s+8192+@j*2|0].
+   !store64[@u|1]. !store64[@u+8|@s+8192]. !switch[@u+128|@u+224].
+   !store64[@u+8|"\r\n"]. !switch[@u+128|@u+224].
+  ]
+ ]
+ @i+1 -> @i.
+]
+? (@status == 0)*(:load64[@s+184] == 0) [
+ !store64[@u|1]. !store64[@u+8|"No eligible removable USB disk. No disk was changed.\r\n"]. !switch[@u+128|@u+224]. 1 -> @status.
+]
+? @status == 0 [
+ !store64[@s+192|6].
+ !store64[@u|1]. !store64[@u+8|"Select disk number (Escape cancels): "]. !switch[@u+128|@u+224].
+ !store64[@u|3]. !switch[@u+128|@u+224].
+ :load64[@u+24] -> @n. 0 -> @selected. 0 -> @i.
+ ? (@n == 0)+(@n > 2) [ 1 -> @status. ]
+ ?? (@status == 0)*(@i < @n) [
+  :load8[@u+4096+@i] -> @x.
+  ? (@x < 48)+(@x > 57) [ 1 -> @status. ] ~ [ @selected*10+@x-48 -> @selected. ] @i+1 -> @i.
+ ]
+ ? (@selected == 0)+(@selected > :load64[@s+184]) [ 1 -> @status. ]
+]
+? @status == 0 [
+ @s+4096+(@selected-1)*64 -> @q.
+ !store64[@s+168|:load64[@q]]. !store64[@s+120|:load64[@q+8]]. !store64[@s+128|:load64[@q+24]].
+ !store64[@s+136|:load64[@q+32]]. !store64[@s+176|:load64[@q+40]].
+ :load64[@q+48] -> @n. !store64[@s+280|@n]. :load64[@q+40] -> @p. 0 -> @j.
+ ?? @j < @n [ !store8[@s+24576+@j|:load8[@p+@j]]. @j+1 -> @j. ]
+ !store64[@u|1]. !store64[@u+8|"ALL DATA on disk "]. !switch[@u+128|@u+224].
+ !store64[@u|2]. !store64[@u+16|@selected]. !switch[@u+128|@u+224].
+ !store64[@u|1]. !store64[@u+8|" will be destroyed. Type ERASE to continue: "]. !switch[@u+128|@u+224].
+ !store64[@u|3]. !switch[@u+128|@u+224].
+ ? (:load64[@u+24] != 5)+(:load32[@u+4096] != 0x53415245)+(:load8[@u+4100] != 69) [ 1 -> @status. ]
+]
+# Allocate aligned I/O scratch and confirm the selected physical media is unchanged.
+? @status == 0 [
+ !store64[@s+192|7].
+ !store64[@s+1024|0x11d26459964e5b21]. !store64[@s+1032|0x3b7269c9a000398e].
+ :call[:load32[@services+88]|:load64[@s+168]|@s+1024|@s+1056|0|0] -> @status.
+ ? @status == 0 [ !store64[@s+120|:load64[@s+1056]]. ]
+]
+? @status == 0 [
+ !store64[@s+1024|0x11d26d3f09576e91]. !store64[@s+1032|0x3b7269c9a000398e].
+ :call[:load32[@services+88]|:load64[@s+168]|@s+1024|@s+1056|0|0] -> @status.
+]
+? @status == 0 [
+ :load64[@s+1056] -> @p.
+ !store64[@u|4]. !store64[@u+8|@p]. !switch[@u+128|@u+224].
+ ? :load64[@u+24] != :load64[@s+280] [ 1 -> @status. ]
+ 0 -> @j. ?? (@status == 0)*(@j < :load64[@s+280]) [
+  ? :load8[@p+@j] != :load8[@s+24576+@j] [ 1 -> @status. ] @j+1 -> @j.
+ ]
+]
+? @status == 0 [
+ !store64[@s+160|0xffffffff]. :call[:load32[@services+32]|1|2|16|@s+160|0] -> @status.
+ ? @status [ !store64[@s+160|0]. ]
+]
+? @status == 0 [
+ :load64[@s+120] -> @protocol. :load32[@protocol+8] -> @media.
+ ? (:load32[@media] != :load64[@s+128])+(:load64[@media+24] != :load64[@s+136]) [ 1 -> @status. ]
+ ? (:load8[@media+4] != 1)+(:load8[@media+5] != 1)+(:load8[@media+6] != 0)+(:load8[@media+7] != 0)+(:load32[@media+12] != 512) [ 1 -> @status. ]
+ :load32[@media+16] -> @align. ? (@align > 4096)+((@align != 0)*(:bitand[@align|@align-1] != 0)) [ 1 -> @status. ]
+]
+? @status == 0 [
+ !store64[@u|1]. !store64[@u+8|"Writing verified image...\r\n"]. !switch[@u+128|@u+224].
+ !store64[@s+192|8].
+]
+0 -> @i.
+?? (@status == 0)*(@i < :load64[@s+88]) [
+ :load64[@s+88]-@i -> @n. ? @n > 65536 [ 65536 -> @n. ]
+ :load64[@s+160] -> @p. :load64[@s+96]+@i -> @q. 0 -> @j.
+ ?? @j < @n [ !store64[@p+@j|:load64[@q+@j]]. @j+8 -> @j. ]
+ :load64[@s+120] -> @protocol.
+ :call7[:load32[@protocol+20]|@protocol|:load64[@s+128]|:bitand[:shr[@i|9]|0xffffffff]|:shr[@i|41]|@n|@p|0] -> @status.
+ @i+@n -> @i.
+]
+# Clear a stale backup GPT at the end of a larger target, without payload overlap.
+? @status == 0 [
+ :load64[@s+136]+1 -> @x. :shr[:load64[@s+88]|9] -> @y.
+ @x-@y -> @n. ? @n > 33 [ 33 -> @n. ]
+ !store64[@s+264|(@x-@n)*512]. !store64[@s+272|@n*512].
+ ? @n [
+  :load64[@s+160] -> @p. 0 -> @j.
+  ?? @j < @n*512 [ !store64[@p+@j|0]. @j+8 -> @j. ]
+  :load64[@s+120] -> @protocol. :load64[@s+264] -> @i. @n*512 -> @n.
+  :call7[:load32[@protocol+20]|@protocol|:load64[@s+128]|:bitand[:shr[@i|9]|0xffffffff]|:shr[@i|41]|@n|@p|0] -> @status.
+ ]
+]
+? @status == 0 [
+ !store64[@s+192|9]. :load64[@s+120] -> @protocol.
+ :call[:load32[@protocol+24]|@protocol|0|0|0|0] -> @status.
+]
+? @status == 0 [
+ !store64[@u|1]. !store64[@u+8|"Reading back every written byte...\r\n"]. !switch[@u+128|@u+224].
+ !store64[@s+192|10].
+]
+0 -> @i.
+?? (@status == 0)*(@i < :load64[@s+88]) [
+ :load64[@s+88]-@i -> @n. ? @n > 65536 [ 65536 -> @n. ]
+ :load64[@s+160] -> @p. :load64[@s+96]+@i -> @q. :load64[@s+120] -> @protocol.
+ :call7[:load32[@protocol+16]|@protocol|:load64[@s+128]|:bitand[:shr[@i|9]|0xffffffff]|:shr[@i|41]|@n|@p|0] -> @status.
+ 0 -> @j.
+ ?? (@status == 0)*(@j < @n) [
+  ? :load64[@p+@j] != :load64[@q+@j] [ 1 -> @status. ] @j+8 -> @j.
+ ]
+ @i+@n -> @i.
+]
+? (@status == 0)*(:load64[@s+272] != 0) [
+ :load64[@s+160] -> @p. :load64[@s+120] -> @protocol.
+ :load64[@s+264] -> @i. :load64[@s+272] -> @n.
+ :call7[:load32[@protocol+16]|@protocol|:load64[@s+128]|:bitand[:shr[@i|9]|0xffffffff]|:shr[@i|41]|@n|@p|0] -> @status.
+ 0 -> @j. ?? (@status == 0)*(@j < @n) [ ? :load64[@p+@j] != 0 [ 1 -> @status. ] @j+8 -> @j. ]
+]
+? @status == 0 [
+ !store64[@u|1]. !store64[@u+8|"Success: image written, flushed and every byte verified.\r\n"]. !switch[@u+128|@u+224].
+] ~ [
+ !store64[@u|1]. !store64[@u+8|"Stopped at stage "]. !switch[@u+128|@u+224].
+ !store64[@u|2]. !store64[@u+16|:load64[@s+192]]. !switch[@u+128|@u+224].
+ !store64[@u|1]. !store64[@u+8|". No successful write is claimed.\r\n"]. !switch[@u+128|@u+224].
+]
+# Free only allocations owned by this utility. No boot variables are changed.
+? :load64[@s+160] [ :call[:load32[@services+36]|:load64[@s+160]|0|16|0|0] -> @code. ]
+? :load64[@s+104] [ :call[:load32[@services+48]|:load64[@s+104]|0|0|0|0] -> @code. ]
+? :load64[@s+232] [ :call[:load32[@services+48]|:load64[@s+232]|0|0|0|0] -> @code. ]
+? :load64[@s+72] [ :call[:load32[@services+48]|:load64[@s+72]|0|0|0|0] -> @code. ]
+!store64[@u|1]. !store64[@u+8|"Press Enter to return to firmware.\r\n"]. !switch[@u+128|@u+224].
+!store64[@u|3]. !switch[@u+128|@u+224].
+:call[:load32[@services+36]|@u|0|32|0|0] -> @code.
+:call[:load32[@services+36]|@zm|0|22|0|0] -> @code.
+:call[:load32[@services+36]|@s|0|16|0|0] -> @code.
+:call[:load32[@services+120]|@image|@status|0|0|0] -> @code.
+!halt.

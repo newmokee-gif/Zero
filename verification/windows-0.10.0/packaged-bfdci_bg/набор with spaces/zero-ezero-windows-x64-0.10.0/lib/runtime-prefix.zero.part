@@ -1,0 +1,9 @@
+# Ezero-owned hosted execution arena. Eight shared initialization variables.
+:reserve[2097152] => @ez_mem.
+@ez_mem => @ez_program.
+0 => @ez_program_bytes.
+0 => @ez_encoded.
+0 => @ez_decode_i.
+0 => @ez_decode_n.
+0 => @ez_decode_a.
+0 => @ez_decode_b.

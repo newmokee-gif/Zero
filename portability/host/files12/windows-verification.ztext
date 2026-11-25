@@ -1,0 +1,36 @@
+ZTEXT001000004933b5dca5c0000000
+Windows original Zero whole-file API tests
+25/25 PASS under Wine (not native Windows).
+create new
+create existing preserves
+create directory rejected
+whole-file read
+read capacity fails
+save UTF8 replacement
+exclusive write preserves existing
+save empty/read zero capacity
+watch regular files UTF8
+empty directory cap0
+list overflow fails
+case-sensitive star glob
+question matches one UTF8 scalar
+no match empty success
+search excludes directories
+exact basename search
+trailing separator all files
+go then relative watch
+native drive roots
+drive output overflow fails
+del requires existing regular file
+whole-file operations reject directories
+empty root/pattern use current directory
+missing directory errors
+65536 read boundary
+
+Fixture /tmp/zero-support/validation-0.12/windows-files/fixtures-hvvh_3bm
+Compiler SHA256 e2d392268cde67c60fd60c53ad71f9c0538f43fc7bd5753b58ab7e444b359d67
+Probe SHA256 93af9290a9b788c469df9abce438ab54938a44592946c9690ba2ee4d427fc324
+
+16 additional boundary assertions passed using windows-bounds.zero under Wine.
+Final table SHA256 b8c5bd606d4a37432251982f7639d100788d0b0c9f2bdefccbc5f0cf4bad0768
+Zero author regeneration: byte-identical.

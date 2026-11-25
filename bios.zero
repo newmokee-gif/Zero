@@ -1,0 +1,471 @@
+# Original BIOS optical loader, compiled by our real-mode Zero compiler.
+# El Torito loads this <=16 KiB program at 0000:7c00. Values are u32.
+# ISO layout: kernels40..271/272..519, EFI FAT520, compiler bundle8712.
+:arg0[] => @drive.
+0 => @status.
+1 => @good.
+1 => @serial.
+"ZERO BIOS: loading own Zero kernel\r\n" => @text.
+0 => @index.
+0 => @character.
+0 => @flags.
+0 => @temporary.
+0 => @wait.
+0 => @attempt.
+0 => @block.
+0x3900 => @dap.
+0x0900 => @handoff.
+"ZERO BIOS: boot failed\r\n" => @error.
+32 => @architecture.
+272 => @kernel_lba.
+0 => @directory.
+0 => @page_directory.
+0 => @video_found.
+0 => @video_pass.
+0 => @video_version.
+0 => @video_memory.
+0 => @mode_segment.
+0 => @mode_offset.
+0 => @mode_scan.
+0 => @mode_number.
+0 => @mode_valid.
+0 => @video_width.
+0 => @video_height.
+0 => @video_pitch.
+0 => @video_stride.
+0 => @video_base.
+0 => @video_format.
+0 => @mask_offset.
+0 => @map_next.
+0 => @map_done.
+0 => @map_calls.
+0 => @map_count.
+0 => @map_base.
+0 => @map_end.
+0 => @map_valid.
+0 => @map_coverage.
+0 => @map_before.
+0 => @map_pass.
+
+# Firmware services are used only before the architectural mode transition.
+!enable.
+!biosmode[3].
+!out8[0x3f9|0].
+!out8[0x3fb|128].
+!out8[0x3f8|1].
+!out8[0x3f9|0].
+!out8[0x3fb|3].
+!out8[0x3fa|7].
+!out8[0x3fc|3].
+:in8[0x3fd] -> @flags.
+? @flags == 255 [ 0 -> @serial. ]
+? @flags == 0 [ 0 -> @serial. ]
+?? :load8[@text+@index] != 0 [
+    :load8[@text+@index] -> @character.
+    !biosput[@character].
+    ? @serial [
+        0 -> @flags. 0 -> @wait.
+        ?? (@flags < 32) * @serial [
+            :in8[0x3fd] -> @flags.
+            ? @flags >= 128 [ @flags-128 -> @flags. ]
+            ? @flags >= 64 [ @flags-64 -> @flags. ]
+            @wait+1 -> @wait.
+            ? @wait == 1000000 [ 0 -> @serial. ]
+        ]
+        ? @serial [ !out8[0x3f8|@character]. ]
+    ]
+    @index+1 -> @index.
+]
+
+# Prefer long mode only when both LM and PAE are reported. The protected-mode
+# kernel is the default and does not require either feature. CPUID itself is
+# part of this PC target's minimum processor contract (Pentium-class or newer).
+? :cpuid[0x80000000|0] >= 0x80000001 [
+    :cpuid[0x80000001|3] -> @flags.
+    ? @flags*4 >= 0x80000000 [
+        ? :cpuid[0|0] >= 1 [
+            :cpuid[1|3] -> @flags.
+            # u32 wrapping multiplication moves feature bit6 to bit31.
+            ? @flags*0x02000000 >= 0x80000000 [ 64 -> @architecture. ]
+        ]
+    ]
+]
+? @architecture == 64 [ 40 -> @kernel_lba. ]
+? @good [
+    :bioscheck[@drive] -> @status.
+    ? @status != 0 [ 0 -> @good. "ZERO BIOS: extended disk reads unavailable\r\n" -> @error. ]
+]
+
+# Refuse conventional RAM or EBDA overlap before any optical payload read.
+# The 64-bit slot ends at94000; the larger32-bit slot ends at9c000.
+0x9c000 -> @temporary.
+? @architecture == 64 [ 0x94000 -> @temporary. ]
+? :load16[0x0413]*1024 < @temporary [
+    0 -> @good. "ZERO BIOS: insufficient conventional memory\r\n" -> @error.
+]
+? :load16[0x040e] != 0 [
+    ? :load16[0x040e]*16 < @temporary [
+        0 -> @good. "ZERO BIOS: kernel would overlap EBDA\r\n" -> @error.
+    ]
+]
+
+# E820 validates the high-memory boot regions before it is used. Keep usable
+# intersections as 8-byte intervals at 4000..47ff, then prove complete coverage
+# even when firmware entries are unordered or adjacent. Every enabled
+# non-RAM overlap is rejected. Page-table construction later reuses this area.
+? @good [
+    0 -> @map_next. 0 -> @map_done. 0 -> @map_calls. 0 -> @map_count.
+    ?? (@map_done == 0) * @good [
+        0 -> @index.
+        ?? @index < 32 [ !store32[0x6600+@index|0]. @index+4 -> @index. ]
+        :memmap[@map_next|0x6600] -> @status.
+        @map_calls+1 -> @map_calls.
+        ? @status == 0xffffffff [
+            0 -> @good. "ZERO BIOS: E820 memory map unavailable or invalid\r\n" -> @error.
+        ] ~ [
+            1 -> @map_valid.
+            ? :load32[0x6618] >= 24 [
+                ? :load32[0x6614]*0x80000000 < 0x80000000 [ 0 -> @map_valid. ]
+            ]
+            ? (:load32[0x6608] == 0) * (:load32[0x660c] == 0) [ 0 -> @map_valid. ]
+            ? :load32[0x6604] != 0 [ 0 -> @map_valid. ]
+            :load32[0x6600] -> @map_base.
+            ? @map_base >= 0x1000000 [ 0 -> @map_valid. ]
+            ? @map_valid [
+                # Reject a firmware range that wraps its 64-bit address space.
+                ? :load32[0x660c] == 0xffffffff [
+                    ? :load32[0x6608] > 0xffffffff-@map_base [
+                        0 -> @good.
+                        "ZERO BIOS: E820 range address overflow\r\n" -> @error.
+                    ]
+                ]
+                # Saturate at 16 MiB without overflowing a real-mode u32 value.
+                0x1000000 -> @map_end.
+                ? :load32[0x660c] == 0 [
+                    ? :load32[0x6608] < 0x1000000-@map_base [
+                        @map_base+:load32[0x6608] -> @map_end.
+                    ]
+                ]
+                ? @map_end > 0x100000 [
+                    ? :load32[0x6610] != 1 [
+                        0 -> @good. "ZERO BIOS: boot memory overlaps reserved memory\r\n" -> @error.
+                    ] ~ [
+                        ? @map_base < 0x100000 [ 0x100000 -> @map_base. ]
+                        !store32[0x4000+@map_count*8|@map_base].
+                        !store32[0x4004+@map_count*8|@map_end].
+                        @map_count+1 -> @map_count.
+                    ]
+                ]
+            ]
+            @status -> @map_next.
+            ? @map_next == 0 [ 1 -> @map_done. ]
+            ? @map_calls >= 256 [
+                ? @map_done == 0 [
+                    0 -> @good. "ZERO BIOS: E820 memory map exceeds limit\r\n" -> @error.
+                ]
+            ]
+        ]
+    ]
+    ? @good [
+        0x100000 -> @map_coverage. 0 -> @map_pass.
+        ?? (@map_coverage < 0x1000000) * (@map_pass < @map_count) [
+            @map_coverage -> @map_before. 0 -> @index.
+            ?? @index < @map_count [
+                ? :load32[0x4000+@index*8] <= @map_coverage [
+                    ? :load32[0x4004+@index*8] > @map_coverage [
+                        :load32[0x4004+@index*8] -> @map_coverage.
+                    ]
+                ]
+                @index+1 -> @index.
+            ]
+            ? @map_coverage == @map_before [ @map_count -> @map_pass. ]
+            @map_pass+1 -> @map_pass.
+        ]
+        ? @map_coverage < 0x1000000 [
+            0 -> @good. "ZERO BIOS: no contiguous usable RAM from 1 MiB to 16 MiB\r\n" -> @error.
+        ]
+    ]
+]
+
+# Load the1MiB compiler bundle first through a32KiB bounce buffer. INT15/AH87
+# copies each completed optical read into4..5MiB; the kernel then reuses the
+# same low-memory region. Every DAP/table is rebuilt before firmware calls.
+0 -> @directory.
+?? (@directory < 2) * @good [
+    0 -> @block. 32 -> @map_count.
+    ? @directory [
+        16 -> @map_count.
+        ? @architecture == 64 [ 15 -> @map_count. ]
+    ]
+    ?? (@block < @map_count) * @good [
+        0 -> @attempt. 1 -> @status.
+        ?? (@attempt < 3) * (@status != 0) [
+            !store32[@dap|0x00100010]. !store16[@dap+4|0].
+            # Both kernel slots end in one16KiB half-block. A full read here
+            # would cross the slot and may overwrite the BIOS EBDA.
+            ? @directory * (@block+1 == @map_count) [ !store16[@dap+2|8]. ]
+            0x2000 -> @temporary.
+            ? @directory [ @temporary+@block*0x800 -> @temporary. ]
+            !store16[@dap+6|@temporary].
+            8712+@block*16 -> @temporary.
+            ? @directory [ @kernel_lba+@block*16 -> @temporary. ]
+            !store32[@dap+8|@temporary]. !store32[@dap+12|0].
+            :bios[@drive|@dap] -> @status.
+            @attempt+1 -> @attempt.
+            ? @status != 0 [ :biosreset[@drive] -> @temporary. ]
+        ]
+        ? @status != 0 [ 0 -> @good. "ZERO BIOS: boot payload read failed\r\n" -> @error. ]
+        ? (@directory == 0) * @good [
+            ? @block == 0 [
+                ? (:far16[0x2000|0] != 0x525a) + (:far16[0x2000|2] != 0x4e42) + (:far16[0x2000|4] != 0x4c44) + (:far16[0x2000|6] != 0x3130) [
+                    0 -> @good. "ZERO BIOS: invalid compiler bundle\r\n" -> @error.
+                ]
+            ]
+            ? @good [
+                0 -> @index.
+                ?? @index < 48 [ !store32[0x6800+@index|0]. @index+4 -> @index. ]
+                !store16[0x6810|32767]. !store8[0x6814|2]. !store8[0x6815|0x93].
+                0x400000+@block*32768 -> @temporary.
+                !store16[0x6818|32767]. !store16[0x681a|@temporary].
+                !store8[0x681c|:shr[@temporary|16]]. !store8[0x681d|0x93].
+                :biosmove[0x6800|16384] -> @status.
+                ? @status != 0 [ 0 -> @good. "ZERO BIOS: compiler bundle copy failed\r\n" -> @error. ]
+            ]
+        ]
+        @block+1 -> @block.
+    ]
+    @directory+1 -> @directory.
+]
+
+? @good [
+    ? @architecture == 64 [
+        # Source-owned identity mapping of the complete first 4 GiB. VBE
+        # framebuffers commonly live above 1 GiB. Every table store remains
+        # below the real-mode 64 KiB segment limit. No reserve allocation is
+        # used by this loader: 4000..5fff is available for two page directories.
+        0x1000 -> @index.
+        ?? @index < 0x3000 [ !store32[@index|0]. @index+4 -> @index. ]
+        !store32[0x1000|0x2003].
+        0 -> @directory.
+        ?? @directory < 4 [
+            0x3000+@directory*4096 -> @page_directory.
+            ? @directory == 3 [ 0xc000 -> @page_directory. ]
+            !store32[0x2000+@directory*8|@page_directory+3].
+            0 -> @index.
+            ?? @index < 512 [
+                !store32[@page_directory+@index*8|@directory*0x40000000+@index*0x200000+0x83].
+                !store32[@page_directory+@index*8+4|0].
+                @index+1 -> @index.
+            ]
+            @directory+1 -> @directory.
+        ]
+    ]
+    # GDT/handoff, VBE buffers, real locals and code do not overlap tables.
+    !store32[0x0800|0].
+    !store32[0x0804|0].
+    !store32[0x0808|0x0000ffff].
+    !store32[0x080c|0x00cf9a00].
+    ? @architecture == 64 [ !store32[0x080c|0x00af9a00]. ]
+    !store32[0x0810|0x0000ffff].
+    !store32[0x0814|0x00cf9200].
+    !store16[0x0820|23].
+    !store32[0x0822|0x0800].
+    0x0900 -> @handoff.
+    0 -> @index.
+    ?? @index < 256 [ !store32[@handoff+@index|0]. @index+4 -> @index. ]
+    !store32[@handoff+24|120].
+    !store32[@handoff+48|1].
+    !store32[@handoff+56|0xb8000].
+    !store32[@handoff+64|640].
+    !store32[@handoff+72|400].
+    !store32[@handoff+80|80].
+    !store32[@handoff+96|1].
+    !store32[@handoff+104|@architecture].
+    # E820-proven high-memory pool. Main stack starts at 4 MiB; worker stacks
+    # are assigned from 1 MiB upward and do not overlap either kernel slot.
+    !store32[@handoff+112|0x100000].
+    !store32[@handoff+120|0x300000].
+    !store32[@handoff+128|0x400000]. !store32[@handoff+136|0x100000].
+    !store32[@handoff+144|0x800000]. !store32[@handoff+152|0x800000].
+
+    "ZERO BIOS: entering 32-bit kernel\r\n" -> @text.
+    ? @architecture == 64 [ "ZERO BIOS: entering 64-bit kernel\r\n" -> @text. ]
+    0 -> @index.
+    ?? :load8[@text+@index] != 0 [
+        :load8[@text+@index] -> @character.
+        !biosput[@character].
+        ? @serial [
+            0 -> @flags. 0 -> @wait.
+            ?? (@flags < 32) * @serial [
+                :in8[0x3fd] -> @flags.
+                ? @flags >= 128 [ @flags-128 -> @flags. ]
+                ? @flags >= 64 [ @flags-64 -> @flags. ]
+                @wait+1 -> @wait.
+                ? @wait == 1000000 [ 0 -> @serial. ]
+            ]
+            ? @serial [ !out8[0x3f8|@character]. ]
+        ]
+        @index+1 -> @index.
+    ]
+
+    # VBE2/3 direct-color linear framebuffer. The original mode list can be
+    # in firmware ROM, so far16 accesses its actual segment:offset rather
+    # than pretending a real-mode DS=0 load can address beyond 64 KiB.
+    0 -> @index.
+    ?? @index < 512 [ !store8[0x6200+@index|0]. @index+1 -> @index. ]
+    !store32[0x6200|0x32454256].
+    :vbe[0x4f00|0|0|0x6200] -> @status.
+    ? @status == 0x004f [
+        ? :load32[0x6200] == 0x41534556 [
+            :load16[0x6204] -> @video_version.
+            :load16[0x6212]*65536 -> @video_memory.
+            :load16[0x620e] -> @mode_offset.
+            :load16[0x6210] -> @mode_segment.
+            ? @video_version >= 0x0200 [
+                # Prefer FullHD, then800x600, then the compatible smaller
+                # modes previously supported. Every pass is bounded.
+                0 -> @video_pass.
+                ?? (@video_pass < 3) * (@video_found == 0) [
+                0 -> @mode_scan.
+                ?? (@mode_scan < 256) * (@video_found == 0) [
+                    @mode_offset+@mode_scan*2 -> @temporary.
+                    0xffff -> @mode_number.
+                    ? @temporary <= 65534 [
+                        ? @mode_segment*16+@temporary <= 0xffffe [
+                            :far16[@mode_segment|@temporary] -> @mode_number.
+                        ]
+                    ]
+                    ? @mode_number == 0xffff [ 256 -> @mode_scan. ] ~ [
+                        0 -> @index.
+                        ?? @index < 256 [ !store8[0x6400+@index|0]. @index+1 -> @index. ]
+                        :vbe[0x4f01|0|@mode_number|0x6400] -> @status.
+                        0 -> @mode_valid.
+                        ? @status == 0x004f [
+                            ? @mode_number < 0x4000 [ 1 -> @mode_valid. ]
+                        ]
+                        :load16[0x6400] -> @flags.
+                        ? @flags*0x80000000 < 0x80000000 [ 0 -> @mode_valid. ]
+                        ? @flags*0x08000000 < 0x80000000 [ 0 -> @mode_valid. ]
+                        ? @flags*0x01000000 < 0x80000000 [ 0 -> @mode_valid. ]
+                        ? :load8[0x6418] != 1 [ 0 -> @mode_valid. ]
+                        ? :load8[0x6419] != 32 [ 0 -> @mode_valid. ]
+                        ? :load8[0x641b] != 6 [ 0 -> @mode_valid. ]
+                        :load16[0x6412] -> @video_width.
+                        :load16[0x6414] -> @video_height.
+                        :load16[0x6410] -> @video_pitch.
+                        :load32[0x6428] -> @video_base.
+                        31 -> @mask_offset.
+                        ? @video_version >= 0x0300 [
+                            :load16[0x6432] -> @video_pitch.
+                            54 -> @mask_offset.
+                        ]
+                        ? @video_width < 640 [ 0 -> @mode_valid. ]
+                        ? @video_width > 1920 [ 0 -> @mode_valid. ]
+                        ? @video_height < 480 [ 0 -> @mode_valid. ]
+                        ? @video_height > 1080 [ 0 -> @mode_valid. ]
+                        ? @video_pass == 0 [
+                            ? @video_width != 1920 [ 0 -> @mode_valid. ]
+                            ? @video_height != 1080 [ 0 -> @mode_valid. ]
+                        ]
+                        ? @video_pass == 1 [
+                            ? @video_width != 800 [ 0 -> @mode_valid. ]
+                            ? @video_height != 600 [ 0 -> @mode_valid. ]
+                        ]
+                        ? @video_pass == 2 [
+                            ? @video_width > 800 [ 0 -> @mode_valid. ]
+                            ? @video_height > 600 [ 0 -> @mode_valid. ]
+                        ]
+                        ? @video_pitch < @video_width*4 [ 0 -> @mode_valid. ]
+                        ? @video_pitch > 16384 [ 0 -> @mode_valid. ]
+                        ? @video_pitch*0x40000000 != 0 [ 0 -> @mode_valid. ]
+                        ? @video_pitch*@video_height > @video_memory [ 0 -> @mode_valid. ]
+                        # The display must not alias our validated stack pool.
+                        ? @video_base < 0x400000 [ 0 -> @mode_valid. ]
+                        ? @video_base+@video_pitch*@video_height <= @video_base [ 0 -> @mode_valid. ]
+                        ? :load8[0x6400+@mask_offset] != 8 [ 0 -> @mode_valid. ]
+                        ? :load8[0x6402+@mask_offset] != 8 [ 0 -> @mode_valid. ]
+                        ? :load8[0x6404+@mask_offset] != 8 [ 0 -> @mode_valid. ]
+                        ? :load8[0x6403+@mask_offset] != 8 [ 0 -> @mode_valid. ]
+                        2 -> @video_format.
+                        ? :load8[0x6401+@mask_offset] == 0 [
+                            ? :load8[0x6405+@mask_offset] == 16 [ 0 -> @video_format. ]
+                        ]
+                        ? :load8[0x6401+@mask_offset] == 16 [
+                            ? :load8[0x6405+@mask_offset] == 0 [ 1 -> @video_format. ]
+                        ]
+                        ? @video_format == 2 [ 0 -> @mode_valid. ]
+                        ? @mode_valid [
+                            :vbe[0x4f02|@mode_number+0x4000|0|0] -> @status.
+                            ? @status == 0x004f [
+                                1 -> @video_found.
+                                0 -> @video_stride.
+                                @video_pitch -> @temporary.
+                                ?? @temporary >= 4 [
+                                    @temporary-4 -> @temporary.
+                                    @video_stride+1 -> @video_stride.
+                                ]
+                                !store32[@handoff+48|2].
+                                !store32[@handoff+56|@video_base].
+                                !store32[@handoff+64|@video_width].
+                                !store32[@handoff+72|@video_height].
+                                !store32[@handoff+80|@video_stride].
+                                !store32[@handoff+88|@video_format].
+                            ]
+                        ]
+                    ]
+                    @mode_scan+1 -> @mode_scan.
+                ]
+                @video_pass+1 -> @video_pass.
+                ]
+            ]
+        ]
+    ]
+    ? @video_found == 0 [ !biosmode[3]. ]
+
+    !disable.
+    !out8[0x21|255].
+    !out8[0xa1|255].
+    !out8[0x70|128].
+    # Fast A20: preserve the port, clear reset bit0, set A20 bit1.
+    :in8[0x92] -> @flags.
+    @flags -> @temporary.
+    ?? @temporary >= 2 [ @temporary-2 -> @temporary. ]
+    ? @temporary [ @flags-1 -> @flags. ]
+    @flags -> @temporary.
+    ?? @temporary >= 4 [ @temporary-4 -> @temporary. ]
+    ? @temporary < 2 [ @flags+2 -> @flags. ]
+    !out8[0x92|@flags].
+    !lgdt[0x0820].
+    ? @architecture == 64 [
+        !cr4[0x20].
+        !cr3[0x1000].
+        :rdmsr[0xc0000080] -> @flags.
+        ? @flags*0x00800000 < 0x80000000 [ @flags+256 -> @flags. ]
+        !wrmsr[0xc0000080|@flags|0].
+        !cr0[0x80010011].
+        !longjump[8|0x20000|@handoff|0x400000].
+    ] ~ [
+        # Protected mode, flat 4 GiB segments, no paging, PAE or MSR use.
+        !cr0[0x00010011].
+        !protectedjump[8|0x20000|@handoff|0x400000].
+    ]
+]
+
+@error -> @text. 0 -> @index.
+?? :load8[@text+@index] != 0 [
+    :load8[@text+@index] -> @character.
+    !biosput[@character].
+    ? @serial [
+        0 -> @flags. 0 -> @wait.
+        ?? (@flags < 32) * @serial [
+            :in8[0x3fd] -> @flags.
+            ? @flags >= 128 [ @flags-128 -> @flags. ]
+            ? @flags >= 64 [ @flags-64 -> @flags. ]
+            @wait+1 -> @wait.
+            ? @wait == 1000000 [ 0 -> @serial. ]
+        ]
+        ? @serial [ !out8[0x3f8|@character]. ]
+    ]
+    @index+1 -> @index.
+]
+!halt.

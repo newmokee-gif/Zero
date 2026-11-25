@@ -1,0 +1,66 @@
+ZTEXT00100000e18041c65ca0000000
+ZERO HTTP RESPONSE PARSER CHECKS
+Date: 2026-11-18
+
+Scope
+Independent native checks of net/http-response.zero.part, composed verbatim
+between the BEGIN/END ZERO HTTP RESPONSE markers in net/http-response-check.zero.
+Both parser and product checker are original Zero source. No Chromium source
+was used. Fixture HTTP bytes are literals and native Zero byte-generation loops.
+
+Result
+100 cases completed; 100 passed; checker process exit status 0.
+Compiler: original native Zero compiler from the verified 0.12 final43 build.
+Target tested here: Linux x64 native. Kernel/VM integration is a separate check.
+Parser SHA-256:
+f0ca0314638ad84967403d641149fd260bb7b49488be1e88cec80190450f848e
+
+Positive coverage
+HTTP/1.0 close-delimited and HTTP/1.1 Content-Length responses; mixed-case
+header names; whitespace; identical and numerically equivalent duplicate
+lengths; empty bodies; multiple chunks; token and quoted chunk extensions;
+ignored non-framing trailers; UTF-8 and binary bodies; redirect metadata;
+HTML, plain-text and other MIME kinds; 404 and unknown valid final status;
+204 without framing headers; 304 with representation length/transfer metadata;
+identity encoding; 255-byte Location; 12000-byte body and raw length 65535.
+
+Negative coverage
+Unsupported versions, interim responses and upgrades; malformed status lines;
+bare CR/LF, NUL, DEL and non-ASCII headers; invalid field names and folding;
+empty, signed, malformed, conflicting, comma-list and overflowing lengths;
+short/excess bodies; ambiguous Transfer-Encoding plus Content-Length;
+unsupported/duplicate transfer encoding and unsupported content compression;
+duplicate Content-Type, Location and Content-Encoding; malformed, overflowing,
+truncated and non-terminated chunks; missing chunk CRLF; invalid extensions;
+metadata/framing fields in trailers; forbidden 204 framing; 204/304 bodies;
+256-byte Location and raw length 65536.
+
+Boundary and memory checks
+8192-byte headers accepted, 8193 rejected; 128 headers/trailers accepted,
+129 rejected. Every fixture checks guard words around the raw/decoded areas
+and after the metadata strings. Input bytes remain unchanged. Successful
+responses must publish exact status/body length/MIME/Location where specified,
+exact decoded bytes and a trailing NUL. Failed responses must publish no
+successful result and decoded body length zero. These are bounded canary
+checks, not a formal proof of memory safety.
+
+Issues identified and fixed before the final run
+Representation Content-Length on 304 previously required a nonexistent body;
+malformed empty and unterminated quoted chunk extensions were accepted;
+204 framing headers were accepted; 304 Transfer-Encoding metadata incorrectly
+required actual chunk data. The final parser passed all associated regressions.
+
+Limits
+This report verifies only the complete-response memory parser, using caller-
+owned raw/decoded pointers at workspace offsets 688/696. It does not verify
+TCP segmentation, retransmission, DNS, TLS, certificate validation, JavaScript,
+CSS rendering, real website compatibility, or arbitrary malicious inputs.
+The parser rejects interim 1xx, unsupported content compression and responses
+above its configured bounds. UTF-8 bytes pass through; character validation
+and display handling belong to the browser renderer.
+
+Reproduction
+Compile net/http-response-check.zero with the original Zero compiler --host,
+then execute the produced binary. One PASS/FAIL line is printed per case;
+any failed assertion causes exit status 1. The composed parser markers must
+be refreshed from net/http-response.zero.part after parser changes.

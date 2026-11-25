@@ -1,0 +1,128 @@
+# Original streaming SHA-256 worker. SHA-256 constants and equations are the
+# public algorithm, implemented here directly in Zero without a hash library.
+# Shared m: input handle0, optional copy handle8, byte limit16, result24,
+# actual bytes32, digest40..71, caller context128, worker context224.
+# Worker flushes a successful copy, closes both handles and detects size drift.
+:fork[@m+224|@m+131072|81920] -> @code.
+? @code == 1 [
+ @m+32768 -> @p.
+ !store32[@p|0x428a2f98]. !store32[@p+4|0x71374491]. !store32[@p+8|0xb5c0fbcf]. !store32[@p+12|0xe9b5dba5].
+ !store32[@p+16|0x3956c25b]. !store32[@p+20|0x59f111f1]. !store32[@p+24|0x923f82a4]. !store32[@p+28|0xab1c5ed5].
+ !store32[@p+32|0xd807aa98]. !store32[@p+36|0x12835b01]. !store32[@p+40|0x243185be]. !store32[@p+44|0x550c7dc3].
+ !store32[@p+48|0x72be5d74]. !store32[@p+52|0x80deb1fe]. !store32[@p+56|0x9bdc06a7]. !store32[@p+60|0xc19bf174].
+ !store32[@p+64|0xe49b69c1]. !store32[@p+68|0xefbe4786]. !store32[@p+72|0x0fc19dc6]. !store32[@p+76|0x240ca1cc].
+ !store32[@p+80|0x2de92c6f]. !store32[@p+84|0x4a7484aa]. !store32[@p+88|0x5cb0a9dc]. !store32[@p+92|0x76f988da].
+ !store32[@p+96|0x983e5152]. !store32[@p+100|0xa831c66d]. !store32[@p+104|0xb00327c8]. !store32[@p+108|0xbf597fc7].
+ !store32[@p+112|0xc6e00bf3]. !store32[@p+116|0xd5a79147]. !store32[@p+120|0x06ca6351]. !store32[@p+124|0x14292967].
+ !store32[@p+128|0x27b70a85]. !store32[@p+132|0x2e1b2138]. !store32[@p+136|0x4d2c6dfc]. !store32[@p+140|0x53380d13].
+ !store32[@p+144|0x650a7354]. !store32[@p+148|0x766a0abb]. !store32[@p+152|0x81c2c92e]. !store32[@p+156|0x92722c85].
+ !store32[@p+160|0xa2bfe8a1]. !store32[@p+164|0xa81a664b]. !store32[@p+168|0xc24b8b70]. !store32[@p+172|0xc76c51a3].
+ !store32[@p+176|0xd192e819]. !store32[@p+180|0xd6990624]. !store32[@p+184|0xf40e3585]. !store32[@p+188|0x106aa070].
+ !store32[@p+192|0x19a4c116]. !store32[@p+196|0x1e376c08]. !store32[@p+200|0x2748774c]. !store32[@p+204|0x34b0bcb5].
+ !store32[@p+208|0x391c0cb3]. !store32[@p+212|0x4ed8aa4a]. !store32[@p+216|0x5b9cca4f]. !store32[@p+220|0x682e6ff3].
+ !store32[@p+224|0x748f82ee]. !store32[@p+228|0x78a5636f]. !store32[@p+232|0x84c87814]. !store32[@p+236|0x8cc70208].
+ !store32[@p+240|0x90befffa]. !store32[@p+244|0xa4506ceb]. !store32[@p+248|0xbef9a3f7]. !store32[@p+252|0xc67178f2].
+ ?? 1 [
+  :load64[@m] -> @fd. :load64[@m+8] -> @outfd.
+  0 -> @code. 0 -> @total. 0 -> @step.
+  :filesize[@fd] -> @expected.
+  ? @expected > :load64[@m+16] [ 75 -> @code. ]
+  @m+33280 -> @q.
+  !store32[@q|0x6a09e667]. !store32[@q+4|0xbb67ae85]. !store32[@q+8|0x3c6ef372]. !store32[@q+12|0xa54ff53a].
+  !store32[@q+16|0x510e527f]. !store32[@q+20|0x9b05688c]. !store32[@q+24|0x1f83d9ab]. !store32[@q+28|0x5be0cd19].
+  ?? (@step < 3)*(@code == 0) [
+   @m+65536 -> @r. 0 -> @used.
+   ? @step == 0 [
+    ?? (@used < 65536)*(@step == 0)*(@code == 0) [
+     :fileread[@fd|@r+@used|65536-@used] -> @got.
+     ? @got > 65536-@used [ 75 -> @code. ] ~ [
+      ? @got == 0 [ 1 -> @step. ] ~ [ @used+@got -> @used. ]
+     ]
+    ]
+    @total+@used -> @total.
+    ? @total > @expected [ 75 -> @code. ]
+    # Optional optical-image identity/catalog verification, before any copy.
+    ? (:load64[@m+80] != 0)*(@total == @used) [
+     ? (@expected < 65536)+(:bitand[@expected|2047] != 0)+(@used < 65536) [ 65 -> @code. ]
+     ? @code == 0 [
+      @r+32768 -> @j.
+      ? (:load8[@j] != 1)+(:load32[@j+1] != 0x30304443)+(:load16[@j+5] != 305) [ 65 -> @code. ]
+      "ZERO_SYSTEM" -> @k. 0 -> @i.
+      ?? @i < 11 [ ? :load8[@j+40+@i] != :load8[@k+@i] [ 65 -> @code. ] @i+1 -> @i. ]
+      ? (:load32[@j+80] != :shr[@expected|11])+(:load16[@j+128] != 2048)+(:load16[@j+130] != 8) [ 65 -> @code. ]
+      0 -> @i. ?? @i < 4 [ ? :load8[@j+80+@i] != :load8[@j+87-@i] [ 65 -> @code. ] @i+1 -> @i. ]
+      ? (:load32[@r+34816+71] != 23)+(:load8[@r+36864] != 255) [ 65 -> @code. ]
+      @r+47104 -> @j. 0 -> @u. 0 -> @i.
+      ?? @i < 32 [ @u+:load16[@j+@i] -> @u. @i+2 -> @i. ]
+      ? (:bitand[@u|65535] != 0)+(:load16[@j+30] != 0xaa55) [ 65 -> @code. ]
+      ? (:load8[@j+32] != 0x88)+(:load16[@j+38] != 32)+(:load32[@j+40] != 32) [ 65 -> @code. ]
+      ? (:load8[@j+96] != 0x88)+(:load16[@j+102] != 32768)+(:load32[@j+104] != 520) [ 65 -> @code. ]
+      ? :load32[@j+40]*2048+:load16[@j+38]*512 > @expected [ 65 -> @code. ]
+      ? :load32[@j+104]*2048+:load16[@j+102]*512 > @expected [ 65 -> @code. ]
+     ]
+    ]
+    0 -> @sent.
+    ?? (@outfd != -1)*(@sent < @used)*(@code == 0) [
+     :filewrite[@outfd|@r+@sent|@used-@sent] -> @got.
+     ? (@got == 0)+(@got > @used-@sent) [ 74 -> @code. ] ~ [ @sent+@got -> @sent. ]
+    ]
+   ]
+   ? @step [
+    ? @step == 1 [ !store8[@r+@used|128]. @used+1 -> @used. ]
+    64 -> @count. ?? @count < @used [ @count+64 -> @count. ]
+    ? @count-@used < 8 [ @count+64 -> @count. ]
+    ? @count > 65536 [ 65536 -> @count. 2 -> @step. ] ~ [ 3 -> @step. ]
+    @used -> @i. ?? @i < @count [ !store8[@r+@i|0]. @i+1 -> @i. ]
+    ? @step == 3 [
+     0 -> @i. ?? @i < 8 [ !store8[@r+@count-1-@i|:shr[@total*8|@i*8]]. @i+1 -> @i. ]
+    ]
+    @count -> @used.
+   ]
+   0 -> @n.
+   ?? (@n < @used)*(@code == 0) [
+    @m+33024 -> @p. 0 -> @i.
+    ?? @i < 16 [
+     @r+@n+@i*4 -> @j.
+     !store32[@p+@i*4|:load8[@j]*16777216+:load8[@j+1]*65536+:load8[@j+2]*256+:load8[@j+3]]. @i+1 -> @i.
+    ]
+    ?? @i < 64 [
+     :load32[@p+(@i-15)*4] -> @x. :load32[@p+(@i-2)*4] -> @y.
+     :bitxor[:bitxor[:shr[@x|7]|:bitand[@x*33554432|0xffffffff]]|:bitxor[:shr[@x|18]|:bitand[@x*16384|0xffffffff]]] -> @u.
+     :bitxor[@u|:shr[@x|3]] -> @u.
+     :bitxor[:bitxor[:shr[@y|17]|:bitand[@y*32768|0xffffffff]]|:bitxor[:shr[@y|19]|:bitand[@y*8192|0xffffffff]]] -> @v.
+     :bitxor[@v|:shr[@y|10]] -> @v.
+     !store32[@p+@i*4|:load32[@p+(@i-16)*4]+@u+:load32[@p+(@i-7)*4]+@v]. @i+1 -> @i.
+    ]
+    :load32[@q] -> @a. :load32[@q+4] -> @b. :load32[@q+8] -> @c. :load32[@q+12] -> @d.
+    :load32[@q+16] -> @e. :load32[@q+20] -> @f. :load32[@q+24] -> @g. :load32[@q+28] -> @h.
+    0 -> @i.
+    ?? @i < 64 [
+     :bitxor[:bitxor[:shr[@e|6]|:bitand[@e*67108864|0xffffffff]]|:bitxor[:shr[@e|11]|:bitand[@e*2097152|0xffffffff]]] -> @u.
+     :bitxor[@u|:bitxor[:shr[@e|25]|:bitand[@e*128|0xffffffff]]] -> @u.
+     :bitxor[:bitand[@e|@f]|:bitand[:bitxor[@e|0xffffffff]|@g]] -> @v.
+     @h+@u+@v+:load32[@m+32768+@i*4]+:load32[@p+@i*4] -> @t.
+     :bitxor[:bitxor[:shr[@a|2]|:bitand[@a*1073741824|0xffffffff]]|:bitxor[:shr[@a|13]|:bitand[@a*524288|0xffffffff]]] -> @u.
+     :bitxor[@u|:bitxor[:shr[@a|22]|:bitand[@a*1024|0xffffffff]]] -> @u.
+     :bitxor[:bitxor[:bitand[@a|@b]|:bitand[@a|@c]]|:bitand[@b|@c]] -> @v.
+     @g -> @h. @f -> @g. @e -> @f. :bitand[@d+@t|0xffffffff] -> @e.
+     @c -> @d. @b -> @c. @a -> @b. :bitand[@t+@u+@v|0xffffffff] -> @a. @i+1 -> @i.
+    ]
+    !store32[@q|:load32[@q]+@a]. !store32[@q+4|:load32[@q+4]+@b]. !store32[@q+8|:load32[@q+8]+@c]. !store32[@q+12|:load32[@q+12]+@d].
+    !store32[@q+16|:load32[@q+16]+@e]. !store32[@q+20|:load32[@q+20]+@f]. !store32[@q+24|:load32[@q+24]+@g]. !store32[@q+28|:load32[@q+28]+@h].
+    @n+64 -> @n.
+   ]
+  ]
+  ? (@code == 0)*((@total != @expected)+(:filesize[@fd] != @expected)) [ 75 -> @code. ]
+  :fileclose[@fd] -> @got. ? @got != 0 [ 75 -> @code. ]
+  ? @outfd != -1 [
+   ? @code == 0 [ :filesync[@outfd] -> @got. ? @got != 0 [ 74 -> @code. ] ]
+   :fileclose[@outfd] -> @got. ? @got != 0 [ 74 -> @code. ]
+  ]
+  0 -> @i. ?? @i < 32 [
+   :bitand[@i|3] -> @j. :bitand[@i|0xfffffffc] -> @k.
+   !store8[@m+40+@i|:shr[:load32[@q+@k]|(3-@j)*8]]. @i+1 -> @i.
+  ]
+  !store64[@m+24|@code]. !store64[@m+32|@total].
+  !switch[@m+224|@m+128].
+ ]
+]

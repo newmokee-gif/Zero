@@ -1,0 +1,80 @@
+ZTEXT00100001177d3203e410000000
+Current original Zero workflow (0.12)
+
+Use the native tools on Linux or their .exe versions on Windows:
+  zero-integrate PROJECT_DIRECTORY NEW_KERNEL.zero
+  zero-build PROJECT_DIRECTORY NEW_OUTPUT_DIRECTORY NEW_KERNEL.zero
+  zero-check PROJECT_DIRECTORY NEW_TEST_DIRECTORY
+All destination paths must be new. The integrator preserves authored sources;
+the builder checks its compiler fixed point and builds the original targets;
+the verifier checks language behavior and host file operations in process.
+See tools/integrate.ztext, tools/build.ztext and checks/README.ztext.
+Read these documents with zero-text read FILE.
+
+The notes below preserve earlier implementation and test history. Any old
+shell/Python runner names, generated artifacts, JSON reports or commands are
+historical references: they were removed from the active project and are not
+current runnable instructions or current-release validation. Native host
+checks do not replace BIOS/UEFI, persistence or physical-hardware testing.
+
+Historical implementation notes
+
+CANONICAL ZERO0.11 HOST DURABILITY EXTENSION
+
+Current canonical compiler.zero adds filesync and hostwait to the16 existing
+host operations. Newsource SHA256:
+a76aeeda865a3fbbc887c3d9a66c8a02bd1ff5e46aacd1d359a361033c170b7a
+Candidate ELF93086 bytes, three identical own-compiler generations, SHA256:
+d89762ea95d3591d95e7f9a66e1015d8124bf87f702dac65ce25547f2ec4ed3f
+Candidate artifacts and exact evidence: portability/host/durability.
+Seed/build promotion and full OS integration are controlled by the release
+coordinator. These component results do not by themselves establish a release.
+
+136 focused checks pass: nativeLinux/Wine21-assertion probes, targetgating,
+arity/reservednames, injectedEINTR retry andEIO/EFAULT failure paths, actual
+x64 guest fallback execution, IA32 guest compilation, native Windows exact
+compiler self-reproduction.433 common regressions and17Linux behavior cases
+also pass, as do existing Windows61API/20boundary assertions and Unicode,
+argv, cooperativeworker and Ezero host-file regressions. OwnWindows formatter
+reproduces all updated Windows template values. app64 compiler94438 bytes;
+app32 compiler124286 bytes; both fit existing131072-byte slots.
+
+filesync requests file flushing only, not directory/rename crash durability.
+hostwait suspends the current native thread for0..86400000 milliseconds.
+Both return0/-1 on hosts and-1 on guests after evaluating operands. SeeABI.txt.
+
+HISTORICAL ZERO0.10 HOST API INTEGRATION
+
+The16-operation extension is published in canonical compiler.zero and the
+normal own bootstrap/build binaries. The frozen0.9 release and its original
+source/seed remain separately preserved; they were not rewritten.
+
+Source86992 bytes, SHA256:
+cf01adff93330c930d1fa6628bbc459d6e93a404b3196afa6ae783922ecc77b7
+Executable91573 bytes, SHA256:
+911f6d67361300755c13bbf5f3d231d54ceae5736f1ec5e60dde5d6e4095ed3a
+Normal builds reproduce the fixed point. The transition from the preserved
+0.9 seed reached identical generations2/3 after the original Linux entry
+changed from41 to44 bytes; no external compiler or binary patcher was used.
+
+Implementation parts and ABI are in this directory. apply-common.py records
+the historical development integration and must not be reapplied to the
+already merged source. Normal builds compile canonical compiler.zero directly.
+Guest compiler images fit unchanged131072-byte slots:92925 x64,122307 IA32.
+Current decoder32768 bytes and total reservation4022880 fit the4MiB arena.
+
+Verification:
+-433 common parser/gating/fallback checks, native x64 guest fallback execution;
+-exact preserved raw/UEFI/real probe output and ordinary guest output parity;
+-17 actual Linux API runtime cases, with byte-exact final-merge linkage;
+-Windows native PE self-reproduction,61 API assertions,20 boundary assertions,
+ Unicode/quoting/argument and cooperative-context tests under Wine10;
+-native Zero compiler CLI and original setup-program tests, recorded separately.
+
+Reports: verification/host-api; linux-verification.json;
+windows-verification.json; windows-cli-verification.json; installer/verification.
+No native Microsoft Windows machine or real Windows reparse fixture is claimed.
+The reparse test is explicitly unverified because Wine's creation API is a stub.
+Live source, syntax, limits and ownership are in LANGUAGE.ztext, SYNTAX.ztext,
+SELFHOST.ztext and ABI.ztext. Documentation hashes are frozen in
+verification/compiler-0.10/documentation-frozen.json.

@@ -1,0 +1,40 @@
+ZTEXT0010000081148268ea10000000
+Current original Zero workflow (0.12)
+
+Use the native tools on Linux or their .exe versions on Windows:
+  zero-integrate PROJECT_DIRECTORY NEW_KERNEL.zero
+  zero-build PROJECT_DIRECTORY NEW_OUTPUT_DIRECTORY NEW_KERNEL.zero
+  zero-check PROJECT_DIRECTORY NEW_TEST_DIRECTORY
+All destination paths must be new. The integrator preserves authored sources;
+the builder checks its compiler fixed point and builds the original targets;
+the verifier checks language behavior and host file operations in process.
+See tools/integrate.ztext, tools/build.ztext and checks/README.ztext.
+Read these documents with zero-text read FILE.
+
+The notes below preserve earlier implementation and test history. Any old
+shell/Python runner names, generated artifacts, JSON reports or commands are
+historical references: they were removed from the active project and are not
+current runnable instructions or current-release validation. Native host
+checks do not replace BIOS/UEFI, persistence or physical-hardware testing.
+
+Historical implementation notes
+
+FullHD display mode policy checks
+
+Run: bash review-tests/video-mode-policy/run.sh
+
+The test runner extracts the dimension-pass conditions directly from
+bios.zero and the preference-selection block directly from loader.zero.
+It verifies that loader32.zero contains the identical preference block.
+Those current Zero source fragments are compiled with the own compiler and
+executed in a hosted assertion program; Python/shell only assemble the test.
+
+Forty assertions cover BIOS FullHD/800x600/compact passes and their dimension
+boundaries, plus GOP candidate order, FullHD preferred over earlier/later
+fallbacks, 800x600 over640x480 over other compatible modes, invalid-mode
+rejection, stable first-choice behavior and an all-invalid candidate list.
+
+This is a source-policy test. It does not emulate QueryMode/SetMode firmware,
+framebuffer MMIO, RGB masks, pitch or physical-memory mappings. The integrated
+BIOS/UEFI virtual-machine suite separately verifies actual mode selection,
+rendered dimensions and lower-resolution fallback.

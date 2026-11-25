@@ -1,0 +1,68 @@
+ZTEXT0010000108b99de9b0a0000000
+Zero file operations 0.12
+
+All implementations and product tests in this directory are original Zero.
+compiler.zero contains the canonical executable definitions. The .zero.part
+files are source fragments, not scripts or assembler input. author.zero resolves
+original byte-encoding labels without an assembler or external compiler.
+
+Expression API:
+  :create[path]                     0 success, -1 failure
+  :del[path]                        0 success, -1 failure
+  :readfile[path|buffer|capacity]    bytes read, -1 failure
+  :save[path|buffer|length]          bytes saved, -1 failure
+  :writefile[path|buffer|length]     bytes written, -1 failure
+  :watch[root|buffer|capacity]       listing bytes, -1 failure
+  :search[pattern|buffer|capacity]   listing bytes, -1 failure
+  :go[root]                         0 success, -1 failure
+  :disks[buffer|capacity]           root-list bytes, -1 failure
+
+Paths are NUL-terminated. Buffers and their capacity are caller-owned.
+The low-level API accepts text or binary file content without transformation.
+Native whole-file and listing buffers are limited to 65536 bytes.
+create preserves an existing readable regular file, or creates an empty file.
+del requires an existing regular file. Final symlinks and Windows reparse points
+are refused. Directory operations remain separate existing primitives.
+save creates or truncates; writefile creates exclusively and refuses overwrite.
+Native successful writes flush and close. save is not an atomic replacement:
+a write/flush/close error can leave a truncated or partial existing file.
+Exclusive writefile attempts to remove its own newly created file after error.
+readfile reads the observed size and checks EOF, refusing growth/shrink or
+insufficient capacity. It does not claim a snapshot against concurrent writers.
+
+watch and search return regular-file names, each terminated by one NUL. The
+byte count includes these terminators, with no additional list terminator.
+An empty list returns zero. Enumeration order follows the filesystem and is not
+promised to be alphabetical. Overflow returns -1; any partial buffer is invalid.
+Ezero converts successful results into one-based text lists and validates UTF-8.
+watch("") lists the current root/directory. search("") lists all current files.
+search splits only the final path component into a pattern. A trailing separator
+means all names in that directory. Without wildcards the match is exact.
+The original matcher is case-sensitive on every target: * consumes zero or more
+characters and ? consumes one UTF-8 scalar. No recursive search is implied.
+Native path separators use host syntax; guest paths use A:|name.
+
+Native go changes the process working directory. Native disks exposes logical
+roots: Linux returns /, Windows returns available drive letters. Linux / is not
+an inventory of physical disks. Guest disks exposes the system's volume roots.
+
+Guest calls use the optional ZEROFS01 descriptor at app context offset184.
+Missing descriptor or incompatible version returns -1 without switching.
+Descriptor fields are 64-bit values:
+  0 magic0x313053464f52455a; 8 version1; 16 service continuation;
+  24 app continuation; 32 operation; 40 path; 48 buffer; 56 count;
+  64 result; 72 driver status; 80 phase; 88 reserved; 96..255 kernel-private.
+Operation IDs: 1readfile, 2save, 3writefile, 4create, 5del, 6watch,
+7search, 8go, 9disks. Caller publishes phase1 and result-1, switches, then
+requires phase2 before reading the result. This shared-memory cooperative ABI
+is not a process-isolation boundary. The kernel applies guest filesystem limits.
+
+AMD64 continuation version1 already records arena bounds. IA32 raw continuations
+retain version1, a 64KiB arena, and frame fields0/4/8/12. IA32 applications use
+version2, a 4MiB arena, and frame fields32/36/40/44. The kernel restore validates
+both versions with their respective geometry. No old kernel receives the new
+service descriptor. Ordinary compiler/frontend applications receive no service.
+
+Compiler output capacity is524288 bytes. Subsequent arena buffers are shifted
+by32768 bytes; total compiler reservation4055648 remains within its4MiB arena.
+Guest bundle compiler slot remains159744 bytes; the builder must reject overflow.

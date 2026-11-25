@@ -1,0 +1,16 @@
+123456789 => @sentinel.
+0 => @buffer.
+:reserve[64] -> @buffer.
+!store64[@buffer|0x1122334455667788].
+? :create["missing"] != -1 [ !exit[11]. ]
+? :del["missing"] != -1 [ !exit[12]. ]
+? :go["missing"] != -1 [ !exit[13]. ]
+? :readfile["missing"|@buffer+8|16] != -1 [ !exit[14]. ]
+? :save["missing"|@buffer+8|16] != -1 [ !exit[15]. ]
+? :writefile["missing"|@buffer+8|16] != -1 [ !exit[16]. ]
+? :watch["missing"|@buffer+8|16] != -1 [ !exit[17]. ]
+? :search["missing*"|@buffer+8|16] != -1 [ !exit[18]. ]
+? :disks[@buffer+8|16] != -1 [ !exit[19]. ]
+? @sentinel != 123456789 [ !exit[20]. ]
+? :load64[@buffer] != 0x1122334455667788 [ !exit[21]. ]
+!put[79]. !put[75]. !put[10].

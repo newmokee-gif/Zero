@@ -1,0 +1,259 @@
+ZTEXT00100003c1f90eca6cf0000000
+Current original Zero workflow (0.12)
+
+Use the native tools on Linux or their .exe versions on Windows:
+  zero-integrate PROJECT_DIRECTORY NEW_KERNEL.zero
+  zero-build PROJECT_DIRECTORY NEW_OUTPUT_DIRECTORY NEW_KERNEL.zero
+  zero-check PROJECT_DIRECTORY NEW_TEST_DIRECTORY
+All destination paths must be new. The integrator preserves authored sources;
+the builder checks its compiler fixed point and builds the original targets;
+the verifier checks language behavior and host file operations in process.
+See tools/integrate.ztext, tools/build.ztext and checks/README.ztext.
+Read these documents with zero-text read FILE.
+
+The notes below preserve earlier implementation and test history. Any old
+shell/Python runner names, generated artifacts, JSON reports or commands are
+historical references: they were removed from the active project and are not
+current runnable instructions or current-release validation. Native host
+checks do not replace BIOS/UEFI, persistence or physical-hardware testing.
+
+Historical implementation notes
+
+Zero self-hosting compiler implementation
+
+compiler.zero is the complete canonical compiler source, written in Zero.
+Normal builds compile that file directly. The selfhost/ fragments are a
+readable development layout, not a complete current concatenation recipe.
+compiler-head.zero.part and compiler-core.zero.part are exact excerpts of the
+current canonical header and decoder/parser/finalizer/output region;
+finalizer.zero.part is also an exact excerpt. Template parts document their
+respective instruction banks and historical extensions.
+
+Current portability source also lives outside this directory:
+  portability/host/linux-tables.zero.part
+  portability/host/windows-tables.zero.part
+  portability/host/windows-finalizer.zero.part
+  portability/host/fallback-tables.zero.part
+  portability/windows/x64-windows.zero.part
+  portability/windows/finalize-windows.zero.part
+  portability/guest/guest-tables.zero.part
+  portability/guest/biosmove/real-biosmove.zero.part
+The associated apply.py scripts record reviewed development integration steps.
+They are not rerun against the already merged compiler by a normal build.
+No native compiler binary is embedded; instruction tables encode original
+primitives and executable/firmware/application ABIs.
+
+Historical one-time 4 MiB bootstrap transition:
+  bootstrap/zero-0.6-seed --host < bootstrap/grow-host-4m.zero > grow-host-4m
+  bootstrap/zero-0.6-seed --host < compiler.zero > stage1-old
+  grow-host-4m < stage1-old > stage1
+  stage1 --host < compiler.zero > stage2
+  stage2 --host < compiler.zero > stage3
+The existing own compiler seed is used only to cross the historical bootstrap
+boundary. The patcher itself is Zero and verifies our complete 41-byte hosted
+prologue before changing its arena-size immediate at file offset 151. Subsequent
+generations emit their own 4 MiB hosted arena prologue and need no patcher.
+The patched first generation and generations 2/3 are byte-identical.
+
+Compiler flags: no flag or --host -> ELF64; --raw/--efi -> x64;
+--raw32/--efi32 -> IA32; --real ->386+ real-mode boot image;
+--windows -> Windows x64 console PE; --app64/--app32 -> ZEROAPP1 native apps.
+Default ELF and --host have a 4 MiB arena; --host additionally permits stores.
+The initial Linux process stack is inspected only through our generated own
+entry ABI: arena_base + 4194304 + 512 holds argc, +528 holds argv[1].
+
+Memory layout, offsets relative to a single 4,022,880-byte reservation:
+       0  source buffer, 262,145 bytes (one overflow-detection byte)
+  262160  262,145 tokens, 12 bytes each (u32 kind and u64 payload)
+ 3407904  generated output, 491,520 bytes
+ 3899440  action/continuation stack, 32,768 bytes
+ 3932224  symbol records, 2,048 bytes
+ 3934272  three 128-entry template banks, 6,144 bytes
+ 3940416  decoded template storage, 32,768 bytes
+ 3973184  reserved string scratch, 4,096 bytes
+ 3977880  builtin metadata (73 slots of 24 bytes, including retired-name holes)
+There are 59 Zero variables. The worst-case 262,145 token records fit;
+the EOF record is explicit. Source bytes are never changed after tokenization.
+
+Parsing uses explicit 24-byte action frames, so the compiler needs neither
+native recursion nor user-level functions. Actions implement one comparison,
+left-associative addition/subtraction/multiplication, recursive unary/primary
+expressions, argument lists, bindings, conditionals and loops. The active unary
+frame limit is 64, matching the previous parser's parentheses/unary budget.
+Block nesting is limited to 64. All declarations are top-level and there are
+at most 64 symbols. All variable lookup is exact, case-sensitive ASCII.
+
+Every source byte is read before parsing. Oversized input and unsupported
+operations fail with status 1. No output is written until tokenization,
+parsing, target code emission and executable-header finalization succeed.
+Input/output retry EINTR; final output handles short writes. Output is capped
+at 491,520 bytes, or 16,384 bytes for the real target. A later write error can
+necessarily leave a partial stream, but compile errors never do.
+
+Current lexical policy reserves all supported builtin names across all targets.
+This is a unified-language namespace, unlike the old separate executables'
+target-dependent reservations. Unsupported target operations still reject.
+Diagnostics in this initial compiler use nonzero exit status without stderr.
+
+Action IDs:
+ 1 statements, 2 statement, 3 binding, 4 effect terminator
+ 10 expression, 11 comparison tail, 12 comparison emission
+ 14 additive, 15 additive tail, 16 binary emission
+ 17 product, 18 product tail, 20 unary/primary, 21 negation
+ 23 string payload, 24 close parenthesis, 25 leave unary frame
+ 31 builtin, 32 finish builtin, 33 arguments, 34 far transition
+ 40 conditional body, 41 conditional/loop completion, 42 else completion
+ 90 emit target template, 99 complete program
+
+Cooperative native threads
+--------------------------
+:fork[context | stackBase | stackBytes] creates a suspended native continuation.
+The parent receives 0. When !switch[fromContext | toContext] activates the new
+continuation, the same expression receives 1 in the child. These operations
+exist for Linux/Windows hosted x64, raw/EFI x64 and raw/EFI IA32; real and
+ZEROAPP1 targets reject them.
+fork and switch evaluate and push every argument in source order. Their native
+templates consume all argument words before measuring the live operand stack.
+
+The context is 80 bytes, aligned to 8. Its fields are 64-bit slots; IA32 stores
+zero in each high word:
+   0 continuation program counter
+   8 native stack pointer
+  16 native frame pointer
+  24 arena allocation cursor
+  32 boot argument0
+  40 boot argument1
+  48 native flags
+  56 resume expression result (new child 1; suspended switch 0)
+  64 arena base / baseline native stack pointer
+  72 context version 1, published only after successful initialization
+
+stackBase must be 16-byte aligned and stackBytes must be at least 81920. The
+runtime validates address arithmetic, actual room for live operands, and
+relevant overlaps; failures detected by these guards trap with UD2. Pointers
+must refer to caller-owned valid memory. Context records
+must be separate from the destination child stack. !switch requires different
+source and destination context records and a valid initialized destination.
+
+Child BP = align_down(stackBase + stackBytes,16) - 16.
+Child arena base = child BP - 512 - 65536.
+Child SP = child arena base - live operand bytes.
+The 512-byte local frame and all live expression operand words are copied.
+The child receives a fresh private 64 KiB reserve arena. Existing pointer values
+are preserved exactly and still refer to shared memory. No untyped integer is
+guessed to be a pointer or implicitly rebased. Allocating a child stack inside
+the parent's reserve arena is therefore valid for hosted tests.
+
+Raw x64 tracks baseline in R12, cursor in R13, boot arguments in R14/R15.
+Current hosted R14 instead retains the original argument frame; Windows R15
+is the PE image base. Cooperative contexts preserve these values unchanged.
+R12 initialization is appended to the existing prologue without moving SP/BP,
+so the Linux argc/argv bootstrap offsets do not change. The foreign call
+template saves/restores R12 around its existing stack-alignment scratch use.
+IA32 uses its existing 16-byte frame header: arg0+0, arg1+4, cursor+8, baseline+12.
+
+This is cooperative scheduling in the shared kernel address space, with real
+independent native stacks and program counters. It provides no preemption,
+memory protection, SMP synchronization or interruption inside firmware calls.
+All scheduler decisions and task bookkeeping are implemented in Zero kernel
+source. No functions, assembly source, external compiler or linker is required.
+
+Additional real-mode graphics primitives:
+  :vbe[ax | bx | cx | buffer] invokes the selected VBE BIOS service and returns AX.
+  :far16[segment | offset] reads a word through a bounded real-mode segment.
+VBE pushes all four arguments; far16 uses the standard binary ECX/EAX ABI.
+
+The threading revision was bootstrapped from preserved own version 0.5 seed
+bootstrap/zero-0.5-seed (SHA256 419f29a1c509f3ede1b092ed9bc716cc62169e4b8ef1647028652a6403e64a91).
+The first generation still had the old entry prologue; generations 2 and 3 are
+byte-identical; that historical fixed point is preserved as the 0.6 seed.
+That version 0.6 compiler source was 52,656 bytes and its executable 58,959 bytes.
+Historical SHA256: 3f9da290f0afc54da61c02297ca9a385b70a49da45fc5094688f966904ad98c6.
+Independent validation includes hosted native two-worker execution, x64 raw
+firmware-call preservation followed by threads, IA32 raw threading without
+long mode or PAE, IA32 full-u64 regression, EFI32/raw text parity, malformed
+primitive arity/target checks, and eight runtime-guard checks on each native
+architecture. Reproducible fixtures and evidence are under review-tests/threads
+and verification/threads. No assembler or linker was used.
+
+Filesystem-development primitives
+---------------------------------
+Linux hosted x64 only:
+  :pread[fd | buffer | count | offset] reads at an explicit 64-bit file offset.
+  :pwrite[fd | buffer | count | offset] writes at an explicit 64-bit file offset.
+  :fsync[fd] flushes the open descriptor.
+The first two evaluate and push all four arguments. Their templates pop offset
+into R10, count into RDX, buffer into RSI and descriptor into RDI, then issue Linux
+syscall 17/18. fsync moves its unary value into RDI and issues syscall 74. Results
+are the direct unsigned 64-bit representation of Linux return values, including
+negative errno. Callers handle EINTR, short transfers and errors. Positioned I/O
+does not alter the descriptor's current offset. No file-opening API is added;
+the validation shell supplies an already-open descriptor, normally 3.
+
+All targets support :bitxor[left | right], :bitand[left | right] and
+:shr[value | count]. The first two operate on all value bits; shr is logical
+unsigned right shift. Counts>=64 return 0 on x64/IA32; counts>=32 return 0 on the
+u32 real target. IA32 implements full 64-bit value and count semantics; a nonzero
+high count word therefore returns 0. Operands follow the usual binary ABI.
+
+Real-only :memmap[continuation | buffer] queries BIOS INT15/E820. The buffer must
+be a physical address<=0xffe0 with 28 writable bytes. The wrapper requests 24-byte
+SMAP records, initializes the extended attribute word at +20 to 1, and records
+returned ECX at +24. It returns the next EBX continuation (0 means end), or
+0xffffffff for an invalid buffer, carry, wrong SMAP signature, or returned
+record size outside 20..24. Invalid buffer is rejected before dereferencing it.
+The wrapper preserves general registers except its EAX result, DS/ES and flags,
+and clears DF after returning. Kernel stack placement is a separate Zero BIOS
+loader policy using the returned usable-memory records.
+
+The previous 0.6 compiler/source are preserved in bootstrap/zero-0.6-seed,
+bootstrap/compiler-0.6.zero and bootstrap/zero-0.6.ztext. The 0.7 baseline
+source/executable are also preserved as bootstrap/compiler-0.7.zero and
+zero-0.7-seed. Current 0.10 source is 86992 bytes; executable 91573 bytes, SHA256:
+911f6d67361300755c13bbf5f3d231d54ceae5736f1ec5e60dde5d6e4095ed3a.
+The preceding 0.9 source/seed are preserved under bootstrap/*0.9*.
+Compiler capacities grow; the language still permits 64 local variable slots,
+64 nested expression frames and 64 nested blocks. Raw/EFI and child reserve
+arenas remain 64 KiB. Real output remains capped at 16 KiB.
+
+Dword I/O extension: builtin metadata 54/55 map to template 82/83; token
+range now 500..572, with existing retired-name holes unchanged. Target banks
+include x64-port32.zero.part, ia32-port32.zero.part and real-port32.zero.part.
+The parser uses existing binary operand-pop handling for out32; in32 is unary.
+See port32.txt and verification/network-ports for reviewed encodings and tests.
+
+Merged 0.9 target extensions
+Windows mode 7 overrides hosted templates and emits original PE/import metadata.
+It supports binary KERNEL32 input/output and original cooperative contexts,
+but rejects firmware/ports and Unix positioned I/O. Current 0.10 also permits
+explicit Microsoft-ABI native call on --host and --windows. Guest modes 8/9 override
+entry/arena/stream/return templates and add ZEROAPP1 header 84. They reject
+firmware/ports, foreign calls, fork/switch and Unix file descriptors. Their
+application context and memory ownership are in portability/guest/ABI.ztext.
+The real-only biosmove builtin 56/token 556 uses template 85; its descriptor
+policy stays in the loader. That 0.9 revision reserved 3998304 bytes for capacity 491520 inside the 4 MiB
+hosted arena. The current 0.10 memory table above supersedes that layout.
+Final merged checks are under verification/compiler-0.9; earlier extension
+reports remain separate evidence tied to their own recorded compiler hashes.
+
+Current 0.10 host extension
+Builtin indices 57..72, tokens 557..572 and templates 86..101 are the 16 operations
+specified in portability/host/ABI.ztext. They retain strict value/effect forms,
+arity validation and a globally reserved namespace. Host templates override
+the active Linux/Windows bank; guest templates return explicit unavailable
+sentinels. Raw/EFI/real expose only host[]=0 from this extension.
+Binary operands use the existing pop preparation. Ternary file I/O and memory
+protection push all three values; templates consume their complete operand
+stack. Windows and Linux preserve RBP/RSP and R12..R15 as required by Zero.
+
+Decoded table storage grows from 8192 to 32768; scratch and metadata move 24576 bytes,
+with total reservation 4022880. Source, tokens, output 491520, parser stack and
+symbol/template banks retain their offsets. The Linux hosted prologue adds
+MOV R14,RBP to preserve the original argument frame across fork/switch. Its
+44-byte size explains the historical seed transition; the current seed reaches
+its own fixed point without a binary patcher. Raw/EFI/guest entry bytes do not
+change for ordinary programs that do not use the new operations.
+
+Optional fragments remain readable development excerpts, not a complete
+concatenation recipe. Normal builds compile canonical compiler.zero directly.
+Current evidence: verification/host-api and portability/host/*verification.json.

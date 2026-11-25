@@ -1,0 +1,5 @@
+# Original Zero browser document reader. stdin is external UTF-8 HTML.
+# stdout is our ZBROW001 document; errors produce no document bytes.
+# Declarations and HTML body are composed by the original Zero integrator.
+0 => @b_work. 0 => @b_doc. 0 => @b_n. 0 => @b_size. 0 => @b_i.
+0 => @b_result. 0 => @b_limit.

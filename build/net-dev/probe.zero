@@ -1,0 +1,813 @@
+# Own Zero kernel: native cooperative threads, pixel desktop and persistent files.
+:reserve[65536] => @memory.
+@memory => @bank_a.
+@memory + 4608 => @bank_b.
+@memory + 9216 => @work.
+@memory + 13824 => @line.
+@memory + 14336 => @listing.
+@memory + 16380 => @echo_byte.
+0 => @state.
+0 => @current.
+0 => @message.
+0 => @pointer.
+0 => @character.
+0 => @i.
+0 => @j.
+0 => @k.
+0 => @temporary.
+0 => @status.
+0 => @timeout.
+0 => @ready.
+0 => @valid.
+0 => @done.
+0 => @io_lba.
+0 => @io_buffer.
+0 => @io_count.
+0 => @io_write.
+0 => @io_return.
+0 => @io_ok.
+0 => @sector_index.
+0 => @word_index.
+0 => @command_status.
+0 => @validate_ptr.
+0 => @validate_return.
+0 => @validate_good.
+0 => @checksum.
+0 => @good_a.
+0 => @good_b.
+0 => @active_bank.
+0 => @fs_ready.
+0 => @disk_ready.
+0 => @disk_select.
+0 => @line_length.
+0 => @overflow.
+0 => @ignore_lf.
+0 => @arguments.
+0 => @command.
+0 => @operation.
+0 => @wanted.
+0 => @equal.
+0 => @name.
+0 => @text.
+0 => @name_length.
+0 => @file.
+0 => @free_file.
+0 => @text_length.
+0 => @slot.
+:arg0[] => @boot_information.
+@memory + 16384 => @console.
+# Original 5x7 ASCII glyph rows. Each character stores seven masks as 48+mask.
+"00000004444404:::0000:O::O:04?D>5N4IJ248;C<BD8EB=44800002488842842224804E>E40044O4400000448000O0000000004122488@>ACEIA>4<4444>>A1248ON11611N26:BO22O@@N11N68@NAA>O124888>AA>AA>>AA?12<04004000400448124842100O0O00@84248@>A12404>AGEG@>>AAOAAANAANAAN?@@@@@?NAAAAANO@@N@@OO@@N@@@?@@GAA?AAAOAAA>44444>72222B<ABDHDBA@@@@@@OAKEEAAAAIIECCA>AAAAA>NAAN@@@>AAAEB=NAANDBA?@@>11NO444444AAAAAA>AAAAA:4AAAEEKAAA:4:AAAA:4444O1248@O>88888>@884221>22222>4:A0000000000O842000000>1?A?@@NAAAN00?@@@?11?AAA?00>AO@?698N8880?AA?1>@@NAAAA40<444>20622B<@@BDHDB<44444>00JEEEE00NAAAA00>AAA>0NAAN@@0?AA?1100FI@@@00?@>1N88N889600AAAA?00AAA:400AAEE:00A:4:A0AAA?1>00O248O34484434444444H44244H009F000" => @font.
+0 => @c0.
+0 => @c1.
+0 => @c2.
+0 => @c3.
+0 => @c4.
+0 => @c5.
+0 -> @i.
+?? @i < 65536 [ !store8[@memory + @i|0]. @i + 1 -> @i. ]
+# Network owns the pre-existing32KiB gap between worker stacks and WM slots.
+!store64[@console + 2400|0]. !store64[@console + 2408|0].
+? @boot_information [
+ :load64[@boot_information + 112] -> @c0.
+ :load64[@boot_information + 120] -> @c1.
+ ? (@c0 != 0) * (:bitand[@c0|15] == 0) * (@c1 >= 335872) [
+  ? (@c0 + @c1 > @c0) * (@c0 + 196608 <= 4294967296) [
+   @c0 + 163840 -> @c2. 0 -> @i.
+   ?? @i < 32768 [ !store64[@c2 + @i|0]. @i + 8 -> @i. ]
+   !store64[@c2 + 56|0x6f72655a].
+   !store64[@c2 + 24584|1].
+   !store64[@console + 2400|@c2]. !store64[@console + 2408|@c2 + 24576].
+  ]
+ ]
+]
+
+!out8[0x43|0x34]. !out8[0x40|0]. !out8[0x40|0].
+!out8[0x43|0]. :in8[0x40] -> @c0. :in8[0x40] -> @c1. !store64[@console + 424|@c0 + @c1 * 256].
+?? 1 [
+# Original polled PCnet/DHCP network engine. Called inside worker2's private
+# frame; no locals survive this part except immutable @console/@memory/etc.
+:load64[@console + 2400] -> @work.
+? @work [
+ :load64[@work] -> @state. :load64[@console + 440] -> @current.
+ # A descriptor that never completes must not permanently stop DHCP recovery.
+ ? ((@state == 3) + (@state == 4)) * :load64[@work + 232] * (@current >= :load64[@work + 656]) [
+  !store64[@work|1]. 1 -> @state. !store64[@work + 32|3].
+  !store64[@work + 232|0]. !store64[@work + 208|0]. !store64[@work + 144|0].
+  64 -> @i. ?? @i <= 112 [ !store64[@work + @i|0]. @i + 8 -> @i. ]
+  !store64[@work + 168|2].
+ ]
+ # PCI mechanism1, bounded32function probes per cooperative slice.
+ ? @state == 0 [
+  0 -> @i.
+  ?? (@i < 32) * (:load64[@work + 16] < 65536) [
+   :load64[@work + 16] -> @j. 0x80000000 + @j * 256 -> @io_lba.
+   !out32[0xcf8|@io_lba]. :in32[0xcfc] -> @c0.
+   1 -> @k.
+   ? :bitand[@j|7] == 0 [
+    8 -> @k.
+    ? :bitand[@c0|65535] != 65535 [
+     !out32[0xcf8|@io_lba + 12].
+     ? :bitand[:in32[0xcfc]|0x800000] [ 1 -> @k. ]
+    ]
+   ]
+   ? (:bitand[@c0|65535] != 65535) * (:bitand[@c0|65535] != 0) [
+    !out32[0xcf8|@io_lba + 8]. :in32[0xcfc] -> @c1.
+    :shr[@c1|16] -> @c2.
+    ? (@c2 == 0x0280) + (@c2 == 0x0d20) + (@c2 == 0x0d21) [
+     @work + 24576 -> @pointer. :load64[@pointer] -> @c3.
+     ? @c3 < 4 [
+      @pointer + 256 + @c3 * 64 -> @text.
+      !store64[@text|@io_lba]. !store64[@text + 8|@c0].
+      !store64[@text + 16|@c1]. !store64[@text + 24|0].
+      !store64[@text + 32|0]. !store64[@text + 40|0].
+      !store64[@text + 48|0]. !store64[@text + 56|0].
+      !store64[@pointer|@c3 + 1]. !store64[@pointer + 72|1].
+     ]
+    ]
+    ? (@c0 == 0x20001022) * (:load64[@work + 8] == 0) [
+     !out32[0xcf8|@io_lba + 16]. :in32[0xcfc] -> @c1.
+     :bitand[@c1|0xfffffffc] -> @c2.
+     ? :bitand[@c1|1] * (@c2 >= 256) * (@c2 <= 65504) [
+      !store64[@work + 8|@c2]. !store64[@work + 160|@io_lba].
+      !out32[0xcf8|@io_lba + 4]. :bitand[:in32[0xcfc]|65535] -> @c1.
+      !out32[0xcfc|:bitxor[@c1|:bitand[@c1|5]] + 5].
+     ]
+    ]
+   ]
+   !store64[@work + 16|@j + @k]. @i + 1 -> @i.
+  ]
+  ? :load64[@work + 16] >= 65536 [
+   !store64[@work + 24584|0]. !store64[@work + 24648|1].
+   ? :load64[@work + 8] [ !store64[@work|1]. ] ~ [
+    !store64[@work|9]. !store64[@work + 32|1].
+    !store64[@work + 40|@current + 100].
+   ]
+  ]
+ ]
+ :load64[@work + 8] -> @io_return.
+ ? @state == 1 [
+  # PCnet word-I/O reset, software style2, one TX and eight RX descriptors.
+  :in16[@io_return + 20] -> @c0.
+  !out16[@io_return + 18|0]. !out16[@io_return + 16|4].
+  !out16[@io_return + 18|20]. !out16[@io_return + 22|2].
+  !out16[@io_return + 18|2]. :in16[@io_return + 22] -> @c0.
+  !out16[@io_return + 22|:bitxor[@c0|:bitand[@c0|2]] + 2].
+  0 -> @i. ?? @i < 6 [
+   :in8[@io_return + @i] -> @c0.
+   !store8[@work + 256 + @i|@c0]. !store8[@work + 516 + @i|@c0].
+   @i + 1 -> @i.
+  ]
+  !store16[@work + 512|0]. !store16[@work + 514|0x0030].
+  !store16[@work + 522|0]. !store64[@work + 524|0].
+  !store32[@work + 532|@work + 1024]. !store32[@work + 536|@work + 1152].
+  0 -> @i. ?? @i < 8 [
+   @work + 1024 + @i * 16 -> @pointer.
+   !store32[@pointer|@work + 2048 + @i * 1536].
+   !store32[@pointer + 8|0]. !store32[@pointer + 12|0].
+   !store32[@pointer + 4|0x8000fa00]. @i + 1 -> @i.
+  ]
+  !store32[@work + 1152|@work + 14336]. !store32[@work + 1156|0x0000f000].
+  !store64[@work + 1160|0]. !store64[@work + 24|0].
+  !out16[@io_return + 18|1]. !out16[@io_return + 16|:bitand[@work + 512|65535]].
+  !out16[@io_return + 18|2]. !out16[@io_return + 16|:shr[@work + 512|16]].
+  !out16[@io_return + 18|4]. !out16[@io_return + 16|0x0915].
+  !out16[@io_return + 18|0]. !out16[@io_return + 16|1].
+  !store64[@work|2]. !store64[@work + 40|@current + 20].
+ ]
+ ? @state == 2 [
+  !out16[@io_return + 18|0]. :in16[@io_return + 16] -> @c0.
+  ? :bitand[@c0|256] [
+   !out16[@io_return + 16|258]. !store64[@work|3].
+   !store64[@work + 32|3]. !store64[@work + 40|0]. !store64[@work + 152|0].
+  ] ~ [
+   ? @current >= :load64[@work + 40] [
+    !store64[@work|9]. !store64[@work + 32|5].
+    !store64[@work + 168|1]. !store64[@work + 40|@current + 100].
+   ]
+  ]
+ ]
+ ? (@state == 3) + (@state == 4) [
+  # Clear completed transmit ownership and acknowledge NIC events without IRQs.
+  ? :bitand[:load16[@work + 1158]|32768] == 0 [ !store64[@work + 232|0]. ]
+  !out16[@io_return + 18|0]. :in16[@io_return + 16] -> @c0.
+  !out16[@io_return + 16|:bitand[@c0|0x7f00] + 2].
+  ? @current >= :load64[@work + 152] [
+   !store64[@work + 152|@current + 10].
+   !out16[@io_return + 18|4]. :bitand[:in16[@io_return + 22]|32768] -> @c0.
+   ? @c0 [
+    ? :load64[@work + 144] == 0 [ !store64[@work + 40|0]. !store64[@work + 32|3]. ]
+    !store64[@work + 144|1].
+   ] ~ [
+    !store64[@work + 144|0]. !store64[@work + 32|2]. !store64[@work|3].
+    64 -> @i. ?? @i <= 112 [ !store64[@work + @i|0]. @i + 8 -> @i. ]
+    !store64[@work + 48|0]. !store64[@work + 248|0].
+   ]
+  ]
+  # At most four complete receive descriptors are processed per poll.
+  0 -> @sector_index.
+  ?? @sector_index < 4 [
+   :load64[@work + 24] -> @slot. @work + 1024 + @slot * 16 -> @file.
+   :load16[@file + 6] -> @c0.
+   ? :bitand[@c0|32768] [ 4 -> @sector_index. ] ~ [
+    @work + 2048 + @slot * 1536 -> @io_buffer.
+    :bitand[:load32[@file + 8]|4095] -> @io_count.
+    0 -> @valid.
+    ? (:bitand[@c0|0x4300] == 0x0300) * (@io_count >= 18) * (@io_count <= 1518) [
+     @io_count - 4 -> @io_count. 1 -> @valid.
+     !store64[@work + 120|:load64[@work + 120] + 1].
+    ]
+    ? @valid [
+     # ARP request for our leased address. Reply only with valid Ethernet/IPv4
+     # ARP sizes and a unicast sender. No unsolicited reply changes our cache.
+     ? (:load16[@io_buffer + 12] == 0x0608) * (@io_count >= 42) * (:load64[@work + 64] != 0) [
+      ? (:load16[@io_buffer + 14] == 0x0100) * (:load16[@io_buffer + 16] == 0x0008) * (:load16[@io_buffer + 18] == 0x0406) * (:load16[@io_buffer + 20] == 0x0100) * (:load32[@io_buffer + 38] == :load32[@work + 64]) * (:load64[@work + 232] == 0) [
+       @work + 14336 -> @text. 0 -> @i.
+       ?? @i < 60 [ !store8[@text + @i|0]. @i + 1 -> @i. ]
+       0 -> @i. ?? @i < 6 [
+        !store8[@text + @i|:load8[@io_buffer + 22 + @i]].
+        !store8[@text + 6 + @i|:load8[@work + 256 + @i]].
+        !store8[@text + 22 + @i|:load8[@work + 256 + @i]].
+        !store8[@text + 32 + @i|:load8[@io_buffer + 22 + @i]]. @i + 1 -> @i.
+       ]
+       !store16[@text + 12|0x0608]. !store16[@text + 14|0x0100].
+       !store16[@text + 16|0x0008]. !store16[@text + 18|0x0406].
+       !store16[@text + 20|0x0200]. !store32[@text + 28|:load32[@work + 64]].
+       !store32[@text + 38|:load32[@io_buffer + 28]].
+       !store64[@work + 216|60]. !store64[@work + 208|1].
+      ]
+     ]
+     ? (:load16[@io_buffer + 12] == 0x0008) * (@io_count >= 34) [
+      :bitand[:load8[@io_buffer + 14]|15] * 4 -> @name_length.
+      :load8[@io_buffer + 16] * 256 + :load8[@io_buffer + 17] -> @text_length.
+      ? (:shr[:load8[@io_buffer + 14]|4] != 4) + (@name_length < 20) + (@name_length > 60) + (@text_length < @name_length) + (@text_length + 14 > @io_count) [ 0 -> @valid. ]
+      ? (:bitand[:load8[@io_buffer + 20]|63] != 0) + (:load8[@io_buffer + 21] != 0) [ 0 -> @valid. ]
+      ? @valid [
+       0 -> @checksum. 0 -> @i.
+       ?? @i < @name_length [ @checksum + :load16[@io_buffer + 14 + @i] -> @checksum. @i + 2 -> @i. ]
+       ?? @checksum > 65535 [ :bitand[@checksum|65535] + :shr[@checksum|16] -> @checksum. ]
+       ? @checksum != 65535 [ 0 -> @valid. ]
+      ]
+      ? @valid * (:load8[@io_buffer + 23] == 17) * (@text_length >= @name_length + 248) [
+       @io_buffer + 14 + @name_length -> @pointer.
+       :load8[@pointer + 4] * 256 + :load8[@pointer + 5] -> @line_length.
+       ? (@line_length < 248) + (@line_length > @text_length - @name_length) + (:load16[@pointer] != 0x4300) + (:load16[@pointer + 2] != 0x4400) [ 0 -> @valid. ]
+       ? @valid * (:load16[@pointer + 6] != 0) [
+        :load16[@io_buffer + 26] + :load16[@io_buffer + 28] + :load16[@io_buffer + 30] + :load16[@io_buffer + 32] + 0x1100 + :load16[@pointer + 4] -> @checksum.
+        0 -> @i. ?? @i + 1 < @line_length [ @checksum + :load16[@pointer + @i] -> @checksum. @i + 2 -> @i. ]
+        ? @i < @line_length [ @checksum + :load8[@pointer + @i] -> @checksum. ]
+        ?? @checksum > 65535 [ :bitand[@checksum|65535] + :shr[@checksum|16] -> @checksum. ]
+        ? @checksum != 65535 [ 0 -> @valid. ]
+       ]
+       ? @valid [
+        @pointer + 8 -> @name.
+        ? (:load8[@name] != 2) + (:load8[@name + 1] != 1) + (:load8[@name + 2] != 6) + (:load32[@name + 4] != :load32[@work + 56]) + (:load32[@name + 236] != 0x63538263) [ 0 -> @valid. ]
+        0 -> @i. ?? @i < 6 [ ? :load8[@name + 28 + @i] != :load8[@work + 256 + @i] [ 0 -> @valid. ] @i + 1 -> @i. ]
+       ]
+       ? @valid [
+        288 -> @i. ?? @i <= 336 [ !store64[@work + @i|0]. @i + 8 -> @i. ]
+        !store64[@work + 288|:load32[@name + 16]].
+        @name + 240 -> @text. @pointer + @line_length -> @free_file.
+        0 -> @done.
+        ?? (@text < @free_file) * (@done == 0) * @valid [
+         :load8[@text] -> @c0. @text + 1 -> @text.
+         ? @c0 == 255 [ 1 -> @done. ] ~ [
+          ? @c0 != 0 [
+           ? @text >= @free_file [ 0 -> @valid. ] ~ [
+            :load8[@text] -> @c1. @text + 1 -> @text.
+            ? @text + @c1 > @free_file [ 0 -> @valid. ] ~ [
+             ? (@c0 == 53) * (@c1 == 1) [ !store64[@work + 336|:load8[@text]]. ]
+             ? (@c0 == 1) * (@c1 == 4) [ !store64[@work + 296|:load32[@text]]. ]
+             ? (@c0 == 3) * (@c1 >= 4) * (:bitand[@c1|3] == 0) [ !store64[@work + 304|:load32[@text]]. ]
+             ? (@c0 == 6) * (@c1 >= 4) * (:bitand[@c1|3] == 0) [ !store64[@work + 312|:load32[@text]]. ]
+             ? (@c0 == 54) * (@c1 == 4) [ !store64[@work + 320|:load32[@text]]. ]
+             ? (@c0 == 51) * (@c1 == 4) [
+              :load8[@text] * 16777216 + :load8[@text + 1] * 65536 + :load8[@text + 2] * 256 + :load8[@text + 3] -> @c2.
+              ? @c2 > 86400 [ 86400 -> @c2. ] !store64[@work + 328|@c2].
+             ]
+             @text + @c1 -> @text.
+            ]
+           ]
+          ]
+         ]
+        ]
+        ? (@done == 0) + (:load64[@work + 320] == 0) [ 0 -> @valid. ]
+        ? @valid [
+         ? (:load64[@work + 336] == 2) * (:load64[@work + 104] == 0) * (:load64[@work + 288] != 0) [
+          !store64[@work + 104|:load64[@work + 288]]. !store64[@work + 96|:load64[@work + 320]].
+          !store64[@work + 40|0]. !store64[@work + 48|0].
+         ]
+         ? (:load64[@work + 336] == 5) * (:load64[@work + 320] == :load64[@work + 96]) * (:load64[@work + 288] == :load64[@work + 104]) * (:load64[@work + 328] > 0) [
+          !store64[@work + 64|:load64[@work + 288]]. !store64[@work + 72|:load64[@work + 296]].
+          !store64[@work + 80|:load64[@work + 304]]. !store64[@work + 88|:load64[@work + 312]].
+          !store64[@work + 136|:load64[@work + 328]].
+          !store64[@work + 112|@current + :load64[@work + 328] * 10].
+          !store64[@work + 184|@current + :load64[@work + 328] * 5].
+          !store64[@work|4]. !store64[@work + 32|4]. !store64[@work + 48|0].
+          !store64[@work + 176|:load64[@work + 176] + 1].
+         ]
+         ? (:load64[@work + 336] == 6) * (:load64[@work + 320] == :load64[@work + 96]) [
+          64 -> @i. ?? @i <= 112 [ !store64[@work + @i|0]. @i + 8 -> @i. ]
+          !store64[@work|3]. !store64[@work + 32|3]. !store64[@work + 40|@current + 10].
+         ]
+        ]
+       ]
+      ]
+     ]
+    ]
+# BEGIN NET CLIENT RECEIVE
+# ARP replies populate only the pending exact next-hop cache.
+? (@io_count >= 42) * (:load16[@io_buffer + 12] == 0x0608) * (:load64[@work + 64] != 0) [
+ ? (:load16[@io_buffer + 14] == 0x0100) * (:load16[@io_buffer + 16] == 0x0008) * (:load16[@io_buffer + 18] == 0x0406) * (:load16[@io_buffer + 20] == 0x0200) * (:load32[@io_buffer + 28] == :load32[@work + 224]) * (:load32[@io_buffer + 38] == :load32[@work + 64]) [
+  1 -> @ready. 0 -> @i.
+  ?? @i < 6 [
+   ? :load8[@io_buffer + 32 + @i] != :load8[@work + 256 + @i] [ 0 -> @ready. ] @i + 1 -> @i.
+  ]
+  ? :bitand[:load8[@io_buffer + 22]|1] [ 0 -> @ready. ]
+  ? @ready [
+   0 -> @i. ?? @i < 6 [ !store8[@work + 240 + @i|:load8[@io_buffer + 22 + @i]]. @i + 1 -> @i. ]
+   !store64[@work + 248|1].
+  ]
+ ]
+]
+? (:load64[@work + 400] == 1) * (@io_count >= 34) * (:load16[@io_buffer + 12] == 0x0008) [
+ 1 -> @valid.
+ :bitand[:load8[@io_buffer + 14]|15] * 4 -> @name_length.
+ :load8[@io_buffer + 16] * 256 + :load8[@io_buffer + 17] -> @text_length.
+ ? (:shr[:load8[@io_buffer + 14]|4] != 4) + (@name_length < 20) + (@name_length > 60) + (@text_length < @name_length) + (@text_length + 14 > @io_count) [ 0 -> @valid. ]
+ ? (:bitand[:load8[@io_buffer + 20]|63] != 0) + (:load8[@io_buffer + 21] != 0) + (:load32[@io_buffer + 30] != :load32[@work + 64]) [ 0 -> @valid. ]
+ ? @valid [
+  0 -> @checksum. 0 -> @i. ?? @i < @name_length [ @checksum + :load16[@io_buffer + 14 + @i] -> @checksum. @i + 2 -> @i. ]
+  ?? @checksum > 65535 [ :bitand[@checksum|65535] + :shr[@checksum|16] -> @checksum. ]
+  ? @checksum != 65535 [ 0 -> @valid. ]
+ ]
+ ? @valid * (:load64[@work + 464] == 2) * (:load8[@io_buffer + 23] == 17) * (@text_length >= @name_length + 20) * (:load32[@io_buffer + 26] == :load32[@work + 88]) [
+  @io_buffer + 14 + @name_length -> @pointer.
+  :load8[@pointer + 4] * 256 + :load8[@pointer + 5] -> @line_length.
+  ? (@line_length < 20) + (@line_length > @text_length - @name_length) + (:load16[@pointer] != 0x3500) + (:load16[@pointer + 2] != 0x00c0) [ 0 -> @valid. ]
+  ? @valid * (:load16[@pointer + 6] != 0) [
+   :load16[@io_buffer + 26] + :load16[@io_buffer + 28] + :load16[@io_buffer + 30] + :load16[@io_buffer + 32] + 0x1100 + :load16[@pointer + 4] -> @checksum.
+   0 -> @i. ?? @i + 1 < @line_length [ @checksum + :load16[@pointer + @i] -> @checksum. @i + 2 -> @i. ]
+   ? @i < @line_length [ @checksum + :load8[@pointer + @i] -> @checksum. ]
+   ?? @checksum > 65535 [ :bitand[@checksum|65535] + :shr[@checksum|16] -> @checksum. ]
+   ? @checksum != 65535 [ 0 -> @valid. ]
+  ]
+  ? @valid [
+   @pointer + 8 -> @name. @pointer + @line_length -> @free_file.
+   ? (:load16[@name] != :load16[@work + 440]) + (:bitand[:load8[@name + 2]|128] == 0) + (:load16[@name + 4] != 0x0100) [ 0 -> @valid. ]
+   ? @valid [
+    ? :bitand[:load8[@name + 3]|15] + :bitand[:load8[@name + 2]|2] [ !store64[@work + 408|5]. 0 -> @valid. ]
+   ]
+   :load64[@work + 632] -> @j.
+   ? @name + 12 + @j > @free_file [ 0 -> @valid. ]
+   ? @valid [
+    0 -> @i. ?? @i < @j [
+     ? :load8[@name + 12 + @i] != :load8[@work + 22000 + @i] [ 0 -> @valid. ] @i + 1 -> @i.
+    ]
+   ]
+   ? @valid [
+    @name + 12 + @j -> @text.
+    :load8[@name + 6] * 256 + :load8[@name + 7] -> @k.
+    ? (@k == 0) + (@k > 32) [ 0 -> @valid. !store64[@work + 408|5]. ]
+    0 -> @word_index. 0 -> @done.
+    ?? (@word_index < @k) * @valid * (@done == 0) [
+     0 -> @ready. 0 -> @i.
+     ?? (@ready == 0) * @valid * (@i < 128) [
+      ? @text >= @free_file [ 0 -> @valid. ] ~ [
+       :load8[@text] -> @c0.
+       ? @c0 == 0 [ @text + 1 -> @text. 1 -> @ready. ] ~ [
+        ? :bitand[@c0|192] == 192 [
+         ? @text + 2 > @free_file [ 0 -> @valid. ] ~ [
+          ? :bitand[@c0|63] * 256 + :load8[@text + 1] >= @free_file - @name [ 0 -> @valid. ]
+          @text + 2 -> @text. 1 -> @ready.
+         ]
+        ] ~ [
+         ? (@c0 > 63) + (@text + @c0 + 1 > @free_file) [ 0 -> @valid. ] ~ [ @text + @c0 + 1 -> @text. ]
+        ]
+       ]
+      ]
+      @i + 1 -> @i.
+     ]
+     ? (@ready == 0) + (@text + 10 > @free_file) [ 0 -> @valid. ]
+     ? @valid [
+      :load8[@text + 8] * 256 + :load8[@text + 9] -> @j.
+      ? @text + 10 + @j > @free_file [ 0 -> @valid. ] ~ [
+       ? (:load16[@text] == 0x0100) * (:load16[@text + 2] == 0x0100) * (@j == 4) [
+        :load32[@text + 10] -> @c0.
+        ? (@c0 != 0) * (@c0 != 0xffffffff) [
+         !store64[@work + 424|@c0]. !store64[@work + 464|3].
+         !store64[@work + 448|0]. !store64[@work + 456|0]. 1 -> @done.
+        ]
+       ]
+       @text + 10 + @j -> @text.
+      ]
+     ]
+     @word_index + 1 -> @word_index.
+    ]
+    ? (@done == 0) * @valid [ !store64[@work + 408|5]. ]
+   ]
+  ]
+ ]
+ ? @valid * (:load64[@work + 464] >= 4) * (:load64[@work + 464] <= 6) * (:load8[@io_buffer + 23] == 6) * (@text_length >= @name_length + 20) * (:load32[@io_buffer + 26] == :load32[@work + 424]) [
+  @io_buffer + 14 + @name_length -> @pointer.
+  @text_length - @name_length -> @free_file.
+  :shr[:load8[@pointer + 12]|4] * 4 -> @line_length.
+  ? (@line_length < 20) + (@line_length > @free_file) + (:load8[@pointer + 2] * 256 + :load8[@pointer + 3] != :load64[@work + 616]) + (:load8[@pointer] * 256 + :load8[@pointer + 1] != :load64[@work + 432]) [ 0 -> @valid. ]
+  ? @valid [
+   :load16[@io_buffer + 26] + :load16[@io_buffer + 28] + :load16[@io_buffer + 30] + :load16[@io_buffer + 32] + 0x0600 + :bitand[@free_file|255] * 256 + :shr[@free_file|8] -> @checksum.
+   0 -> @i. ?? @i + 1 < @free_file [ @checksum + :load16[@pointer + @i] -> @checksum. @i + 2 -> @i. ]
+   ? @i < @free_file [ @checksum + :load8[@pointer + @i] -> @checksum. ]
+   ?? @checksum > 65535 [ :bitand[@checksum|65535] + :shr[@checksum|16] -> @checksum. ]
+   ? @checksum != 65535 [ 0 -> @valid. ]
+  ]
+  ? @valid [
+   :load8[@pointer + 4] * 16777216 + :load8[@pointer + 5] * 65536 + :load8[@pointer + 6] * 256 + :load8[@pointer + 7] -> @command.
+   :load8[@pointer + 8] * 16777216 + :load8[@pointer + 9] * 65536 + :load8[@pointer + 10] * 256 + :load8[@pointer + 11] -> @arguments.
+   :load8[@pointer + 13] -> @operation.
+   ? :load64[@work + 464] == 4 [
+    ? :bitand[@operation|4] * (@arguments == :load64[@work + 496] + 1) [ !store64[@work + 408|7]. ]
+    ? (:bitand[@operation|0x16] == 0x12) * (@arguments == :load64[@work + 496] + 1) [
+     !store64[@work + 480|:bitand[@command + 1|0xffffffff]].
+     !store64[@work + 464|5]. !store64[@work + 448|0]. !store64[@work + 456|0].
+    ]
+   ] ~ [
+    ? :bitand[@operation|4] * (@command == :load64[@work + 480]) [ !store64[@work + 408|7]. ]
+    ? (:bitand[@operation|0x16] == 0x10) * (@arguments >= :load64[@work + 496] + 1) * (@arguments <= :load64[@work + 472]) [
+     @free_file - @line_length -> @j.
+     :load64[@work + 480] -> @c0.
+     :bitand[@c0 - @command|0xffffffff] -> @i.
+     ? @i <= @j [
+      ? :load64[@work + 416] + @j - @i > 4095 [ !store64[@work + 408|9]. ] ~ [
+       :load64[@work + 416] -> @k.
+       ?? @i < @j [
+        :load8[@pointer + @line_length + @i] -> @c1.
+        ? ((@c1 >= 32) * (@c1 <= 126) + (@c1 == 9) + (@c1 == 10) + (@c1 == 13)) == 0 [ !store64[@work + 408|11]. ]
+        !store8[@work + 17024 + @k|@c1]. @k + 1 -> @k. @i + 1 -> @i.
+       ]
+       !store64[@work + 416|@k]. !store8[@work + 17024 + @k|0].
+       !store64[@work + 480|:bitand[@command + @j|0xffffffff]].
+       ? @j [ !store64[@work + 568|1]. !store64[@work + 448|@current + 50]. ]
+      ]
+     ]
+     ? @j [ !store64[@work + 544|1]. ]
+     ? :bitand[@operation|1] * (:bitand[@command + @j|0xffffffff] == :load64[@work + 480]) [
+      !store64[@work + 480|:bitand[:load64[@work + 480] + 1|0xffffffff]]. !store64[@work + 608|1]. !store64[@work + 544|1].
+     ]
+    ]
+   ]
+  ]
+ ]
+]
+# END NET CLIENT RECEIVE
+    ? @valid == 0 [ !store64[@work + 192|:load64[@work + 192] + 1]. ]
+    !store32[@file + 8|0]. !store32[@file + 12|0]. !store32[@file + 4|0x8000fa00].
+    !store64[@work + 24|:bitand[@slot + 1|7]]. @sector_index + 1 -> @sector_index.
+   ]
+  ]
+  ? (:load64[@work] == 4) * (@current >= :load64[@work + 112]) [
+   64 -> @i. ?? @i <= 112 [ !store64[@work + @i|0]. @i + 8 -> @i. ]
+   !store64[@work|3]. !store64[@work + 32|3]. !store64[@work + 40|0]. !store64[@work + 248|0].
+  ]
+# BEGIN NET CLIENT POLL
+# Original bounded DNS and HTTP/1.0 client. One request at a time, no disk I/O.
+? :load64[@work + 384] != :load64[@work + 392] [
+ !store64[@work + 392|:load64[@work + 384]]. !store64[@work + 400|1].
+ !store64[@work + 408|0]. !store64[@work + 416|0]. !store8[@work + 17024|0].
+ !store64[@work + 456|0]. !store64[@work + 464|0]. !store64[@work + 544|0].
+ !store64[@work + 568|0]. !store64[@work + 608|0]. !store64[@work + 624|@current + 300].
+ 0 -> @i. 1 -> @valid.
+ ?? (@i < 256) * (:load8[@work + 16384 + @i] != 0) [
+  :load8[@work + 16384 + @i] -> @c0.
+  ? (@c0 <= 32) + (@c0 > 126) [ 0 -> @valid. ] @i + 1 -> @i.
+ ]
+ ? (@i == 0) + (@i == 256) [ 0 -> @valid. ]
+ 0 -> @j.
+ ? (@i >= 7) * (:load8[@work + 16384] == 104) * (:load8[@work + 16385] == 116) * (:load8[@work + 16386] == 116) * (:load8[@work + 16387] == 112) * (:load8[@work + 16388] == 58) * (:load8[@work + 16389] == 47) * (:load8[@work + 16390] == 47) [ 7 -> @j. ]
+ !store64[@work + 640|@j].
+ 0 -> @k. 1 -> @ready.
+ ?? (@j < @i) * (@ready != 0) [
+  :load8[@work + 16384 + @j] -> @c0.
+  ? (@c0 == 58) + (@c0 == 47) [ 0 -> @ready. ] ~ [
+   ? @k >= 127 [ 0 -> @valid. 0 -> @ready. ] ~ [
+    ? (@c0 >= 65) * (@c0 <= 90) [ @c0 + 32 -> @c0. ]
+    ? ((@c0 >= 97) * (@c0 <= 122) + (@c0 >= 48) * (@c0 <= 57) + (@c0 == 45) + (@c0 == 46)) == 0 [ 0 -> @valid. ]
+    !store8[@work + 16640 + @k|@c0]. @k + 1 -> @k. @j + 1 -> @j.
+   ]
+  ]
+ ]
+ !store8[@work + 16640 + @k|0]. ? @k == 0 [ 0 -> @valid. ]
+ !store64[@work + 432|80].
+ ? (@j < @i) * (:load8[@work + 16384 + @j] == 58) [
+  @j + 1 -> @j. 0 -> @c1. 0 -> @c2.
+  ?? (@j < @i) * (:load8[@work + 16384 + @j] != 47) [
+   :load8[@work + 16384 + @j] -> @c0.
+   ? (@c0 < 48) + (@c0 > 57) [ 0 -> @valid. ]
+   @c1 * 10 + @c0 - 48 -> @c1. @c2 + 1 -> @c2.
+   ? (@c1 > 65535) + (@c2 > 5) [ 0 -> @valid. ] @j + 1 -> @j.
+  ]
+  ? (@c1 == 0) + (@c2 == 0) [ 0 -> @valid. ] !store64[@work + 432|@c1].
+ ]
+ :load64[@work + 640] -> @c4. 0 -> @c5.
+ ?? @c4 < @j [ !store8[@work + 22600 + @c5|:load8[@work + 16384 + @c4]]. @c4 + 1 -> @c4. @c5 + 1 -> @c5. ]
+ !store8[@work + 22600 + @c5|0].
+ 0 -> @c2.
+ ? @j == @i [ !store8[@work + 16768|47]. 1 -> @c2. ] ~ [
+  ?? (@j < @i) * (@c2 < 255) [
+   !store8[@work + 16768 + @c2|:load8[@work + 16384 + @j]]. @j + 1 -> @j. @c2 + 1 -> @c2.
+  ]
+  ? @j != @i [ 0 -> @valid. ]
+ ]
+ !store8[@work + 16768 + @c2|0].
+ # Numeric IPv4 literals bypass DNS; nonnumeric host names need valid labels.
+ 0 -> @i. 0 -> @c0. 0 -> @c1. 0 -> @c2. 0 -> @c3. 1 -> @ready.
+ ?? @i < @k [
+  :load8[@work + 16640 + @i] -> @c4.
+  ? (@c4 != 46) * ((@c4 < 48) + (@c4 > 57)) [ 0 -> @ready. ]
+  @i + 1 -> @i.
+ ]
+ ? @ready [
+  0 -> @i.
+  ?? @i <= @k [
+   :load8[@work + 16640 + @i] -> @c4.
+   ? (@c4 == 46) + (@i == @k) [
+    ? (@c0 > 255) + (@c1 == 0) + (@c2 > 3) [ 0 -> @valid. ]
+    ? @c2 < 4 [
+     1 -> @c5. ? @c2 == 1 [ 256 -> @c5. ] ? @c2 == 2 [ 65536 -> @c5. ] ? @c2 == 3 [ 16777216 -> @c5. ]
+     @c3 + @c0 * @c5 -> @c3.
+    ]
+    0 -> @c0. 0 -> @c1. @c2 + 1 -> @c2.
+   ] ~ [ @c0 * 10 + @c4 - 48 -> @c0. @c1 + 1 -> @c1. ? @c1 > 3 [ 0 -> @valid. ] ]
+   @i + 1 -> @i.
+  ]
+  ? (@c2 != 4) + (@c3 == 0) + (@c3 == 0xffffffff) [ 0 -> @valid. ]
+  !store64[@work + 424|@c3]. !store64[@work + 464|3].
+ ] ~ [
+  # Store the expected DNS question independently of the reusable TX buffer.
+  0 -> @i. 0 -> @j. 0 -> @c0. 0 -> @c1.
+  ?? @i <= @k [
+   :load8[@work + 16640 + @i] -> @c2.
+   ? (@c2 == 46) + (@i == @k) [
+    ? (@c0 == 0) + (@c0 > 63) [ 0 -> @valid. ]
+    !store8[@work + 22000 + @j|@c0]. @j + 1 -> @j.
+    0 -> @c3. ?? @c3 < @c0 [
+     !store8[@work + 22000 + @j|:load8[@work + 16640 + @c1 + @c3]]. @j + 1 -> @j. @c3 + 1 -> @c3.
+    ]
+    @i + 1 -> @c1. 0 -> @c0.
+   ] ~ [ @c0 + 1 -> @c0. ]
+   @i + 1 -> @i.
+  ]
+  !store8[@work + 22000 + @j|0]. @j + 1 -> @j.
+  !store16[@work + 22000 + @j|0x0100]. !store16[@work + 22002 + @j|0x0100].
+  !store64[@work + 632|@j + 4].
+  !store64[@work + 440|:bitand[:load64[@work + 384] + 0x5170|65535]].
+  !store64[@work + 464|1].
+  ? :load64[@work + 88] == 0 [ !store64[@work + 408|3]. ]
+ ]
+ ? @valid == 0 [ !store64[@work + 408|2]. ]
+ !store64[@work + 448|0]. !store64[@work + 496|0x10203040 + :bitand[@current|65535] * 4096 + :bitand[:load64[@work + 384]|255] * 4096].
+ !store64[@work + 472|:load64[@work + 496] + 1].
+ !store64[@work + 616|49152 + :bitand[:load64[@work + 384]|8191]].
+ # Build an original HTTP/1.0 close-delimited request in a bounded private area.
+ 0 -> @j. 0 -> @c0.
+ ?? @c0 < 5 [
+  "GET " -> @text. ? @c0 == 1 [ @work + 16768 -> @text. ]
+  ? @c0 == 2 [ " HTTP/1.0\r\nHost: " -> @text. ]
+  ? @c0 == 3 [ @work + 22600 -> @text. ]
+  ? @c0 == 4 [ "\r\nConnection: close\r\n\r\n" -> @text. ]
+  0 -> @i. ?? :load8[@text + @i] [
+   ? @j < 511 [ !store8[@work + 21200 + @j|:load8[@text + @i]]. ] ~ [ !store64[@work + 408|2]. ]
+   @j + 1 -> @j. @i + 1 -> @i.
+  ]
+  @c0 + 1 -> @c0.
+ ]
+ !store64[@work + 488|@j].
+]
+? :load64[@work + 400] == 1 [
+ ? :load64[@work + 32] != 4 [ !store64[@work + 408|1]. ]
+ ? @current >= :load64[@work + 624] [ !store64[@work + 408|8]. ]
+ ? (:load64[@work + 232] == 0) * (:load64[@work + 208] == 0) * (:load64[@work + 408] == 0) [
+  :load64[@work + 464] -> @command_status.
+  # Resolve the actual next hop (direct LAN peer or router) using ARP.
+  ? (@command_status == 1) + (@command_status == 3) [
+   :load32[@work + 88] -> @c0. ? @command_status == 3 [ :load32[@work + 424] -> @c0. ]
+   ? :bitand[@c0|:load32[@work + 72]] != :bitand[:load32[@work + 64]|:load32[@work + 72]] [ :load32[@work + 80] -> @c0. ]
+   ? @c0 == 0 [ !store64[@work + 408|4]. ]
+   ? @c0 != :load32[@work + 224] [
+    !store64[@work + 224|@c0]. !store64[@work + 248|0]. !store64[@work + 448|0]. !store64[@work + 456|0].
+   ]
+   ? :load64[@work + 248] [
+    !store64[@work + 464|@command_status + 1]. !store64[@work + 448|0]. !store64[@work + 456|0].
+   ] ~ [
+    ? @current >= :load64[@work + 448] [
+     ? :load64[@work + 456] >= 3 [ !store64[@work + 408|4]. ] ~ [
+      @work + 14336 -> @text. 0 -> @i. ?? @i < 60 [ !store8[@text + @i|0]. @i + 1 -> @i. ]
+      0 -> @i. ?? @i < 6 [
+       !store8[@text + @i|255]. !store8[@text + 6 + @i|:load8[@work + 256 + @i]].
+       !store8[@text + 22 + @i|:load8[@work + 256 + @i]]. @i + 1 -> @i.
+      ]
+      !store16[@text + 12|0x0608]. !store16[@text + 14|0x0100]. !store16[@text + 16|0x0008].
+      !store16[@text + 18|0x0406]. !store16[@text + 20|0x0100].
+      !store32[@text + 28|:load32[@work + 64]]. !store32[@text + 38|:load32[@work + 224]].
+      !store64[@work + 216|60]. !store64[@work + 208|1].
+      !store64[@work + 448|@current + 10]. !store64[@work + 456|:load64[@work + 456] + 1].
+     ]
+    ]
+   ]
+  ]
+  # Select one IP packet to build:1DNS,2SYN,3GET,4ACK,5FIN+ACK.
+  0 -> @ready.
+  ? (@command_status == 2) * (@current >= :load64[@work + 448]) [
+   ? :load64[@work + 456] >= 3 [ !store64[@work + 408|5]. ] ~ [ 1 -> @ready. ]
+  ]
+  ? (@command_status == 4) * (@current >= :load64[@work + 448]) [
+   ? :load64[@work + 456] >= 3 [ !store64[@work + 408|6]. ] ~ [ 2 -> @ready. ]
+  ]
+  ? @command_status == 5 [ 3 -> @ready. ]
+  ? @command_status == 6 [
+   ? :load64[@work + 544] [ 4 -> @ready. ]
+   ? :load64[@work + 608] [ 5 -> @ready. ]
+   ? @current >= :load64[@work + 448] [
+    ? (:load64[@work + 568] == 0) * (:load64[@work + 456] < 3) [ 3 -> @ready. ] ~ [ !store64[@work + 408|8]. ]
+   ]
+  ]
+  ? @ready * (:load64[@work + 408] == 0) [
+   @work + 14336 -> @text. 0 -> @i. ?? @i < 1536 [ !store8[@text + @i|0]. @i + 1 -> @i. ]
+   0 -> @i. ?? @i < 6 [
+    !store8[@text + @i|:load8[@work + 240 + @i]]. !store8[@text + 6 + @i|:load8[@work + 256 + @i]]. @i + 1 -> @i.
+   ]
+   !store16[@text + 12|0x0008]. !store8[@text + 14|69]. !store8[@text + 22|64].
+   !store32[@text + 26|:load32[@work + 64]].
+   ? @ready == 1 [
+    !store8[@text + 23|17]. !store32[@text + 30|:load32[@work + 88]].
+    !store16[@text + 34|0x00c0]. !store16[@text + 36|0x3500].
+    !store16[@text + 42|:load16[@work + 440]]. !store16[@text + 44|0x0001]. !store16[@text + 46|0x0100].
+    :load64[@work + 632] -> @j. 0 -> @i. ?? @i < @j [ !store8[@text + 54 + @i|:load8[@work + 22000 + @i]]. @i + 1 -> @i. ]
+    @j + 20 -> @line_length.
+    !store8[@text + 38|:shr[@line_length|8]]. !store8[@text + 39|:bitand[@line_length|255]].
+    !store64[@work + 448|@current + 20]. !store64[@work + 456|:load64[@work + 456] + 1].
+   ] ~ [
+    !store8[@text + 23|6]. !store32[@text + 30|:load32[@work + 424]].
+    !store8[@text + 34|:shr[:load64[@work + 616]|8]]. !store8[@text + 35|:bitand[:load64[@work + 616]|255]]. !store8[@text + 36|:shr[:load64[@work + 432]|8]]. !store8[@text + 37|:bitand[:load64[@work + 432]|255]].
+    :load64[@work + 472] -> @c0. :load64[@work + 480] -> @c1.
+    20 -> @line_length. 0x10 -> @c2.
+    ? @ready == 2 [
+     :load64[@work + 496] -> @c0. 0 -> @c1. 2 -> @c2. 24 -> @line_length.
+     !store32[@text + 54|0x00040402].
+     !store64[@work + 448|@current + 20]. !store64[@work + 456|:load64[@work + 456] + 1].
+    ]
+    ? @ready == 3 [
+     :load64[@work + 496] + 1 -> @c0. 0x18 -> @c2.
+     :load64[@work + 488] -> @j. @line_length + @j -> @line_length.
+     0 -> @i. ?? @i < @j [ !store8[@text + 54 + @i|:load8[@work + 21200 + @i]]. @i + 1 -> @i. ]
+     !store64[@work + 472|@c0 + @j]. !store64[@work + 464|6].
+     !store64[@work + 448|@current + 30]. !store64[@work + 456|:load64[@work + 456] + 1].
+    ]
+    ? @ready == 5 [ 0x11 -> @c2. !store64[@work + 472|@c0 + 1]. ]
+    !store8[@text + 38|:shr[@c0|24]]. !store8[@text + 39|:bitand[:shr[@c0|16]|255]].
+    !store8[@text + 40|:bitand[:shr[@c0|8]|255]]. !store8[@text + 41|:bitand[@c0|255]].
+    !store8[@text + 42|:shr[@c1|24]]. !store8[@text + 43|:bitand[:shr[@c1|16]|255]].
+    !store8[@text + 44|:bitand[:shr[@c1|8]|255]]. !store8[@text + 45|:bitand[@c1|255]].
+    !store8[@text + 46|80]. ? @ready == 2 [ !store8[@text + 46|96]. ]
+    !store8[@text + 47|@c2]. !store16[@text + 48|0xff0f].
+    :load16[@text + 26] + :load16[@text + 28] + :load16[@text + 30] + :load16[@text + 32] + 0x0600 + :bitand[@line_length|255] * 256 + :shr[@line_length|8] -> @checksum.
+    0 -> @i. ?? @i + 1 < @line_length [ @checksum + :load16[@text + 34 + @i] -> @checksum. @i + 2 -> @i. ]
+    ? @i < @line_length [ @checksum + :load8[@text + 34 + @i] -> @checksum. ]
+    ?? @checksum > 65535 [ :bitand[@checksum|65535] + :shr[@checksum|16] -> @checksum. ]
+    !store16[@text + 50|65535 - @checksum]. !store64[@work + 544|0].
+    ? @ready == 5 [
+     # A closed TCP stream is successful only if a complete supported HTTP
+     # response is present. Never label premature Content-Length EOF complete.
+     @work + 17024 -> @pointer. :load64[@work + 416] -> @wanted.
+     1 -> @valid. 0 -> @name_length. 0 -> @equal.
+     ? @wanted < 16 [ 0 -> @valid. ]
+     ? (:load32[@pointer] != 0x50545448) + (:load8[@pointer + 4] != 47) + (:load8[@pointer + 5] != 49) + (:load8[@pointer + 6] != 46) + ((:load8[@pointer + 7] != 48) * (:load8[@pointer + 7] != 49)) + (:load8[@pointer + 8] != 32) [ 0 -> @valid. ]
+     9 -> @i. ?? @i < 12 [ ? (:load8[@pointer + @i] < 48) + (:load8[@pointer + @i] > 57) [ 0 -> @valid. ] @i + 1 -> @i. ]
+     0 -> @i. ?? (@i + 3 < @wanted) * (@name_length == 0) [
+      ? :load32[@pointer + @i] == 0x0a0d0a0d [ @i + 4 -> @name_length. ] @i + 1 -> @i.
+     ]
+     ? @name_length == 0 [ 0 -> @valid. ]
+     0 -> @i.
+     ?? (@i + 1 < @name_length) * @valid [
+      @i -> @j. ?? (@j + 1 < @name_length) * (:load16[@pointer + @j] != 0x0a0d) [ @j + 1 -> @j. ]
+      ? @j + 1 >= @name_length [ 0 -> @valid. ] ~ [
+       0 -> @c3. 0 -> @c4.
+       ?? @c4 < 2 [
+        "content-length:" -> @name. 15 -> @c5. ? @c4 == 1 [ "transfer-encoding:" -> @name. 18 -> @c5. ]
+        1 -> @done. ? @j - @i < @c5 [ 0 -> @done. ]
+        0 -> @k. ?? (@k < @c5) * @done [
+         :load8[@pointer + @i + @k] -> @c0. ? (@c0 >= 65) * (@c0 <= 90) [ @c0 + 32 -> @c0. ]
+         ? @c0 != :load8[@name + @k] [ 0 -> @done. ] @k + 1 -> @k.
+        ]
+        ? @done [ @c4 + 1 -> @c3. ] @c4 + 1 -> @c4.
+       ]
+       ? @c3 == 2 [ 0 -> @valid. !store64[@work + 408|12]. ]
+       ? @c3 == 1 [
+        @i + 15 -> @k. 0 -> @c0. 0 -> @c1. 0 -> @c2.
+        ?? (@k < @j) * ((:load8[@pointer + @k] == 32) + (:load8[@pointer + @k] == 9)) [ @k + 1 -> @k. ]
+        ?? @k < @j [
+         :load8[@pointer + @k] -> @c4.
+         ? (@c4 >= 48) * (@c4 <= 57) * (@c2 == 0) [
+          @c0 * 10 + @c4 - 48 -> @c0. @c1 + 1 -> @c1.
+          ? (@c0 > 4095) + (@c1 > 10) [ 0 -> @valid. ]
+         ] ~ [ ? (@c4 == 32) + (@c4 == 9) [ 1 -> @c2. ] ~ [ 0 -> @valid. ] ]
+         @k + 1 -> @k.
+        ]
+        ? @c1 == 0 [ 0 -> @valid. ]
+        ? @equal * (@equal != @c0 + 1) [ 0 -> @valid. ] @c0 + 1 -> @equal.
+       ]
+       @j + 2 -> @i.
+      ]
+     ]
+     ? @equal * (@wanted - @name_length != @equal - 1) [ 0 -> @valid. ]
+     ? @valid [ !store64[@work + 400|2]. !store64[@work + 464|0]. ] ~ [ ? :load64[@work + 408] == 0 [ !store64[@work + 408|10]. ] ]
+    ]
+   ]
+   @line_length + 20 -> @c0. !store8[@text + 16|:shr[@c0|8]]. !store8[@text + 17|:bitand[@c0|255]].
+   0 -> @checksum. 14 -> @i. ?? @i < 34 [ @checksum + :load16[@text + @i] -> @checksum. @i + 2 -> @i. ]
+   ?? @checksum > 65535 [ :bitand[@checksum|65535] + :shr[@checksum|16] -> @checksum. ]
+   !store16[@text + 24|65535 - @checksum].
+   @line_length + 34 -> @c0. ? @c0 < 60 [ 60 -> @c0. ]
+   !store64[@work + 216|@c0]. !store64[@work + 208|1].
+  ]
+ ]
+ ? :load64[@work + 408] [ !store64[@work + 400|3]. !store64[@work + 464|0]. !store64[@work + 544|0]. ]
+]
+# END NET CLIENT POLL
+  # Automatic DHCP discovery/request/renewal, with bounded retry pacing.
+  ? :load64[@work + 144] * (:load64[@work + 232] == 0) * (:load64[@work + 208] == 0) [
+   0 -> @ready.
+   ? (:load64[@work] == 3) * (@current >= :load64[@work + 40]) [ 1 -> @ready. ]
+   ? (:load64[@work] == 4) * (@current >= :load64[@work + 184]) [ 1 -> @ready. ]
+   ? @ready [
+    @work + 14336 -> @text. 0 -> @i.
+    ?? @i < 342 [ !store8[@text + @i|0]. @i + 1 -> @i. ]
+    0 -> @i. ?? @i < 6 [
+     !store8[@text + @i|255]. !store8[@text + 6 + @i|:load8[@work + 256 + @i]].
+     !store8[@text + 70 + @i|:load8[@work + 256 + @i]]. @i + 1 -> @i.
+    ]
+    !store16[@text + 12|0x0008]. !store8[@text + 14|69]. !store16[@text + 16|0x4801].
+    !store8[@text + 22|64]. !store8[@text + 23|17]. !store32[@text + 30|0xffffffff].
+    !store16[@text + 34|0x4400]. !store16[@text + 36|0x4300]. !store16[@text + 38|0x3401].
+    !store8[@text + 42|1]. !store8[@text + 43|1]. !store8[@text + 44|6].
+    !store32[@text + 46|:load32[@work + 56]]. !store16[@text + 52|0x0080].
+    !store32[@text + 278|0x63538263]. !store8[@text + 282|53]. !store8[@text + 283|1].
+    1 -> @c0. ? :load64[@work + 104] [ 3 -> @c0. ] !store8[@text + 284|@c0].
+    !store8[@text + 285|55]. !store8[@text + 286|4].
+    !store8[@text + 287|1]. !store8[@text + 288|3]. !store8[@text + 289|6]. !store8[@text + 290|51].
+    291 -> @j.
+    ? :load64[@work] == 4 [
+     !store32[@text + 26|:load32[@work + 64]]. !store32[@text + 54|:load32[@work + 64]].
+     !store64[@work + 184|@current + 30].
+    ] ~ [
+     ? :load64[@work + 104] [
+      !store8[@text + @j|50]. !store8[@text + @j + 1|4]. !store32[@text + @j + 2|:load32[@work + 104]]. @j + 6 -> @j.
+      !store8[@text + @j|54]. !store8[@text + @j + 1|4]. !store32[@text + @j + 2|:load32[@work + 96]]. @j + 6 -> @j.
+     ]
+    ]
+    !store8[@text + @j|255].
+    0 -> @checksum. 14 -> @i. ?? @i < 34 [ @checksum + :load16[@text + @i] -> @checksum. @i + 2 -> @i. ]
+    ?? @checksum > 65535 [ :bitand[@checksum|65535] + :shr[@checksum|16] -> @checksum. ]
+    !store16[@text + 24|65535 - @checksum].
+    !store64[@work + 216|342]. !store64[@work + 208|1].
+    !store64[@work + 48|:load64[@work + 48] + 1]. !store64[@work + 40|@current + 30].
+    ? :load64[@work + 48] >= 4 [
+     !store64[@work + 48|0]. !store64[@work + 40|@current + 100].
+     ? :load64[@work] == 3 [ !store64[@work + 104|0]. !store64[@work + 96|0]. ]
+    ]
+   ]
+  ]
+  # Publish descriptor OWN last. The packet buffer stays untouched until NIC
+  # releases ownership, preventing concurrent DMA overwrite by another reply.
+  ? :load64[@work + 208] * (:load64[@work + 232] == 0) [
+   :load64[@work + 216] -> @i.
+   ? (@i >= 60) * (@i <= 1514) [
+    !store32[@work + 1160|0]. !store32[@work + 1164|0].
+    !store16[@work + 1156|65536 - @i]. !store16[@work + 1158|0x8300].
+    !store64[@work + 232|1]. !store64[@work + 656|@current + 20]. !store64[@work + 128|:load64[@work + 128] + 1].
+    !out16[@io_return + 18|0]. !out16[@io_return + 16|10].
+   ]
+   !store64[@work + 208|0].
+  ]
+ ]
+ ? (:load64[@work + 384] != :load64[@work + 392]) * (:load64[@work + 32] != 4) [
+  !store64[@work + 392|:load64[@work + 384]]. !store64[@work + 400|3].
+  !store64[@work + 408|1]. !store64[@work + 416|0]. !store8[@work + 17024|0].
+ ]
+ ? (@state == 9) * (@current >= :load64[@work + 40]) [
+  ? :load64[@work + 8] [ !store64[@work|1]. ] ~ [
+   !store64[@work|0]. !store64[@work + 16|0].
+   !store64[@work + 24576|0]. !store64[@work + 24584|1].
+  ]
+ ]
+]
+  !out8[0x43| 0]. :in8[0x40] -> @c0. :in8[0x40] -> @c1.
+  @c0 + @c1 * 256 -> @c0. :load64[@console + 424] -> @c1.
+  ? @c1 >= @c0 [ @c1 - @c0 -> @c2. ] ~ [ @c1 + 65536 - @c0 -> @c2. ]
+  !store64[@console + 424| @c0].
+  !store64[@console + 432| :load64[@console + 432] + @c2].
+  ?? :load64[@console + 432] >= 119318 [
+   !store64[@console + 432| :load64[@console + 432] - 119318].
+   !store64[@console + 440| :load64[@console + 440] + 1].
+  ]
+
+]

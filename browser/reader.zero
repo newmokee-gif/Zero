@@ -1,0 +1,416 @@
+# Original Zero browser document reader. stdin is external UTF-8 HTML.
+# stdout is our ZBROW001 document; errors produce no document bytes.
+# Declarations and HTML body are composed by the original Zero integrator.
+0 => @b_work. 0 => @b_doc. 0 => @b_n. 0 => @b_size. 0 => @b_i.
+0 => @b_result. 0 => @b_limit.
+# Original bounded HTML reader variables. Caller supplies eight memory/size fields.
+0 => @h_input. 0 => @h_length. 0 => @h_output. 0 => @h_capacity.
+80 => @h_width. 0 => @h_title. 0 => @h_links. 0 => @h_scratch.
+0 => @h_written. 0 => @h_linkcount. 0 => @h_error. 0 => @h_flags.
+0 => @h_pos. 0 => @h_end. 0 => @h_i. 0 => @h_j. 0 => @h_k.
+0 => @h_char. 0 => @h_value. 0 => @h_extra. 0 => @h_quote.
+0 => @h_tag. 0 => @h_close. 0 => @h_skip. 0 => @h_pre.
+0 => @h_space. 0 => @h_column. 0 => @h_active. 0 => @h_titlemode.
+0 => @h_titlelen. 0 => @h_labelsize. 0 => @h_state. 0 => @h_return.
+0 => @h_break. 0 => @h_ptr. 0 => @h_size. 0 => @h_attr.
+0 => @h_start. 0 => @h_ready. 0 => @h_current.
+0 => @h_plain.
+:reserve[115520] -> @b_work.
+@b_work+64 -> @h_input. @b_work+65600 -> @b_doc.
+@b_doc+64 -> @h_title. @b_doc+192 -> @h_links.
+@b_doc+16576 -> @h_output. 32768 -> @h_capacity. 78 -> @h_width.
+@b_work+114944 -> @h_scratch. 0 -> @h_length. 1 -> @b_n.
+:argument[1] -> @b_result.
+? @b_result [
+ ? :load8[@b_result] [
+  "--plain" -> @b_limit. 0 -> @b_i. 1 -> @b_size.
+  ?? (@b_i < 8)*@b_size [ ? :load8[@b_result+@b_i] != :load8[@b_limit+@b_i] [ 0 -> @b_size. ] @b_i+1 -> @b_i. ]
+  ? @b_size == 0 [ !exit[64]. ] 1 -> @h_plain.
+ ]
+]
+?? (@h_length < 65536)*(@b_n != 0) [
+ :read[@h_input+@h_length|65536-@h_length] -> @b_n.
+ ? @b_n > 65536-@h_length [ !exit[74]. ]
+ @h_length+@b_n -> @h_length.
+]
+? @h_length == 65536 [
+ :read[@h_scratch|1] -> @b_n. ? @b_n != 0 [ !exit[65]. ]
+]
+# Original memory-only HTML reading profile. This is not an HTML5/CSS/JS engine.
+# Caller-owned disjoint buffers: input[length], output[capacity], title[128],
+# links[32*512], scratch[512]. length<=65536, capacity1..32768, width20..160.
+# Record: href[256], label[128], label byte length u64 at384, reserved remaining.
+# Flags:1scripts,2styles,4forms,8link limit,16unsupported media/embed,
+# 32truncated title/label/href,64unknown entities,128preformatted text present.
+# Error65 invalid parameters/UTF8 or incomplete quoted tag;28 output capacity.
+# No output or link table is publishable on an error. All counts reset per call.
+0 -> @h_written. 0 -> @h_linkcount. 0 -> @h_error. 0 -> @h_flags.
+0 -> @h_pos. 0 -> @h_skip. 0 -> @h_pre. 0 -> @h_space. 0 -> @h_column.
+0 -> @h_active. 0 -> @h_titlemode. 0 -> @h_titlelen. 0 -> @h_return. 1 -> @h_state.
+? @h_plain [ 1 -> @h_pre. ]
+? (@h_input == 0)+(@h_output == 0)+(@h_title == 0)+(@h_links == 0)+(@h_scratch == 0) [ 65 -> @h_error. ]
+? (@h_length > 65536)+(@h_capacity == 0)+(@h_capacity > 32768)+(@h_width < 20)+(@h_width > 160) [ 65 -> @h_error. ]
+? (@h_input+@h_length < @h_input)+(@h_output+@h_capacity < @h_output)+(@h_title+128 < @h_title)+(@h_links+16384 < @h_links)+(@h_scratch+512 < @h_scratch) [ 65 -> @h_error. ]
+? @h_error == 0 [
+ !store8[@h_output|0]. 0 -> @h_i. ?? @h_i < 128 [ !store8[@h_title+@h_i|0]. @h_i+1 -> @h_i. ]
+ 0 -> @h_i. ?? @h_i < 16384 [ !store64[@h_links+@h_i|0]. @h_i+8 -> @h_i. ]
+ 0 -> @h_i. ?? @h_i < 512 [ !store64[@h_scratch+@h_i|0]. @h_i+8 -> @h_i. ]
+ # Check the complete byte stream before parsing or exposing any output.
+ 0 -> @h_i.
+ ?? (@h_i < @h_length)*(@h_error == 0) [
+  :load8[@h_input+@h_i] -> @h_char. 0 -> @h_extra.
+  ? @h_char >= 128 [
+   ? (@h_char >= 194)*(@h_char <= 223) [ 1 -> @h_extra. ] ~ [
+    ? (@h_char >= 224)*(@h_char <= 239) [ 2 -> @h_extra. ] ~ [
+     ? (@h_char >= 240)*(@h_char <= 244) [ 3 -> @h_extra. ] ~ [ 65 -> @h_error. ]
+    ]
+   ]
+  ]
+  ? @h_extra >= @h_length-@h_i [ 65 -> @h_error. ]
+  ? (@h_error == 0)*(@h_extra != 0) [
+   :load8[@h_input+@h_i+1] -> @h_value.
+   ? ((@h_char == 224)*(@h_value < 160))+((@h_char == 237)*(@h_value > 159))+((@h_char == 240)*(@h_value < 144))+((@h_char == 244)*(@h_value > 143)) [ 65 -> @h_error. ]
+   1 -> @h_j. ?? @h_j <= @h_extra [
+    :load8[@h_input+@h_i+@h_j] -> @h_value.
+    ? (@h_value < 128)+(@h_value > 191) [ 65 -> @h_error. ] @h_j+1 -> @h_j.
+   ]
+  ]
+  @h_i+@h_extra+1 -> @h_i.
+ ]
+]
+?? (@h_state != 0)*(@h_error == 0) [
+ @h_state -> @h_current.
+ ? @h_current == 1 [
+  ? @h_pos >= @h_length [
+   0 -> @h_state. ? @h_active [ 130 -> @h_state. ]
+  ] ~ [
+   :load8[@h_input+@h_pos] -> @h_char. 0 -> @h_ready.
+   ? (@h_char == 60)*(@h_plain == 0) [
+    ? (@h_length-@h_pos >= 4)*(@h_skip == 0) [
+     ? :load32[@h_input+@h_pos] == 0x2d2d213c [
+      @h_pos+4 -> @h_pos. 0 -> @h_ready.
+      ?? (@h_pos < @h_length)*(@h_ready == 0) [
+       ? @h_length-@h_pos >= 3 [
+        ? (:load16[@h_input+@h_pos] == 0x2d2d)*(:load8[@h_input+@h_pos+2] == 62) [ @h_pos+3 -> @h_pos. 1 -> @h_ready. ]
+       ]
+       ? @h_ready == 0 [ @h_pos+1 -> @h_pos. ]
+      ]
+      2 -> @h_ready.
+     ]
+    ]
+    ? (@h_ready == 0)*(@h_pos+1 < @h_length) [
+     :load8[@h_input+@h_pos+1] -> @h_char.
+     ? ((@h_char >= 65)*(@h_char <= 90))+((@h_char >= 97)*(@h_char <= 122))+(@h_char == 47)+(@h_char == 33)+(@h_char == 63) [ 1 -> @h_ready. ]
+    ]
+    ? @h_skip [
+     0 -> @h_ready. "script" -> @h_ptr. 6 -> @h_size.
+     ? @h_skip == 2 [ "style" -> @h_ptr. 5 -> @h_size. ]
+     ? @h_length-@h_pos >= @h_size+3 [
+      ? :load8[@h_input+@h_pos+1] == 47 [
+       1 -> @h_ready. 0 -> @h_i.
+       ?? @h_i < @h_size [
+        :load8[@h_input+@h_pos+2+@h_i] -> @h_char.
+        ? (@h_char >= 65)*(@h_char <= 90) [ @h_char+32 -> @h_char. ]
+        ? @h_char != :load8[@h_ptr+@h_i] [ 0 -> @h_ready. ] @h_i+1 -> @h_i.
+       ]
+       :load8[@h_input+@h_pos+2+@h_size] -> @h_char.
+       ? (@h_char > 32)*(@h_char != 62)*(@h_char != 47) [ 0 -> @h_ready. ]
+      ]
+     ]
+    ]
+   ]
+   ? @h_ready == 1 [
+    # Find the true end of the tag; a greater-than sign inside quotes is data.
+    @h_pos+1 -> @h_j. 0 -> @h_end. 0 -> @h_quote.
+    ?? (@h_j < @h_length)*(@h_end == 0) [
+     :load8[@h_input+@h_j] -> @h_char.
+     ? @h_quote [ ? @h_char == @h_quote [ 0 -> @h_quote. ] ] ~ [
+      ? (@h_char == 34)+(@h_char == 39) [ @h_char -> @h_quote. ]
+      ? @h_char == 62 [ @h_j -> @h_end. ]
+     ] @h_j+1 -> @h_j.
+    ]
+    ? @h_end == 0 [ 65 -> @h_error. ] ~ [
+     @h_pos+1 -> @h_i. 0 -> @h_close. 0 -> @h_tag.
+     ? :load8[@h_input+@h_i] == 47 [ 1 -> @h_close. @h_i+1 -> @h_i. ]
+     @h_pos+1+@h_close -> @h_i. 0 -> @h_size. 1 -> @h_ready.
+     ?? (@h_i < @h_end)*@h_ready [
+      :load8[@h_input+@h_i] -> @h_char.
+      ? (@h_char >= 65)*(@h_char <= 90) [ @h_char+32 -> @h_char. ]
+      ? ((@h_char >= 97)*(@h_char <= 122))+((@h_char >= 48)*(@h_char <= 57)) [
+       ? @h_size < 31 [ !store8[@h_scratch+@h_size|@h_char]. @h_size+1 -> @h_size. ]
+       @h_i+1 -> @h_i.
+      ] ~ [ 0 -> @h_ready. ]
+     ]
+     !store8[@h_scratch+@h_size|0]. @h_i -> @h_start.
+     "html head body title script style p div br h1 h2 h3 h4 h5 h6 ul ol li pre a hr table tr td th blockquote section article header footer nav main form input button select textarea img link meta iframe object video audio " -> @h_ptr.
+     0 -> @h_i. 1 -> @h_k.
+     ?? :load8[@h_ptr+@h_i] [
+      0 -> @h_j. 1 -> @h_ready.
+      ?? (:load8[@h_ptr+@h_i] != 32)*(:load8[@h_ptr+@h_i] != 0) [
+       ? @h_j >= @h_size [ 0 -> @h_ready. ] ~ [
+        ? :load8[@h_ptr+@h_i] != :load8[@h_scratch+@h_j] [ 0 -> @h_ready. ]
+       ] @h_i+1 -> @h_i. @h_j+1 -> @h_j.
+      ]
+      ? @h_ready*(@h_j == @h_size) [ @h_k -> @h_tag. ]
+      ? :load8[@h_ptr+@h_i] == 32 [ @h_i+1 -> @h_i. ] @h_k+1 -> @h_k.
+     ]
+     ? @h_skip [
+      ? @h_close*(((@h_skip == 1)*(@h_tag == 5))+((@h_skip == 2)*(@h_tag == 6))) [ 0 -> @h_skip. ]
+     ] ~ [
+      ? (@h_tag == 5)+(@h_tag == 6) [
+       ? @h_close == 0 [ @h_tag-4 -> @h_skip. ]
+       ? @h_tag == 5 [ :bitand[@h_flags|1] -> @h_value. ? @h_value == 0 [ @h_flags+1 -> @h_flags. ] ]
+       ? @h_tag == 6 [ :bitand[@h_flags|2] -> @h_value. ? @h_value == 0 [ @h_flags+2 -> @h_flags. ] ]
+      ]
+      ? @h_tag == 2 [ !store64[@h_scratch+400|1-@h_close]. ]
+      ? @h_tag == 3 [ !store64[@h_scratch+400|0]. ]
+      ? @h_tag == 4 [ 1-@h_close -> @h_titlemode. ]
+      ? (@h_tag >= 33)*(@h_tag <= 37) [
+       ? :bitand[@h_flags|4] == 0 [ @h_flags+4 -> @h_flags. ]
+      ]
+      ? (@h_tag == 38)+(@h_tag >= 41) [
+       ? :bitand[@h_flags|16] == 0 [ @h_flags+16 -> @h_flags. ]
+      ]
+      # Parse anchor href attributes. Attribute names are ASCII case-insensitive.
+      ? (@h_tag == 20)*(@h_close == 0)*(:load64[@h_scratch+400] == 0)*(@h_titlemode == 0) [
+       0 -> @h_active. 0 -> @h_attr. 0 -> @h_labelsize.
+       !store8[@h_scratch+64|0]. @h_start -> @h_i.
+       ?? @h_i < @h_end [
+        :load8[@h_input+@h_i] -> @h_char.
+        ? (@h_char <= 32)+(@h_char == 47) [ @h_i+1 -> @h_i. ] ~ [
+         0 -> @h_size. 1 -> @h_ready.
+         ?? (@h_i < @h_end)*@h_ready [
+          :load8[@h_input+@h_i] -> @h_char.
+          ? (@h_char <= 32)+(@h_char == 61)+(@h_char == 47) [ 0 -> @h_ready. ] ~ [
+           ? (@h_char >= 65)*(@h_char <= 90) [ @h_char+32 -> @h_char. ]
+           ? @h_size < 31 [ !store8[@h_scratch+32+@h_size|@h_char]. @h_size+1 -> @h_size. ] @h_i+1 -> @h_i.
+          ]
+         ]
+         !store8[@h_scratch+32+@h_size|0]. 0 -> @h_ready.
+         ? (@h_size == 4)*(:load32[@h_scratch+32] == 0x66657268) [ 1 -> @h_ready. ]
+         1 -> @h_extra. ?? (@h_i < @h_end)*@h_extra [
+          ? :load8[@h_input+@h_i] <= 32 [ @h_i+1 -> @h_i. ] ~ [ 0 -> @h_extra. ]
+         ]
+         ? @h_i < @h_end [
+          ? :load8[@h_input+@h_i] == 61 [
+           @h_i+1 -> @h_i.
+           1 -> @h_extra. ?? (@h_i < @h_end)*@h_extra [
+            ? :load8[@h_input+@h_i] <= 32 [ @h_i+1 -> @h_i. ] ~ [ 0 -> @h_extra. ]
+           ]
+           0 -> @h_quote.
+           ? @h_i < @h_end [
+            :load8[@h_input+@h_i] -> @h_char. ? (@h_char == 34)+(@h_char == 39) [ @h_char -> @h_quote. @h_i+1 -> @h_i. ]
+           ]
+           1 -> @h_extra. 0 -> @h_size.
+           ?? (@h_i < @h_end)*@h_extra [
+            :load8[@h_input+@h_i] -> @h_char.
+            ? (@h_quote*(@h_char == @h_quote))+((@h_quote == 0)*(@h_char <= 32)) [ 0 -> @h_extra. ] ~ [
+             ? @h_ready*(@h_attr == 0) [
+              # Decode the common query separator without widening the URL.
+              ? (@h_char == 38)*(@h_end-@h_i >= 5) [
+               ? (:load32[@h_input+@h_i] == 0x706d6126)*(:load8[@h_input+@h_i+4] == 59) [ @h_i+4 -> @h_i. ]
+              ]
+              ? (@h_char < 33)+(@h_char == 127) [ 256 -> @h_size. ]
+              ? @h_size < 255 [ !store8[@h_scratch+64+@h_size|@h_char]. @h_size+1 -> @h_size. ] ~ [ 256 -> @h_size. ]
+             ] @h_i+1 -> @h_i.
+            ]
+           ]
+           ? @h_quote [ ? @h_i < @h_end [ @h_i+1 -> @h_i. ] ]
+           ? @h_ready*(@h_attr == 0) [
+            1 -> @h_attr. @h_size -> @h_labelsize.
+            ? @h_size < 256 [ !store8[@h_scratch+64+@h_size|0]. ] ~ [
+             0 -> @h_labelsize. !store8[@h_scratch+64|0]. ? :bitand[@h_flags|32] == 0 [ @h_flags+32 -> @h_flags. ]
+            ]
+           ]
+          ]
+         ]
+        ]
+       ]
+       ? @h_labelsize [
+        ? @h_linkcount >= 32 [ ? :bitand[@h_flags|8] == 0 [ @h_flags+8 -> @h_flags. ] ] ~ [
+         @h_links+@h_linkcount*512 -> @h_ptr. 0 -> @h_i.
+         ?? @h_i <= @h_labelsize [ !store8[@h_ptr+@h_i|:load8[@h_scratch+64+@h_i]]. @h_i+1 -> @h_i. ]
+         @h_linkcount+1 -> @h_linkcount. @h_linkcount -> @h_active.
+        ]
+       ]
+      ]
+      0 -> @h_break.
+      ? (@h_tag == 7)+((@h_tag >= 10)*(@h_tag <= 15))+(@h_tag == 21)+(@h_tag == 26) [ 2 -> @h_break. ]
+      ? (@h_tag == 8)+(@h_tag == 9)+((@h_tag >= 16)*(@h_tag <= 19))+(@h_tag == 22)+(@h_tag == 23)+((@h_tag >= 27)*(@h_tag <= 32)) [ 1 -> @h_break. ]
+      ? (@h_tag == 24)+(@h_tag == 25) [ 1 -> @h_space. ]
+      ? @h_tag == 19 [
+       1-@h_close -> @h_pre. ? :bitand[@h_flags|128] == 0 [ @h_flags+128 -> @h_flags. ]
+      ]
+      ? (@h_tag == 18)*(@h_close == 0) [ !store64[@h_scratch+432|1]. ]
+      ? :load64[@h_scratch+400]+@h_titlemode [ 0 -> @h_break. !store64[@h_scratch+432|0]. ]
+      ? @h_break [ 100 -> @h_state. ]
+      ? (@h_tag == 20)*@h_close*@h_active [ 130 -> @h_state. ]
+     ]
+     @h_end+1 -> @h_pos.
+     2 -> @h_ready.
+    ]
+   ]
+   ? @h_ready == 0 [
+    ? @h_skip [ @h_pos+1 -> @h_pos. ] ~ [
+     # Decode one character/entity into a Unicode scalar. Input was validated.
+     :load8[@h_input+@h_pos] -> @h_value. @h_pos+1 -> @h_pos.
+     ? (@h_value == 38)*(@h_plain == 0) [
+      @h_pos -> @h_i. 0 -> @h_end.
+      ?? (@h_i < @h_length)*(@h_i-@h_pos < 16)*(@h_end == 0) [
+       :load8[@h_input+@h_i] -> @h_char.
+       ? @h_char == 59 [ @h_i -> @h_end. ]
+       ? (@h_char <= 32)+(@h_char == 60)+(@h_char == 38) [ @h_pos+16 -> @h_i. ] ~ [ @h_i+1 -> @h_i. ]
+      ]
+      0 -> @h_ready.
+      ? @h_end [
+       @h_end-@h_pos -> @h_size.
+       ? @h_size == 2 [ ? :load16[@h_input+@h_pos] == 0x746c [ 60 -> @h_value. 1 -> @h_ready. ] ? :load16[@h_input+@h_pos] == 0x7467 [ 62 -> @h_value. 1 -> @h_ready. ] ]
+       ? @h_size == 3 [ ? (:load16[@h_input+@h_pos] == 0x6d61)*(:load8[@h_input+@h_pos+2] == 112) [ 38 -> @h_value. 1 -> @h_ready. ] ]
+       ? @h_size == 4 [
+        :load32[@h_input+@h_pos] -> @h_char.
+        ? @h_char == 0x746f7571 [ 34 -> @h_value. 1 -> @h_ready. ]
+        ? @h_char == 0x736f7061 [ 39 -> @h_value. 1 -> @h_ready. ]
+        ? @h_char == 0x7073626e [ 160 -> @h_value. 1 -> @h_ready. ]
+       ]
+       ? @h_size > 1 [
+        ? :load8[@h_input+@h_pos] == 35 [
+         0 -> @h_value. 10 -> @h_extra. @h_pos+1 -> @h_i. 1 -> @h_ready.
+         :load8[@h_input+@h_i] -> @h_char.
+         ? (@h_char == 120)+(@h_char == 88) [ 16 -> @h_extra. @h_i+1 -> @h_i. ]
+         ? @h_i == @h_end [ 0 -> @h_ready. ]
+         ?? (@h_i < @h_end)*@h_ready [
+          :load8[@h_input+@h_i] -> @h_char. 99 -> @h_j.
+          ? (@h_char >= 48)*(@h_char <= 57) [ @h_char-48 -> @h_j. ]
+          ? (@h_char >= 65)*(@h_char <= 70)*(@h_extra == 16) [ @h_char-55 -> @h_j. ]
+          ? (@h_char >= 97)*(@h_char <= 102)*(@h_extra == 16) [ @h_char-87 -> @h_j. ]
+          ? @h_j >= @h_extra [ 0 -> @h_ready. ] ~ [
+           @h_value*@h_extra+@h_j -> @h_value. ? @h_value > 1114111 [ 0 -> @h_ready. ]
+          ] @h_i+1 -> @h_i.
+         ]
+         ? (@h_value == 0)+((@h_value >= 55296)*(@h_value <= 57343)) [ 65533 -> @h_value. ]
+        ]
+       ]
+      ]
+      ? @h_ready [ @h_end+1 -> @h_pos. ] ~ [
+       38 -> @h_value. ? :bitand[@h_flags|64] == 0 [ @h_flags+64 -> @h_flags. ]
+      ]
+     ] ~ [
+      ? @h_value >= 128 [
+       1 -> @h_extra. :bitand[@h_value|31] -> @h_char.
+       ? @h_value >= 224 [ 2 -> @h_extra. :bitand[@h_value|15] -> @h_char. ]
+       ? @h_value >= 240 [ 3 -> @h_extra. :bitand[@h_value|7] -> @h_char. ]
+       0 -> @h_i. ?? @h_i < @h_extra [ @h_char*64+:load8[@h_input+@h_pos]-128 -> @h_char. @h_pos+1 -> @h_pos. @h_i+1 -> @h_i. ]
+       @h_char -> @h_value.
+      ]
+     ]
+     ? @h_value == 13 [ ? @h_pos < @h_length [ ? :load8[@h_input+@h_pos] == 10 [ @h_pos+1 -> @h_pos. ] ] 10 -> @h_value. ]
+     20 -> @h_state.
+    ]
+   ]
+  ]
+ ]
+ ? @h_current == 20 [
+  1 -> @h_state.
+  ? @h_pre*(@h_value == 9) [ 32 -> @h_value. ]
+  ? ((@h_value < 33)+((@h_value >= 127)*(@h_value <= 159)))*((@h_pre == 0)+(@h_value != 32)) [
+   ? @h_titlemode [ !store64[@h_scratch+408|1]. ] ~ [
+    ? @h_pre*(@h_value == 10) [ 1 -> @h_return. 1 -> @h_break. 100 -> @h_state. ] ~ [ 1 -> @h_space. ]
+   ]
+  ] ~ [
+   # Encode a scalar to private scratch; no half UTF-8 scalar is ever appended.
+   1 -> @h_size. !store8[@h_scratch+320|@h_value].
+   ? @h_value >= 128 [
+    2 -> @h_size. !store8[@h_scratch+320|192+:shr[@h_value|6]]. !store8[@h_scratch+321|128+:bitand[@h_value|63]].
+   ]
+   ? @h_value >= 2048 [
+    3 -> @h_size. !store8[@h_scratch+320|224+:shr[@h_value|12]]. !store8[@h_scratch+321|128+:bitand[:shr[@h_value|6]|63]]. !store8[@h_scratch+322|128+:bitand[@h_value|63]].
+   ]
+   ? @h_value >= 65536 [
+    4 -> @h_size. !store8[@h_scratch+320|240+:shr[@h_value|18]]. !store8[@h_scratch+321|128+:bitand[:shr[@h_value|12]|63]]. !store8[@h_scratch+322|128+:bitand[:shr[@h_value|6]|63]]. !store8[@h_scratch+323|128+:bitand[@h_value|63]].
+   ]
+   ? @h_titlemode [
+    :load64[@h_scratch+408]*(@h_titlelen != 0) -> @h_extra.
+    ? @h_titlelen+@h_size+@h_extra <= 127 [
+     ? @h_extra [ !store8[@h_title+@h_titlelen|32]. @h_titlelen+1 -> @h_titlelen. ]
+     0 -> @h_i. ?? @h_i < @h_size [ !store8[@h_title+@h_titlelen|:load8[@h_scratch+320+@h_i]]. @h_titlelen+1 -> @h_titlelen. @h_i+1 -> @h_i. ]
+     !store8[@h_title+@h_titlelen|0].
+    ] ~ [ ? :bitand[@h_flags|32] == 0 [ @h_flags+32 -> @h_flags. ] ]
+    !store64[@h_scratch+408|0].
+   ] ~ [
+    ? :load64[@h_scratch+400] == 0 [
+     @h_space*(@h_column != 0) -> @h_extra.
+     0 -> @h_char. ? @h_column+@h_extra >= @h_width [ 1 -> @h_char. 0 -> @h_extra. ]
+     ? @h_written+@h_size+@h_extra+@h_char >= @h_capacity [ 28 -> @h_error. ] ~ [
+      ? @h_char [
+       !store8[@h_output+@h_written|10]. @h_written+1 -> @h_written. 0 -> @h_column. 0 -> @h_extra.
+      ]
+      ? @h_extra [ !store8[@h_output+@h_written|32]. @h_written+1 -> @h_written. @h_column+1 -> @h_column. ]
+      0 -> @h_i. ?? @h_i < @h_size [ !store8[@h_output+@h_written|:load8[@h_scratch+320+@h_i]]. @h_written+1 -> @h_written. @h_i+1 -> @h_i. ]
+      @h_column+1 -> @h_column. !store8[@h_output+@h_written|0].
+      ? @h_active [
+       @h_links+(@h_active-1)*512 -> @h_ptr. :load64[@h_ptr+384] -> @h_labelsize.
+       @h_space*(@h_labelsize != 0) -> @h_extra.
+       ? @h_labelsize+@h_size+@h_extra <= 127 [
+        ? @h_extra [ !store8[@h_ptr+256+@h_labelsize|32]. @h_labelsize+1 -> @h_labelsize. ]
+        0 -> @h_i. ?? @h_i < @h_size [ !store8[@h_ptr+256+@h_labelsize|:load8[@h_scratch+320+@h_i]]. @h_labelsize+1 -> @h_labelsize. @h_i+1 -> @h_i. ]
+        !store8[@h_ptr+256+@h_labelsize|0]. !store64[@h_ptr+384|@h_labelsize].
+       ] ~ [ ? :bitand[@h_flags|32] == 0 [ @h_flags+32 -> @h_flags. ] ]
+      ] 0 -> @h_space.
+     ]
+    ]
+   ]
+  ]
+ ]
+ ? @h_current == 100 [
+  1 -> @h_state. 0 -> @h_i.
+  ? @h_written+@h_return [
+   ?? (@h_i < @h_written)*(@h_i < 2) [
+    ? :load8[@h_output+@h_written-@h_i-1] == 10 [ @h_i+1 -> @h_i. ] ~ [ @h_i+3 -> @h_i. ]
+   ]
+   ? @h_i >= 3 [ @h_i-3 -> @h_i. ]
+   ? @h_pre [ 0 -> @h_i. ]
+   ?? (@h_i < @h_break)*(@h_error == 0) [
+    ? @h_written+1 >= @h_capacity [ 28 -> @h_error. ] ~ [ !store8[@h_output+@h_written|10]. @h_written+1 -> @h_written. @h_i+1 -> @h_i. ]
+   ]
+   !store8[@h_output+@h_written|0].
+  ]
+  0 -> @h_column. 0 -> @h_space. 0 -> @h_return.
+  ? :load64[@h_scratch+432] [
+   ? @h_written+2 >= @h_capacity [ 28 -> @h_error. ] ~ [
+    !store8[@h_output+@h_written|42]. !store8[@h_output+@h_written+1|32]. @h_written+2 -> @h_written.
+    !store8[@h_output+@h_written|0]. 2 -> @h_column.
+   ] !store64[@h_scratch+432|0].
+  ]
+ ]
+ ? @h_current == 130 [
+  1 -> @h_state. 3 -> @h_size. ? @h_active >= 10 [ 4 -> @h_size. ]
+  ? @h_written+@h_size+(@h_column != 0) >= @h_capacity [ 28 -> @h_error. ] ~ [
+   ? @h_column [
+    32 -> @h_char. ? @h_column+@h_size+1 > @h_width [ 10 -> @h_char. 0 -> @h_column. ] ~ [ @h_column+1 -> @h_column. ]
+    !store8[@h_output+@h_written|@h_char]. @h_written+1 -> @h_written.
+   ]
+   !store8[@h_output+@h_written|91]. @h_written+1 -> @h_written. @h_active -> @h_value.
+   ? @h_active >= 10 [
+    0 -> @h_char. ?? @h_value >= 10 [ @h_value-10 -> @h_value. @h_char+1 -> @h_char. ]
+    !store8[@h_output+@h_written|48+@h_char]. @h_written+1 -> @h_written.
+   ]
+   !store8[@h_output+@h_written|48+@h_value]. !store8[@h_output+@h_written+1|93]. @h_written+2 -> @h_written.
+   @h_column+@h_size -> @h_column. !store8[@h_output+@h_written|0].
+  ] 0 -> @h_active.
+ ]
+]
+? @h_error [
+ 0 -> @h_written. 0 -> @h_linkcount.
+ ? (@h_output != 0)*(@h_capacity != 0)*(@h_capacity <= 32768)*(@h_output+@h_capacity >= @h_output) [ !store8[@h_output|0]. ]
+ ? (@h_title != 0)*(@h_title+128 >= @h_title) [ !store8[@h_title|0]. ]
+]
+? @h_error [ !exit[@h_error]. ]
+!store64[@b_doc|0x313030574f52425a]. !store64[@b_doc+8|1].
+!store64[@b_doc+16|@h_written]. !store64[@b_doc+24|@h_linkcount].
+!store64[@b_doc+32|@h_flags]. !store64[@b_doc+40|0].
+!store64[@b_doc+48|@h_width]. !store64[@b_doc+56|0].
+16576+@h_written -> @b_size. 0 -> @b_i.
+?? @b_i < @b_size [
+ :write[@b_doc+@b_i|@b_size-@b_i] -> @b_n.
+ ? (@b_n == 0)+(@b_n > @b_size-@b_i) [ !exit[74]. ] @b_i+@b_n -> @b_i.
+]

@@ -1,0 +1,73 @@
+ZTEXT0010000115cf062c5470000000
+Zero OS 0.9.0 final VM verification — PASS
+Date: 2026-11-16 UTC.
+Exact tested image: build/zero.iso, 18,890,752 bytes.
+SHA256: 880feb36e9c95d26abd0adaf912668396b1c135b98a04e4d87fa996ca8a90a05
+
+All four complete runs passed: BIOS32 (long mode and PAE disabled), BIOS64,
+UEFI32, UEFI64. All VMs stopped; the ISO and all private test disk copies
+retain their initial complete SHA256. Each framebuffer is native 1920x1080.
+QEMU TCG/PCnet user networking, not native VirtualBox or physical hardware.
+Actual argv, serial transcripts, command outputs, PCAP and results are saved
+per mode. matrix.json summarizes the exact assertions.
+
+Before any terminal input, each guest independently completed real DHCP
+Discover/Offer/Request/ACK. net reported IP 10.0.2.15, mask 255.255.255.0,
+gateway 10.0.2.2 and DNS 10.0.2.3. Link loss cleared the addresses; restoring
+the virtual cable caused automatic DHCP recovery without a reconnect command.
+This recovery and local HTTP 200 completed with compute thread 3 paused.
+Both its block counter and checksum stayed unchanged; they advanced on resume.
+Independent packet decoding found no bad guest IPv4 or TCP checksums.
+
+Visible task numbers are 1 terminal, 2 graphics and 3 computation. pause 0/1/4
+was rejected. Pausing graphics preserved every framebuffer byte while terminal
+commands continued, and resume redrew the framebuffer. While graphics was
+paused, pixel 1 1 and pixel 1920 1080 modified exactly the first/last physical
+pixels. Zero and coordinates beyond width/height were rejected; a full-image
+comparison verified that no other pixels changed.
+
+Each guest made two real HTTP requests to the independent local HTTP/1.0
+fixture: directly to 10.0.2.2, and after public DNS resolution of
+10.0.2.2.nip.io to 10.0.2.2. These establish guest DNS plus local HTTP, not
+public Internet HTTP access. The separate host example.com:80 probe failed
+with errno 101 (Network is unreachable); external HTTP is unverified.
+
+The production wifi command opened the no-adapter modal. Actual PS/2 Up,
+Down, F1, F5, q and Enter did not leak input or modify that modal. Escape
+restored the shell and window/focus state. WIRELESS header pixels were checked
+against the own font. BIOS read-only memory snapshots additionally verified
+terminal history preservation and zeroed WiFi password storage. No native
+WiFi radio, scanning, authentication or association was tested or claimed.
+Stock QEMU has no WiFi radio; hosted UI simulations are separate evidence.
+
+In each mode, 15 native compiler/help invocations and a subsequent terminal
+command passed: Zero output and nonzero exit; Ezero text, math, typed phrase
+fields and repeat; Zero malformed-source rejection; actual Ezero line/reason
+diagnostic; Ezero zero-index runtime error/exit 65; full-u64 store/load; stdin
+EOF; exactly 4095 output bytes with exit 74 on overflow; and successful Ezero
+compilation/execution after all errors. These use the default bundled native
+compilers and real PS/2 source input, not host compilation substituted for
+guest execution. Network and tasks remained usable afterwards. Guest programs
+remain cooperative and share kernel address space; no isolation guarantee.
+
+Read-only storage regression used newly copied private fixtures, never the
+user's build/data.img or build/data.vdi. disks used one-based disk labels;
+read B:|welcome and GO B:| followed by read welcome returned the ext4 fixture
+text. Full SHA256 of both private disks remained unchanged in every mode.
+This is a read regression, not a fresh full filesystem write/crash suite.
+
+55 recorded command/control actions per BIOS mode, 58 per UEFI mode: 226
+records total. This is a focused behavioral and boundary matrix, not 100
+arbitrary repetitions and not proof that every possible bug is absent.
+Earlier candidate failures remain under their different ISO hashes. In
+particular the paused-computation bug in 1cff88fb was fixed and its actual
+counter/checksum behavior is now independently verified in all four modes.
+
+Reproduce from repository root:
+python3 verification/network-0.9.0/run.py --iso build/zero.iso --sha \
+880feb36e9c95d26abd0adaf912668396b1c135b98a04e4d87fa996ca8a90a05 \
+--label NEW_UNIQUE_LABEL --guest-compilers --storage
+
+Evidence screenshots are native captures, never resized. wifi-no-adapter.png
+is the production no-radio screen; native-compilers.png includes the deliberate
+long-output boundary test and is not a curated compiler demonstration.

@@ -1,0 +1,2 @@
+join([] | empty) => show
+join([] | unused) => show

@@ -1,0 +1,4 @@
+f :: x [
+ x => return
+]
+f(1 | 2) => show

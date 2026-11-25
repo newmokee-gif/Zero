@@ -1,0 +1,2 @@
+lines("\n") => show
+lines("A\n\nB\n") => show

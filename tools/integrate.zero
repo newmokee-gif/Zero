@@ -1,0 +1,274 @@
+# Original Zero source composition. Inputs remain untouched; output is exclusive.
+0 => @work.
+0 => @project.
+0 => @projectlen.
+0 => @destination.
+0 => @path.
+0 => @frames.
+0 => @depth.
+0 => @frame.
+0 => @buffer.
+0 => @output.
+0 => @outbytes.
+-1 => @handle.
+0 => @size.
+0 => @count.
+0 => @n.
+0 => @i.
+0 => @j.
+0 => @c.
+0 => @error.
+0 => @message.
+0 => @status.
+0 => @pointer.
+0 => @line.
+0 => @start.
+0 => @end.
+0 => @trim.
+0 => @endtrim.
+0 => @key.
+0 => @needle.
+0 => @endneedle.
+0 => @files.
+0 => @keep.
+0 => @record.
+0 => @table.
+0 => @match.
+0 => @kind.
+0 => @skip.
+0 => @pending.
+0 => @part.
+0 => @length.
+0 => @pathlen.
+0 => @name.
+0 => @seen.
+0 => @found.
+0 => @created.
+0 => @done.
+0 => @action.
+0 => @raw.
+0 => @mode.
+"Usage: zero-integrate PROJECT_DIRECTORY NEW_SOURCE.zero [--ezero|--picture|--picture-check|--browser|--browser-check]\nDefault: kernel. Source inputs are preserved; an existing output is refused.\n" -> @message.
+? (:argcount[] != 2)*(:argcount[] != 3) [ 64 -> @error. ]
+? (:host[] != 1)*(:host[] != 2) [ 64 -> @error. ]
+? @error == 0 [
+ :argument[1] -> @project. :argument[2] -> @destination.
+ ? :argcount[] == 3 [
+  :argument[3] -> @pointer. 1 -> @key.
+  ?? @key <= 5 [
+   "--ezero" -> @needle. ? @key == 2 [ "--picture" -> @needle. ] ? @key == 3 [ "--picture-check" -> @needle. ]
+   ? @key == 4 [ "--browser" -> @needle. ] ? @key == 5 [ "--browser-check" -> @needle. ] 0 -> @i. 1 -> @match.
+   ?? :load8[@needle+@i]*@match [ ? :load8[@pointer+@i] != :load8[@needle+@i] [ 0 -> @match. ] ~ [ @i+1 -> @i. ] ]
+   ? @match [ ? :load8[@pointer+@i] == 0 [ @key -> @mode. ] ] @key+1 -> @key.
+  ]
+  ? @mode == 0 [ 64 -> @error. ]
+ ]
+ ?? (:load8[@project+@projectlen] != 0)*(@projectlen < 3800) [ @projectlen+1 -> @projectlen. ]
+ ? (@projectlen == 0)+(@projectlen >= 3800) [ 64 -> @error. ]
+]
+? @error == 0 [
+ :hostalloc[16777216] -> @work.
+ ? @work == 0 [ "Cannot allocate source composition workspace.\n" -> @message. 71 -> @error. ]
+ @work+4096 -> @path. @work+8192 -> @part. @work+16384 -> @frames.
+ @work+32768 -> @table. @work+40960 -> @seen. @work+9437184 -> @output.
+]
+? @error == 0 [
+ # Each record has opening marker, closing marker, source list, keep markers.
+ !store64[@table|"# BEGIN GENERATED FILESYSTEM STATES"]. !store64[@table+8|"# END GENERATED FILESYSTEM STATES"]. !store64[@table+16|"fs/volumes.zero.part|fs/discovery.zero.part|fs/ext4.zero|fs/ntfs.zero|fs/btrfs.zero|"]. !store64[@table+24|1].
+ !store64[@table+32|"# BEGIN WM INIT"]. !store64[@table+40|"# END WM INIT"]. !store64[@table+48|"wm/init.zero.part|"]. !store64[@table+56|1].
+ !store64[@table+64|"# BEGIN WM SWITCH"]. !store64[@table+72|"# END WM SWITCH"]. !store64[@table+80|"wm/switch.zero.part|"]. !store64[@table+88|1].
+ !store64[@table+96|"# BEGIN WM WORKER"]. !store64[@table+104|"# END WM WORKER"]. !store64[@table+112|"wm/worker.zero.part|"]. !store64[@table+120|1].
+ !store64[@table+128|"# BEGIN WM COMMANDS"]. !store64[@table+136|"# END WM COMMANDS"]. !store64[@table+144|"wm/commands.zero.part|"]. !store64[@table+152|1].
+ !store64[@table+160|"# BEGIN WM LIST"]. !store64[@table+168|"# END WM LIST"]. !store64[@table+176|"wm/list.zero.part|"]. !store64[@table+184|1].
+ !store64[@table+192|"# BEGIN NET INIT"]. !store64[@table+200|"# END NET INIT"]. !store64[@table+208|"net/init.zero.part|"]. !store64[@table+216|1].
+ !store64[@table+224|"# BEGIN NET POLL"]. !store64[@table+232|"# END NET POLL"]. !store64[@table+240|"net/poll.zero.part|"]. !store64[@table+248|1].
+ !store64[@table+256|"# BEGIN NET COMMANDS"]. !store64[@table+264|"# END NET COMMANDS"]. !store64[@table+272|"net/commands.zero.part|"]. !store64[@table+280|1].
+ !store64[@table+288|"# BEGIN NET UI"]. !store64[@table+296|"# END NET UI"]. !store64[@table+304|"net/ui.zero.part|"]. !store64[@table+312|1].
+ !store64[@table+320|"# BEGIN NET REPLY"]. !store64[@table+328|"# END NET REPLY"]. !store64[@table+336|"net/reply.zero.part|"]. !store64[@table+344|1].
+ !store64[@table+352|"# BEGIN NET CLIENT RECEIVE"]. !store64[@table+360|"# END NET CLIENT RECEIVE"]. !store64[@table+368|"net/client-receive.zero.part|"]. !store64[@table+376|1].
+ !store64[@table+384|"# BEGIN NET CLIENT POLL"]. !store64[@table+392|"# END NET CLIENT POLL"]. !store64[@table+400|"net/client-poll.zero.part|"]. !store64[@table+408|1].
+ !store64[@table+416|"# BEGIN GUEST COMPILER COMMANDS"]. !store64[@table+424|"# END GUEST COMPILER COMMANDS"]. !store64[@table+432|"portability/guest/kernel-commands.zero.part|"].
+ !store64[@table+448|"# INCLUDE NET wifi-open.zero.part"]. !store64[@table+464|"net/wifi-open.zero.part|"].
+ !store64[@table+480|"# INCLUDE NET wifi-step.zero.part"]. !store64[@table+496|"net/wifi-step.zero.part|"].
+ !store64[@table+512|"# INCLUDE NET wifi-render.zero.part"]. !store64[@table+528|"net/wifi-render.zero.part|"].
+ !store64[@table+544|"# INCLUDE NET wifi-close.zero.part"]. !store64[@table+560|"net/wifi-close.zero.part|"].
+ !store64[@table+576|"# INCLUDE APP step.zero.part"]. !store64[@table+592|"apps/step.zero.part|"].
+ !store64[@table+608|"# INCLUDE APP render-labels.zero.part"]. !store64[@table+624|"apps/render-labels.zero.part|"].
+ !store64[@table+640|"# INCLUDE APP render-values.zero.part"]. !store64[@table+656|"apps/render-values.zero.part|"].
+ !store64[@table+672|"# BEGIN GUEST FILE SERVICE"]. !store64[@table+680|"# END GUEST FILE SERVICE"]. !store64[@table+688|"fs/guest-service.zero.part|"]. !store64[@table+696|1].
+ !store64[@table+704|"# BEGIN ZERO TEXT READER"]. !store64[@table+712|"# END ZERO TEXT READER"]. !store64[@table+720|"fs/text-reader.zero.part|"]. !store64[@table+728|1].
+ !store64[@table+736|"# BEGIN ZERO PICTURE DECODER"]. !store64[@table+744|"# END ZERO PICTURE DECODER"]. !store64[@table+752|"media/zpix-decoder.zero.part|"]. !store64[@table+760|1].
+ !store64[@table+768|"# BEGIN BROWSER COMMANDS"]. !store64[@table+776|"# END BROWSER COMMANDS"]. !store64[@table+784|"browser/open.zero.part|"]. !store64[@table+792|1].
+ !store64[@table+800|"# BEGIN BROWSER UI"]. !store64[@table+808|"# END BROWSER UI"]. !store64[@table+816|"browser/ui.zero.part|"]. !store64[@table+824|1].
+ !store64[@table+832|"# INCLUDE BROWSER address.zero.part"]. !store64[@table+848|"browser/address.zero.part|"].
+ !store64[@table+864|"# INCLUDE BROWSER parse.zero.part"]. !store64[@table+880|"browser/parse.zero.part|"].
+ !store64[@table+896|"# INCLUDE BROWSER render.zero.part"]. !store64[@table+912|"browser/render.zero.part|"].
+ !store64[@table+928|"# BEGIN MOUSE INIT"]. !store64[@table+936|"# END MOUSE INIT"]. !store64[@table+944|"mouse/init.zero.part|"]. !store64[@table+952|1].
+ !store64[@table+960|"# BEGIN MOUSE POLL"]. !store64[@table+968|"# END MOUSE POLL"]. !store64[@table+976|"mouse/poll.zero.part|"]. !store64[@table+984|1].
+ !store64[@table+992|"# BEGIN MOUSE PIXEL"]. !store64[@table+1000|"# END MOUSE PIXEL"]. !store64[@table+1008|"mouse/pixel.zero.part|"]. !store64[@table+1016|1].
+ !store64[@table+1024|"# INCLUDE MOUSE restore.zero.part"]. !store64[@table+1040|"mouse/restore.zero.part|"].
+ !store64[@table+1056|"# INCLUDE MOUSE draw.zero.part"]. !store64[@table+1072|"mouse/draw.zero.part|"].
+ !store64[@table+1088|"# BEGIN EDITOR COMMANDS"]. !store64[@table+1096|"# END EDITOR COMMANDS"]. !store64[@table+1104|"editor/guest-open.zero.part|"]. !store64[@table+1112|1].
+ !store64[@table+1120|"# BEGIN EDITOR UI"]. !store64[@table+1128|"# END EDITOR UI"]. !store64[@table+1136|"editor/guest-ui.zero.part|"]. !store64[@table+1144|1].
+ !store64[@table+1152|"# BEGIN EDITOR COMPILE BEFORE"]. !store64[@table+1160|"# END EDITOR COMPILE BEFORE"]. !store64[@table+1168|"editor/guest-compile-before.zero.part|"]. !store64[@table+1176|1].
+ !store64[@table+1184|"# BEGIN EDITOR COMPILE AFTER"]. !store64[@table+1192|"# END EDITOR COMPILE AFTER"]. !store64[@table+1200|"editor/guest-compile-after.zero.part|"]. !store64[@table+1208|1].
+ !store64[@table+1216|"# INCLUDE EDITOR guest-input.zero.part"]. !store64[@table+1232|"editor/guest-input.zero.part|"].
+ !store64[@table+1248|"# INCLUDE EDITOR guest-file.zero.part"]. !store64[@table+1264|"editor/guest-file.zero.part|"].
+ !store64[@table+1280|"# INCLUDE EDITOR guest-render.zero.part"]. !store64[@table+1296|"editor/guest-render.zero.part|"].
+ "kernel.zero" -> @name. 0 -> @action.
+ ? @mode == 2 [ "tools/picture.zero" -> @name. ]
+ ? @mode == 3 [ "media/picture-check.zero" -> @name. ]
+ ? @mode == 1 [
+  !store64[@frames+32|"ezero/frontend/head.zero.part|ezero/frontend/lexer.zero.part|ezero/frontend/parser.zero.part|ezero/frontend/expression.zero.part|ezero/frontend/finish.zero.part|"].
+  1 -> @action.
+ ]
+ ? @mode == 4 [
+  !store64[@frames+32|"browser/reader-head.zero.part|browser/html-declarations.zero.part|browser/reader-input.zero.part|browser/html.zero.part|browser/reader-output.zero.part|"]. 1 -> @action.
+ ]
+ ? @mode == 5 [
+  !store64[@frames+32|"browser/html-check-head.zero.part|browser/html-declarations.zero.part|browser/html-check-input.zero.part|browser/html.zero.part|browser/html-check-output.zero.part|"]. 1 -> @action.
+ ]
+]
+
+?? (@done == 0)*(@error == 0) [
+ @frames+@depth*64 -> @frame.
+ @work+1048576+@depth*524288 -> @buffer.
+ ? @action == 0 [
+  0 -> @i. ?? @i < @projectlen [ !store8[@path+@i|:load8[@project+@i]]. @i+1 -> @i. ]
+  !store8[@path+@i|47]. @i+1 -> @i. 0 -> @j.
+  ?? :load8[@name+@j] [ !store8[@path+@i|:load8[@name+@j]]. @i+1 -> @i. @j+1 -> @j. ]
+  !store8[@path+@i|0].
+  :fileopen[@path|0] -> @handle.
+  ? @handle == -1 [ "Cannot open source fragment.\n" -> @message. 66 -> @error. ]
+  ? @error == 0 [
+   :filesize[@handle] -> @size.
+   ? (@size == 0)+(@size > 524288) [ "Source fragment is empty or too large.\n" -> @message. 65 -> @error. ]
+  ]
+  0 -> @count.
+  ?? (@count < @size)*(@error == 0) [
+   :fileread[@handle|@buffer+@count|@size-@count] -> @n.
+   ? (@n == 0)+(@n > @size-@count) [ "Incomplete source fragment read.\n" -> @message. 74 -> @error. ] ~ [ @count+@n -> @count. ]
+  ]
+  ? @error == 0 [
+   :fileread[@handle|@work+256|1] -> @n.
+   ? (@n != 0)+(:filesize[@handle] != @size) [ "Source fragment changed while reading.\n" -> @message. 74 -> @error. ]
+  ]
+  ? @handle != -1 [
+   :fileclose[@handle] -> @status. -1 -> @handle.
+   ? (@status != 0)*(@error == 0) [ "Cannot close source fragment.\n" -> @message. 74 -> @error. ]
+  ]
+  0 -> @i. ?? @i < 64 [ !store64[@frame+@i|0]. @i+8 -> @i. ]
+  !store64[@frame|@count]. !store64[@frame+48|@raw]. 0 -> @raw. 1 -> @action.
+ ] ~ [
+  :load64[@frame+32] -> @pending.
+  ? @pending [
+   :load64[@frame+40] -> @i. 0 -> @j.
+   ?? (:load8[@pending+@i] != 0)*(:load8[@pending+@i] != 124)*(@j < 255) [
+    !store8[@part+@j|:load8[@pending+@i]]. @i+1 -> @i. @j+1 -> @j.
+   ]
+   !store8[@part+@j|0].
+   ? (@j == 0)+(@j >= 255) [ "Invalid source composition entry.\n" -> @message. 65 -> @error. ]
+   ? :load8[@pending+@i] == 124 [ @i+1 -> @i. ]
+   !store64[@frame+40|@i].
+   ? :load8[@pending+@i] == 0 [ !store64[@frame+32|0]. ]
+   ? @depth >= 15 [ "Source include nesting exceeds its limit.\n" -> @message. 65 -> @error. ]
+   ? @error == 0 [
+    :load64[@frame+56] -> @raw. @depth+1 -> @depth. @part -> @name. 0 -> @action.
+   ]
+  ] ~ [
+   :load64[@frame+8] -> @start. :load64[@frame] -> @size.
+   ? @start >= @size [
+    ? :load64[@frame+16] != 0 [ "Missing closing source marker.\n" -> @message. 65 -> @error. ]
+    ? @depth == 0 [ 1 -> @done. ] ~ [ @depth-1 -> @depth. ]
+   ] ~ [
+    @start -> @end.
+    ?? (@end < @size)*(:load8[@buffer+@end] != 10) [
+     ? :load8[@buffer+@end] == 0 [ "NUL byte in source fragment.\n" -> @message. 65 -> @error. ]
+     @end+1 -> @end.
+    ]
+    ? @end < @size [ @end+1 -> @end. ] !store64[@frame+8|@end].
+    @start -> @trim. @end -> @endtrim.
+    ?? (@trim < @endtrim)*((:load8[@buffer+@trim] == 32)+(:load8[@buffer+@trim] == 9)) [ @trim+1 -> @trim. ]
+    ?? (@endtrim > @trim)*((:load8[@buffer+@endtrim-1] == 32)+(:load8[@buffer+@endtrim-1] == 9)+(:load8[@buffer+@endtrim-1] == 10)+(:load8[@buffer+@endtrim-1] == 13)) [ @endtrim-1 -> @endtrim. ]
+    1 -> @keep. 0 -> @found. :load64[@frame+16] -> @skip.
+    ? @skip [
+     0 -> @keep. 0 -> @i. 1 -> @match.
+     ?? :load8[@skip+@i] [
+      ? @trim+@i >= @endtrim [ 0 -> @match. ] ~ [ ? :load8[@skip+@i] != :load8[@buffer+@trim+@i] [ 0 -> @match. ] ]
+      @i+1 -> @i.
+     ]
+     ? @trim+@i != @endtrim [ 0 -> @match. ]
+     ? @match [ :load64[@frame+24] -> @keep. !store64[@frame+16|0]. ]
+    ] ~ [
+     0 -> @key.
+     ?? @key < 41 [
+      @table+@key*32 -> @record. :load64[@record] -> @needle.
+      0 -> @i. 1 -> @match.
+      ?? :load8[@needle+@i] [
+       ? @trim+@i >= @endtrim [ 0 -> @match. ] ~ [ ? :load8[@needle+@i] != :load8[@buffer+@trim+@i] [ 0 -> @match. ] ]
+       @i+1 -> @i.
+      ]
+      ? @trim+@i != @endtrim [ 0 -> @match. ]
+      ? ((@key == 13)+(@key == 21))*(:load64[@frame+48] != 0) [ 0 -> @match. ]
+      ? @match [
+       1 -> @found. :load64[@record+24] -> @keep.
+       ? (@key < 14)+((@key >= 21)*(@key <= 25))+((@key >= 29)*(@key <= 31))+((@key >= 34)*(@key <= 37)) [
+        ? :load64[@seen+@key*8] != 0 [ "Duplicate source marker.\n" -> @message. 65 -> @error. ]
+        !store64[@seen+@key*8|1].
+        !store64[@frame+16|:load64[@record+8]]. !store64[@frame+24|@keep].
+       ]
+       !store64[@frame+32|:load64[@record+16]]. !store64[@frame+40|0].
+       !store64[@frame+56|0]. ? @key == 13 [ !store64[@frame+56|1]. ]
+      ]
+      @key+1 -> @key.
+     ]
+     ? @found == 0 [
+      "# INCLUDE " -> @needle. 0 -> @i. 1 -> @match.
+      ?? @i < 10 [
+       ? @trim+@i >= @endtrim [ 0 -> @match. ] ~ [ ? :load8[@needle+@i] != :load8[@buffer+@trim+@i] [ 0 -> @match. ] ]
+       @i+1 -> @i.
+      ]
+      ? @match [ "Unknown source include.\n" -> @message. 65 -> @error. ]
+     ]
+    ]
+    ? @keep*(@error == 0) [
+     @end-@start -> @length.
+     ? @outbytes+@length+1 > 524288 [ "Composed kernel exceeds524288 source bytes.\n" -> @message. 65 -> @error. ] ~ [
+      0 -> @i. ?? @i < @length [ !store8[@output+@outbytes|:load8[@buffer+@start+@i]]. @outbytes+1 -> @outbytes. @i+1 -> @i. ]
+      ? :load8[@output+@outbytes-1] != 10 [ !store8[@output+@outbytes|10]. @outbytes+1 -> @outbytes. ]
+     ]
+    ]
+   ]
+  ]
+ ]
+]
+? (@error == 0)*(@mode == 0) [
+ 0 -> @key. ?? @key < 23 [
+  ? (@key < 14)+(@key >= 21) [ ? :load64[@seen+@key*8] != 1 [ "Required source marker is missing.\n" -> @message. 65 -> @error. ] ] @key+1 -> @key.
+ ]
+]
+? (@error == 0)*((@mode == 2)+(@mode == 3)) [
+ ? :load64[@seen+184] != 1 [ "Required picture decoder marker is missing.\n" -> @message. 65 -> @error. ]
+]
+? @error == 0 [
+ :fileopen[@destination|1] -> @handle.
+ ? @handle == -1 [ "Cannot create output; existing files are preserved.\n" -> @message. 73 -> @error. ] ~ [ 1 -> @created. ]
+ 0 -> @count.
+ ?? (@count < @outbytes)*(@error == 0) [
+  :filewrite[@handle|@output+@count|@outbytes-@count] -> @n.
+  ? (@n == 0)+(@n > @outbytes-@count) [ "Cannot write composed source.\n" -> @message. 74 -> @error. ] ~ [ @count+@n -> @count. ]
+ ]
+ ? (@handle != -1)*(@error == 0) [ ? :filesync[@handle] != 0 [ "Cannot flush composed source.\n" -> @message. 74 -> @error. ] ]
+ ? @handle != -1 [
+  :fileclose[@handle] -> @status. -1 -> @handle.
+  ? (@status != 0)*(@error == 0) [ "Cannot close composed source.\n" -> @message. 74 -> @error. ]
+ ]
+]
+? @created*@error [
+ :filedelete[@destination] -> @status.
+ ? @status != 0 [ "Incomplete output could not be removed.\n" -> @message. ]
+]
+? @error == 0 [ "Composed original Zero source fragments. Inputs preserved.\n" -> @message. ]
+0 -> @i. ?? :load8[@message+@i] [ !put[:load8[@message+@i]]. @i+1 -> @i. ]
+? @work [ :hostfree[@work|16777216] -> @status. ]
+!exit[@error].

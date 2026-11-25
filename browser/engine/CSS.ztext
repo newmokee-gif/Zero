@@ -1,0 +1,64 @@
+ZTEXT00100000f14851c38000000000
+ZERO WEB CSS PROFILE 0.15
+
+This original Zero memory-only worker implements a bounded experimental CSS
+cascade. It does not contain Chromium code and is not a complete CSS engine.
+Stylesheet text is external interoperability input, never a project language.
+
+Supported behavior
+
+Selectors: a single ASCII tag, .class, #id or *. Tag names are ASCII-insensitive;
+id/class values are case-sensitive. Class attributes contain whitespace-delimited
+tokens. Specificity is0/1/10/100; later declarations/rules win equal specificity.
+Inline declarations override stylesheet rules. Color and font size inherit from
+the computed parent. The declaration's own invalid value does not erase an
+earlier valid value. Whitespace/comments and quoted declaration values are parsed
+with bounded scanning; braces inside strings do not terminate rules.
+
+Properties: color, background-color, font-size, display, padding, margin, width.
+Colors accept #rgb, #rrggbb and black/white/red/green/blue/gray/grey/yellow/cyan/
+magenta/orange/purple/navy/teal/silver/maroon/olive/rebeccapurple. Background also
+accepts transparent, represented by unsigned -1. Background is not inherited.
+Font size is an integer1..96px. Padding, margin and width accept one nonnegative
+integer0..4096px; unitless zero is allowed. Display accepts none, block or inline.
+Default color is0x1f2937; default font size16px; default background transparent.
+Block tags have a basic block default. Head/title/meta/link/style/script default
+to hidden; style/script content cannot be rendered by an author display rule.
+Ancestor display:none hides every descendant.
+
+Limits and unsupported syntax
+
+Maximum512 nodes,65536 input bytes and128 accepted stylesheet rules. Unsupported
+selectors (including combinations, descendants, comma lists and pseudoclasses),
+properties, values, at-rules, functions and !important are ignored and set warning
+bit2. No resource is fetched. Unsupported at-rule blocks are skipped as balanced
+units; nested rules are not applied outside their unsupported condition.
+This profile lacks the full CSS tokenizer, escaping, cascade origins/layers,
+important handling, style-sheet loading, inherited keywords, custom properties,
+flex/grid/table layout, relative units, shaping and media query evaluation.
+Unclosed stylesheet rules are ignored rather than HTML/CSS-standard recovery.
+The separate renderer determines how this bounded computed style is painted.
+
+ABI and composition
+
+declarations.zero.part documents the shared arena. css.zero.part uses only@web
+and@v0..@v31. Its fork context isweb+1280; stack isweb+1146880,81920bytes.
+After fork, prime once by switch[web+1024|web+1280]. Then each identical switch
+processes the current descriptor. The caller owns valid disjoint memory and
+must not expose computed styles on nonzero error. Existing errors are preserved.
+Error28 is rule capacity;70 is invalid descriptor/parent/source bounds.
+The caller must supply DOM fields as described by the common contract.
+
+Verification
+
+css-check.zero consists of common declarations, css-check-head.zero.part,
+css.zero.part and css-check-tail.zero.part, in that order. The original Zero
+checker has51 semantic/boundary cases and100 deterministic malformed CSS probes.
+Checks cover specificity, source order, inherited values, inline precedence,
+comments/quotes, at-rule isolation, unsupported syntax, transparent backgrounds,
+limits128/129, invalid parent/source pointers, guards and immutable input.
+All151 pass on native Linux x64 and Windows x64 under Wine. Native Windows and
+physical hardware were not tested. Compile-only smoke succeeds for raw/UEFI32/64
+with a caller-provided arena. No guest execution is claimed. Existing compiler
+app32/app64 modes reject fork/switch, so these worker forms cannot yet be shipped
+as standalone guest applications without further runtime/compiler integration.

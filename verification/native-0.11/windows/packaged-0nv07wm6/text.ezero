@@ -1,0 +1,3 @@
+join(lines("alpha\r\nbeta\n") | "/") => show
+size(lines("")) => show
+join([Привет | мир] | "/") => show

@@ -1,0 +1,37 @@
+ZTEXT001000009490d9476410000000
+Ezero behavioral checks
+
+The native original Zero verifier is tools/check.zero. Its own-language case
+manifest and fixtures live in ../../checks/. It runs compiler applications and
+generated programs in-process, compares expected results, and reports failures.
+Build/run instructions are in ../../checks/README.ztext. All product parser,
+runtime, memory management and check implementation sources are Zero/Ezero.
+
+files.ezero is a self-checking file API program. Compile it with the native
+ezero command and run it with one argument naming a private empty directory.
+It checks create preservation, save replacement and empty text, read/readfile,
+exclusive writefile, exact/glob search, one-based lists, GC retention, go,
+disks, del/rm and an empty final directory. Any failed assertion produces an
+arithmetic error; success prints Files passed. It deletes only its own zcheck
+and zother files. Do not use a directory containing valuable files.
+
+files_mutation.ezero tests native mutations without depending on listings.
+files_text.ezero checks native Unicode filenames/content and a 65536-byte
+round trip. files_unicode_glob.ezero checks case-sensitive wildcard matching
+on accented and supplementary Unicode filenames. files_listing_gc.ezero expects a private directory containing
+exactly 2048 regular files and repeatedly lists it across garbage collections.
+files_guest.ezero is a compact single-statement sequence for a private selected
+writable ZeroFS volume; omit its comment when pasting after the terminal's
+ezero command. Its list exposes each operation result in evaluation order.
+
+file_error_*.ezero exercise missing reads/deletes/directories, non-text paths
+non-text save values and excessive content size. They must report a source-line runtime error and
+exit 65. External platform verification also uses private fixtures for Unicode
+paths, native I/O failures, symlinks, list bounds and Windows platform behavior.
+Those environmental tools are not product source or runtime dependencies.
+
+The broader suite covers typed phrases, one-based indexing, Unicode size,
+optional escapes, arithmetic, lists, conditions, once-evaluated loops,
+recursive functions, evaluation order, frame isolation, collection and errors.
+Guest VM verification is separate from native execution. A report's completed
+results define its scope; this README makes no unperformed pass claim.

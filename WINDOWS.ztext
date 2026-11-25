@@ -1,0 +1,113 @@
+ZTEXT0010000178cc04eb6880000000
+Current original Zero workflow (0.12)
+
+Use the native tools on Linux or their .exe versions on Windows:
+  zero-integrate PROJECT_DIRECTORY NEW_KERNEL.zero
+  zero-build PROJECT_DIRECTORY NEW_OUTPUT_DIRECTORY NEW_KERNEL.zero
+  zero-check PROJECT_DIRECTORY NEW_TEST_DIRECTORY
+All destination paths must be new. The integrator preserves authored sources;
+the builder checks its compiler fixed point and builds the original targets;
+the verifier checks language behavior and host file operations in process.
+See tools/integrate.ztext, tools/build.ztext and checks/README.ztext.
+Read these documents with zero-text read FILE.
+
+The notes below preserve earlier implementation and test history. Any old
+shell/Python runner names, generated artifacts, JSON reports or commands are
+historical references: they were removed from the active project and are not
+current runnable instructions or current-release validation. Native host
+checks do not replace BIOS/UEFI, persistence or physical-hardware testing.
+
+Historical implementation notes
+
+ZERO WINDOW MANAGER
+
+The window manager is original Zero code inside the monolithic kernel.
+It provides independent terminal sessions and two keyboard-driven layouts.
+Two terminals open at startup; window1 has focus. All windows remain open
+when they leave the visible area. No image assets or external GUI library
+are required.
+
+Keyboard
+F1  create a terminal and focus it
+F2  close the focused terminal; the last terminal stays open
+F3  focus the next open terminal
+F4  focus the previous open terminal
+F5  switch between tiled and horizontally scrolling layouts
+Held function keys do not repeatedly create or close windows.
+
+Commands, also usable over serial
+windows             list live IDs, selected volumes, focus and capacity
+window new          create and focus a terminal
+window close        close the focused terminal
+window next         focus the next live ID, wrapping at the end
+window prev         focus the preceding live ID
+window 3            focus the live terminal with ID3
+window tile         select the tiled layout
+window scroll       select the horizontal strip
+window toggle       toggle layouts
+
+IDs belong to slots, not positions on screen. Closing a window does not
+renumber other windows; a later creation reuses the lowest free ID. Closing
+the focused window selects the next higher live ID, wrapping if needed.
+No disk file is deleted when closing a window.
+
+Display
+The preferred native mode is1920x1080. At this resolution a960x540 logical
+workspace is drawn with2x scaling: terminal cells are16x32 physical pixels,
+and frames, borders, margins and hints scale together. Other firmware modes
+keep1x scaling. Firmware without Full HD can use the smaller validated modes.
+The pixel command always uses physical framebuffer coordinates.
+
+Layouts
+Tile: a single window fills the workspace. Two share it side by side.
+Groups of three use a master window on the left and two stacked on the
+right. Focusing a window in another group automatically shows that group;
+hidden groups retain all session state. Minimum supported display640x400.
+Scroll: each terminal is a column in one ordered horizontal workspace.
+Focus centers its column, with clipped neighbors at the edges. Next/previous
+focus moves the viewport; keyboard navigation is immediate, not animated.
+The current renderer displays at most three columns at once.
+
+Each window owns its incomplete command, overflow flag, selected volume and
+the most recent7168 bytes of terminal output. The byte ring is reflowed for
+its current text width when the layout changes. clear resets only that
+window's output. Its input limit remains480 bytes. There is no command-line
+recall, manual scrollback navigation, mouse interaction or clipboard yet.
+New terminals inherit the selected volume of the window that created them.
+Switching focus preserves a partially typed command. Device modifier state
+and serial CRLF framing are global, so a trailing LF never submits a command
+in a different window after a focus change.
+
+Memory and scheduling
+Each slot occupies8192 bytes in the unused middle of the loader-owned pool.
+Capacity is computed from that pool:88 windows with the current1MiB UEFI
+pool,344 with the current3MiB BIOS pool. This is not unlimited allocation or
+all installed RAM. Insufficient room refuses creation without losing other
+windows. The main and child native stacks retain their reserved regions.
+
+Terminal sessions share the existing command thread and filesystem engine.
+Commands complete serially; these windows are not isolated user processes.
+Focus changes occur only while the engine is waiting for input, never during
+a filesystem operation. Filesystem caches remain shared and valid across
+windows. Closing a terminal discards its volatile input/output history.
+
+The graphics thread owns the framebuffer while the manager is active. It
+repaints dirty visible windows, checks layout generations after yields and
+clips drawing to the screen/window. A fixed ASCII grid bounds rendering
+scratch space. animate toggles the focused caret blink; theme changes colors.
+pause1 freezes display updates, but input/commands still run and output is
+retained; resume1 shows the latest state. Computation remains independently
+pausable. A missing GUI falls back to the focused VGA text terminal or serial.
+
+Sources
+wm/init.zero.part      pool validation and initial sessions
+wm/switch.zero.part    deferred safe creation/close/focus/layout operations
+wm/commands.zero.part  command validation and action requests
+wm/list.zero.part      bounded streaming inventory
+wm/worker.zero.part    original compositor, ring replay and glyph renderer
+wm/integrate.sh        checked source integration; --check does not edit
+wm/SESSION.ztext and wm/RENDERER.ztext document the internal ABI.
+wm/design/ contains the explicitly labelled earlier static design previews.
+
+The same sources compile for BIOS/UEFI and x86-32/x86-64. See verification.ztext
+for completed tests, hashes and the boundary of native VirtualBox testing.

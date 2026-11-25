@@ -1,0 +1,165 @@
+ZTEXT0010000247f1de1cccf0000000
+Ezero implementation contract (original Zero implementation)
+
+Zero is the system language; Ezero is the high-level language built on it.
+The frontend, packer, runtime, native compiler command and build/check tools
+are original Zero. Targets are Linux x86-64, Windows x64 and Zero OS native
+32/64-bit applications. Guest applications use the owned memory-stream ABI
+and share kernel memory; application loading is not process isolation.
+
+Source grammar
+UTF-8 source; validate UTF-8 and reject embedded NUL. Text needs no quotes.
+Bare unknown words become text; an already-bound bare name reads its value.
+Adjacent values form a typed phrase: 3 банана retains number3 and textбанана.
+Consecutive literal text words form one text segment (space-normalized).
+Phrases print their parts separated by spaces and support INDEX/SIZE/each.
+If all phrase parts are text, MAKE_PHRASE may merge them into one text value.
+Optional quoted text remains an escape hatch for punctuation/reserved names,
+with \n \r \t \\ \" escapes; examples must use the unquoted form.
+The reserved word empty produces empty text; true/false remain numeric1/0.
+Newline terminates an ordinary statement; blank lines and # comments allowed.
+Names: ASCII letter/underscore then letters/digits/underscore, 1..31 bytes.
+No @, declared types or trailing punctuation required.
+expression => name                 create or replace a variable
+expression => show                 print its value and a newline
+expression => return               return from a function
+expression => repeat [ statements ]
+expression => when [ statements ] ~ [ statements ]
+expression => each name [ statements ]
+name :: parameter | parameter [ statements ]  top-level function definition
+Definitions may have zero parameters. Register a function before parsing its
+body, allowing self-recursion. Functions must be defined before use; no nested
+function definitions. Implicit function return is numeric zero. Top-level
+return is rejected. Parameters and function assignments are local. Reads first
+resolve known locals, then earlier global bindings. No closures/imports yet.
+Statements inside blocks still end at a newline or the closing ]. A newline
+after ] may precede ~. Arrays/calls/grouped expressions may span lines.
+
+Expressions: decimal u64 literals, unquoted UTF-8 text/phrases, variables, [a | b | c],
+function(arg | arg), size(value), list[index], grouping, + - *, comparisons
+== != < <= > >=. Normal precedence: postfix, multiplication, add/sub, one
+comparison. No unary minus/division; checked unsigned arithmetic.
+true and false are numeric1/0. Conditions require a number,0 means false.
++ handles number+number (checked), text+text, text+number, number+text,
+and list+list. Other combinations fail clearly. Lists can contain mixed and
+nested values. User indices are ONE-BASED: first element1, last element=size.
+Index0 and index>size are runtime bounds errors; list/phrase indexing only.
+size accepts lists/phrases (element count) and text (Unicode scalar count). Equality compares numbers and text by content;
+list equality is rejected (do not silently compare identity).
+show prints numbers in decimal, raw text, and lists as [a | b | c].
+Ordinary numeric tokens are number values, including inside an unquoted
+phrase; quoted text is optional, never required for the common examples.
+For example 3 банана => purchase; purchase[1]+2 => show prints5;
+purchase[2] => show printsбанана. User-facing documentation calls this Ezero,
+the existing system language remains Zero.
+No manual addresses/allocations are exposed in Ezero. Heap objects immutable;
+runtime owns reclamation and bounds checks.
+
+Limits
+source65536 bytes;4096-byte decoded string;16384 total constant bytes;
+1536 instructions;64 functions including main;16 parameters;256 variables per
+scope including hidden loop slots;32 expression/block nesting levels;
+2048 evaluation values;64 active function calls; heap262144 bytes per space.
+Capacity, uninitialized variable, type and arithmetic errors must be explicit,
+never out-of-bounds writes or silent wrapping.
+
+Frontend output is a binary instruction/data package, completely buffered
+before output. Compile errors: nonzero exit, human-readable ASCII diagnostic
+with source line on stdout. The native command publishes no failed output.
+Successful package has the following little-endian u64 header (64 bytes):
+0 magic0x31564d4f52455a45;8 totalBytes;16 instructionCount;24 functionCount;
+32 globalCount;40 constantByteCount;48 version1;56 reserved0.
+Then functionCount records of32 bytes: entryInstruction,parameterCount,
+localCount,reserved0. Main index0: entry0,params0,locals0 (uses globalCount).
+Then instructionCount records of32 bytes: opcode,a,b,sourceLine.
+Then constantByteCount raw bytes. PUSH_TEXT offsets are relative to constants.
+Jump/function entries use instruction indices, not byte addresses.
+No separate external runtime library: generated .zero contains owned data
+initialization and the original Zero runtime, compiled as one executable.
+This first version uses our instruction interpreter inside that executable;
+it is not direct native code emission for every Ezero expression.
+
+Opcodes
+0 HALT
+1 PUSH_NUMBER a
+2 PUSH_TEXT a=constantOffset,b=length
+3 LOAD_GLOBAL a=index
+4 STORE_GLOBAL a=index (pops)
+5 LOAD_LOCAL a=index
+6 STORE_LOCAL a=index (pops)
+7 ADD
+8 SUBTRACT
+9 MULTIPLY
+10 EQUAL
+11 NOT_EQUAL
+12 LESS
+13 LESS_EQUAL
+14 GREATER
+15 GREATER_EQUAL
+16 MAKE_LIST a=count (pop ordered values, push list)
+17 INDEX (pop index then list; push selected value)
+18 SIZE
+19 SHOW (pop value, newline)
+20 DROP
+21 JUMP a=instructionIndex
+22 JUMP_FALSE a=instructionIndex (pops numeric condition)
+23 CALL a=functionIndex,b=argumentCount
+24 RETURN (pops result; preserve caller evaluation values)
+25 DUPLICATE
+26 MAKE_PHRASE a=count (typed ordered parts, space-separated rendering)
+
+Frontend lowers repeat into a hidden remaining-count slot and >0 loop;
+each into hidden list/index slots and SIZE/INDEX loop, starting index1 and
+continuing while index<=size. Internal bytecode indices remain unchanged. Expressions evaluated
+once on entry to these constructs. User bindings can first occur in a block;
+read before a runtime assignment is an explicit uninitialized-variable error.
+Hidden slots cannot collide with user names. Temporaries are frame-local.
+
+Runtime prefix initializes exactly these shared integration variables:
+:reserve[2097152] => @ez_mem.
+@ez_mem => @ez_program.
+0 => @ez_program_bytes.
+0 => @ez_encoded. 0 => @ez_decode_i. 0 => @ez_decode_n.
+0 => @ez_decode_a. 0 => @ez_decode_b.
+Packer emits initialization using ONLY these eight declared names, reusing
+decode temporaries; sets ez_program_bytes; no additional declarations.
+Prefix + packer output + runtime.zero.part must compile under64-variable cap.
+Packer input limit70000 bytes; each generated string <=2048 hex characters.
+Program initialization goes only into ez_mem[0..262143]. Runtime state lives
+above that region, within the same2MiB reservation. No further reserve calls.
+Runtime allocation, copy-GC roots, frames and stack layout belong to runtime
+agent and must be documented in MEMORY.ztext. On runtime error print an ASCII
+Ezero error with source line and exit65; output before failure may exist.
+
+Canonical0.10 host interoperability extension
+27 READ_FILE;28 WRITE_FILE;29 FILE_EXISTS;30 ARGUMENTS;31 HOST.
+All five require a=b=0. Frontend builtins readfile(path),writefile(path|text),
+fileexists(path),arguments(),host(). Strict bounded UTF-8 external text;
+writefile exclusively publishes a new file and never replaces a destination.
+See HOST.ztext for the complete host interoperability contract.
+
+Text convenience extension
+32 LINES;33 JOIN. Both require a=b=0. LINES consumes one text value and pushes
+a list. JOIN consumes a list then text separator and pushes text. Arity is
+checked by the frontend; runtime checks types and complete allocation bounds.
+Token314 lines maps to builtin70/opcode32; token315 join maps to71/33.
+Both operations are independent of host APIs and run on guest32/64 targets.
+The language guide defines newline, empty-input and strict text-item behavior.
+
+File service extension
+34 CREATE; 35 DELETE; 36 WATCH; 37 SEARCH; 38 SAVE; 39 GO; 40 DISKS.
+All require a=b=0. CREATE/DELETE/GO consume one text path and push number 1
+on success. SAVE consumes path and text, pushes the byte count. WATCH/SEARCH
+consume a path and push a one-based text list; DISKS has no operand and pushes
+a text list. Paths and staged results undergo strict UTF-8 validation before
+managed values are created. The entire list allocation is reserved before GC.
+Native adapters and the guest kernel service expose the same primitive calling
+shape; availability, path/content limits and durability remain platform-specific.
+READ_FILE/WRITE_FILE/FILE_EXISTS now also use the guest whole-file service.
+ARGUMENTS remains native-only. See HOST.ztext for the user-visible contract.
+
+Normalized frontend tokens 316..322 map to builtins 72..78 and opcodes 34..40.
+read aliases readfile (token 309/opcode 27); rm aliases del (317/35). Aliases do
+not add opcodes. The scanner keeps an initial letter-colon-bar sequence inside
+a path word, so A:|file and B:| do not split at the root separator. All other
+bars retain their existing list/argument separator meaning.

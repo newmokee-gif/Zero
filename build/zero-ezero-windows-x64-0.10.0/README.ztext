@@ -1,0 +1,116 @@
+ZTEXT001000015633f5c0eb00000000
+ZERO / EZERO 0.10.0 — NATIVE WINDOWS X64 TOOLKIT
+
+The native zero.exe and ezero.exe commands compile with our original Zero
+compiler and Ezero frontend/runtime, loaded directly from lib/. They do not
+launch CMD, PowerShell, Bash, Python, a subprocess compiler, or any foreign
+language runtime. All application, compiler, setup, updater and SHA256 code
+is original Zero. Windows operating-system APIs provide host file and memory
+services. Keep the complete directory together when moving the toolkit.
+
+Target: Windows 10/11 x64. Execution verification uses Wine10 on Debian13;
+a native Microsoft Windows machine run is not claimed. The archive includes
+no Wine, Linux runtime, foreign DLL, boot firmware or host test machinery.
+
+COMPILE AND RUN
+
+From a terminal in the extracted directory:
+
+    .\zero.exe examples\hello.zero hello.exe
+    .\hello.exe
+
+    .\ezero.exe examples\banana.ezero banana.exe
+    .\banana.exe
+
+    .\ezero.exe examples\host-files.ezero copy-text.exe
+    .\copy-text.exe input.txt new-output.txt
+
+Ezero source and host text are UTF-8. The host-files example reads and copies
+text, preserves existing destination files, and uses one-based arguments.
+Use a terminal with UTF-8 display support to show non-ASCII output correctly.
+The binary files and UTF-8 path operations do not depend on console encoding.
+Quote command-line paths containing spaces using your terminal's normal rules.
+
+    .\zero.exe --help
+    .\ezero.exe INPUT.ezero NEW_OUTPUT.exe [TARGET]
+    .\zero.exe INPUT.zero NEW_OUTPUT.exe [TARGET]
+
+The default output is Windows PE64. Explicit targets: --host, --windows,
+--raw, --raw32, --efi, --efi32, --real, --app64 and --app32. Other targets need
+the matching execution environment. Existing output files are never replaced.
+Windows accepts63 user arguments and a complete UTF-8 command line of at
+most4095 bytes. Invalid arguments and source errors return a failure status.
+Companion files are resolved relative to the executable, not the working
+folder. A renamed command may select its language explicitly as its first
+argument, for example rebuilt.exe zero INPUT.zero NEW_OUTPUT.exe.
+
+OWN SOURCE / REBUILD
+
+source/ contains the complete original standalone implementations. For example:
+
+    .\zero.exe source\compiler-cli.zero rebuilt.exe
+    .\rebuilt.exe --help
+    .\zero.exe source\compiler.zero rebuilt-compiler.exe
+    .\zero.exe source\installer\setup.zero rebuilt-setup.exe
+    .\zero.exe source\updater\update.zero rebuilt-update.exe
+    .\zero.exe source\updater\sha256.zero rebuilt-sha256.exe
+
+source\compiler-seed.exe is the original direct stream compiler reference;
+normal users should use zero.exe/ezero.exe. The native CLI can rebuild this
+seed from source\compiler.zero without invoking it as an external process.
+The compiler apps in lib/ use our own ZEROAPP1 ABI; they are also reproducible
+with --app64 from the included compiler, frontend and packer sources.
+The language, memory and ABI documentation is in source\ezero\.
+
+PREPARE ZERO OS FILES
+
+The OS ISO is distributed separately. Use a trusted release ISO:
+
+    .\zero-setup.exe prepare zero.iso NEW_DIRECTORY
+    .\zero-setup.exe status NEW_DIRECTORY
+    .\zero-setup.exe remove NEW_DIRECTORY
+
+Preparation copies/verifies the ISO and creates original ZeroFS storage plus
+an ownership manifest in a new directory. Removal validates ownership and
+payloads and preserves unrelated files. Boot integration is NOT IMPLEMENTED:
+this does not add a boot-menu entry, install Zero OS into Windows, or make an
+ISO inside an arbitrary host filesystem bootable. Boot the separate ISO in a
+compatible VM. See source\installer\README.txt for the exact contract.
+
+LOCAL UPDATE PREPARATION
+
+    .\zero-update.exe init zero.iso 1 NEW_STORE
+    .\zero-update.exe stage next-zero.iso 2 NEW_STORE
+    .\zero-update.exe status NEW_STORE
+    .\zero-update.exe rollback NEW_STORE
+
+    .\zero-update.exe publish next-zero.iso 3 NEW_INBOX
+    .\zero-update.exe check NEW_INBOX NEW_STORE
+    .\zero-update.exe verify NEW_STORE
+
+These commands prepare and verify local release copies and record a rollback
+selection. They do not activate the selected OS, register a startup task or
+fetch releases from the Internet. Counters start at1 and must increase for
+new staging, including after rollback. Repeated check is idempotent.
+SHA256 detects corruption; it does not authenticate a release publisher.
+Use trusted local ISO/inbox files. No partition table, boot sector, firmware
+entry or user data disk is changed. Interrupted journal writes are rejected;
+automatic crash repair and power-loss durability are not claimed. Full state
+and recovery rules are in source\updater\README.txt and FORMAT.txt.
+
+VERIFY FILES
+
+    .\zero-sha256.exe zero.exe
+    .\zero-sha256.exe zero.iso
+
+SHA256SUMS.txt lists package file hashes. BUILD-INPUTS.sha256 identifies the
+original source and compiler inputs used to build the native tools. The
+SHA256 implementation is original Zero and has no external hash dependency.
+
+Native Windows reparse handling uses Windows file attributes and open flags.
+Wine's Z: POSIX symlinks do not expose those attributes, and Wine10's symbolic
+link creation API is a stub. Wine tests therefore do not establish native
+Windows reparse-point behavior. The file API does not sandbox linked ancestor
+directories; use private folders you own. These tools remain bounded early
+system tools, with the detailed capabilities and limits documented alongside
+their sources.

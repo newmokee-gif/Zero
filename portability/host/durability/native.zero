@@ -1,0 +1,33 @@
+0 => @h.
+0 => @r.
+:reserve[16] => @buffer.
+:argument[1] => @path.
+? :argcount[] != 1 [ !exit[90]. ]
+:fileopen[@path | 1] -> @h.
+? @h == 18446744073709551615 [ !exit[1]. ]
+!store8[@buffer | 65].
+? :filewrite[@h | @buffer | 1] != 1 [ !exit[2]. ]
+? :filesync[@h] != 0 [ !exit[3]. ]
+? :filesize[@h] != 1 [ !exit[4]. ]
+!store8[@buffer | 66].
+? :filewrite[@h | @buffer | 1] != 1 [ !exit[5]. ]
+? :filesync[@h] != 0 [ !exit[6]. ]
+? :fileclose[@h] != 0 [ !exit[7]. ]
+? :filesync[@h] != 18446744073709551615 [ !exit[8]. ]
+? :filesync[18446744073709551615] != 18446744073709551615 [ !exit[9]. ]
+? :filesync[4294967299] != 18446744073709551615 [ !exit[10]. ]
+:fileopen[@path | 0] -> @h.
+? @h == 18446744073709551615 [ !exit[11]. ]
+? :fileread[@h | @buffer | 16] != 2 [ !exit[12]. ]
+? :load16[@buffer] != 16961 [ !exit[13]. ]
+? :fileclose[@h] != 0 [ !exit[14]. ]
+? :hostwait[0] != 0 [ !exit[15]. ]
+? :hostwait[86400001] != 18446744073709551615 [ !exit[16]. ]
+? :hostwait[18446744073709551615] != 18446744073709551615 [ !exit[17]. ]
+? :hostwait[4294967296] != 18446744073709551615 [ !exit[18]. ]
+? :hostwait[20] != 0 [ !exit[19]. ]
+? :argcount[] != 1 [ !exit[20]. ]
+? :argument[1] != @path [ !exit[21]. ]
+"DURABILITY OK\n" -> @path.
+0 -> @r. ?? :load8[@path + @r] [ !put[:load8[@path + @r]]. @r + 1 -> @r. ]
+!exit[0].

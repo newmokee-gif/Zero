@@ -1,0 +1,58 @@
+ZTEXT00100000c431d86f3200000000
+Native Zero/Ezero compiler command
+
+compiler-cli.zero is the complete original Zero implementation. Compile it for
+Linux x86-64 or Windows x64 and place identical native copies at zero/ezero
+(zero.exe/ezero.exe on Windows). Neither executable invokes a shell, command
+interpreter, subprocess, external compiler or external language runtime.
+
+Commands:
+  zero INPUT.zero OUTPUT [TARGET]
+  ezero INPUT.ezero OUTPUT [TARGET]
+  zero --help
+
+The default target matches the host: --host on Linux, --windows on Windows.
+Explicit targets are --host, --windows, --raw, --raw32, --efi, --efi32, --real,
+--app64 and --app32. An executable renamed to another basename can use an
+explicit first argument zero or ezero to select the language. Source arguments
+named zero/ezero remain normal filenames for the standard named commands.
+
+Required files relative to the real executable's parent directory:
+  lib/zero64.app
+  lib/frontend64.app
+  lib/pack64.app
+  lib/runtime-prefix.zero.part
+  lib/runtime.zero.part
+These are compiled/source components of this same original Zero/Ezero toolchain.
+The executable and lib directory can be relocated together. The current working
+directory is irrelevant to companion lookup. Source/output paths remain relative
+to the caller's current directory and support spaces and UTF-8 host paths.
+
+The command reads source into bounded buffers, maps a compiler image as RW,
+validates every ZEROAPP1 header field and its exact length, switches the mapping
+to RX, then calls it directly with an owned context and stack. Ezero uses the
+frontend, packer, runtime prefix/initializer/body and Zero compiler in sequence.
+The command never requests RWX memory. It releases host mappings after returning.
+
+Zero input is limited to 262144 bytes; Ezero input to 65536. A compiler image
+must fit 1 MiB. The owned workspace is 8 MiB, including a 6 MiB application stack.
+Generated Zero source is limited to 262144 bytes and target output to 491520.
+The frontend/package and initializer buffers remain independently bounded.
+
+Compilation must finish before the output file is created. Output creation is
+exclusive; existing files, directories and final symlinks are refused. Linux
+output permissions are 0700 reduced by the user's umask. Write/close failures
+attempt to remove only the newly created output. Completed compilation does not
+imply power-loss durability, process isolation or validity of arbitrary edited
+compiler application bodies. ZEROAPP1 applications share this process's memory.
+
+Ezero frontend diagnostics retain their original source-line message. The initial
+Zero compiler has only a failure status, so its command reports a compile failure
+without inventing a source location. Messages use the current console/stdout.
+This command builds executables; it does not launch the resulting program.
+
+Current original Zero verification:
+  zero-check PROJECT_DIRECTORY NEW_TEST_DIRECTORY
+See checks/README.ztext for source/ABI checks and native filesystem coverage.
+This replaces removed foreign-language test runners. Host checks do not prove
+firmware boot, physical hardware support or arbitrary edited app isolation.

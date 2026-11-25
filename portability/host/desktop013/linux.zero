@@ -1,0 +1,38 @@
+# Original native syscall ABI regression. No persistent files are created.
+:reserve[16] => @pair.
+0 => @a.
+0 => @b.
+0 => @file.
+0 => @mapping.
+0 => @index.
+:reserve[0] => @cursor.
+? :host[] != 1 [ !exit[1]. ]
+? :hostlibrary["unavailable"] != 0 [ !exit[19]. ]
+? :hostsymbol[0|"unavailable"] != 0 [ !exit[20]. ]
+? 9 + :hostcall12[0|1|2|3|4|5|6|7|8|9|10|11|12] != 9 [ !exit[21]. ]
+? :hostsyscall[39|0|0|0|0|0|0] == 0 [ !exit[2]. ]
+? :hostsyscall[3|2147483647|0|0|0|0|0] != -9 [ !exit[3]. ]
+# socketpair places its result through syscall argument four (R10).
+? :hostsyscall[53|1|1|0|@pair|0|0] != 0 [ !exit[4]. ]
+:load32[@pair] -> @a. :load32[@pair+4] -> @b.
+? :hostsyscall[1|@a|"Zero"|4|0|0|0] != 4 [ !exit[5]. ]
+? :hostsyscall[0|@b|@pair+8|4|0|0|0] != 4 [ !exit[6]. ]
+? :load32[@pair+8] != 0x6f72655a [ !exit[7]. ]
+? :hostsyscall[3|@a|0|0|0|0|0] != 0 [ !exit[8]. ]
+? :hostsyscall[3|@b|0|0|0|0|0] != 0 [ !exit[9]. ]
+# Anonymous memory file tests mmap descriptor/offset in arguments five/six.
+:hostsyscall[319|"Zero desktop ABI"|0|0|0|0|0] -> @file.
+? @file > 2147483647 [ !exit[10]. ]
+? :hostsyscall[77|@file|8192|0|0|0|0] != 0 [ !exit[11]. ]
+? :hostsyscall[18|@file|"M"|1|4096|0|0] != 1 [ !exit[12]. ]
+:hostsyscall[9|0|4096|1|1|@file|4096] -> @mapping.
+? @mapping > 0xfffffffffffff000 [ !exit[13]. ]
+? :load8[@mapping] != 77 [ !exit[14]. ]
+? :hostsyscall[11|@mapping|4096|0|0|0|0] != 0 [ !exit[15]. ]
+? :hostsyscall[3|@file|0|0|0|0|0] != 0 [ !exit[16]. ]
+?? @index < 128 [
+ ? 7 + :hostsyscall[3|2147483647|2|3|4|5|6] != -2 [ !exit[17]. ]
+ ? :reserve[0] != @cursor [ !exit[18]. ]
+ @index+1 -> @index.
+]
+:write["PASS native desktop syscall ABI\n"|32] -> @a.

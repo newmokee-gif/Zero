@@ -1,0 +1,102 @@
+ZTEXT001000013db02f9bfc70000000
+Zero Studio - original native GUI editor
+
+The editor implementation, source composer, renderer, input handling, file
+operations and compiler pipeline are written entirely in Zero. Its 5x7 glyphs
+are the original Zero OS glyphs. No GUI toolkit, external editor, browser engine,
+font asset, C, assembly, Python or shell program is included in the product.
+
+Native hosts
+
+Linux x86-64: original X11 wire protocol client over a local Unix socket.
+DISPLAY=:N and unix:N are accepted. MIT-MAGIC-COOKIE-1 authentication is read
+from XAUTHORITY or HOME/.Xauthority. An X11 server or Xwayland is required;
+a Wayland-only connection is not implemented. The client validates 24-bit
+TrueColor depth, 32-bit pixel padding, byte order and request size. Remote X11,
+alternate display screens and unusual pixel formats are not supported yet.
+
+Windows x64: documented Win32 host APIs create a window and transfer the
+editor's own pixels. The editor handles its own text, caret and keyboard;
+it does not embed an operating-system text editor control. Linux and Windows
+share the original renderer and editor logic. The fixed 1280x800 canvas fits
+a 1920x1080 desktop. The OS pointer cursor and an insertion caret are visible.
+
+The Windows executable has been exercised through Wine's actual graphical
+window/event path. Native Windows hardware has not been tested in this session.
+
+Use
+
+  zero-studio [SOURCE.zero]
+  zero-studio [SOURCE.ezero]
+
+Ctrl+O opens a path prompt. Ctrl+S opens the save prompt, prefilled with the
+current path. Enter confirms; Escape cancels. F5 builds the in-memory buffer.
+Ctrl+Q closes; if there are unsaved changes, press it again to discard them.
+An X11 window-manager close request uses the same unsaved-change guard.
+Arrows, Home, End, Page Up, Page Down, Backspace, Delete, Tab and Enter work.
+Click in the source area to place the caret. Positions start at one.
+
+Open stages and validates the entire source before changing the document.
+Missing files, binary input and oversize files leave the document intact.
+CRLF/CR line endings become LF in memory; the status reports this conversion.
+The disk file changes only after saving. Save writes an exclusive temporary
+sibling, flushes it, then atomically replaces the destination. A failed write
+or rename preserves the original destination. Existing temporary files are
+never removed or reused.
+
+F5 uses the original compiler applications in-process; no subprocess runs.
+A .ezero path selects frontend -> package converter -> runtime -> Zero compiler.
+Other source paths select the Zero compiler. Output is SOURCE.zrun on Linux
+and SOURCE.zrun.exe on Windows. Rebuilds publish atomically after successful
+compilation and preserve the previous executable on syntax or write errors.
+The editor does not automatically execute programs it compiles.
+
+Portable installation
+
+Keep these original companions in lib/ beside the editor executable:
+  zero64.app
+  frontend64.app
+  pack64.app
+  runtime-prefix.zero.part
+  runtime.zero.part
+
+These are the same companions distributed with the native Zero/Ezero compiler
+commands. Copying the editor and lib/ together permits relocation, including
+parent paths containing spaces. The executable itself is generated directly
+by the original Zero compiler as native ELF or PE, the host compatibility
+formats used by Linux and Windows.
+
+Build
+
+editor/host/editor.zero is the complete compilable source. The original
+editor/host/compose.zero composes it reproducibly from the adjacent .zero.part
+files. After compiling compose.zero with Zero:
+
+  studio-compose PROJECT_DIRECTORY NEW_SOURCE.zero
+  zero NEW_SOURCE.zero NEW_LINUX_EXECUTABLE --host
+  zero NEW_SOURCE.zero NEW_WINDOWS_EXECUTABLE --windows
+
+Existing composition destinations are refused. The native builder can compile
+the complete editor.zero directly. Compiler host primitives required are
+hostsyscall, hostlibrary, hostsymbol and hostcall12; their implementation is
+also original Zero instruction data inside the self-hosted compiler.
+
+Current bounds
+
+One ASCII source document, 65535 bytes; paths entered in the GUI are ASCII and
+at most 500 bytes. An overlong startup path is refused instead of truncated.
+The compiler diagnostics are bounded status messages: Ezero's frontend error
+text is shown; Zero currently reports a syntax failure without a line number.
+There is no text selection, clipboard, undo history, IME, Unicode source
+editing, debugger, tabbed workspace or language-server protocol yet. Page
+navigation uses bounded byte jumps; visual lines wrap at 98 columns.
+
+Verification
+
+Actual Linux Xorg and Windows Wine GUI workflows exercised keyboard input,
+mouse placement, save, reopen, missing-file handling and unsaved-close guard.
+Both hosts compiled Zero and quote-free Ezero in-process and executed the
+generated sample externally in the test harness with the expected output.
+An independent original Zero harness checked ten file-preservation, size,
+symlink, CRLF, temporary-collision, failed-rename and memory-boundary cases.
+External validation tools and screenshots are kept outside the project tree.

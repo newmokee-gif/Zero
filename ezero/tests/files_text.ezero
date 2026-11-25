@@ -1,0 +1,23 @@
+# Native-only bounded UTF-8 and maximum-size file round trip.
+check :: value [
+ value => when [ 1 => return ]
+ 0 - 1 => return
+]
+arguments() => paths
+go(paths[1]) => ready
+Hello => content
+check(save(данные.txt | content) == 5) => ready
+check(read(данные.txt) == Hello) => ready
+Привет мир => content
+check(save(данные.txt | content) == 19) => ready
+check(read(данные.txt) == content) => ready
+check(search(данные.txt)[1] == данные.txt) => ready
+check(del(данные.txt) == 1) => ready
+x => content
+16 => repeat [ content + content => content ]
+check(size(content) == 65536) => ready
+check(save(maximum | content) == 65536) => ready
+check(read(maximum) == content) => ready
+check(del(maximum) == 1) => ready
+check(size(watch(.)) == 0) => ready
+Text files passed => show

@@ -1,0 +1,52 @@
+# An original bounded page frame. No HTML byte can become a terminal command.
+:load64[@console+2400]+163840 -> @c5.
+0 -> @i. ?? @i < 1296 [ !store8[@c5+4096+@i|32]. @i+1 -> @i. ]
+0 -> @i. ?? @i < 15 [ !store8[@c5+4176+@i*81|10]. @i+1 -> @i. ] !store8[@c5+5391|0].
+0 -> @k.
+?? @k < 6 [
+ "ZERO BROWSER / ORIGINAL ZERO PAGE READER" -> @text. 0 -> @j. 78 -> @c4.
+ ? @k == 1 [ @c5+128 -> @text. 81 -> @j. ? :load64[@c5+8] == 1 [ @c5+384 -> @text. ] ]
+ ? @k == 2 [
+  "HTTP reader | HTML text and links | HTTPS, CSS and scripts unavailable" -> @text. 162 -> @j.
+  ? :load64[@c5+8] == 1 [ "Type an HTTP address, then Enter. Backspace edits. Esc closes." -> @text. ]
+  ? :load64[@c5+8] == 2 [ "Loading page... Esc closes. Network polling continues." -> @text. ]
+  ? :load64[@c5+8] == 4 [ "The page could not be displayed. O opens another address." -> @text. ]
+ ]
+ ? @k == 3 [
+  "-------------------------------------------------------------------------------" -> @text. 243 -> @j.
+  ? :load64[@c5+8] == 3 [ @c5+8256 -> @text. ]
+ ]
+ ? @k == 4 [
+  "" -> @text. 1134 -> @j.
+  ? (:load64[@c5+8] == 3)*(:load64[@c5+8192+24] > 0) [ @c5+8384+(:load64[@c5+32]-1)*512 -> @text. ]
+ ]
+ ? @k == 5 [ "O address  B back  R reload  Up/Down scroll  Space link  Enter follow  Esc close" -> @text. 1215 -> @j. ]
+ 0 -> @i. ?? (@i < @c4)*(:load8[@text+@i] != 0) [
+  :load8[@text+@i] -> @character. ? (@character < 32)+(@character > 126) [ 63 -> @character. ]
+  !store8[@c5+4096+@j+@i|@character]. @i+1 -> @i.
+ ]
+ @k+1 -> @k.
+]
+? :load64[@c5+8] == 1 [
+ :load64[@c5+24] -> @i. ? @i > 77 [ 77 -> @i. ] !store8[@c5+4177+@i|95].
+]
+? :load64[@c5+8] == 3 [
+ :load64[@c5+16] -> @i. :load64[@c5+8208] -> @c4. 4 -> @k. 0 -> @j.
+ ?? (@i < @c4)*(@k < 14) [
+  :load8[@c5+24768+@i] -> @character.
+  ? @character == 10 [ @k+1 -> @k. 0 -> @j. ] ~ [
+   ? @j >= 78 [ @k+1 -> @k. 0 -> @j. ]
+   ? @k < 14 [
+    ? (@character < 32)+(@character > 126) [ 63 -> @character. ]
+    !store8[@c5+4096+@k*81+@j|@character]. @j+1 -> @j.
+   ]
+  ] @i+1 -> @i.
+ ]
+]
+? :load64[@c5+8] == 4 [
+ 0 -> @i. ?? (@i < 127)*(:load8[@c5+640+@i] != 0) [
+  @i -> @j. 4 -> @k. ? @i >= 78 [ @i-78 -> @j. 5 -> @k. ]
+  !store8[@c5+4096+@k*81+@j|:load8[@c5+640+@i]]. @i+1 -> @i.
+ ]
+]
+@c5+4096 -> @message.

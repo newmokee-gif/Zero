@@ -1,0 +1,80 @@
+ZTEXT00100001101cb5883650000000
+Zero OS - shared UEFI console handoff
+
+loader.zero serves AMD64 UEFI; loader32.zero serves IA32 UEFI. Both obtain
+Graphics Output Protocol while boot services are available, copy validated
+metadata, finish all mode selection/QueryMode buffer releases before the
+final memory-map/exit loop, and enter the same kernel source compiled for
+their architecture. The kernel renders its own glyphs after firmware services
+end. It does not call GOP methods or firmware console routines after entry.
+
+Shared handoff fields (all u64, byte offsets)
+0       memory-map byte size
+8       memory-descriptor stride
+16      memory-map pointer
+24      allocated kernel-code pages
+32      memory-map key
+40      memory-descriptor version
+48      display kind: 0 serial only, 1 VGA text, 2 GOP framebuffer
+56      framebuffer address
+64      visible pixel width
+72      visible pixel height
+80      pixels per scan line
+88      pixel format: 0 RGB-reserved, 1 BGR-reserved; four bytes per pixel
+96      boot kind: 1 BIOS, 2 UEFI
+104     execution architecture: 32 or 64
+112     owned kernel stack-pool base
+120     stack-pool size in bytes
+128     native compiler bundle base
+136     native compiler bundle bytes (1048576)
+144     native compiler workspace base
+152     native compiler workspace bytes (8388608)
+
+Both UEFI loaders clear the complete 256-byte header. This preserves zero
+upper halves when IA32 firmware writes a 32-bit UINTN result, or either
+firmware writes the 32-bit descriptor-version field. BIOS supplies the same
+display/boot/architecture layout. UEFI always writes boot kind 2; each loader
+writes its own architecture. IA32 ABI differences are documented in UEFI32.ztext.
+Each UEFI loader allocates 256 pages (1 MiB) for the pool, enters the main
+kernel at its upper end and supplies the full base/size. The kernel places
+two 81920-byte child stacks in its lower part for cooperative workers.
+
+GOP policy
+A valid active1920x1080 RGB/BGR mode is preserved. Otherwise up to256 modes
+are queried for FullHD. Compatible candidates have widths640..1920 and
+heights400..1080. Lower-mode fallback preference is800x600, then640x480,
+then the first other compatible candidate. The scan continues after finding
+FullHD so a fallback remains available if the preferred SetMode fails.
+FullHD requires at least8294400 framebuffer bytes at a1920-pixel stride.
+If setting the preferred mode fails, the remembered fallback is attempted;
+the firmware's actual current mode is then validated before use.
+Every allocated QueryMode Info buffer is released, even for an unsuitable
+mode; a FreePool failure stops additional queries.
+
+After SetMode is attempted, the actual current mode is read again and
+validated. Stale queried pointers never become the kernel framebuffer.
+The fallback current mode may be up to 8192 by 8192 pixels, with stride at
+most 16384 pixels, provided width >= 640 and height >= 400. Stride must cover
+the visible width, framebuffer size must cover stride*height*4, and address
+arithmetic must not wrap. Bit-mask and BltOnly formats are unsupported.
+For IA32, the entire claimed framebuffer range must also fit below or end
+at the 4 GiB boundary. A high address is never silently truncated.
+A missing/unsupported GOP leaves display kind 0 for serial use.
+
+COM1 and exit discipline
+COM1 is optional and mirrors loader diagnostics when present. Absence or
+transmit timeout disables serial diagnostics instead of halting a valid boot.
+File paths and firmware operations do not depend on serial availability.
+Actual boot errors still stop. After the first ExitBootServices attempt,
+only GetMemoryMap and ExitBootServices use firmware; failure diagnostics use
+direct UART operations, not firmware console/protocol methods.
+
+Historical 0.4.0 verification
+Focused AMD64 OVMF loader probes validated framebuffer metadata/writes with
+COM1 present and absent, plus a serial-only headless fallback. An actual
+IA32 OVMF boot completed file loading, ExitBootServices, shared-kernel entry,
+GOP display, PS/2 input and disk I/O. Final 0.4.0 ISO integration exercised
+both UEFI architectures alongside both BIOS paths and shared-disk persistence.
+See verification.ztext for exact release artifacts and captured evidence.
+Native VirtualBox execution and physical hardware remain separate unverified
+targets; VirtualBox firmware under QEMU is not a native VM test.

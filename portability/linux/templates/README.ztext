@@ -1,0 +1,93 @@
+ZTEXT001000012ab6dbeb8230000000
+Current original Zero workflow (0.12)
+
+Use the native tools on Linux or their .exe versions on Windows:
+  zero-integrate PROJECT_DIRECTORY NEW_KERNEL.zero
+  zero-build PROJECT_DIRECTORY NEW_OUTPUT_DIRECTORY NEW_KERNEL.zero
+  zero-check PROJECT_DIRECTORY NEW_TEST_DIRECTORY
+All destination paths must be new. The integrator preserves authored sources;
+the builder checks its compiler fixed point and builds the original targets;
+the verifier checks language behavior and host file operations in process.
+See tools/integrate.ztext, tools/build.ztext and checks/README.ztext.
+Read these documents with zero-text read FILE.
+
+The notes below preserve earlier implementation and test history. Any old
+shell/Python runner names, generated artifacts, JSON reports or commands are
+historical references: they were removed from the active project and are not
+current runnable instructions or current-release validation. Native host
+checks do not replace BIOS/UEFI, persistence or physical-hardware testing.
+
+Historical implementation notes
+
+Zero and Ezero compiler toolkit for Linux x86-64
+
+This portable package contains both original compilers, their source, Ezero's
+original runtime, examples and user-level launchers. The native executables
+use Linux x86-64 system calls directly. They have no dynamic loader, libc,
+Python, GCC, LLVM or separately installed language-runtime dependency.
+Shell launchers/build scripts require Bash and ordinary GNU core utilities.
+These are host orchestration; language parsing/execution is implemented in Zero.
+
+Extract anywhere, including a directory whose path contains spaces:
+    tar -xzf zero-ezero-linux-x86_64.tar.gz
+    cd zero-ezero-linux-x86_64
+    ./bin/ezero run share/ezero/examples/banana.ezero
+    ./bin/zero run share/ezero/examples/hello.zero
+
+Keep a compiled application and generated Zero source:
+    ./bin/ezero build share/ezero/examples/banana.ezero banana --emit-zero banana.zero
+    ./banana
+    ./bin/zero build banana.zero another-banana
+
+Generate only the Zero source:
+    ./bin/ezero emit-zero share/ezero/examples/banana.ezero banana.zero
+
+The original Zero stdin/stdout compiler interface remains available:
+    ./bin/zero --host < program.zero > program
+    chmod +x program
+    ./program
+Zero's raw/firmware target switches are also passed through unchanged.
+The high-level build/run conveniences target hosted Linux x86-64.
+
+Optional user-level installation, with no administrator privileges:
+    bash install.sh
+This copies the toolkit to $HOME/.local/share/zero-ezero and installs zero and
+ezero launchers in $HOME/.local/bin. Put that bin directory in your PATH.
+For a separate prefix:
+    bash install.sh --prefix /absolute/path/to/my-tools
+Existing destinations are refused, never silently replaced. The unpacked
+package remains usable without installation. Installed symlinks are relative
+to the selected prefix, and launchers locate their data independently of cwd.
+
+Reproduce all three native compiler/tool binaries with our supplied compiler:
+    mkdir rebuilt
+    bash rebuild.sh rebuilt
+This recompiles Zero twice, checks byte-identical self-reproduction, compiles
+Ezero's frontend and package writer, and compares all three shipped binaries.
+No external compiler or assembler is used.
+
+Run portable-package verification:
+    bash tests/smoke.sh
+It exercises all public examples, both languages, emitted source, paths with
+spaces, failed-build preservation, source rebuilds and user-prefix installation.
+Tests use temporary directories and do not access the OS disk images.
+BUILD-INPUTS.sha256 identifies the project source snapshot used for this bundle.
+SHA256SUMS checks the complete package; it is not a cryptographic signature.
+
+Compatibility
+The target ABI is Linux x86-64, including Debian and Arch Linux. No
+distribution-specific package manager or shared-library version is required.
+The actual distribution test matrix is recorded in the accompanying release
+verification report; compatibility should not be confused with an unperformed
+distribution boot/test. Non-x86-64 CPUs and non-Linux kernels are not targets
+of this archive. At least 8 MiB of process stack must be available; generated
+host programs reserve a 4 MiB arena on their stack.
+
+Language and execution boundaries
+Ezero text normally needs no quotes. UTF-8 phrases retain numeric and text
+parts, and collection indices begin at 1. See share/ezero/LANGUAGE.ztext.
+Generated Ezero applications embed our own bounded instruction interpreter
+and garbage collector. They are standalone binaries, not direct native
+lowering of each Ezero expression. Current library features and limits are
+documented alongside the source. This Linux package makes no claim about
+guest Zero OS or native Windows execution; those are separate integrations.

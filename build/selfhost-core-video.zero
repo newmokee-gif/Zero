@@ -1,0 +1,1177 @@
+0 => @memory.
+0 => @source.
+0 => @tokens.
+0 => @output.
+0 => @stack.
+0 => @symbols.
+0 => @templates.
+0 => @decoded.
+0 => @scratch.
+0 => @meta.
+0 => @names.
+0 => @flags.
+0 => @mode.
+0 => @arch.
+0 => @limit.
+0 => @p.
+0 => @n.
+0 => @c.
+0 => @d.
+0 => @v.
+0 => @base.
+0 => @x.
+0 => @y.
+0 => @z.
+0 => @k.
+0 => @j.
+0 => @i.
+0 => @ti.
+0 => @tt.
+0 => @tv.
+0 => @op.
+0 => @a.
+0 => @b.
+0 => @sp.
+0 => @vars.
+0 => @ed.
+0 => @bd.
+0 => @out.
+0 => @fail.
+0 => @done.
+0 => @e0.
+0 => @e1.
+0 => @e2.
+0 => @e3.
+0 => @suffix.
+0 => @width.
+0 => @imm.
+0 => @tail.
+0 => @next.
+0 => @na.
+0 => @nb.
+0 => @name.
+0 => @nlen.
+0 => @count.
+0 => @len.
+0 => @str.
+0 => @emit.
+0 => @id.
+0 => @idx.
+:reserve[0] -> @memory.
+:load64[@memory + 1049088] -> @n.
+? @n > 2 [ !exit[1]. ]
+? @n == 2 [
+ :load64[@memory + 1049104] -> @str.
+ "--host|--raw|--efi|--raw32|--efi32|--real|" -> @flags.
+ 0 -> @p. 1 -> @k.
+ ?? @k < 7 [
+  0 -> @j. 1 -> @x.
+  ?? :load8[@flags + @p + @j] != 124 [
+   ? @x == 1 [ ? :load8[@flags + @p + @j] != :load8[@str + @j] [ 0 -> @x. ] ]
+   @j + 1 -> @j.
+  ]
+  ? @x == 1 [ ? :load8[@str + @j] != 0 [ 0 -> @x. ] ]
+  ? @x == 1 [ @k -> @mode. ]
+  @p + @j + 1 -> @p. @k + 1 -> @k.
+ ]
+ ? @mode == 0 [ !exit[1]. ]
+]
+:reserve[1040000] -> @memory.
+@memory -> @source.
+@memory + 65552 -> @tokens.
+@memory + 852016 -> @output.
+@memory + 983104 -> @stack.
+@memory + 1015872 -> @symbols.
+@memory + 1017920 -> @templates.
+@memory + 1024064 -> @decoded.
+@memory + 1032256 -> @scratch.
+@memory + 1037000 -> @meta.
+"put exit store8 store16 store32 store64 out8 out16 halt disable load8 load16 load32 load64 in8 in16 reserve arg0 arg1 call enter read write call7 enable bios biosreset bioscheck biosmode biosput cpuid lgdt cr0 cr3 cr4 rdmsr wrmsr longjump protectedjump var if else while fork switch vbe far16 " -> @names.
+? @mode > 3 [ 1 -> @arch. ]
+? @mode == 6 [ 2 -> @arch. ]
+131072 -> @limit.
+? @arch == 2 [ 16384 -> @limit. ]
+0 -> @i.
+?? @i < 6144 [
+ !store64[@templates + @i | 0].
+ @i + 8 -> @i.
+]
+!store64[@meta + 0 | 43]. !store64[@meta + 8 | 1]. !store64[@meta + 16 | 1].
+!store64[@meta + 24 | 44]. !store64[@meta + 32 | 1]. !store64[@meta + 40 | 1].
+!store64[@meta + 48 | 26]. !store64[@meta + 56 | 2]. !store64[@meta + 64 | 1].
+!store64[@meta + 72 | 27]. !store64[@meta + 80 | 2]. !store64[@meta + 88 | 1].
+!store64[@meta + 96 | 28]. !store64[@meta + 104 | 2]. !store64[@meta + 112 | 1].
+!store64[@meta + 120 | 29]. !store64[@meta + 128 | 2]. !store64[@meta + 136 | 1].
+!store64[@meta + 144 | 32]. !store64[@meta + 152 | 2]. !store64[@meta + 160 | 1].
+!store64[@meta + 168 | 33]. !store64[@meta + 176 | 2]. !store64[@meta + 184 | 1].
+!store64[@meta + 192 | 40]. !store64[@meta + 200 | 0]. !store64[@meta + 208 | 1].
+!store64[@meta + 216 | 39]. !store64[@meta + 224 | 0]. !store64[@meta + 232 | 1].
+!store64[@meta + 240 | 22]. !store64[@meta + 248 | 1]. !store64[@meta + 256 | 0].
+!store64[@meta + 264 | 23]. !store64[@meta + 272 | 1]. !store64[@meta + 280 | 0].
+!store64[@meta + 288 | 24]. !store64[@meta + 296 | 1]. !store64[@meta + 304 | 0].
+!store64[@meta + 312 | 25]. !store64[@meta + 320 | 1]. !store64[@meta + 328 | 0].
+!store64[@meta + 336 | 30]. !store64[@meta + 344 | 1]. !store64[@meta + 352 | 0].
+!store64[@meta + 360 | 31]. !store64[@meta + 368 | 1]. !store64[@meta + 376 | 0].
+!store64[@meta + 384 | 34]. !store64[@meta + 392 | 1]. !store64[@meta + 400 | 0].
+!store64[@meta + 408 | 35]. !store64[@meta + 416 | 0]. !store64[@meta + 424 | 0].
+!store64[@meta + 432 | 36]. !store64[@meta + 440 | 0]. !store64[@meta + 448 | 0].
+!store64[@meta + 456 | 37]. !store64[@meta + 464 | 6]. !store64[@meta + 472 | 0].
+!store64[@meta + 480 | 38]. !store64[@meta + 488 | 3]. !store64[@meta + 496 | 1].
+!store64[@meta + 504 | 41]. !store64[@meta + 512 | 2]. !store64[@meta + 520 | 0].
+!store64[@meta + 528 | 42]. !store64[@meta + 536 | 2]. !store64[@meta + 544 | 0].
+!store64[@meta + 552 | 51]. !store64[@meta + 560 | 8]. !store64[@meta + 568 | 0].
+!store64[@meta + 576 | 53]. !store64[@meta + 584 | 0]. !store64[@meta + 592 | 1].
+!store64[@meta + 600 | 54]. !store64[@meta + 608 | 2]. !store64[@meta + 616 | 0].
+!store64[@meta + 624 | 55]. !store64[@meta + 632 | 1]. !store64[@meta + 640 | 0].
+!store64[@meta + 648 | 56]. !store64[@meta + 656 | 1]. !store64[@meta + 664 | 0].
+!store64[@meta + 672 | 57]. !store64[@meta + 680 | 1]. !store64[@meta + 688 | 1].
+!store64[@meta + 696 | 58]. !store64[@meta + 704 | 1]. !store64[@meta + 712 | 1].
+!store64[@meta + 720 | 59]. !store64[@meta + 728 | 2]. !store64[@meta + 736 | 0].
+!store64[@meta + 744 | 60]. !store64[@meta + 752 | 1]. !store64[@meta + 760 | 1].
+!store64[@meta + 768 | 61]. !store64[@meta + 776 | 1]. !store64[@meta + 784 | 1].
+!store64[@meta + 792 | 62]. !store64[@meta + 800 | 1]. !store64[@meta + 808 | 1].
+!store64[@meta + 816 | 63]. !store64[@meta + 824 | 1]. !store64[@meta + 832 | 1].
+!store64[@meta + 840 | 64]. !store64[@meta + 848 | 1]. !store64[@meta + 856 | 0].
+!store64[@meta + 864 | 65]. !store64[@meta + 872 | 3]. !store64[@meta + 880 | 1].
+!store64[@meta + 888 | 66]. !store64[@meta + 896 | 4]. !store64[@meta + 904 | 1].
+!store64[@meta + 912 | 69]. !store64[@meta + 920 | 4]. !store64[@meta + 928 | 1].
+!store64[@meta + 1032 | 71]. !store64[@meta + 1040 | 3]. !store64[@meta + 1048 | 0].
+!store64[@meta + 1056 | 72]. !store64[@meta + 1064 | 2]. !store64[@meta + 1072 | 1].
+!store64[@meta + 1080 | 73]. !store64[@meta + 1088 | 4]. !store64[@meta + 1096 | 0].
+!store64[@meta + 1104 | 74]. !store64[@meta + 1112 | 2]. !store64[@meta + 1120 | 0].
+# X64 instruction encodings from our existing Zero backend.
+# @templates points to a zeroed bank of 128 entries,16 bytes each.
+# Each entry contains a pointer to ASCII hexadecimal and its decoded byte count.
+# IDs are shared by name with other target banks; 70 is the hosted1MiB prologue.
+# 0: prologue (38 bytes)
+!store64[@templates + 0 | "4883e4f04889e54881ec000200004889e731c0b940000000fcf348ab4881ec000001004989e5"].
+!store64[@templates + 8 | 38].
+# 1: entry_arguments (6 bytes)
+!store64[@templates + 16 | "4989ce4989d7"].
+!store64[@templates + 24 | 6].
+# 2: immediate (2 bytes)
+!store64[@templates + 32 | "48b8"].
+!store64[@templates + 40 | 2].
+# 3: load_local (3 bytes)
+!store64[@templates + 48 | "488b85"].
+!store64[@templates + 56 | 3].
+# 4: store_local (3 bytes)
+!store64[@templates + 64 | "488985"].
+!store64[@templates + 72 | 3].
+# 5: push_rax (1 bytes)
+!store64[@templates + 80 | "50"].
+!store64[@templates + 88 | 1].
+# 6: pop_rcx (1 bytes)
+!store64[@templates + 96 | "59"].
+!store64[@templates + 104 | 1].
+# 7: add_code (3 bytes)
+!store64[@templates + 112 | "4801c8"].
+!store64[@templates + 120 | 3].
+# 8: sub_code (6 bytes)
+!store64[@templates + 128 | "4829c14889c8"].
+!store64[@templates + 136 | 6].
+# 9: mul_code (4 bytes)
+!store64[@templates + 144 | "480fafc1"].
+!store64[@templates + 152 | 4].
+# 10: neg_code (3 bytes)
+!store64[@templates + 160 | "48f7d8"].
+!store64[@templates + 168 | 3].
+# 11: compare_code (3 bytes)
+!store64[@templates + 176 | "4839c1"].
+!store64[@templates + 184 | 3].
+# 12: set_eq (3 bytes)
+!store64[@templates + 192 | "0f94c0"].
+!store64[@templates + 200 | 3].
+# 13: set_ne (3 bytes)
+!store64[@templates + 208 | "0f95c0"].
+!store64[@templates + 216 | 3].
+# 14: set_lt (3 bytes)
+!store64[@templates + 224 | "0f92c0"].
+!store64[@templates + 232 | 3].
+# 15: set_gt (3 bytes)
+!store64[@templates + 240 | "0f97c0"].
+!store64[@templates + 248 | 3].
+# 16: set_le (3 bytes)
+!store64[@templates + 256 | "0f96c0"].
+!store64[@templates + 264 | 3].
+# 17: set_ge (3 bytes)
+!store64[@templates + 272 | "0f93c0"].
+!store64[@templates + 280 | 3].
+# 18: normalize (3 bytes)
+!store64[@templates + 288 | "0fb6c0"].
+!store64[@templates + 296 | 3].
+# 19: test_jump (5 bytes)
+!store64[@templates + 304 | "4885c00f84"].
+!store64[@templates + 312 | 5].
+# 20: jump_code (1 bytes)
+!store64[@templates + 320 | "e9"].
+!store64[@templates + 328 | 1].
+# 21: string_address (3 bytes)
+!store64[@templates + 336 | "488d05"].
+!store64[@templates + 344 | 3].
+# 22: load8_code (3 bytes)
+!store64[@templates + 352 | "0fb600"].
+!store64[@templates + 360 | 3].
+# 23: load16_code (3 bytes)
+!store64[@templates + 368 | "0fb700"].
+!store64[@templates + 376 | 3].
+# 24: load32_code (2 bytes)
+!store64[@templates + 384 | "8b00"].
+!store64[@templates + 392 | 2].
+# 25: load64_code (3 bytes)
+!store64[@templates + 400 | "488b00"].
+!store64[@templates + 408 | 3].
+# 26: store8_code (2 bytes)
+!store64[@templates + 416 | "8801"].
+!store64[@templates + 424 | 2].
+# 27: store16_code (3 bytes)
+!store64[@templates + 432 | "668901"].
+!store64[@templates + 440 | 3].
+# 28: store32_code (2 bytes)
+!store64[@templates + 448 | "8901"].
+!store64[@templates + 456 | 2].
+# 29: store64_code (3 bytes)
+!store64[@templates + 464 | "488901"].
+!store64[@templates + 472 | 3].
+# 30: in8_code (5 bytes)
+!store64[@templates + 480 | "89c231c0ec"].
+!store64[@templates + 488 | 5].
+# 31: in16_code (6 bytes)
+!store64[@templates + 496 | "89c231c066ed"].
+!store64[@templates + 504 | 6].
+# 32: out8_code (3 bytes)
+!store64[@templates + 512 | "89caee"].
+!store64[@templates + 520 | 3].
+# 33: out16_code (4 bytes)
+!store64[@templates + 528 | "89ca66ef"].
+!store64[@templates + 536 | 4].
+# 34: reserve_code (40 bytes)
+!store64[@templates + 544 | "4883c00f72204883e0f04c89ea4801c27214488d8d00feffff4839ca77084c89e84989d5eb020f0b"].
+!store64[@templates + 552 | 40].
+# 35: argument0_code (3 bytes)
+!store64[@templates + 560 | "4c89f0"].
+!store64[@templates + 568 | 3].
+# 36: argument1_code (3 bytes)
+!store64[@templates + 576 | "4c89f8"].
+!store64[@templates + 584 | 3].
+# 37: foreign_call (30 bytes)
+!store64[@templates + 592 | "415a415941585a59584989e44883e4f04883ec304c89542420ffd04c89e4"].
+!store64[@templates + 600 | 30].
+# 38: enter_code (13 bytes)
+!store64[@templates + 608 | "5a5958fa4889d44883e4f0ffe0"].
+!store64[@templates + 616 | 13].
+# 39: disable_code (1 bytes)
+!store64[@templates + 624 | "fa"].
+!store64[@templates + 632 | 1].
+# 40: halt_code (4 bytes)
+!store64[@templates + 640 | "faf4ebfc"].
+!store64[@templates + 648 | 4].
+# 41: host_read_code (12 bytes)
+!store64[@templates + 656 | "4889c24889ce31ff31c00f05"].
+!store64[@templates + 664 | 12].
+# 42: host_write_code (18 bytes)
+!store64[@templates + 672 | "4889c24889cebf01000000b8010000000f05"].
+!store64[@templates + 680 | 18].
+# 43: put_code (49 bytes)
+!store64[@templates + 688 | "50b801000000bf010000004889e6ba010000000f054883f8fc74e64883f801740cb83c000000bf4a0000000f054883c408"].
+!store64[@templates + 696 | 49].
+# 44: exit_code (10 bytes)
+!store64[@templates + 704 | "4889c7b83c0000000f05"].
+!store64[@templates + 712 | 10].
+# 45: default_exit (9 bytes)
+!store64[@templates + 720 | "31ffb83c0000000f05"].
+!store64[@templates + 728 | 9].
+# 46: elf_header (120 bytes)
+!store64[@templates + 736 | "7f454c4602010100000000000000000002003e0001000000780040000000000040000000000000000000000000000000000000004000380001000000000000000100000005000000000000000000000000004000000000000000400000000000000000000000000000000000000000000010000000000000"].
+!store64[@templates + 744 | 120].
+# 47: pe_header (512 bytes)
+!store64[@templates + 752 | "4d5a00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000400000005045000064860200000000000000000000000000f00022000b020100000000000002000000000000001000000010000000001000000000000010000000020000000000000000000000000000000000000000000000020000000000000a0000000000040000000000000004000000000000000100000000000010000000000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002e7465787400000000000000001000000000000000020000000000000000000000000000200000602e72656c6f6300000c000000000000000002000000000000000000000000000000000000400000420000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"].
+!store64[@templates + 760 | 512].
+# 70: host_prologue (38 bytes)
+!store64[@templates + 1120 | "4883e4f04889e54881ec000200004889e731c0b940000000fcf348ab4881ec000010004989e5"].
+!store64[@templates + 1128 | 38].
+
+
+@templates + 2048 -> @templates.
+# IA32 u64 instruction encodings from our existing Zero backend.
+# @templates points to a zeroed bank of 128 entries, 16 bytes each.
+# Each entry contains an ASCII hexadecimal pointer and decoded byte count.
+# IDs are shared with x64; absent slots stay zero and are unavailable.
+# 0: prologue (50 bytes)
+!store64[@templates + 0 | "8b4424048b54240883e4f083ec108904248954240489e581ec0002000089e731c0b980000000fcf3ab81ec00000100896508"].
+!store64[@templates + 8 | 50].
+# 1: entry_arguments (0 bytes)
+!store64[@templates + 16 | ""].
+!store64[@templates + 24 | 0].
+# 2: immediate (1 bytes)
+!store64[@templates + 32 | "b8"].
+!store64[@templates + 40 | 1].
+# 3: load_local (2 bytes)
+!store64[@templates + 48 | "8dbd"].
+!store64[@templates + 56 | 2].
+# 4: store_local (2 bytes)
+!store64[@templates + 64 | "8dbd"].
+!store64[@templates + 72 | 2].
+# 5: push_rax (2 bytes)
+!store64[@templates + 80 | "5250"].
+!store64[@templates + 88 | 2].
+# 6: pop_rcx (2 bytes)
+!store64[@templates + 96 | "595b"].
+!store64[@templates + 104 | 2].
+# 7: add_code (4 bytes)
+!store64[@templates + 112 | "01c811da"].
+!store64[@templates + 120 | 4].
+# 8: sub_code (8 bytes)
+!store64[@templates + 128 | "29c119d389c889da"].
+!store64[@templates + 136 | 8].
+# 9: mul_code (16 bytes)
+!store64[@templates + 144 | "89d60faff189df0faff801fef7e101f2"].
+!store64[@templates + 152 | 16].
+# 10: neg_code (7 bytes)
+!store64[@templates + 160 | "f7daf7d883da00"].
+!store64[@templates + 168 | 7].
+# 11: compare_code (6 bytes)
+!store64[@templates + 176 | "39d3750239c1"].
+!store64[@templates + 184 | 6].
+# 12: set_eq (3 bytes)
+!store64[@templates + 192 | "0f94c0"].
+!store64[@templates + 200 | 3].
+# 13: set_ne (3 bytes)
+!store64[@templates + 208 | "0f95c0"].
+!store64[@templates + 216 | 3].
+# 14: set_lt (3 bytes)
+!store64[@templates + 224 | "0f92c0"].
+!store64[@templates + 232 | 3].
+# 15: set_gt (3 bytes)
+!store64[@templates + 240 | "0f97c0"].
+!store64[@templates + 248 | 3].
+# 16: set_le (3 bytes)
+!store64[@templates + 256 | "0f96c0"].
+!store64[@templates + 264 | 3].
+# 17: set_ge (3 bytes)
+!store64[@templates + 272 | "0f93c0"].
+!store64[@templates + 280 | 3].
+# 18: normalize (5 bytes)
+!store64[@templates + 288 | "0fb6c031d2"].
+!store64[@templates + 296 | 5].
+# 19: test_jump (6 bytes)
+!store64[@templates + 304 | "89c109d10f84"].
+!store64[@templates + 312 | 6].
+# 20: jump_code (1 bytes)
+!store64[@templates + 320 | "e9"].
+!store64[@templates + 328 | 1].
+# 21: string_address (9 bytes)
+!store64[@templates + 336 | "31d2e8000000005805"].
+!store64[@templates + 344 | 9].
+# 22: load8_code (11 bytes)
+!store64[@templates + 352 | "85d274020f0b0fb60031d2"].
+!store64[@templates + 360 | 11].
+# 23: load16_code (11 bytes)
+!store64[@templates + 368 | "85d274020f0b0fb70031d2"].
+!store64[@templates + 376 | 11].
+# 24: load32_code (10 bytes)
+!store64[@templates + 384 | "85d274020f0b8b0031d2"].
+!store64[@templates + 392 | 10].
+# 25: load64_code (13 bytes)
+!store64[@templates + 400 | "85d274020f0b89c18b018b5104"].
+!store64[@templates + 408 | 13].
+# 26: store8_code (8 bytes)
+!store64[@templates + 416 | "85db74020f0b8801"].
+!store64[@templates + 424 | 8].
+# 27: store16_code (9 bytes)
+!store64[@templates + 432 | "85db74020f0b668901"].
+!store64[@templates + 440 | 9].
+# 28: store32_code (8 bytes)
+!store64[@templates + 448 | "85db74020f0b8901"].
+!store64[@templates + 456 | 8].
+# 29: store64_code (11 bytes)
+!store64[@templates + 464 | "85db74020f0b8901895104"].
+!store64[@templates + 472 | 11].
+# 30: in8_code (7 bytes)
+!store64[@templates + 480 | "89c231c0ec31d2"].
+!store64[@templates + 488 | 7].
+# 31: in16_code (8 bytes)
+!store64[@templates + 496 | "89c231c066ed31d2"].
+!store64[@templates + 504 | 8].
+# 32: out8_code (3 bytes)
+!store64[@templates + 512 | "89caee"].
+!store64[@templates + 520 | 3].
+# 33: out16_code (4 bytes)
+!store64[@templates + 528 | "89ca66ef"].
+!store64[@templates + 536 | 4].
+# 34: reserve_code (42 bytes)
+!store64[@templates + 544 | "85d2752483c00f721f83e0f08b7d0889f901c172138d9d00feffff39d9770989f8894d0831d2eb020f0b"].
+!store64[@templates + 552 | 42].
+# 35: argument0_code (5 bytes)
+!store64[@templates + 560 | "8b450031d2"].
+!store64[@templates + 568 | 5].
+# 36: argument1_code (5 bytes)
+!store64[@templates + 576 | "8b450431d2"].
+!store64[@templates + 584 | 5].
+# 37: foreign_call (61 bytes)
+!store64[@templates + 592 | "89e6837e2c0074020f0b8b5e2883e4f083ec208b46208904248b4618894424048b4610894424088b46088944240c8b0689442410ffd389f483c43031d2"].
+!store64[@templates + 600 | 61].
+# 38: enter_code (51 bytes)
+!store64[@templates + 608 | "595a85d2752b5b5a85d27525585a85d2751fe8000000005f81c716000000fa89cc83e4f083ec086a005357ffe0faf4ebfc0f0b"].
+!store64[@templates + 616 | 51].
+# 39: disable_code (1 bytes)
+!store64[@templates + 624 | "fa"].
+!store64[@templates + 632 | 1].
+# 40: halt_code (4 bytes)
+!store64[@templates + 640 | "faf4ebfc"].
+!store64[@templates + 648 | 4].
+# 41: host_read_code (2 bytes)
+!store64[@templates + 656 | "0f0b"].
+!store64[@templates + 664 | 2].
+# 42: host_write_code (2 bytes)
+!store64[@templates + 672 | "0f0b"].
+!store64[@templates + 680 | 2].
+# 43: put_code (2 bytes)
+!store64[@templates + 688 | "0f0b"].
+!store64[@templates + 696 | 2].
+# 44: exit_code (2 bytes)
+!store64[@templates + 704 | "0f0b"].
+!store64[@templates + 712 | 2].
+# 45: default_exit (2 bytes)
+!store64[@templates + 720 | "0f0b"].
+!store64[@templates + 728 | 2].
+# 46: elf_header (120 bytes)
+!store64[@templates + 736 | "7f454c4602010100000000000000000002003e0001000000780040000000000040000000000000000000000000000000000000004000380001000000000000000100000005000000000000000000000000004000000000000000400000000000000000000000000000000000000000000010000000000000"].
+!store64[@templates + 744 | 120].
+# 47: pe_header (512 bytes)
+!store64[@templates + 752 | "4d5a0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000040000000504500004c010200000000000000000000000000e00022010b010100000000000002000000000000001000000010000000000000000010000010000000020000000000000000000000000000000000000000000000020000000000000a00000000000400000004000000010000100000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002e7465787400000000000000001000000000000000020000000000000000000000000000200000602e72656c6f6300000c00000000000000000200000000000000000000000000000000000040000042000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"].
+!store64[@templates + 760 | 512].
+# 48: immediate_high (1 bytes)
+!store64[@templates + 768 | "ba"].
+!store64[@templates + 776 | 1].
+# 49: load_local_value (5 bytes)
+!store64[@templates + 784 | "8b078b5704"].
+!store64[@templates + 792 | 5].
+# 50: store_local_value (5 bytes)
+!store64[@templates + 800 | "8907895704"].
+!store64[@templates + 808 | 5].
+# 51: foreign_call7 (75 bytes)
+!store64[@templates + 816 | "89e6837e3c0074020f0b8b5e3883e4f083ec208b46308904248b4628894424048b4620894424088b46188944240c8b4610894424108b4608894424148b0689442418ffd389f483c44031d2"].
+!store64[@templates + 824 | 75].
+
+
+@templates + 2048 -> @templates.
+# Real-mode u32 instruction encodings from our existing Zero backend.
+# @templates points to a zeroed bank of 128 entries, 16 bytes each.
+# Each entry contains an ASCII hexadecimal pointer and decoded byte count.
+# IDs are shared with x64; absent slots stay zero and are unavailable.
+# 0: prologue (58 bytes)
+!store64[@templates + 0 | "fa6631c08ed88ec08ed066bc007c000066bd00700000fc660fb6c266a3006e66c706046e0040000066bf006f00006631c066b94000000066f3ab"].
+!store64[@templates + 8 | 58].
+# 2: immediate (2 bytes)
+!store64[@templates + 32 | "66b8"].
+!store64[@templates + 40 | 2].
+# 3: load_local (4 bytes)
+!store64[@templates + 48 | "67668b85"].
+!store64[@templates + 56 | 4].
+# 4: store_local (4 bytes)
+!store64[@templates + 64 | "67668985"].
+!store64[@templates + 72 | 4].
+# 5: push_rax (2 bytes)
+!store64[@templates + 80 | "6650"].
+!store64[@templates + 88 | 2].
+# 6: pop_rcx (2 bytes)
+!store64[@templates + 96 | "6659"].
+!store64[@templates + 104 | 2].
+# 7: add_code (3 bytes)
+!store64[@templates + 112 | "6601c8"].
+!store64[@templates + 120 | 3].
+# 8: sub_code (6 bytes)
+!store64[@templates + 128 | "6629c16689c8"].
+!store64[@templates + 136 | 6].
+# 9: mul_code (4 bytes)
+!store64[@templates + 144 | "660fafc1"].
+!store64[@templates + 152 | 4].
+# 10: neg_code (3 bytes)
+!store64[@templates + 160 | "66f7d8"].
+!store64[@templates + 168 | 3].
+# 11: compare_code (3 bytes)
+!store64[@templates + 176 | "6639c1"].
+!store64[@templates + 184 | 3].
+# 12: set_eq (3 bytes)
+!store64[@templates + 192 | "0f94c0"].
+!store64[@templates + 200 | 3].
+# 13: set_ne (3 bytes)
+!store64[@templates + 208 | "0f95c0"].
+!store64[@templates + 216 | 3].
+# 14: set_lt (3 bytes)
+!store64[@templates + 224 | "0f92c0"].
+!store64[@templates + 232 | 3].
+# 15: set_gt (3 bytes)
+!store64[@templates + 240 | "0f97c0"].
+!store64[@templates + 248 | 3].
+# 16: set_le (3 bytes)
+!store64[@templates + 256 | "0f96c0"].
+!store64[@templates + 264 | 3].
+# 17: set_ge (3 bytes)
+!store64[@templates + 272 | "0f93c0"].
+!store64[@templates + 280 | 3].
+# 18: normalize (4 bytes)
+!store64[@templates + 288 | "660fb6c0"].
+!store64[@templates + 296 | 4].
+# 19: test_jump (6 bytes)
+!store64[@templates + 304 | "6685c0660f84"].
+!store64[@templates + 312 | 6].
+# 20: jump_code (2 bytes)
+!store64[@templates + 320 | "66e9"].
+!store64[@templates + 328 | 2].
+# 22: load8_code (5 bytes)
+!store64[@templates + 352 | "67660fb600"].
+!store64[@templates + 360 | 5].
+# 23: load16_code (5 bytes)
+!store64[@templates + 368 | "67660fb700"].
+!store64[@templates + 376 | 5].
+# 24: load32_code (4 bytes)
+!store64[@templates + 384 | "67668b00"].
+!store64[@templates + 392 | 4].
+# 26: store8_code (3 bytes)
+!store64[@templates + 416 | "678801"].
+!store64[@templates + 424 | 3].
+# 27: store16_code (3 bytes)
+!store64[@templates + 432 | "678901"].
+!store64[@templates + 440 | 3].
+# 28: store32_code (4 bytes)
+!store64[@templates + 448 | "67668901"].
+!store64[@templates + 456 | 4].
+# 30: in8_code (7 bytes)
+!store64[@templates + 480 | "6689c26631c0ec"].
+!store64[@templates + 488 | 7].
+# 31: in16_code (7 bytes)
+!store64[@templates + 496 | "6689c26631c0ed"].
+!store64[@templates + 504 | 7].
+# 32: out8_code (4 bytes)
+!store64[@templates + 512 | "6689caee"].
+!store64[@templates + 520 | 4].
+# 33: out16_code (4 bytes)
+!store64[@templates + 528 | "6689caef"].
+!store64[@templates + 536 | 4].
+# 34: reserve_code (44 bytes)
+!store64[@templates + 544 | "6683c00f72246683e0f0668b16046e6689d16601c272136681fa00600000770a6689c8668916046eeb020f0b"].
+!store64[@templates + 552 | 44].
+# 35: argument0_code (4 bytes)
+!store64[@templates + 560 | "66a1006e"].
+!store64[@templates + 568 | 4].
+# 39: disable_code (1 bytes)
+!store64[@templates + 624 | "fa"].
+!store64[@templates + 632 | 1].
+# 40: halt_code (4 bytes)
+!store64[@templates + 640 | "faf4ebfc"].
+!store64[@templates + 648 | 4].
+# 52: real_header (512 bytes)
+!store64[@templates + 832 | "ea007e00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000055aa"].
+!store64[@templates + 840 | 512].
+# 53: enable_code (1 bytes)
+!store64[@templates + 848 | "fb"].
+!store64[@templates + 856 | 1].
+# 54: bios_code (61 bytes)
+!store64[@templates + 864 | "6689ca6689c69c1e06666031c08ed88ec0b442fbcd13fa660fb6c4730d6685c0750b66b800010000eb036631c02e66a3086e6661071f9dfc2e66a1086e"].
+!store64[@templates + 872 | 61].
+# 55: biosreset_code (56 bytes)
+!store64[@templates + 880 | "6689c29c1e06666031c08ed88ec0fbcd13fa660fb6c4730d6685c0750b66b800010000eb036631c02e66a3086e6661071f9dfc2e66a1086e"].
+!store64[@templates + 888 | 56].
+# 56: bioscheck_code (58 bytes)
+!store64[@templates + 896 | "6689c29c1e066660b441bbaa55fbcd13fa721181fb55aa750bf7c1010074056631c0eb0666b8010000002e66a3086e6661071f9dfc2e66a1086e"].
+!store64[@templates + 904 | 58].
+# 57: biosmode_code (18 bytes)
+!store64[@templates + 912 | "9c1e06666025ff00fbcd10fa6661071f9dfc"].
+!store64[@templates + 920 | 18].
+# 58: biosput_code (20 bytes)
+!store64[@templates + 928 | "9c1e066660b40ebb0700fbcd10fa6661071f9dfc"].
+!store64[@templates + 936 | 20].
+# 59: cpuid_code (53 bytes)
+!store64[@templates + 944 | "6689c66689c86631c90fa26683fe0074246683fe0175056689d8eb196683fe0275056689c8eb0e6683fe0375056689d0eb036631c0"].
+!store64[@templates + 952 | 53].
+# 60: lgdt_code (5 bytes)
+!store64[@templates + 960 | "67660f0110"].
+!store64[@templates + 968 | 5].
+# 61: cr0_code (3 bytes)
+!store64[@templates + 976 | "0f22c0"].
+!store64[@templates + 984 | 3].
+# 62: cr3_code (3 bytes)
+!store64[@templates + 992 | "0f22d8"].
+!store64[@templates + 1000 | 3].
+# 63: cr4_code (3 bytes)
+!store64[@templates + 1008 | "0f22e0"].
+!store64[@templates + 1016 | 3].
+# 64: rdmsr_code (5 bytes)
+!store64[@templates + 1024 | "6689c10f32"].
+!store64[@templates + 1032 | 5].
+# 65: wrmsr_code (8 bytes)
+!store64[@templates + 1040 | "665a665866590f30"].
+!store64[@templates + 1048 | 8].
+# 66: longjump_setup (32 bytes)
+!store64[@templates + 1056 | "665a66596658665bfa66a3206e66890e246e668916286e891e306e66c7062c6e"].
+!store64[@templates + 1064 | 32].
+# 67: longjump_branch (5 bytes)
+!store64[@templates + 1072 | "66ff2e2c6e"].
+!store64[@templates + 1080 | 5].
+# 68: longjump_abi (35 bytes)
+!store64[@templates + 1088 | "31c08ed88ec08ed08b0425206e00008b0c25246e00008b2425286e00004883e4f0ffe0"].
+!store64[@templates + 1096 | 35].
+# 69: protectedjump_abi (52 bytes)
+!store64[@templates + 1104 | "66b810008ed88ec08ed08ee08ee8fca1206e00008b0d246e00008b25286e000083e4f083ec086a0051e804000000faf4ebfcffe0"].
+!store64[@templates + 1112 | 52].
+
+# Real video primitives, emitted directly as our instruction encodings.
+# VBE consumes four pushed u32 values: AX, BX, CX, buffer. Buffer <= 65535.
+# Preserve general registers except EAX result, DS/ES and EFLAGS; clear DF.
+!store64[@templates + 1168 | "669c1e0666603667668b7c24283667668b4c242c3667668b5c24303667668b4424346681ffffff0000660f872c00000031d28eda8ec2fcfbcd10fa660fb7c02e66a3086e6661071f669dfc67668d6424102e66a1086e66e9020000000f0b"].
+!store64[@templates + 1176 | 94].
+# far16 consumes ECX segment and EAX offset; offset <= 65534.
+!store64[@templates + 1184 | "669c1e66526681f9ffff0000660f87240000006681f8feff0000660f87160000008ed96689c267660fb702665a1f669dfc66e9020000000f0b"].
+!store64[@templates + 1192 | 57].
+
+@templates - 4096 -> @templates.
+# Decode our instruction tables once, including the two inactive targets.
+0 -> @i. 0 -> @k.
+?? @i < 384 [
+ :load64[@templates + @i * 16] -> @str.
+ :load64[@templates + @i * 16 + 8] -> @len.
+ ? @k + @len > 8192 [ !exit[1]. ]
+ !store64[@templates + @i * 16 | @decoded + @k].
+ 0 -> @j.
+ ?? @j < @len [
+  :load8[@str + @j * 2] -> @c.
+  :load8[@str + @j * 2 + 1] -> @d.
+  ? @c < 58 [ @c - 48 -> @c. ] ~ [ @c - 87 -> @c. ]
+  ? @d < 58 [ @d - 48 -> @d. ] ~ [ @d - 87 -> @d. ]
+  !store8[@decoded + @k + @j | @c * 16 + @d].
+  @j + 1 -> @j.
+ ]
+ @k + @len -> @k. @i + 1 -> @i.
+]
+@templates + @arch * 2048 -> @templates.
+# Read until EOF, retrying interrupted reads. One extra byte detects overflow.
+0 -> @n. 0 -> @done.
+?? @done == 0 [
+ :read[@source + @n | 65537 - @n] -> @v.
+ ? @v == 18446744073709551612 [ ] ~ [
+  ? @v > 65537 [ !exit[1]. ]
+  ? @v == 0 [ 1 -> @done. ] ~ [
+   @n + @v -> @n. ? @n > 65536 [ !exit[1]. ]
+  ]
+ ]
+]
+!store8[@source + @n | 0].
+# Tokens are 12 bytes: kind u32, then value u64 or offset/length u32 pair.
+0 -> @p. 0 -> @count.
+?? @p < @n [
+ :load8[@source + @p] -> @c. 0 -> @done.
+ ? @c == 32 [ 1 -> @done. ]
+ ? @c == 9 [ 1 -> @done. ]
+ ? @c == 10 [ 1 -> @done. ]
+ ? @c == 13 [ 1 -> @done. ]
+ ? @done == 1 [ @p + 1 -> @p. ]
+ ? @c == 35 [
+  1 -> @done.
+  ?? @p < @n [
+   ? :load8[@source + @p] == 10 [ @n -> @x. ] ~ [ 0 -> @x. ]
+   ? @x == @n [ @p + 1 -> @p. @n + 1 -> @x. ] ~ [ @p + 1 -> @p. ]
+   ? @x > @n [ @p -> @v. @n -> @p. ]
+  ]
+  ? @x > @n [ @v -> @p. ]
+ ]
+ ? @done == 0 [
+  0 -> @x. 0 -> @nlen. 0 -> @tv.
+  ? @c == 95 [ 1 -> @x. ]
+  ? @c >= 65 [ ? @c <= 90 [ 1 -> @x. ] ]
+  ? @c >= 97 [ ? @c <= 122 [ 1 -> @x. ] ]
+  ? @x == 1 [
+   @p -> @tv. 256 -> @tt. 0 -> @nlen.
+   ?? @x == 1 [
+    @p + 1 -> @p. @nlen + 1 -> @nlen.
+    ? @nlen > 31 [ !exit[1]. ]
+    :load8[@source + @p] -> @c. 0 -> @x.
+    ? @c == 95 [ 1 -> @x. ]
+    ? @c >= 65 [ ? @c <= 90 [ 1 -> @x. ] ]
+    ? @c >= 97 [ ? @c <= 122 [ 1 -> @x. ] ]
+    ? @c >= 48 [ ? @c <= 57 [ 1 -> @x. ] ]
+   ]
+   0 -> @i. 0 -> @k.
+   ?? @k < 47 [
+    0 -> @j. 1 -> @x.
+    ?? :load8[@names + @i + @j] != 32 [
+     ? @j >= @nlen [ 0 -> @x. ] ~ [
+      ? :load8[@names + @i + @j] != :load8[@source + @tv + @j] [ 0 -> @x. ]
+     ]
+     @j + 1 -> @j.
+    ]
+    ? @j != @nlen [ 0 -> @x. ]
+    ? @x == 1 [ @k + 500 -> @tt. ]
+    @i + @j + 1 -> @i. @k + 1 -> @k.
+   ]
+  ] ~ [
+   0 -> @x. ? @c >= 48 [ ? @c <= 57 [ 1 -> @x. ] ]
+   ? @x == 1 [
+    257 -> @tt. 0 -> @tv. 10 -> @base. 0 -> @len.
+    ? @c == 48 [ ? :load8[@source + @p + 1] == 120 [ 16 -> @base. @p + 2 -> @p. ] ]
+    0 -> @done.
+    ?? @done == 0 [
+     :load8[@source + @p] -> @c. 99 -> @d.
+     ? @c >= 48 [ ? @c <= 57 [ @c - 48 -> @d. ] ]
+     ? @base == 16 [
+      ? @c >= 65 [ ? @c <= 70 [ @c - 55 -> @d. ] ]
+      ? @c >= 97 [ ? @c <= 102 [ @c - 87 -> @d. ] ]
+     ]
+     ? @d >= @base [ 1 -> @done. ] ~ [
+      ? @base == 10 [
+       ? @tv > 1844674407370955161 [ !exit[1]. ]
+       ? @tv == 1844674407370955161 [ ? @d > 5 [ !exit[1]. ] ]
+      ] ~ [ ? @tv > 1152921504606846975 [ !exit[1]. ] ]
+      @tv * @base + @d -> @tv. @p + 1 -> @p. @len + 1 -> @len.
+     ]
+    ]
+    ? @len == 0 [ !exit[1]. ]
+    ? @arch == 2 [ ? @tv > 4294967295 [ !exit[1]. ] ]
+   ] ~ [
+    ? @c == 34 [
+     258 -> @tt. @p + 1 -> @p. @p -> @tv. 0 -> @len. 0 -> @done.
+     ?? @done == 0 [
+      ? @p >= @n [ !exit[1]. ]
+      :load8[@source + @p] -> @c. @p + 1 -> @p.
+      ? @c == 34 [ 1 -> @done. ] ~ [
+       ? @c < 32 [ !exit[1]. ] ? @c > 126 [ !exit[1]. ]
+       ? @c == 92 [
+        ? @p >= @n [ !exit[1]. ]
+        :load8[@source + @p] -> @c. @p + 1 -> @p. 0 -> @x.
+        ? @c == 110 [ 1 -> @x. ] ? @c == 114 [ 1 -> @x. ]
+        ? @c == 116 [ 1 -> @x. ] ? @c == 92 [ 1 -> @x. ]
+        ? @c == 34 [ 1 -> @x. ] ? @x == 0 [ !exit[1]. ]
+       ]
+       @len + 1 -> @len. ? @len > 4095 [ !exit[1]. ]
+      ]
+     ]
+     @len -> @nlen.
+    ] ~ [
+     ? @c < 32 [ !exit[1]. ] ? @c > 126 [ !exit[1]. ]
+     @c -> @tt. @p + 1 -> @p.
+     :load8[@source + @p] -> @d.
+     ? @c == 61 [
+      0 -> @tt.
+      ? @d == 61 [ 400 -> @tt. ]
+      ? @d == 62 [ 404 -> @tt. ]
+      ? @tt == 0 [ !exit[1]. ] @p + 1 -> @p.
+     ]
+     ? @c == 33 [ ? @d == 61 [ 401 -> @tt. @p + 1 -> @p. ] ]
+     ? @c == 60 [ ? @d == 61 [ 402 -> @tt. @p + 1 -> @p. ] ]
+     ? @c == 62 [ ? @d == 61 [ 403 -> @tt. @p + 1 -> @p. ] ]
+     ? @c == 45 [ ? @d == 62 [ 405 -> @tt. @p + 1 -> @p. ] ]
+     ? @c == 63 [ ? @d == 63 [ 406 -> @tt. @p + 1 -> @p. ] ]
+    ]
+   ]
+  ]
+  ? @count >= 65536 [ !exit[1]. ]
+  !store32[@tokens + @count * 12 | @tt].
+  !store64[@tokens + @count * 12 + 4 | @tv].
+  ? @tt == 256 [ !store32[@tokens + @count * 12 + 8 | @nlen]. ]
+  ? @tt == 258 [ !store32[@tokens + @count * 12 + 8 | @nlen]. ]
+  ? @tt >= 500 [ !store32[@tokens + @count * 12 + 8 | @nlen]. ]
+  @count + 1 -> @count.
+ ]
+]
+!store32[@tokens + @count * 12 | 0]. !store64[@tokens + @count * 12 + 4 | 0].
+# Action frames contain operation, first operand and second operand (24 bytes).
+@tokens -> @ti. 0 -> @out. 0 -> @vars. 0 -> @ed. 0 -> @bd.
+!store64[@stack | 99]. !store64[@stack + 8 | 0]. !store64[@stack + 16 | 0].
+!store64[@stack + 24 | 1]. !store64[@stack + 32 | 0]. !store64[@stack + 40 | 0].
+48 -> @sp.
+? @mode < 2 [
+ !store64[@stack + @sp | 90]. !store64[@stack + @sp + 8 | 70]. @sp + 24 -> @sp.
+ !store64[@stack + @sp | 90]. !store64[@stack + @sp + 8 | 46]. @sp + 24 -> @sp.
+] ~ [
+ !store64[@stack + @sp | 90]. !store64[@stack + @sp + 8 | 0]. @sp + 24 -> @sp.
+ ? @arch == 2 [
+  !store64[@stack + @sp | 90]. !store64[@stack + @sp + 8 | 52]. @sp + 24 -> @sp.
+ ] ~ [
+  !store64[@stack + @sp | 90]. !store64[@stack + @sp + 8 | 1]. @sp + 24 -> @sp.
+  ? @mode == 3 [ !store64[@stack + @sp | 90]. !store64[@stack + @sp + 8 | 47]. @sp + 24 -> @sp. ]
+  ? @mode == 5 [ !store64[@stack + @sp | 90]. !store64[@stack + @sp + 8 | 47]. @sp + 24 -> @sp. ]
+ ]
+]
+?? @sp > 0 [
+ ? @sp > 32640 [ !exit[1]. ]
+ @sp - 24 -> @sp.
+ :load64[@stack + @sp] -> @op.
+ :load64[@stack + @sp + 8] -> @a.
+ :load64[@stack + @sp + 16] -> @b.
+ :load32[@ti] -> @tt. :load64[@ti + 4] -> @tv.
+ -1 -> @e0. -1 -> @e1. -1 -> @e2. -1 -> @e3. -1 -> @suffix.
+ 0 -> @width. 0 -> @imm. -1 -> @tail. 0 -> @next. 0 -> @na. 0 -> @nb.
+ ? @op == 1 [
+  ? @tt == 0 [ ? @a != 0 [ !exit[1]. ] ] ~ [
+   ? @tt == 93 [
+    ? @a == 0 [ !exit[1]. ]
+    @ti + 12 -> @ti. @bd - 1 -> @bd.
+   ] ~ [
+    !store64[@stack + @sp | 1]. !store64[@stack + @sp + 8 | @a]. !store64[@stack + @sp + 16 | 0]. @sp + 24 -> @sp.
+    2 -> @next.
+   ]
+  ]
+ ]
+ ? @op == 2 [
+  0 -> @x. ? @tt == 63 [ 1 -> @x. ] ? @tt == 406 [ 1 -> @x. ]
+  ? @x == 1 [
+   -1 -> @b. ? @tt == 406 [ @out -> @b. ]
+   @ti + 12 -> @ti.
+   !store64[@stack + @sp | 40]. !store64[@stack + @sp + 8 | 0]. !store64[@stack + @sp + 16 | @b]. @sp + 24 -> @sp.
+   10 -> @next.
+  ] ~ [
+   ? @tt == 33 [
+    @ti + 12 -> @ti.
+    !store64[@stack + @sp | 4]. @sp + 24 -> @sp.
+    31 -> @next. 1 -> @na.
+   ] ~ [
+    !store64[@stack + @sp | 3]. @sp + 24 -> @sp.
+    10 -> @next.
+   ]
+  ]
+ ]
+ ? @op == 3 [
+  0 -> @x. ? @tt == 404 [ 1 -> @x. ] ? @tt == 405 [ 1 -> @x. ]
+  ? @x == 0 [ !exit[1]. ] @tt -> @b. @ti + 12 -> @ti.
+  ? :load32[@ti] != 64 [ !exit[1]. ] @ti + 12 -> @ti.
+  ? :load32[@ti] != 256 [ !exit[1]. ]
+  :load32[@ti + 4] -> @name. :load32[@ti + 8] -> @nlen.
+  64 -> @x. 0 -> @i.
+  ?? @i < @vars [
+   ? :load64[@symbols + @i * 16 + 8] == @nlen [
+    :load64[@symbols + @i * 16] -> @str. 1 -> @y. 0 -> @j.
+    ?? @j < @nlen [
+     ? :load8[@source + @name + @j] != :load8[@source + @str + @j] [ 0 -> @y. ]
+     @j + 1 -> @j.
+    ]
+    ? @y == 1 [ @i -> @x. ]
+   ]
+   @i + 1 -> @i.
+  ]
+  ? @b == 404 [
+   ? @bd != 0 [ !exit[1]. ] ? @x != 64 [ !exit[1]. ] ? @vars >= 64 [ !exit[1]. ]
+   @vars -> @x.
+   !store64[@symbols + @vars * 16 | @name]. !store64[@symbols + @vars * 16 + 8 | @nlen].
+   @vars + 1 -> @vars.
+  ] ~ [ ? @x == 64 [ !exit[1]. ] ]
+  @ti + 12 -> @ti. ? :load32[@ti] != 46 [ !exit[1]. ] @ti + 12 -> @ti.
+  4 -> @e0. 4 -> @width. -8 * (@x + 1) -> @imm.
+  ? @arch == 1 [ 50 -> @suffix. ]
+  ? @arch == 2 [ -4 * (@x + 1) -> @imm. ]
+ ]
+ ? @op == 4 [ ? @tt != 46 [ !exit[1]. ] @ti + 12 -> @ti. ]
+ # Expression precedence: comparison, additive, product, unary/primary.
+ ? @op == 10 [
+  !store64[@stack + @sp | 11]. @sp + 24 -> @sp. 14 -> @next.
+ ]
+ ? @op == 11 [
+  0 -> @x.
+  ? @tt == 400 [ 12 -> @x. ] ? @tt == 401 [ 13 -> @x. ]
+  ? @tt == 60 [ 14 -> @x. ] ? @tt == 62 [ 15 -> @x. ]
+  ? @tt == 402 [ 16 -> @x. ] ? @tt == 403 [ 17 -> @x. ]
+  ? @x != 0 [
+   @ti + 12 -> @ti. 5 -> @e0.
+   !store64[@stack + @sp | 12]. !store64[@stack + @sp + 8 | @x]. @sp + 24 -> @sp.
+   14 -> @next.
+  ]
+ ]
+ ? @op == 12 [ 6 -> @e0. 11 -> @e1. @a -> @e2. 18 -> @e3. ]
+ ? @op == 14 [ !store64[@stack + @sp | 15]. @sp + 24 -> @sp. 17 -> @next. ]
+ ? @op == 15 [
+  0 -> @x. ? @tt == 43 [ 7 -> @x. ] ? @tt == 45 [ 8 -> @x. ]
+  ? @x != 0 [
+   @ti + 12 -> @ti. 5 -> @e0.
+   !store64[@stack + @sp | 15]. @sp + 24 -> @sp.
+   !store64[@stack + @sp | 16]. !store64[@stack + @sp + 8 | @x]. @sp + 24 -> @sp.
+   17 -> @next.
+  ]
+ ]
+ ? @op == 16 [ 6 -> @e0. @a -> @e1. ]
+ ? @op == 17 [ !store64[@stack + @sp | 18]. @sp + 24 -> @sp. 20 -> @next. ]
+ ? @op == 18 [
+  ? @tt == 42 [
+   @ti + 12 -> @ti. 5 -> @e0.
+   !store64[@stack + @sp | 18]. @sp + 24 -> @sp.
+   !store64[@stack + @sp | 16]. !store64[@stack + @sp + 8 | 9]. @sp + 24 -> @sp.
+   20 -> @next.
+  ]
+ ]
+ ? @op == 20 [
+  @ed + 1 -> @ed. ? @ed > 64 [ !exit[1]. ]
+  !store64[@stack + @sp | 25]. @sp + 24 -> @sp.
+  ? @tt == 45 [
+   @ti + 12 -> @ti.
+   !store64[@stack + @sp | 21]. @sp + 24 -> @sp. 20 -> @next.
+  ] ~ [
+   ? @tt == 40 [
+    @ti + 12 -> @ti.
+    !store64[@stack + @sp | 24]. @sp + 24 -> @sp. 10 -> @next.
+   ] ~ [
+    ? @tt == 257 [
+     2 -> @e0. 8 -> @width. @tv -> @imm.
+     ? @arch != 0 [ 4 -> @width. ]
+     ? @arch == 1 [ 48 -> @suffix. :load32[@ti + 8] -> @tail. ]
+     @ti + 12 -> @ti.
+    ] ~ [
+     ? @tt == 258 [
+      :load32[@ti + 4] -> @na. :load32[@ti + 8] -> @nb.
+      20 -> @e0. 4 -> @width. @nb + 1 -> @imm. 23 -> @next.
+      @ti + 12 -> @ti.
+     ] ~ [
+      ? @tt == 64 [
+       @ti + 12 -> @ti. ? :load32[@ti] != 256 [ !exit[1]. ]
+       :load32[@ti + 4] -> @name. :load32[@ti + 8] -> @nlen.
+       64 -> @x. 0 -> @i.
+       ?? @i < @vars [
+        ? :load64[@symbols + @i * 16 + 8] == @nlen [
+         :load64[@symbols + @i * 16] -> @str. 1 -> @y. 0 -> @j.
+         ?? @j < @nlen [
+          ? :load8[@source + @name + @j] != :load8[@source + @str + @j] [ 0 -> @y. ]
+          @j + 1 -> @j.
+         ]
+         ? @y == 1 [ @i -> @x. ]
+        ]
+        @i + 1 -> @i.
+       ]
+       ? @x == 64 [ !exit[1]. ]
+       @ti + 12 -> @ti. 3 -> @e0. 4 -> @width. -8 * (@x + 1) -> @imm.
+       ? @arch == 1 [ 49 -> @suffix. ]
+       ? @arch == 2 [ -4 * (@x + 1) -> @imm. ]
+      ] ~ [
+       ? @tt == 58 [ @ti + 12 -> @ti. 31 -> @next. ] ~ [ !exit[1]. ]
+      ]
+     ]
+    ]
+   ]
+  ]
+ ]
+ ? @op == 21 [ 10 -> @e0. ]
+ ? @op == 23 [
+  ? @out + @b + 1 > @limit [ !exit[1]. ]
+  @a -> @p. 0 -> @j.
+  ?? @j < @b [
+   :load8[@source + @p] -> @c. @p + 1 -> @p.
+   ? @c == 92 [
+    :load8[@source + @p] -> @c. @p + 1 -> @p.
+    ? @c == 110 [ 10 -> @c. ]
+    ? @c == 114 [ 13 -> @c. ]
+    ? @c == 116 [ 9 -> @c. ]
+   ]
+   !store8[@output + @out + @j | @c]. @j + 1 -> @j.
+  ]
+  !store8[@output + @out + @b | 0]. @out + @b + 1 -> @out.
+  4 -> @width.
+  ? @arch == 2 [ 2 -> @e0. 31744 + @out - @b - 1 -> @imm. ] ~ [
+   21 -> @e0. -(@b + 8) -> @imm.
+  ]
+ ]
+ ? @op == 24 [ ? @tt != 41 [ !exit[1]. ] @ti + 12 -> @ti. ]
+ ? @op == 25 [ @ed - 1 -> @ed. ]
+ # Builtins share metadata; target restrictions are checked before code emission.
+ ? @op == 31 [
+  ? @tt < 500 [ !exit[1]. ] ? @tt > 546 [ !exit[1]. ]
+  ? @tt >= 539 [ ? @tt <= 542 [ !exit[1]. ] ]
+  @tt - 500 -> @idx.
+  ? :load64[@meta + @idx * 24 + 16] != @a [ !exit[1]. ]
+  0 -> @x.
+  ? @mode < 2 [
+   ? @idx < 2 [ 1 -> @x. ]
+   ? @idx >= 10 [ ? @idx <= 13 [ 1 -> @x. ] ]
+   ? @idx == 16 [ 1 -> @x. ] ? @idx == 21 [ 1 -> @x. ] ? @idx == 22 [ 1 -> @x. ]
+   ? @mode == 1 [ ? @idx >= 2 [ ? @idx <= 5 [ 1 -> @x. ] ] ]
+  ] ~ [
+   ? @idx >= 2 [ ? @idx <= 20 [ 1 -> @x. ] ]
+   ? @arch == 1 [ ? @idx == 23 [ 1 -> @x. ] ]
+   ? @arch == 2 [
+    ? @idx == 5 [ 0 -> @x. ] ? @idx == 13 [ 0 -> @x. ]
+    ? @idx >= 18 [ ? @idx <= 20 [ 0 -> @x. ] ]
+    ? @idx >= 24 [ ? @idx <= 38 [ 1 -> @x. ] ]
+   ]
+  ]
+  ? @arch < 2 [
+   ? @idx == 43 [ 1 -> @x. ] ? @idx == 44 [ 1 -> @x. ]
+  ] ~ [
+   ? @idx == 45 [ 1 -> @x. ] ? @idx == 46 [ 1 -> @x. ]
+  ]
+  ? @x == 0 [ !exit[1]. ]
+  :load64[@meta + @idx * 24] -> @id.
+  ? :load64[@templates + @id * 16 + 8] == 0 [ !exit[1]. ]
+  :load64[@meta + @idx * 24 + 8] -> @len.
+  @ti + 12 -> @ti.
+  ? @len == 0 [
+   ? @a == 0 [
+    ? :load32[@ti] != 91 [ !exit[1]. ] @ti + 12 -> @ti.
+    ? :load32[@ti] != 93 [ !exit[1]. ] @ti + 12 -> @ti.
+   ]
+   @id -> @e0.
+  ] ~ [
+   ? :load32[@ti] != 91 [ !exit[1]. ] @ti + 12 -> @ti.
+   !store64[@stack + @sp | 32]. !store64[@stack + @sp + 8 | @id]. @sp + 24 -> @sp.
+   !store64[@stack + @sp | 33]. !store64[@stack + @sp + 8 | @len]. !store64[@stack + @sp + 16 | @id]. @sp + 24 -> @sp.
+   10 -> @next.
+  ]
+ ]
+ ? @op == 32 [
+  0 -> @x. ? @a == 66 [ 1 -> @x. ] ? @a == 69 [ 1 -> @x. ]
+  ? @x == 1 [
+   66 -> @e0. 4 -> @width.
+   31744 + @out + :load64[@templates + 66 * 16 + 8] + 9 -> @imm.
+   34 -> @next. @a -> @na.
+  ] ~ [ @a -> @e0. ]
+ ]
+ ? @op == 33 [
+  ? @a > 1 [
+   ? @tt != 124 [ !exit[1]. ] @ti + 12 -> @ti. 5 -> @e0.
+   !store64[@stack + @sp | 33]. !store64[@stack + @sp + 8 | @a - 1]. !store64[@stack + @sp + 16 | @b]. @sp + 24 -> @sp.
+   10 -> @next.
+  ] ~ [
+   ? @tt != 93 [ !exit[1]. ] @ti + 12 -> @ti.
+   0 -> @x.
+   ? @b == 37 [ 1 -> @x. ] ? @b == 38 [ 1 -> @x. ]
+   ? @b == 51 [ 1 -> @x. ] ? @b == 65 [ 1 -> @x. ]
+   ? @b == 66 [ 1 -> @x. ] ? @b == 69 [ 1 -> @x. ]
+   ? @b >= 71 [ ? @b <= 73 [ 1 -> @x. ] ]
+   ? @x == 1 [ 5 -> @e0. ] ~ [
+    0 -> @x.
+    ? @b >= 26 [ ? @b <= 29 [ 1 -> @x. ] ]
+    ? @b == 32 [ 1 -> @x. ] ? @b == 33 [ 1 -> @x. ]
+    ? @b == 41 [ 1 -> @x. ] ? @b == 42 [ 1 -> @x. ]
+    ? @b == 54 [ 1 -> @x. ] ? @b == 59 [ 1 -> @x. ]
+    ? @b == 74 [ 1 -> @x. ]
+    ? @x == 1 [ 6 -> @e0. ]
+   ]
+  ]
+ ]
+ ? @op == 34 [
+  67 -> @e0. ? @a == 66 [ 68 -> @e1. ] ~ [ 69 -> @e1. ]
+ ]
+ # Conditional and loop frames remember displacement locations, not pointers.
+ ? @op == 40 [
+  ? @tt != 91 [ !exit[1]. ] @ti + 12 -> @ti.
+  @bd + 1 -> @bd. ? @bd > 64 [ !exit[1]. ]
+  19 -> @e0. 4 -> @width.
+  @out + :load64[@templates + 19 * 16 + 8] -> @x.
+  !store64[@stack + @sp | 41]. !store64[@stack + @sp + 8 | @x]. !store64[@stack + @sp + 16 | @b]. @sp + 24 -> @sp.
+  1 -> @next. 1 -> @na.
+ ]
+ ? @op == 41 [
+  ? @b != -1 [
+   20 -> @e0. 4 -> @width.
+   @out + :load64[@templates + 20 * 16 + 8] + 4 -> @x.
+   @b - @x -> @imm. !store32[@output + @a | @x - @a - 4].
+  ] ~ [
+   ? @tt == 126 [
+    @ti + 12 -> @ti. ? :load32[@ti] != 91 [ !exit[1]. ] @ti + 12 -> @ti.
+    @bd + 1 -> @bd. ? @bd > 64 [ !exit[1]. ]
+    20 -> @e0. 4 -> @width.
+    @out + :load64[@templates + 20 * 16 + 8] -> @x.
+    !store32[@output + @a | @x - @a].
+    !store64[@stack + @sp | 42]. !store64[@stack + @sp + 8 | @x]. @sp + 24 -> @sp.
+    1 -> @next. 1 -> @na.
+   ] ~ [ !store32[@output + @a | @out - @a - 4]. ]
+  ]
+ ]
+ ? @op == 42 [ !store32[@output + @a | @out - @a - 4]. ]
+ ? @op == 90 [ @a -> @e0. ]
+ ? @op == 99 [
+  ? @tt != 0 [ !exit[1]. ] ? @ed != 0 [ !exit[1]. ] ? @bd != 0 [ !exit[1]. ]
+  ? @mode < 2 [ 45 -> @e0. ] ~ [ 40 -> @e0. ]
+ ]
+ # Emit up to four prefixes, a little-endian immediate, suffix, and high word.
+ 0 -> @idx.
+ ?? @idx < 7 [
+  -1 -> @id.
+  ? @idx == 0 [ @e0 -> @id. ]
+  ? @idx == 1 [ @e1 -> @id. ]
+  ? @idx == 2 [ @e2 -> @id. ]
+  ? @idx == 3 [ @e3 -> @id. ]
+  ? @idx == 5 [ @suffix -> @id. ]
+  ? @id != -1 [
+   ? @id >= 128 [ !exit[1]. ]
+   :load64[@templates + @id * 16] -> @str.
+   :load64[@templates + @id * 16 + 8] -> @len.
+   ? @out + @len > @limit [ !exit[1]. ]
+   0 -> @j.
+   ?? @j < @len [
+    !store8[@output + @out + @j | :load8[@str + @j]]. @j + 1 -> @j.
+   ]
+   @out + @len -> @out.
+  ]
+  ? @idx == 4 [
+   ? @out + @width > @limit [ !exit[1]. ]
+   ? @width == 4 [ !store32[@output + @out | @imm]. ]
+   ? @width == 8 [ !store64[@output + @out | @imm]. ]
+   @out + @width -> @out.
+  ]
+  ? @idx == 6 [
+   ? @tail != -1 [
+    ? @out + 4 > @limit [ !exit[1]. ]
+    !store32[@output + @out | @tail]. @out + 4 -> @out.
+   ]
+  ]
+  @idx + 1 -> @idx.
+ ]
+ ? @sp > 32640 [ !exit[1]. ]
+ ? @next != 0 [
+  !store64[@stack + @sp | @next]. !store64[@stack + @sp + 8 | @na]. !store64[@stack + @sp + 16 | @nb]. @sp + 24 -> @sp.
+ ]
+]
+# Finalize already-emitted headers and code. Compiler errors exit before output.
+# Inputs: @output, @out, @mode, @arch, @limit.
+# Scratch: @i, @j, @k, @x, @y, @z, @c, @d. PE changes @out.
+? @mode < 2 [
+ ? @out < 120 [ !exit[1]. ]
+ ? @out > @limit [ !exit[1]. ]
+ !store64[@output + 96 | @out].
+ !store64[@output + 104 | @out].
+]
+0 -> @c.
+? @mode == 3 [ 1 -> @c. ]
+? @mode == 5 [ 1 -> @c. ]
+? @c == 1 [
+ ? @out < 512 [ !exit[1]. ]
+ ? @out > @limit [ !exit[1]. ]
+ # Leave room for both alignment increments and the image-size field.
+ ? @out > 0xffff0000 [ !exit[1]. ]
+ ? @arch > 1 [ !exit[1]. ]
+ @out - 512 -> @x.
+ 0 -> @y.
+ ?? @y < @x [ @y + 512 -> @y. ]
+ @y + 512 -> @k.
+ @k + 512 -> @d.
+ ? @d > @limit [ !exit[1]. ]
+ 0 -> @z.
+ ?? @z < @x [ @z + 4096 -> @z. ]
+ @z + 4096 -> @z.
+ # Every header field and final byte is in bounds before the first store.
+ @out -> @i.
+ ?? @i < @d [
+  !store8[@output + @i | 0].
+  @i + 1 -> @i.
+ ]
+ 0 -> @j.
+ ? @arch == 0 [ 16 -> @j. ]
+ !store32[@output + 92 | @y].
+ !store32[@output + 144 | @z + 4096].
+ !store32[@output + 320 + @j | @x].
+ !store32[@output + 328 + @j | @y].
+ !store32[@output + 364 + @j | @z].
+ !store32[@output + 372 + @j | @k].
+ !store32[@output + 224 + @j | @z].
+ ? @arch == 1 [ !store32[@output + 112 | @z]. ]
+ !store32[@output + @k | 4096].
+ !store32[@output + @k + 4 | 12].
+ @d -> @out.
+]
+# Nothing reaches stdout until lexing, parsing and finalization all succeed.
+0 -> @p.
+?? @p < @out [
+ :write[@output + @p | @out - @p] -> @v.
+ ? @v == 18446744073709551612 [ ] ~ [
+  ? @v == 0 [ !exit[1]. ]
+  ? @v > @out - @p [ !exit[1]. ]
+  @p + @v -> @p.
+ ]
+]
+!exit[0].

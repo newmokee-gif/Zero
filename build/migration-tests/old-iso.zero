@@ -1,0 +1,255 @@
+# Own ISO 9660 / El Torito BIOS + UEFI writer, compiled with zero --host.
+# stdin: BIOS stage16KiB, kernel64/32 each128KiB, then FAT16 image16MiB.
+# stdout: deterministic8360-sector ISO; payloads at sectors32,40,104,168.
+var sector = reserve(2048);
+var payload = reserve(2048);
+var number = 0;
+var index = 0;
+var text = 0;
+var destination = 0;
+var length = 0;
+var record = 0;
+var status = 0;
+var received = 0;
+var emitted = 0;
+var checksum = 0;
+var nameLength = 0;
+
+while number < 32 {
+    index = 0;
+    while index < 2048 {
+        store64(sector + index, 0);
+        index = index + 8;
+    }
+    if (number >= 16) * (number <= 18) {
+        text = "CD001";
+        index = 0;
+        while index < 5 {
+            store8(sector + 1 + index, load8(text + index));
+            index = index + 1;
+        }
+        store8(sector + 6, 1);
+    }
+    if number == 16 {
+        store8(sector, 1);
+        # The textual identifier fields use space padding.
+        index = 8;
+        while index < 72 { store8(sector + index, 32); index = index + 1; }
+        index = 190;
+        while index < 813 { store8(sector + index, 32); index = index + 1; }
+        text = "ZERO";
+        index = 0;
+        while index < 4 {
+            store8(sector + 8 + index, load8(text + index));
+            index = index + 1;
+        }
+        text = "ZERO_SYSTEM";
+        index = 0;
+        while index < 11 {
+            store8(sector + 40 + index, load8(text + index));
+            index = index + 1;
+        }
+        text = "ZERO ISO WRITER";
+        index = 0;
+        while index < 15 {
+            store8(sector + 574 + index, load8(text + index));
+            index = index + 1;
+        }
+        # ISO dual-endian quantities: little-endian half, then big-endian.
+        store32(sector + 80, 8360);
+        store32(sector + 84, 0xa8200000);
+        store16(sector + 120, 1);
+        store16(sector + 122, 0x0100);
+        store16(sector + 124, 1);
+        store16(sector + 126, 0x0100);
+        store16(sector + 128, 2048);
+        store16(sector + 130, 0x0008);
+        store32(sector + 132, 10);
+        store32(sector + 136, 0x0a000000);
+        store32(sector + 140, 21);
+        store32(sector + 148, 0x16000000);
+        # The root directory record is filled by the common record loop.
+        text = "1980010100000000";
+        index = 0;
+        while index < 16 {
+            store8(sector + 813 + index, load8(text + index));
+            store8(sector + 830 + index, load8(text + index));
+            store8(sector + 847 + index, 48);
+            store8(sector + 864 + index, load8(text + index));
+            index = index + 1;
+        }
+        # Timestamp zone bytes are zero: UTC. Expiration is unspecified.
+        store8(sector + 881, 1);
+    }
+    if number == 17 {
+        # Boot Record Volume Descriptor: type zero, El Torito system ID.
+        text = "EL TORITO SPECIFICATION";
+        index = 0;
+        while index < 23 {
+            store8(sector + 7 + index, load8(text + index));
+            index = index + 1;
+        }
+        store32(sector + 71, 23);
+    }
+    if number == 18 { store8(sector, 255); }
+
+    # Shared record layout: PVD root, dot, dot-dot, and four sorted files.
+    length = 0;
+    if number == 16 { destination = sector + 156; length = 1; }
+    if number == 20 { destination = sector; length = 6; }
+    record = 0;
+    while record < length {
+        store8(destination, 34);
+        store32(destination + 2, 20);
+        store32(destination + 6, 0x14000000);
+        store32(destination + 10, 2048);
+        store32(destination + 14, 0x00080000);
+        # Directory-record timestamp: 1980-01-01 00:00:00 UTC.
+        store8(destination + 18, 80);
+        store8(destination + 19, 1);
+        store8(destination + 20, 1);
+        store8(destination + 25, 2);
+        store16(destination + 28, 1);
+        store16(destination + 30, 0x0100);
+        store8(destination + 32, 1);
+        if record == 1 { store8(destination + 33, 1); }
+        if record >= 2 {
+            store8(destination, 44);
+            store32(destination + 2, 32);
+            store32(destination + 6, 0x20000000);
+            store32(destination + 10, 16384);
+            store32(destination + 14, 0x00400000);
+            store8(destination + 25, 0);
+            nameLength = 10;
+            text = "BOOT.BIN;1";
+            if record == 3 {
+                store32(destination + 2, 168);
+                store32(destination + 6, 0xa8000000);
+                store32(destination + 10, 16777216);
+                store32(destination + 14, 0x00000001);
+                text = "BOOT.IMG;1";
+            }
+            if record == 4 {
+                store8(destination, 46);
+                store32(destination + 2, 40);
+                store32(destination + 6, 0x28000000);
+                store32(destination + 10, 131072);
+                store32(destination + 14, 0x00000200);
+                nameLength = 12;
+                text = "KERNEL.BIN;1";
+            }
+            if record == 5 {
+                store8(destination, 48);
+                store32(destination + 2, 104);
+                store32(destination + 6, 0x68000000);
+                store32(destination + 10, 131072);
+                store32(destination + 14, 0x00000200);
+                nameLength = 14;
+                text = "KERNEL32.BIN;1";
+            }
+            store8(destination + 32, nameLength);
+            index = 0;
+            while index < nameLength {
+                store8(destination + 33 + index, load8(text + index));
+                index = index + 1;
+            }
+        }
+        destination = destination + load8(destination);
+        record = record + 1;
+    }
+    if number == 21 {
+        # Mandatory little-endian path table, one root directory.
+        store8(sector, 1);
+        store32(sector + 2, 20);
+        store16(sector + 6, 1);
+    }
+    if number == 22 {
+        # Mandatory big-endian path table, same root directory.
+        store8(sector, 1);
+        store32(sector + 2, 0x14000000);
+        store16(sector + 6, 0x0100);
+    }
+    if number == 23 {
+        # Validation entry: x86 platform 00, checksum and 55 AA key.
+        store8(sector, 1);
+        text = "ZERO BIOS AND UEFI";
+        index = 0;
+        while index < 18 {
+            store8(sector + 4 + index, load8(text + index));
+            index = index + 1;
+        }
+        store16(sector + 30, 0xaa55);
+        checksum = 0;
+        index = 0;
+        while index < 32 {
+            checksum = checksum + load16(sector + index);
+            index = index + 2;
+        }
+        store16(sector + 28, -checksum);
+        # BIOS default entry: bootable, no emulation, 16 KiB at LBA 32.
+        # Load segment zero selects the El Torito default address 0000:7c00.
+        store8(sector + 32, 0x88);
+        store16(sector + 38, 32);
+        store32(sector + 40, 32);
+        # Final section header: EFI platform EF, one following boot entry.
+        store8(sector + 64, 0x91);
+        store8(sector + 65, 0xef);
+        store16(sector + 66, 1);
+        # EFI entry: both fallback architectures share a FAT image atLBA168.
+        # Load counts use 512-byte sectors; addresses use ISO 2048-byte LBAs.
+        store8(sector + 96, 0x88);
+        store16(sector + 102, 32768);
+        store32(sector + 104, 168);
+    }
+    emitted = 0;
+    while emitted < 2048 {
+        status = write(sector + emitted, 2048 - emitted);
+        if status != -4 {
+            if status == 0 { exit(4); }
+            if status > 2048 - emitted { exit(4); }
+            emitted = emitted + status;
+        }
+    }
+    number = number + 1;
+}
+
+# Copy all four payloads unchanged, with only two 2048-byte buffers.
+while number < 8360 {
+    received = 0;
+    while received < 2048 {
+        status = read(payload + received, 2048 - received);
+        if status != -4 {
+            if status == 0 { exit(2); }
+            if status > 2048 - received { exit(1); }
+            received = received + status;
+        }
+    }
+    if number == 168 {
+        # Check the FAT16 image at its actual input boundary. El Torito BIOS
+        # stages need no 55 AA signature, and their machine code is opaque.
+        if load16(payload + 11) != 512 { exit(2); }
+        if load8(payload + 13) != 1 { exit(2); }
+        if load16(payload + 14) != 1 { exit(2); }
+        if load8(payload + 16) != 2 { exit(2); }
+        if load16(payload + 17) != 512 { exit(2); }
+        if load16(payload + 19) != 32768 { exit(2); }
+        if load16(payload + 22) != 128 { exit(2); }
+        if load16(payload + 510) != 0xaa55 { exit(2); }
+    }
+    emitted = 0;
+    while emitted < 2048 {
+        status = write(payload + emitted, 2048 - emitted);
+        if status != -4 {
+            if status == 0 { exit(4); }
+            if status > 2048 - emitted { exit(4); }
+            emitted = emitted + status;
+        }
+    }
+    number = number + 1;
+}
+# Require EOF after exactly16384+131072+131072+16777216 input bytes.
+status = -4;
+while status == -4 { status = read(payload, 1); }
+if status > 1 { exit(1); }
+if status != 0 { exit(3); }
+exit(0);

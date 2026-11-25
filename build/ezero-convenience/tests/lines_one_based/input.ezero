@@ -1,0 +1,2 @@
+lines("first\nsecond")[1] => show
+lines("first\nsecond")[2] => show

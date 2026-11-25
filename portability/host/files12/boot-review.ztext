@@ -1,0 +1,8 @@
+ZTEXT001000002c282007b570000000
+Independent boot-slot review: PASS
+ISO sectors40..271 x64=475136;272..519 IA32=507904; FAT starts520; bundle8712..9223; total18890752.
+BIOS32KiB reads terminate with16KiB and stay below94000/9c000.
+FAT chains4..131/132..259 loaders,260..1187 x64,1188..2179 IA32,2180..4227 bundle match directory sizes and payload boundaries.
+UEFI allocations116/124pages match464/496KiB slots; installer120pages safely accommodates current464KiB and legacy480KiB.
+Installer load-iso source and canonical loader validate both endian pairs for current/legacy sizes.
+Fixed stale installer review parser and README size text. Review parser6/6 passes current,legacy,mixed-endian rejection,unsupported-size and zero-size cases.

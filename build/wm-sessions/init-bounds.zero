@@ -1,0 +1,402 @@
+
+:reserve[65536] => @memory.
+@memory + 16384 => @console.
+@memory + 13824 => @line.
+@memory + 14336 => @listing.
+:reserve[3145728] => @pool.
+:reserve[128] => @boot_information.
+0 => @state.
+0 => @operation.
+0 => @ready.
+0 => @done.
+0 => @message.
+0 => @line_length.
+0 => @overflow.
+0 => @ignore_lf.
+0 => @pointer.
+0 => @valid.
+0 => @i.
+0 => @j.
+0 => @c0.
+0 => @c1.
+0 => @c2.
+0 => @c3.
+0 => @c4.
+0 => @c5.
+0 => @saved.
+0 => @counter.
+0 => @next.
+0 -> @i.
+?? @i < 65536 [ !store8[@memory + @i| 0]. @i + 1 -> @i. ]
+0 -> @i.
+?? @i < 1048576 [ !store8[@pool + @i| 165]. @i + 1 -> @i. ]
+!store64[@boot_information + 112| @pool].
+!store64[@boot_information + 120| 1048576].
+!store64[@boot_information + 104| 64].
+!store64[@boot_information + 120| 3145728].
+# BEGIN ZERO WINDOW SESSION INITIALIZATION
+# Child stacks occupy pool+0..0x28000; reserve the top128KiB for the main
+# stack/arena. Window slots use only the owned, otherwise unused middle.
+!store64[@console + 2048| 0]. !store64[@console + 2056| 0].
+!store64[@console + 2064| 0]. !store64[@console + 2072| 0].
+!store64[@console + 2080| 0]. !store64[@console + 2088| 1].
+!store64[@console + 2096| 0]. !store64[@console + 2104| 0].
+!store64[@console + 2112| 0].
+? @boot_information [
+ :load64[@boot_information + 112] -> @c0.
+ :load64[@boot_information + 120] -> @c1.
+ 1 -> @valid.
+ ? @c0 == 0 [ 0 -> @valid. ]
+ ? :bitand[@c0| 15] [ 0 -> @valid. ]
+ ? @c1 < 335872 [ 0 -> @valid. ]
+ ? @c0 + @c1 <= @c0 [ 0 -> @valid. ]
+ ? :load64[@boot_information + 104] == 32 [
+  ? @c0 + @c1 > 4294967296 [ 0 -> @valid. ]
+ ]
+ ? @valid [
+  @c0 + 196608 -> @c2.
+  :shr[@c1 - 327680| 13] -> @c3.
+  !store64[@console + 2048| @c2]. !store64[@console + 2056| @c3].
+  # Only initialize headers of unused slots; allocated slots are fully zeroed
+  # before publication. This does not touch either native worker stack.
+  0 -> @i.
+  ?? @i < @c3 [ !store64[@c2 + @i * 8192| 0]. @i + 1 -> @i. ]
+  2 -> @c4. ? @c3 < 2 [ 1 -> @c4. ]
+  0 -> @i.
+  ?? @i < @c4 [
+   @c2 + @i * 8192 -> @c5. 0 -> @j.
+   ?? @j < 8192 [ !store64[@c5 + @j| 0]. @j + 8 -> @j. ]
+   !store64[@c5 + 8| @i + 1]. !store64[@c5 + 64| 1].
+   !store64[@c5 + 56| :load64[@memory + 24688]].
+   ? @i == 0 [ !store64[@c5 + 144| 1]. ]
+   !store64[@c5| 1].
+   @i + 1 -> @i.
+  ]
+  !store64[@console + 2072| @c4]. !store64[@console + 2112| @c2].
+  @c2 + 256 -> @line.
+ ]
+]
+# END ZERO WINDOW SESSION INITIALIZATION
+? :load64[@console + 2056] != 344 [ !exit[51]. ]
+!store64[@boot_information + 120| 335872].
+# BEGIN ZERO WINDOW SESSION INITIALIZATION
+# Child stacks occupy pool+0..0x28000; reserve the top128KiB for the main
+# stack/arena. Window slots use only the owned, otherwise unused middle.
+!store64[@console + 2048| 0]. !store64[@console + 2056| 0].
+!store64[@console + 2064| 0]. !store64[@console + 2072| 0].
+!store64[@console + 2080| 0]. !store64[@console + 2088| 1].
+!store64[@console + 2096| 0]. !store64[@console + 2104| 0].
+!store64[@console + 2112| 0].
+? @boot_information [
+ :load64[@boot_information + 112] -> @c0.
+ :load64[@boot_information + 120] -> @c1.
+ 1 -> @valid.
+ ? @c0 == 0 [ 0 -> @valid. ]
+ ? :bitand[@c0| 15] [ 0 -> @valid. ]
+ ? @c1 < 335872 [ 0 -> @valid. ]
+ ? @c0 + @c1 <= @c0 [ 0 -> @valid. ]
+ ? :load64[@boot_information + 104] == 32 [
+  ? @c0 + @c1 > 4294967296 [ 0 -> @valid. ]
+ ]
+ ? @valid [
+  @c0 + 196608 -> @c2.
+  :shr[@c1 - 327680| 13] -> @c3.
+  !store64[@console + 2048| @c2]. !store64[@console + 2056| @c3].
+  # Only initialize headers of unused slots; allocated slots are fully zeroed
+  # before publication. This does not touch either native worker stack.
+  0 -> @i.
+  ?? @i < @c3 [ !store64[@c2 + @i * 8192| 0]. @i + 1 -> @i. ]
+  2 -> @c4. ? @c3 < 2 [ 1 -> @c4. ]
+  0 -> @i.
+  ?? @i < @c4 [
+   @c2 + @i * 8192 -> @c5. 0 -> @j.
+   ?? @j < 8192 [ !store64[@c5 + @j| 0]. @j + 8 -> @j. ]
+   !store64[@c5 + 8| @i + 1]. !store64[@c5 + 64| 1].
+   !store64[@c5 + 56| :load64[@memory + 24688]].
+   ? @i == 0 [ !store64[@c5 + 144| 1]. ]
+   !store64[@c5| 1].
+   @i + 1 -> @i.
+  ]
+  !store64[@console + 2072| @c4]. !store64[@console + 2112| @c2].
+  @c2 + 256 -> @line.
+ ]
+]
+# END ZERO WINDOW SESSION INITIALIZATION
+? :load64[@console + 2056] != 1 [ !exit[52]. ]
+!store64[@boot_information + 120| 335871].
+# BEGIN ZERO WINDOW SESSION INITIALIZATION
+# Child stacks occupy pool+0..0x28000; reserve the top128KiB for the main
+# stack/arena. Window slots use only the owned, otherwise unused middle.
+!store64[@console + 2048| 0]. !store64[@console + 2056| 0].
+!store64[@console + 2064| 0]. !store64[@console + 2072| 0].
+!store64[@console + 2080| 0]. !store64[@console + 2088| 1].
+!store64[@console + 2096| 0]. !store64[@console + 2104| 0].
+!store64[@console + 2112| 0].
+? @boot_information [
+ :load64[@boot_information + 112] -> @c0.
+ :load64[@boot_information + 120] -> @c1.
+ 1 -> @valid.
+ ? @c0 == 0 [ 0 -> @valid. ]
+ ? :bitand[@c0| 15] [ 0 -> @valid. ]
+ ? @c1 < 335872 [ 0 -> @valid. ]
+ ? @c0 + @c1 <= @c0 [ 0 -> @valid. ]
+ ? :load64[@boot_information + 104] == 32 [
+  ? @c0 + @c1 > 4294967296 [ 0 -> @valid. ]
+ ]
+ ? @valid [
+  @c0 + 196608 -> @c2.
+  :shr[@c1 - 327680| 13] -> @c3.
+  !store64[@console + 2048| @c2]. !store64[@console + 2056| @c3].
+  # Only initialize headers of unused slots; allocated slots are fully zeroed
+  # before publication. This does not touch either native worker stack.
+  0 -> @i.
+  ?? @i < @c3 [ !store64[@c2 + @i * 8192| 0]. @i + 1 -> @i. ]
+  2 -> @c4. ? @c3 < 2 [ 1 -> @c4. ]
+  0 -> @i.
+  ?? @i < @c4 [
+   @c2 + @i * 8192 -> @c5. 0 -> @j.
+   ?? @j < 8192 [ !store64[@c5 + @j| 0]. @j + 8 -> @j. ]
+   !store64[@c5 + 8| @i + 1]. !store64[@c5 + 64| 1].
+   !store64[@c5 + 56| :load64[@memory + 24688]].
+   ? @i == 0 [ !store64[@c5 + 144| 1]. ]
+   !store64[@c5| 1].
+   @i + 1 -> @i.
+  ]
+  !store64[@console + 2072| @c4]. !store64[@console + 2112| @c2].
+  @c2 + 256 -> @line.
+ ]
+]
+# END ZERO WINDOW SESSION INITIALIZATION
+? :load64[@console + 2056] != 0 [ !exit[53]. ]
+? :load64[@console + 2112] != 0 [ !exit[63]. ]
+!store64[@boot_information + 112| @pool + 1]. !store64[@boot_information + 120| 1048576].
+# BEGIN ZERO WINDOW SESSION INITIALIZATION
+# Child stacks occupy pool+0..0x28000; reserve the top128KiB for the main
+# stack/arena. Window slots use only the owned, otherwise unused middle.
+!store64[@console + 2048| 0]. !store64[@console + 2056| 0].
+!store64[@console + 2064| 0]. !store64[@console + 2072| 0].
+!store64[@console + 2080| 0]. !store64[@console + 2088| 1].
+!store64[@console + 2096| 0]. !store64[@console + 2104| 0].
+!store64[@console + 2112| 0].
+? @boot_information [
+ :load64[@boot_information + 112] -> @c0.
+ :load64[@boot_information + 120] -> @c1.
+ 1 -> @valid.
+ ? @c0 == 0 [ 0 -> @valid. ]
+ ? :bitand[@c0| 15] [ 0 -> @valid. ]
+ ? @c1 < 335872 [ 0 -> @valid. ]
+ ? @c0 + @c1 <= @c0 [ 0 -> @valid. ]
+ ? :load64[@boot_information + 104] == 32 [
+  ? @c0 + @c1 > 4294967296 [ 0 -> @valid. ]
+ ]
+ ? @valid [
+  @c0 + 196608 -> @c2.
+  :shr[@c1 - 327680| 13] -> @c3.
+  !store64[@console + 2048| @c2]. !store64[@console + 2056| @c3].
+  # Only initialize headers of unused slots; allocated slots are fully zeroed
+  # before publication. This does not touch either native worker stack.
+  0 -> @i.
+  ?? @i < @c3 [ !store64[@c2 + @i * 8192| 0]. @i + 1 -> @i. ]
+  2 -> @c4. ? @c3 < 2 [ 1 -> @c4. ]
+  0 -> @i.
+  ?? @i < @c4 [
+   @c2 + @i * 8192 -> @c5. 0 -> @j.
+   ?? @j < 8192 [ !store64[@c5 + @j| 0]. @j + 8 -> @j. ]
+   !store64[@c5 + 8| @i + 1]. !store64[@c5 + 64| 1].
+   !store64[@c5 + 56| :load64[@memory + 24688]].
+   ? @i == 0 [ !store64[@c5 + 144| 1]. ]
+   !store64[@c5| 1].
+   @i + 1 -> @i.
+  ]
+  !store64[@console + 2072| @c4]. !store64[@console + 2112| @c2].
+  @c2 + 256 -> @line.
+ ]
+]
+# END ZERO WINDOW SESSION INITIALIZATION
+? :load64[@console + 2056] != 0 [ !exit[54]. ]
+? :load64[@console + 2112] != 0 [ !exit[64]. ]
+!store64[@boot_information + 112| 18446744073709486080]. !store64[@boot_information + 120| 1048576].
+# BEGIN ZERO WINDOW SESSION INITIALIZATION
+# Child stacks occupy pool+0..0x28000; reserve the top128KiB for the main
+# stack/arena. Window slots use only the owned, otherwise unused middle.
+!store64[@console + 2048| 0]. !store64[@console + 2056| 0].
+!store64[@console + 2064| 0]. !store64[@console + 2072| 0].
+!store64[@console + 2080| 0]. !store64[@console + 2088| 1].
+!store64[@console + 2096| 0]. !store64[@console + 2104| 0].
+!store64[@console + 2112| 0].
+? @boot_information [
+ :load64[@boot_information + 112] -> @c0.
+ :load64[@boot_information + 120] -> @c1.
+ 1 -> @valid.
+ ? @c0 == 0 [ 0 -> @valid. ]
+ ? :bitand[@c0| 15] [ 0 -> @valid. ]
+ ? @c1 < 335872 [ 0 -> @valid. ]
+ ? @c0 + @c1 <= @c0 [ 0 -> @valid. ]
+ ? :load64[@boot_information + 104] == 32 [
+  ? @c0 + @c1 > 4294967296 [ 0 -> @valid. ]
+ ]
+ ? @valid [
+  @c0 + 196608 -> @c2.
+  :shr[@c1 - 327680| 13] -> @c3.
+  !store64[@console + 2048| @c2]. !store64[@console + 2056| @c3].
+  # Only initialize headers of unused slots; allocated slots are fully zeroed
+  # before publication. This does not touch either native worker stack.
+  0 -> @i.
+  ?? @i < @c3 [ !store64[@c2 + @i * 8192| 0]. @i + 1 -> @i. ]
+  2 -> @c4. ? @c3 < 2 [ 1 -> @c4. ]
+  0 -> @i.
+  ?? @i < @c4 [
+   @c2 + @i * 8192 -> @c5. 0 -> @j.
+   ?? @j < 8192 [ !store64[@c5 + @j| 0]. @j + 8 -> @j. ]
+   !store64[@c5 + 8| @i + 1]. !store64[@c5 + 64| 1].
+   !store64[@c5 + 56| :load64[@memory + 24688]].
+   ? @i == 0 [ !store64[@c5 + 144| 1]. ]
+   !store64[@c5| 1].
+   @i + 1 -> @i.
+  ]
+  !store64[@console + 2072| @c4]. !store64[@console + 2112| @c2].
+  @c2 + 256 -> @line.
+ ]
+]
+# END ZERO WINDOW SESSION INITIALIZATION
+? :load64[@console + 2056] != 0 [ !exit[55]. ]
+? :load64[@console + 2112] != 0 [ !exit[65]. ]
+!store64[@boot_information + 112| 4294963200]. !store64[@boot_information + 120| 1048576]. !store64[@boot_information + 104| 32].
+# BEGIN ZERO WINDOW SESSION INITIALIZATION
+# Child stacks occupy pool+0..0x28000; reserve the top128KiB for the main
+# stack/arena. Window slots use only the owned, otherwise unused middle.
+!store64[@console + 2048| 0]. !store64[@console + 2056| 0].
+!store64[@console + 2064| 0]. !store64[@console + 2072| 0].
+!store64[@console + 2080| 0]. !store64[@console + 2088| 1].
+!store64[@console + 2096| 0]. !store64[@console + 2104| 0].
+!store64[@console + 2112| 0].
+? @boot_information [
+ :load64[@boot_information + 112] -> @c0.
+ :load64[@boot_information + 120] -> @c1.
+ 1 -> @valid.
+ ? @c0 == 0 [ 0 -> @valid. ]
+ ? :bitand[@c0| 15] [ 0 -> @valid. ]
+ ? @c1 < 335872 [ 0 -> @valid. ]
+ ? @c0 + @c1 <= @c0 [ 0 -> @valid. ]
+ ? :load64[@boot_information + 104] == 32 [
+  ? @c0 + @c1 > 4294967296 [ 0 -> @valid. ]
+ ]
+ ? @valid [
+  @c0 + 196608 -> @c2.
+  :shr[@c1 - 327680| 13] -> @c3.
+  !store64[@console + 2048| @c2]. !store64[@console + 2056| @c3].
+  # Only initialize headers of unused slots; allocated slots are fully zeroed
+  # before publication. This does not touch either native worker stack.
+  0 -> @i.
+  ?? @i < @c3 [ !store64[@c2 + @i * 8192| 0]. @i + 1 -> @i. ]
+  2 -> @c4. ? @c3 < 2 [ 1 -> @c4. ]
+  0 -> @i.
+  ?? @i < @c4 [
+   @c2 + @i * 8192 -> @c5. 0 -> @j.
+   ?? @j < 8192 [ !store64[@c5 + @j| 0]. @j + 8 -> @j. ]
+   !store64[@c5 + 8| @i + 1]. !store64[@c5 + 64| 1].
+   !store64[@c5 + 56| :load64[@memory + 24688]].
+   ? @i == 0 [ !store64[@c5 + 144| 1]. ]
+   !store64[@c5| 1].
+   @i + 1 -> @i.
+  ]
+  !store64[@console + 2072| @c4]. !store64[@console + 2112| @c2].
+  @c2 + 256 -> @line.
+ ]
+]
+# END ZERO WINDOW SESSION INITIALIZATION
+? :load64[@console + 2056] != 0 [ !exit[56]. ]
+? :load64[@console + 2112] != 0 [ !exit[66]. ]
+!store64[@boot_information + 112| 0].
+# BEGIN ZERO WINDOW SESSION INITIALIZATION
+# Child stacks occupy pool+0..0x28000; reserve the top128KiB for the main
+# stack/arena. Window slots use only the owned, otherwise unused middle.
+!store64[@console + 2048| 0]. !store64[@console + 2056| 0].
+!store64[@console + 2064| 0]. !store64[@console + 2072| 0].
+!store64[@console + 2080| 0]. !store64[@console + 2088| 1].
+!store64[@console + 2096| 0]. !store64[@console + 2104| 0].
+!store64[@console + 2112| 0].
+? @boot_information [
+ :load64[@boot_information + 112] -> @c0.
+ :load64[@boot_information + 120] -> @c1.
+ 1 -> @valid.
+ ? @c0 == 0 [ 0 -> @valid. ]
+ ? :bitand[@c0| 15] [ 0 -> @valid. ]
+ ? @c1 < 335872 [ 0 -> @valid. ]
+ ? @c0 + @c1 <= @c0 [ 0 -> @valid. ]
+ ? :load64[@boot_information + 104] == 32 [
+  ? @c0 + @c1 > 4294967296 [ 0 -> @valid. ]
+ ]
+ ? @valid [
+  @c0 + 196608 -> @c2.
+  :shr[@c1 - 327680| 13] -> @c3.
+  !store64[@console + 2048| @c2]. !store64[@console + 2056| @c3].
+  # Only initialize headers of unused slots; allocated slots are fully zeroed
+  # before publication. This does not touch either native worker stack.
+  0 -> @i.
+  ?? @i < @c3 [ !store64[@c2 + @i * 8192| 0]. @i + 1 -> @i. ]
+  2 -> @c4. ? @c3 < 2 [ 1 -> @c4. ]
+  0 -> @i.
+  ?? @i < @c4 [
+   @c2 + @i * 8192 -> @c5. 0 -> @j.
+   ?? @j < 8192 [ !store64[@c5 + @j| 0]. @j + 8 -> @j. ]
+   !store64[@c5 + 8| @i + 1]. !store64[@c5 + 64| 1].
+   !store64[@c5 + 56| :load64[@memory + 24688]].
+   ? @i == 0 [ !store64[@c5 + 144| 1]. ]
+   !store64[@c5| 1].
+   @i + 1 -> @i.
+  ]
+  !store64[@console + 2072| @c4]. !store64[@console + 2112| @c2].
+  @c2 + 256 -> @line.
+ ]
+]
+# END ZERO WINDOW SESSION INITIALIZATION
+? :load64[@console + 2056] != 0 [ !exit[57]. ]
+? :load64[@console + 2112] != 0 [ !exit[67]. ]
+0 -> @boot_information.
+# BEGIN ZERO WINDOW SESSION INITIALIZATION
+# Child stacks occupy pool+0..0x28000; reserve the top128KiB for the main
+# stack/arena. Window slots use only the owned, otherwise unused middle.
+!store64[@console + 2048| 0]. !store64[@console + 2056| 0].
+!store64[@console + 2064| 0]. !store64[@console + 2072| 0].
+!store64[@console + 2080| 0]. !store64[@console + 2088| 1].
+!store64[@console + 2096| 0]. !store64[@console + 2104| 0].
+!store64[@console + 2112| 0].
+? @boot_information [
+ :load64[@boot_information + 112] -> @c0.
+ :load64[@boot_information + 120] -> @c1.
+ 1 -> @valid.
+ ? @c0 == 0 [ 0 -> @valid. ]
+ ? :bitand[@c0| 15] [ 0 -> @valid. ]
+ ? @c1 < 335872 [ 0 -> @valid. ]
+ ? @c0 + @c1 <= @c0 [ 0 -> @valid. ]
+ ? :load64[@boot_information + 104] == 32 [
+  ? @c0 + @c1 > 4294967296 [ 0 -> @valid. ]
+ ]
+ ? @valid [
+  @c0 + 196608 -> @c2.
+  :shr[@c1 - 327680| 13] -> @c3.
+  !store64[@console + 2048| @c2]. !store64[@console + 2056| @c3].
+  # Only initialize headers of unused slots; allocated slots are fully zeroed
+  # before publication. This does not touch either native worker stack.
+  0 -> @i.
+  ?? @i < @c3 [ !store64[@c2 + @i * 8192| 0]. @i + 1 -> @i. ]
+  2 -> @c4. ? @c3 < 2 [ 1 -> @c4. ]
+  0 -> @i.
+  ?? @i < @c4 [
+   @c2 + @i * 8192 -> @c5. 0 -> @j.
+   ?? @j < 8192 [ !store64[@c5 + @j| 0]. @j + 8 -> @j. ]
+   !store64[@c5 + 8| @i + 1]. !store64[@c5 + 64| 1].
+   !store64[@c5 + 56| :load64[@memory + 24688]].
+   ? @i == 0 [ !store64[@c5 + 144| 1]. ]
+   !store64[@c5| 1].
+   @i + 1 -> @i.
+  ]
+  !store64[@console + 2072| @c4]. !store64[@console + 2112| @c2].
+  @c2 + 256 -> @line.
+ ]
+]
+# END ZERO WINDOW SESSION INITIALIZATION
+? :load64[@console + 2056] != 0 [ !exit[58]. ]
+? :load64[@console + 2112] != 0 [ !exit[68]. ]
+!put[80]. !put[65]. !put[83]. !put[83]. !put[10]. !exit[0].

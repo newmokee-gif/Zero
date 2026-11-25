@@ -1,0 +1,7 @@
+# Original Zero memory-only HTML regression suite. No host fixture parser.
+0 => @t_work. 1 => @t_case. 0 => @t_failures. 0 => @t_failed.
+0 => @t_source. 0 => @t_expected. 0 => @t_expectederror.
+0 => @t_expectedflags. 0 => @t_expectedlinks. 0 => @t_expectedtitle.
+0 => @t_expectedhref. 0 => @t_expectedlabel. 0 => @t_i. 0 => @t_j.
+0 => @t_k. 0 => @t_hash. 0 => @t_after. 1234567 => @t_seed.
+0 => @t_n. 0 => @t_message.

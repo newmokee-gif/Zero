@@ -1,0 +1,5 @@
+# Original Windows host API encodings, emitted by windows-author.zero.
+? @mode == 7 [
+ !store64[@templates + 1648 | "483d005c26050f872300000041544989e44883e4f04883ec204889c141ff97c011000031c04c89e4415ce90700000048c7c0ffffffff"].
+ !store64[@templates + 1656 | 54].
+]

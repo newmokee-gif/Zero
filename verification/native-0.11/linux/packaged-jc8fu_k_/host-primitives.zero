@@ -1,0 +1,1 @@
+:argument[1] => @p.:fileopen[@p|1] => @f.? @f == -1 [!exit[1].]!store8[:reserve[1]|65].? :filesync[@f] != 0 [!exit[2].]? :fileclose[@f] != 0 [!exit[3].]? :hostwait[20] != 0 [!exit[4].]? :filesync[-1] != -1 [!exit[5].]? :hostwait[86400001] != -1 [!exit[6].]!put[89].

@@ -1,0 +1,7 @@
+# Zero Flash: validated image snapshot, explicit target, complete readback.
+0 => @fwork. 0 => @fimage. 0 => @fbytes. 0 => @fpayload. 0 => @flength.
+-1 => @ffile. -1 => @fout. 0 => @ferror. 0 => @fmessage. 0 => @fmode.
+0 => @fpath. 0 => @ftarget. 0 => @fpos. 0 => @fcount. 0 => @fn.
+0 => @fi. 0 => @fj. 0 => @flit. 0 => @fsame. 0 => @fphase.
+0 => @fcreated. 0 => @fpower. 0 => @fvalue. 0 => @fdigit. 0 => @fstarted.
+0 => @ftotal. 0 => @ftrailer. 0 => @fjob.

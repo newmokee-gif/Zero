@@ -1,0 +1,27 @@
+ZTEXT0010000065a3519980a0000000
+Ezero examples
+
+Compile a source with the native original Zero command:
+    ezero examples/hello.ezero NEW_OUTPUT
+Then run the output on its target system. The toolkit command and lib directory
+must remain together. Linux, Windows and Zero OS use the same frontend and
+runtime; guest inline source and filesystem capacities are bounded separately.
+See ../README.ztext, ../HOST.ztext and ../../portability/guest/ABI.ztext.
+
+hello.ezero / hello.zero: identical three-line output through two languages.
+banana.ezero: unquoted UTF-8 text, a typed phrase and one-based indexing.
+values.ezero: inferred values, reassignment, text concatenation, conditions.
+lists.ezero: iteration, accumulation, indexing and nested mixed values.
+functions.ezero: parameters, returned text and recursive local call frames.
+memory.ezero: temporary objects reclaimed while retained values survive.
+host-files.ezero: native arguments and exclusive creation of a new text file.
+files.ezero: create, replace, read, search, volume roots and explicit deletion.
+text.ezero: LF/CRLF lines, one-based selection and joining text lists.
+
+File examples use raw file contents with extensionless names; they do not
+claim to encode ZTEXT001. The original zero-text tool manages that checked
+document format. File examples modify only their named destinations. files.ezero accepts an
+optional native directory argument; choose an empty directory for exploration.
+No example manually allocates memory, traverses character pointers, declares a
+value type or invokes a foreign runtime. Compiled programs contain their own
+instruction data and the original Zero runtime.

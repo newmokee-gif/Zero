@@ -1,0 +1,115 @@
+:reserve[131072] -> @t_work.
+?? @t_case <= 170 [
+ 0 -> @t_failed. 0 -> @t_expectederror. 0 -> @t_expectedflags.
+ 0 -> @t_expectedlinks. "" -> @t_expectedtitle. 0 -> @t_expectedhref.
+ 0 -> @t_expectedlabel. "Hello" -> @t_source. "Hello" -> @t_expected.
+ 0 -> @t_i. ?? @t_i < 131072 [ !store64[@t_work+@t_i|0xa5a5a5a5a5a5a5a5]. @t_i+8 -> @t_i. ]
+ @t_work+64 -> @h_input. @t_work+65728 -> @h_output.
+ @t_work+98624 -> @h_title. @t_work+98880 -> @h_links.
+ @t_work+115456 -> @h_scratch. 32768 -> @h_capacity. 20 -> @h_width. 0 -> @h_plain.
+ ? @t_case == 1 [ "" -> @t_source. "" -> @t_expected. ]
+ ? @t_case == 3 [ " \t Hello\r\n  world \t " -> @t_source. "Hello world" -> @t_expected. ]
+ ? @t_case == 4 [ "<!DOCTYPE html><HEAD>hidden<TITLE> A &amp; B </TITLE></HEAD><body>Hello" -> @t_source. "A & B" -> @t_expectedtitle. ]
+ ? @t_case == 5 [ "Hel<!-- hidden > -->lo<!--truncated" -> @t_source. ]
+ ? @t_case == 6 [ "Hello<script> < <bad x=\" <b> </script>" -> @t_source. 1 -> @t_expectedflags. ]
+ ? @t_case == 7 [ "<STYLE>bad <b \" text</StYlE>Hello" -> @t_source. 2 -> @t_expectedflags. ]
+ ? @t_case == 8 [ "<h1>Heading</h1><p>A</p><p>B</p>" -> @t_source. "Heading\n\nA\n\nB\n\n" -> @t_expected. ]
+ ? @t_case == 9 [ "A<br>B<br><br>C" -> @t_source. "A\nB\nC" -> @t_expected. ]
+ ? @t_case == 10 [ "<ul><li>One</li><li>Two</li></ul>" -> @t_source. "* One\n* Two\n" -> @t_expected. ]
+ ? @t_case == 11 [ "<pre> a  b\n\n\tc</pre>" -> @t_source. " a  b\n\n c\n" -> @t_expected. 128 -> @t_expectedflags. ]
+ ? @t_case == 12 [ "&lt;&gt;&amp;&quot;&apos;&nbsp;" -> @t_source. @t_work+120000 -> @t_expected. !store32[@t_expected|0x22263e3c]. !store8[@t_expected+4|39]. !store16[@t_expected+5|0xa0c2]. !store8[@t_expected+7|0]. ]
+ ? @t_case == 13 [ "&#65;&#x3B1;&#128578;" -> @t_source. @t_work+120000 -> @t_expected. !store64[@t_expected|0x0082999ff0b1ce41]. ]
+ ? @t_case == 14 [ "A&unknown; B& C" -> @t_source. "A&unknown; B& C" -> @t_expected. 64 -> @t_expectedflags. ]
+ ? @t_case == 15 [ "&#0;&#55296;&#x110000;" -> @t_source. @t_work+120000 -> @t_expected. !store16[@t_expected|0xbfef]. !store8[@t_expected+2|0xbd]. !store16[@t_expected+3|0xbfef]. !store8[@t_expected+5|0xbd]. "&#x110000;" -> @t_message. 0 -> @t_i. ?? @t_i < 11 [ !store8[@t_expected+6+@t_i|:load8[@t_message+@t_i]]. @t_i+1 -> @t_i. ] 64 -> @t_expectedflags. ]
+ ? @t_case == 16 [ "<form><input><button>Hello</button></form><img><iframe></iframe>" -> @t_source. 20 -> @t_expectedflags. ]
+ ? @t_case == 17 [ "<a href='/next?a=1&amp;b=2'>Next</a>" -> @t_source. "Next [1]" -> @t_expected. 1 -> @t_expectedlinks. "/next?a=1&b=2" -> @t_expectedhref. "Next" -> @t_expectedlabel. ]
+ ? @t_case == 18 [ "<A disabled HREF=\"/a>b\" class=x>Hello</A>" -> @t_source. "Hello [1]" -> @t_expected. 1 -> @t_expectedlinks. "/a>b" -> @t_expectedhref. "Hello" -> @t_expectedlabel. ]
+ ? @t_case == 19 [ "<a title='X' href=/next>Hello</a>" -> @t_source. "Hello [1]" -> @t_expected. 1 -> @t_expectedlinks. "/next" -> @t_expectedhref. ]
+ ? @t_case == 20 [ "<a href=/first href=/second>Hello</a>" -> @t_source. "Hello [1]" -> @t_expected. 1 -> @t_expectedlinks. "/first" -> @t_expectedhref. ]
+ ? @t_case == 21 [ "<a href=''>Hello</a>" -> @t_source. ]
+ ? @t_case == 22 [ "<head><a href=/hidden>hidden</a></head>Hello" -> @t_source. ]
+ ? @t_case == 23 [ "<a href=/next>Hello" -> @t_source. "Hello [1]" -> @t_expected. 1 -> @t_expectedlinks. "/next" -> @t_expectedhref. ]
+ ? @t_case == 24 [ "<a href=/next>One <b>two</b></a>" -> @t_source. "One two [1]" -> @t_expected. 1 -> @t_expectedlinks. "One two" -> @t_expectedlabel. ]
+ ? @t_case == 25 [ @t_work+120000 -> @t_source. @t_source -> @t_expected. !store64[@t_source|0x0082999ff0b1ce41]. ]
+ ? @t_case == 26 [ "123456789012345678901" -> @t_source. "12345678901234567890\n1" -> @t_expected. ]
+ ? @t_case == 27 [ "1234567890123456789 X" -> @t_source. "1234567890123456789\nX" -> @t_expected. ]
+ ? @t_case == 28 [ "12345678901234567890" -> @t_source. @t_work+120000 -> @t_expected. 0 -> @t_i. ?? @t_i < 20 [ !store8[@t_expected+@t_i|:load8[@t_source+@t_i]]. @t_i+1 -> @t_i. ] !store8[@t_expected+20|10]. !store16[@t_expected+21|0xb1ce]. !store8[@t_expected+23|0]. ]
+ ? (@t_case >= 29)*(@t_case <= 37) [ 65 -> @t_expectederror. "" -> @t_expected. ]
+ ? @t_case == 35 [ "<a href='unterminated>" -> @t_source. ]
+ ? @t_case == 36 [ "<p" -> @t_source. ]
+ ? @t_case == 37 [ "<a href=\"unterminated" -> @t_source. ]
+ ? @t_case == 38 [ "" -> @t_source. "" -> @t_expected. 1 -> @h_capacity. ]
+ ? @t_case == 39 [ "A" -> @t_source. "A" -> @t_expected. 2 -> @h_capacity. ]
+ ? @t_case == 40 [ "AB" -> @t_source. 2 -> @h_capacity. 28 -> @t_expectederror. "" -> @t_expected. ]
+ ? @t_case == 41 [ "<a href=/next>X</a>" -> @t_source. 6 -> @h_capacity. "X [1]" -> @t_expected. 1 -> @t_expectedlinks. ]
+ ? @t_case == 42 [ "<a href=/next>X</a>" -> @t_source. 5 -> @h_capacity. 28 -> @t_expectederror. "" -> @t_expected. ]
+ ? @t_case == 43 [ "A<p>B" -> @t_source. 4 -> @h_capacity. 28 -> @t_expectederror. "" -> @t_expected. ]
+ ? @t_case == 44 [ "<ul><li>A" -> @t_source. 3 -> @h_capacity. 28 -> @t_expectederror. "" -> @t_expected. ]
+ ? @t_case == 45 [ "&#+1; &#x; &#;" -> @t_source. "&#+1; &#x; &#;" -> @t_expected. 64 -> @t_expectedflags. ]
+ ? @t_case == 46 [ "<script>ignored</scripture>ignored</script>Hello" -> @t_source. 1 -> @t_expectedflags. ]
+ ? @t_case == 47 [ "Hello<script>never closed" -> @t_source. 1 -> @t_expectedflags. ]
+ ? @t_case == 48 [ "<head>hidden</head><title>One <b>two</b></title>Hello" -> @t_source. "One two" -> @t_expectedtitle. ]
+ ? @t_case == 49 [ "<a href='/has space'>Hello</a>" -> @t_source. 32 -> @t_expectedflags. ]
+ ? @t_case == 50 [ "<table><tr><td>A</td><td>B</td></tr></table>" -> @t_source. "A B\n" -> @t_expected. ]
+ ? @t_case == 51 [ "1 < 2 > 0" -> @t_source. "1 < 2 > 0" -> @t_expected. ]
+ ? @t_case == 52 [ "&#27;Hello&#x85;world" -> @t_source. "Hello world" -> @t_expected. ]
+ ? @t_case == 53 [ "<script><!-- x </script>Hello" -> @t_source. 1 -> @t_expectedflags. ]
+ ? @t_case == 54 [ "<a href=/next>12345678901234567</a>" -> @t_source. "12345678901234567\n[1]" -> @t_expected. 1 -> @t_expectedlinks. ]
+ ? @t_case == 55 [ "<a href=/next></a>" -> @t_source. "[1]" -> @t_expected. 1 -> @t_expectedlinks. "" -> @t_expectedlabel. ]
+ 0 -> @h_length. ?? :load8[@t_source+@h_length] [ !store8[@h_input+@h_length|:load8[@t_source+@h_length]]. @h_length+1 -> @h_length. ]
+ ? @t_case == 28 [ !store16[@h_input+20|0xb1ce]. 22 -> @h_length. ]
+ ? @t_case == 29 [ !store8[@h_input|0xc2]. 1 -> @h_length. ]
+ ? @t_case == 30 [ !store16[@h_input|0x80c0]. 2 -> @h_length. ]
+ ? @t_case == 31 [ !store32[@h_input|0x0080a0ed]. 3 -> @h_length. ]
+ ? @t_case == 32 [ !store32[@h_input|0x808090f4]. 4 -> @h_length. ]
+ ? @t_case == 33 [ !store8[@h_input|0x80]. 1 -> @h_length. ]
+ ? @t_case == 34 [ !store32[@h_input|0x41a0e1]. 3 -> @h_length. ]
+ # Generated link-count and field-boundary fixtures remain original Zero.
+ ? @t_case == 56 [
+  "<a href=/x>x</a>" -> @t_source. 0 -> @h_length. 0 -> @t_i.
+  ?? @t_i < 33 [ 0 -> @t_j. ?? :load8[@t_source+@t_j] [ !store8[@h_input+@h_length|:load8[@t_source+@t_j]]. @h_length+1 -> @h_length. @t_j+1 -> @t_j. ] @t_i+1 -> @t_i. ]
+  32 -> @t_expectedlinks. 8 -> @t_expectedflags. 0 -> @t_expected.
+ ]
+ ? (@t_case == 57)+(@t_case == 58) [
+  "<a href='" -> @t_source. 0 -> @h_length. ?? :load8[@t_source+@h_length] [ !store8[@h_input+@h_length|:load8[@t_source+@h_length]]. @h_length+1 -> @h_length. ]
+  255 -> @t_n. ? @t_case == 58 [ 256 -> @t_n. ] 0 -> @t_i.
+  ?? @t_i < @t_n [ !store8[@h_input+@h_length|120]. @h_length+1 -> @h_length. @t_i+1 -> @t_i. ]
+  "'>Hello</a>" -> @t_source. 0 -> @t_i. ?? :load8[@t_source+@t_i] [ !store8[@h_input+@h_length|:load8[@t_source+@t_i]]. @h_length+1 -> @h_length. @t_i+1 -> @t_i. ]
+  ? @t_case == 57 [ "Hello [1]" -> @t_expected. 1 -> @t_expectedlinks. ] ~ [ 32 -> @t_expectedflags. ]
+ ]
+ ? @t_case == 59 [
+  "<title>" -> @t_source. 0 -> @h_length. ?? :load8[@t_source+@h_length] [ !store8[@h_input+@h_length|:load8[@t_source+@h_length]]. @h_length+1 -> @h_length. ]
+  0 -> @t_i. ?? @t_i < 128 [ !store8[@h_input+@h_length|84]. @h_length+1 -> @h_length. @t_i+1 -> @t_i. ]
+  "</title>Hello" -> @t_source. 0 -> @t_i. ?? :load8[@t_source+@t_i] [ !store8[@h_input+@h_length|:load8[@t_source+@t_i]]. @h_length+1 -> @h_length. @t_i+1 -> @t_i. ]
+  32 -> @t_expectedflags. 0 -> @t_expectedtitle.
+ ]
+ ? @t_case == 60 [
+  "<a href=/x>" -> @t_source. 0 -> @h_length. ?? :load8[@t_source+@h_length] [ !store8[@h_input+@h_length|:load8[@t_source+@h_length]]. @h_length+1 -> @h_length. ]
+  0 -> @t_i. ?? @t_i < 128 [ !store8[@h_input+@h_length|76]. @h_length+1 -> @h_length. @t_i+1 -> @t_i. ]
+  1 -> @t_expectedlinks. 32 -> @t_expectedflags. 0 -> @t_expected.
+ ]
+ ? @t_case == 61 [ 65536 -> @h_length. 0 -> @t_i. ?? @t_i < @h_length [ !store8[@h_input+@t_i|32]. @t_i+1 -> @t_i. ] "" -> @t_expected. ]
+ ? @t_case == 62 [ 65536 -> @h_length. 0 -> @t_i. ?? @t_i < @h_length [ !store8[@h_input+@t_i|88]. @t_i+1 -> @t_i. ] 28 -> @t_expectederror. "" -> @t_expected. ]
+ ? @t_case == 63 [ 19 -> @h_width. 65 -> @t_expectederror. "" -> @t_expected. ]
+ ? @t_case == 64 [ 161 -> @h_width. 65 -> @t_expectederror. "" -> @t_expected. ]
+ ? (@t_case >= 65)*(@t_case <= 68) [ 1 -> @h_plain. ]
+ ? @t_case == 65 [ "<b>&amp;</b>" -> @t_source. @t_source -> @t_expected. 12 -> @h_length. 0 -> @t_i. ?? @t_i < @h_length [ !store8[@h_input+@t_i|:load8[@t_source+@t_i]]. @t_i+1 -> @t_i. ] ]
+ ? @t_case == 66 [ "\n  A\n\nB" -> @t_source. @t_source -> @t_expected. 7 -> @h_length. 0 -> @t_i. ?? @t_i < @h_length [ !store8[@h_input+@t_i|:load8[@t_source+@t_i]]. @t_i+1 -> @t_i. ] ]
+ ? @t_case == 67 [ "&notanentity;" -> @t_source. @t_source -> @t_expected. 13 -> @h_length. 0 -> @t_i. ?? @t_i < @h_length [ !store8[@h_input+@t_i|:load8[@t_source+@t_i]]. @t_i+1 -> @t_i. ] ]
+ ? @t_case == 68 [ "<script>x" -> @t_source. @t_source -> @t_expected. 9 -> @h_length. 0 -> @t_i. ?? @t_i < @h_length [ !store8[@h_input+@t_i|:load8[@t_source+@t_i]]. @t_i+1 -> @t_i. ] ]
+ # These invalid address spans must fail before any access to that destination.
+ ? @t_case == 69 [ !store8[@h_output|0]. -4 -> @h_output. 65 -> @t_expectederror. "" -> @t_expected. ]
+ ? @t_case == 70 [ !store8[@h_title|0]. -4 -> @h_title. 65 -> @t_expectederror. "" -> @t_expected. ]
+ # Deterministic ASCII tag/entity fuzz probes termination and write boundaries.
+ ? @t_case > 70 [
+  256 -> @h_length. 0 -> @t_i. "<>/&;='\"abcdefghijklmnopqrstuvwxyz0123456789 \n\t" -> @t_source.
+  0 -> @t_n. ?? :load8[@t_source+@t_n] [ @t_n+1 -> @t_n. ]
+  ?? @t_i < @h_length [
+   :bitand[@t_seed*1664525+1013904223|0xffffffff] -> @t_seed.
+   :bitand[:shr[@t_seed|16]|255] -> @t_j. ?? @t_j >= @t_n [ @t_j-@t_n -> @t_j. ]
+   !store8[@h_input+@t_i|:load8[@t_source+@t_j]]. @t_i+1 -> @t_i.
+  ] 0 -> @t_expected. 0 -> @t_expectedtitle. -1 -> @t_expectederror. -1 -> @t_expectedflags. -1 -> @t_expectedlinks.
+ ]
+ 0 -> @t_i. ?? @t_i < 16 [ !store8[@h_input+@h_length+@t_i|165]. @t_i+1 -> @t_i. ]
+ 2166136261 -> @t_hash. 0 -> @t_i.
+ ?? @t_i < @h_length [ :bitand[(@t_hash*16777619)+:load8[@h_input+@t_i]|0xffffffff] -> @t_hash. @t_i+1 -> @t_i. ]

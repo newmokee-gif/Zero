@@ -1,0 +1,27 @@
+ZTEXT001000005d89d1368480000000
+Zero updater 0.11 independent source review
+
+Reviewed read-only by the installer_lifecycle collaborator on 2026-11-17.
+Files: main.zero.part, recovery.zero.part, sha256.zero.part, declarations,
+README.txt, FORMAT.txt and focused recovery tests.
+
+No blocking defect found in full-record chain validation, prefix/high-water
+preservation, payload copy and independent rehash, exact source-journal
+recheck, source-lock/evidence preservation or exclusive target semantics.
+Worker flushes and closes owned handles. Recovery does not drop whole invalid
+records or infer that a source lock is stale; it writes a new snapshot only.
+
+Review clarification applied to README: metadata is always validated, but a
+release counter <= high-water mark is a no-op and its unused inbox image is
+not hashed. A corrupted NEWER image fails verification.
+
+Limits remain explicit: final source recheck is a point-in-time snapshot,
+not a lock against subsequent adversarial mutations. Parent directories are
+not fsynced; power-loss ordering/durability of rename is not guaranteed.
+This review does not claim hardware power-loss simulation, native Windows,
+network transport, publisher authentication, scheduler or boot activation.
+
+Focused testing separately caught error-code masking after a failed recovery
+copy. Hash comparison now runs only after successful worker I/O, preserving
+the actual write/flush failure code 74. The regression is exercised through
+RLIMIT_FSIZE and injected fsync errors in test-recovery.py.

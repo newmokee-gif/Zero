@@ -1,0 +1,6 @@
+ZTEXT0010000011cd4af79320000000
+Hosted Ezero acceptance: 85/85 passed.
+Implementation hashes unchanged during suite: True.
+All language parsing/execution uses original Zero implementations.
+External Python/shell only orchestrate tests and compare expected bytes.
+No user disks or OS images are opened by this suite.

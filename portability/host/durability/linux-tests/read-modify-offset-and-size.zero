@@ -1,0 +1,12 @@
+
+:reserve[16] => @b. :fileopen["file" | 3] => @h.
+? @h == -1 [ !exit[1]. ]
+? :fileread[@h | @b | 2] != 2 [ !exit[2]. ]
+? :load16[@b] != 0x0041 [ !exit[3]. ]
+? :filesize[@h] != 4 [ !exit[4]. ]
+!store8[@b | 67].
+? :filewrite[@h | @b | 1] != 1 [ !exit[5]. ]
+? :fileread[@h | @b | 16] != 1 [ !exit[6]. ]
+? :load8[@b] != 255 [ !exit[7]. ]
+? :fileread[@h | @b | 16] != 0 [ !exit[8]. ]
+? :fileclose[@h] != 0 [ !exit[9]. ] !exit[0].

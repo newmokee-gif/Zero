@@ -1,0 +1,388 @@
+# Original Zero Web native viewer, using our own X11/Win32 frontend.
+# Main is called only after successful document processing and rasterization.
+# Renderer context1664 is initialized by the caller; width800 height600.
+? :load64[@web+72] == 1 [
+ :host[] -> @u3. 1 -> @u4. 1 -> @u5.
+ 0 -> @u17. -1 -> @u8. -1 -> @u7. 0 -> @u9.
+ "Zero Web closed." -> @u6.
+ :hostalloc[1048576] -> @u0. :hostalloc[262144] -> @u2.
+ ? (@u0 == 0)+(@u2 == 0) [
+  ? @u0 [ :hostfree[@u0|1048576] -> @v0. ]
+  ? @u2 [ :hostfree[@u2|262144] -> @v0. ]
+  !exit[71].
+ ]
+ 0 -> @v3. ?? @v3 < 1048576 [ !store64[@u0+@v3|0]. @v3+8 -> @v3. ]
+ @web+2097152 -> @u1. @u0+2048 -> @u13.
+ @u0+76800 -> @u14. @u0+131072 -> @u15.
+ ? (@u3 != 1)*(@u3 != 2) [ 0 -> @u4. 1 -> @u17. "No native window backend for this platform." -> @u6. ]
+
+# Original X11 wire protocol client. No Xlib, toolkit or external GUI process.
+# Local DISPLAY and MIT-MAGIC-COOKIE-1 are read from this process's environment.
+? @u3 == 1 [
+ @u0 + 327680 -> @v0. :fileopen["/proc/self/environ" | 0] -> @u7. 0 -> @v6.
+ ? @u7 != -1 [ :fileread[@u7 | @v0 | 65535] -> @v6. :fileclose[@u7] -> @v7. -1 -> @u7. ]
+ ? @v6 > 65535 [ 0 -> @v6. ] !store8[@v0 + @v6 | 0].
+ 0 -> @v3. ?? @v3 < @v6 [
+  @v3 -> @v4. ?? (@v4 < @v6) * (:load8[@v0 + @v4] != 0) [ @v4 + 1 -> @v4. ]
+  ? @v4 - @v3 > 8 [ ? :load64[@v0 + @v3] == 0x3d59414c50534944 [ !store64[@u0 + 32 | @v0 + @v3 + 8]. ] ]
+  ? @v4 - @v3 > 11 [
+   ? (:load64[@v0 + @v3] == 0x49524f4854554158) * (:load16[@v0 + @v3 + 8] == 0x5954) * (:load8[@v0 + @v3 + 10] == 61) [ !store64[@u0 + 40 | @v0 + @v3 + 11]. ]
+  ]
+  ? @v4 - @v3 > 5 [ ? (:load32[@v0 + @v3] == 0x454d4f48) * (:load8[@v0 + @v3 + 4] == 61) [ !store64[@u0 + 48 | @v0 + @v3 + 5]. ] ]
+  @v4 + 1 -> @v3.
+ ]
+ :load64[@u0 + 32] -> @v0. "0" -> @v1. 1 -> @v2.
+ ? @v0 != 0 [
+  ? :load32[@v0] == 0x78696e75 [ @v0 + 4 -> @v0. ]
+  ? :load8[@v0] != 58 [ "Linux viewer needs a local X11 DISPLAY (Xwayland is supported)." -> @u6. 0 -> @u4. 1 -> @u17. ] ~ [
+   @v0 + 1 -> @v1. 0 -> @v2. ?? (:load8[@v1 + @v2] >= 48) * (:load8[@v1 + @v2] <= 57) * (@v2 < 6) [ @v2 + 1 -> @v2. ]
+   ? (@v2 == 0) + (@v2 > 5) [ 0 -> @u4. 1 -> @u17. "Invalid DISPLAY number." -> @u6. ]
+   ? :load8[@v1 + @v2] != 0 [
+    ? (:load8[@v1 + @v2] != 46) + (:load8[@v1 + @v2 + 1] != 48) + (:load8[@v1 + @v2 + 2] != 0) [ 0 -> @u4. 1 -> @u17. "Only X11 screen zero is supported." -> @u6. ]
+   ]
+  ]
+ ]
+ !store64[@u0 + 56 | @v1]. !store64[@u0 + 64 | @v2].
+ !store16[@u0 + 80 | 1]. "/tmp/.X11-unix/X" -> @v0. 0 -> @v3.
+ ?? :load8[@v0 + @v3] [ !store8[@u0 + 82 + @v3 | :load8[@v0 + @v3]]. @v3 + 1 -> @v3. ]
+ 0 -> @v4. ?? @v4 < @v2 [ !store8[@u0 + 82 + @v3 | :load8[@v1 + @v4]]. @v4 + 1 -> @v4. @v3 + 1 -> @v3. ]
+ !store8[@u0 + 82 + @v3 | 0]. !store64[@u0 + 72 | @v3 + 3].
+ ? @u4 [
+  :hostsyscall[41 | 1 | 0x80001 | 0 | 0 | 0 | 0] -> @u8.
+  ? @u8 > 2147483647 [ "Cannot create the X11 socket." -> @u6. 0 -> @u4. 1 -> @u17. ] ~ [
+   ? :hostsyscall[42 | @u8 | @u0 + 80 | :load64[@u0 + 72] | 0 | 0 | 0] != 0 [ "Cannot connect to the local X11 display." -> @u6. 0 -> @u4. 1 -> @u17. ]
+  ]
+ ]
+ # Cookie source. An absent authority file also permits local access-controlled
+ # servers that explicitly grant this process's operating-system account access.
+ 0 -> @v9. :load64[@u0 + 40] -> @v0.
+ ? @v0 == 0 [
+  :load64[@u0 + 48] -> @v1. ? @v1 != 0 [
+   @u0 + 300000 -> @v0. 0 -> @v3. ?? (:load8[@v1 + @v3] != 0) * (@v3 < 4000) [ !store8[@v0 + @v3 | :load8[@v1 + @v3]]. @v3 + 1 -> @v3. ]
+   "/.Xauthority" -> @v1. 0 -> @v4. ?? :load8[@v1 + @v4] [ !store8[@v0 + @v3 | :load8[@v1 + @v4]]. @v4 + 1 -> @v4. @v3 + 1 -> @v3. ] !store8[@v0 + @v3 | 0].
+  ]
+ ]
+ ? @v0 != 0 [
+  :fileopen[@v0 | 0] -> @u7. ? @u7 != -1 [
+   :fileread[@u7 | @u0 + 393216 | 65536] -> @v6. :fileclose[@u7] -> @v7. -1 -> @u7.
+   ? @v6 > 65536 [ 0 -> @v6. ] 0 -> @v3. @u0 + 393216 -> @v0.
+   ?? @v3 + 2 <= @v6 [
+    @v3 + 2 -> @v3. 0 -> @v5. 1 -> @v10. 0 -> @v8.
+    ?? (@v5 < 4) * (@v3 + 2 <= @v6) [
+     :load8[@v0 + @v3] * 256 + :load8[@v0 + @v3 + 1] -> @v7. @v3 + 2 -> @v3.
+     ? @v3 + @v7 > @v6 [ @v6 + 1 -> @v3. 0 -> @v10. ] ~ [
+      ? @v5 == 1 [
+       ? @v7 != :load64[@u0 + 64] [ 0 -> @v10. ] ~ [
+        0 -> @v4. ?? @v4 < @v7 [ ? :load8[@v0 + @v3 + @v4] != :load8[:load64[@u0 + 56] + @v4] [ 0 -> @v10. ] @v4 + 1 -> @v4. ]
+       ]
+      ]
+      ? @v5 == 2 [
+       ? @v7 != 18 [ 0 -> @v10. ] ~ [ "MIT-MAGIC-COOKIE-1" -> @v1. 0 -> @v4. ?? @v4 < 18 [ ? :load8[@v0 + @v3 + @v4] != :load8[@v1 + @v4] [ 0 -> @v10. ] @v4 + 1 -> @v4. ] ]
+      ]
+      ? (@v5 == 3) * (@v7 == 16) * @v10 [ @v0 + @v3 -> @v8. ]
+      @v3 + @v7 -> @v3.
+     ] @v5 + 1 -> @v5.
+    ]
+    ? @v8 != 0 [ 0 -> @v4. ?? @v4 < 16 [ !store8[@u0 + 256 + @v4 | :load8[@v8 + @v4]]. @v4 + 1 -> @v4. ] 16 -> @v9. ]
+    ? @v5 < 4 [ @v6 + 1 -> @v3. ]
+   ]
+  ]
+ ]
+ 0 -> @v3. ?? @v3 < 64 [ !store8[@u2 + @v3 | 0]. @v3 + 1 -> @v3. ]
+ !store8[@u2 | 108]. !store16[@u2 + 2 | 11]. 12 -> @v8.
+ ? @v9 == 16 [
+  !store16[@u2 + 6 | 18]. !store16[@u2 + 8 | 16]. "MIT-MAGIC-COOKIE-1" -> @v0.
+  0 -> @v3. ?? @v3 < 18 [ !store8[@u2 + 12 + @v3 | :load8[@v0 + @v3]]. @v3 + 1 -> @v3. ]
+  0 -> @v3. ?? @v3 < 16 [ !store8[@u2 + 32 + @v3 | :load8[@u0 + 256 + @v3]]. @v3 + 1 -> @v3. ] 48 -> @v8.
+ ]
+ # Startup transactions: connect handshake, setup body, keyboard mapping reply.
+ 0 -> @v5. ?? (@v5 < 4) * @u4 [
+  ? (@v5 == 0) + (@v5 == 2) [
+   0 -> @v6. ?? (@v6 < @v8) * @u4 [
+    :hostsyscall[44 | @u8 | @u2 + @v6 | @v8 - @v6 | 16384 | 0 | 0] -> @v7.
+    ? (@v7 == 0) + (@v7 > @v8 - @v6) [ 0 -> @u4. 1 -> @u17. "X11 request failed." -> @u6. ] ~ [ @v6 + @v7 -> @v6. ]
+   ]
+   8 -> @v8. ? @v5 == 2 [ 32 -> @v8. ]
+  ]
+  0 -> @v6. ?? (@v6 < @v8) * @u4 [
+   !store32[@u0 + 240 | @u8]. !store16[@u0 + 244 | 1]. !store16[@u0 + 246 | 0].
+   :hostsyscall[7 | @u0 + 240 | 1 | 3000 | 0 | 0 | 0] -> @v7.
+   ? @v7 != 1 [ 0 -> @u4. 1 -> @u17. "X11 server did not complete startup." -> @u6. ] ~ [
+    :hostsyscall[0 | @u8 | @u2 + @v6 | @v8 - @v6 | 0 | 0 | 0] -> @v7.
+    ? (@v7 == 0) + (@v7 > @v8 - @v6) [ 0 -> @u4. 1 -> @u17. "X11 connection ended during startup." -> @u6. ] ~ [ @v6 + @v7 -> @v6. ]
+   ]
+  ]
+  ? @v5 == 0 [
+   ? :load8[@u2] != 1 [ 0 -> @u4. 1 -> @u17. "X11 authentication failed; check DISPLAY and XAUTHORITY." -> @u6. ]
+   :load16[@u2 + 6] * 4 -> @v8. ? (@v8 < 32) + (@v8 > 262144) [ 0 -> @u4. 1 -> @u17. ]
+  ]
+  ? @v5 == 1 [
+   :load32[@u2 + 4] -> @u21. :load32[@u2 + 8] -> @v10.
+   ? (:bitand[@v10 | 7] != 7) + (:load8[@u2 + 22] != 0) + (:load8[@u2 + 20] == 0) + (:load16[@u2 + 18] < 61446) [ "Unsupported X11 pixel layout or request limit." -> @u6. 0 -> @u4. 1 -> @u17. ]
+   :load16[@u2 + 16] -> @v3. :bitand[@v3 + 3 | 0xfffffffffffffffc] + 32 -> @v3.
+   0 -> @v4. 0 -> @v7.
+   ?? @v4 < :load8[@u2 + 21] [
+    ? @v3 + @v4 * 8 + 8 <= @v8 [
+     ? (:load8[@u2 + @v3 + @v4 * 8] == 24) * (:load8[@u2 + @v3 + @v4 * 8 + 1] == 32) * (:load8[@u2 + @v3 + @v4 * 8 + 2] == 32) [ 1 -> @v7. ]
+    ] @v4 + 1 -> @v4.
+   ]
+   ? @v7 == 0 [ 0 -> @u4. 1 -> @u17. "X11 screen needs 32-bit padded TrueColor pixels." -> @u6. ]
+   @v3 + :load8[@u2 + 21] * 8 -> @v3.
+   ? @v3 + 40 > @v8 [ 0 -> @u4. 1 -> @u17. "Truncated X11 screen description." -> @u6. ] ~ [
+    :load32[@u2 + @v3] -> @u11. :load32[@u2 + @v3 + 32] -> @v2. :load8[@u2 + @v3 + 38] -> @u12.
+    !store64[@u0 + 280 | @v2].
+    ? @u12 != 24 [ 0 -> @u4. 1 -> @u17. "This viewer requires a 24-bit X11 TrueColor screen." -> @u6. ]
+   ]
+   :load8[@u2 + 26] -> @v3. :load8[@u2 + 27] -> @v4.
+   !store64[@u0 + 288 | @v3]. !store64[@u0 + 296 | @v4 - @v3 + 1].
+   !store8[@u2 | 101]. !store8[@u2 + 1 | 0]. !store16[@u2 + 2 | 2]. !store8[@u2 + 4 | @v3]. !store8[@u2 + 5 | @v4 - @v3 + 1]. !store16[@u2 + 6 | 0]. 8 -> @v8.
+  ]
+  ? @v5 == 2 [
+   ? :load8[@u2] != 1 [ 0 -> @u4. 1 -> @u17. ] :load8[@u2 + 1] -> @u16.
+   :load32[@u2 + 4] * 4 -> @v8.
+   ? (@u16 == 0) + (@v8 > 65536) + (@v8 != :load64[@u0 + 296] * @u16 * 4) [ 0 -> @u4. 1 -> @u17. "Invalid X11 keyboard map." -> @u6. ]
+  ]
+  ? @v5 == 3 [ 0 -> @v3. ?? @v3 < @v8 [ !store8[@u15 + @v3 | :load8[@u2 + @v3]]. @v3 + 1 -> @v3. ] ]
+  @v5 + 1 -> @v5.
+ ]
+ ? @u4 [
+  @u21 + 1 -> @u9. @u21 + 2 -> @u10.
+  0 -> @v3. ?? @v3 < 256 [ !store8[@u2 + @v3 | 0]. @v3 + 1 -> @v3. ]
+  !store8[@u2 | 1]. !store8[@u2 + 1 | @u12]. !store16[@u2 + 2 | 10]. !store32[@u2 + 4 | @u9]. !store32[@u2 + 8 | @u11].
+  !store16[@u2 + 12 | 30]. !store16[@u2 + 14 | 30]. !store16[@u2 + 16 | 800]. !store16[@u2 + 18 | 600]. !store16[@u2 + 22 | 1].
+  !store32[@u2 + 24 | :load64[@u0 + 280]]. !store32[@u2 + 28 | 2050]. !store32[@u2 + 32 | 0x141824]. !store32[@u2 + 36 | 163845].
+  !store8[@u2 + 40 | 55]. !store16[@u2 + 42 | 4]. !store32[@u2 + 44 | @u10]. !store32[@u2 + 48 | @u9].
+  !store8[@u2 + 56 | 18]. !store16[@u2 + 58 | 15]. !store32[@u2 + 60 | @u9]. !store32[@u2 + 64 | 39]. !store32[@u2 + 68 | 31]. !store8[@u2 + 72 | 8]. !store32[@u2 + 76 | 34].
+  "Zero Web - original Zero browser  " -> @v0. 0 -> @v3. ?? @v3 < 34 [ !store8[@u2 + 80 + @v3 | :load8[@v0 + @v3]]. @v3 + 1 -> @v3. ]
+  :hostsyscall[44 | @u8 | @u2 | 116 | 16384 | 0 | 0] -> @v7. ? @v7 != 116 [ 0 -> @u4. 1 -> @u17. "X11 window creation failed." -> @u6. ]
+  # ICCCM size hints preserve the fixed raster canvas under a window manager.
+  0 -> @v3. ?? @v3 < 96 [ !store8[@u2+@v3|0]. @v3+1 -> @v3. ]
+  !store8[@u2|18]. !store16[@u2+2|24]. !store32[@u2+4|@u9].
+  !store32[@u2+8|40]. !store32[@u2+12|41]. !store8[@u2+16|32]. !store32[@u2+20|18].
+  !store32[@u2+24|48]. !store32[@u2+44|800]. !store32[@u2+48|600].
+  !store32[@u2+52|800]. !store32[@u2+56|600].
+  ? @u4 [
+   :hostsyscall[44|@u8|@u2|96|16384|0|0] -> @v7.
+   ? @v7 != 96 [ 0 -> @u4. 1 -> @u17. "Cannot set the X11 canvas size." -> @u6. ]
+  ]
+  # Advertise WM_DELETE_WINDOW before mapping: close receives our normal unsaved
+  # guard instead of the window manager terminating the process.
+  0 -> @v5. ?? (@v5 < 2) * @u4 [
+   "WM_PROTOCOLS" -> @v0. 12 -> @v1. ? @v5 == 1 [ "WM_DELETE_WINDOW" -> @v0. 16 -> @v1. ]
+   !store8[@u2 | 16]. !store8[@u2 + 1 | 0]. !store16[@u2 + 2 | :shr[@v1 + 8 | 2]]. !store16[@u2 + 4 | @v1]. !store16[@u2 + 6 | 0].
+   0 -> @v3. ?? @v3 < @v1 [ !store8[@u2 + 8 + @v3 | :load8[@v0 + @v3]]. @v3 + 1 -> @v3. ]
+   :hostsyscall[44 | @u8 | @u2 | @v1 + 8 | 16384 | 0 | 0] -> @v7.
+   ? @v7 != @v1 + 8 [ 0 -> @u4. 1 -> @u17. ]
+   0 -> @v6. ?? (@v6 < 32) * @u4 [
+    !store32[@u0 + 240 | @u8]. !store16[@u0 + 244 | 1]. !store16[@u0 + 246 | 0].
+    :hostsyscall[7 | @u0 + 240 | 1 | 3000 | 0 | 0 | 0] -> @v7.
+    ? @v7 != 1 [ 0 -> @u4. 1 -> @u17. ] ~ [
+     :hostsyscall[0 | @u8 | @u2 + @v6 | 32 - @v6 | 0 | 0 | 0] -> @v7.
+     ? (@v7 == 0) + (@v7 > 32 - @v6) [ 0 -> @u4. 1 -> @u17. ] ~ [ @v6 + @v7 -> @v6. ]
+    ]
+   ]
+   ? :load8[@u2] != 1 [ 0 -> @u4. 1 -> @u17. ]
+   !store64[@u0 + 304 + @v5 * 8 | :load32[@u2 + 8]]. @v5 + 1 -> @v5.
+  ]
+  ? @u4 [
+   !store8[@u2 | 18]. !store8[@u2 + 1 | 0]. !store16[@u2 + 2 | 7]. !store32[@u2 + 4 | @u9]. !store32[@u2 + 8 | :load64[@u0 + 304]].
+   !store32[@u2 + 12 | 4]. !store8[@u2 + 16 | 32]. !store8[@u2 + 17 | 0]. !store16[@u2 + 18 | 0]. !store32[@u2 + 20 | 1]. !store32[@u2 + 24 | :load64[@u0 + 312]].
+   !store8[@u2 + 28 | 8]. !store8[@u2 + 29 | 0]. !store16[@u2 + 30 | 2]. !store32[@u2 + 32 | @u9].
+   :hostsyscall[44 | @u8 | @u2 | 36 | 16384 | 0 | 0] -> @v7. ? @v7 != 36 [ 0 -> @u4. 1 -> @u17. ]
+  ]
+  ? @u4 == 0 [ "Cannot register the X11 window-close protocol." -> @u6. ]
+ ]
+ 0 -> @v9.
+]
+
+# Win32 is a host interface, not a bundled GUI toolkit. STATIC supplies a native
+# top-level message queue; the viewer paints its own original pixel canvas.
+? @u3 == 2 [
+ :hostlibrary["user32.dll"] -> @v0. :hostlibrary["gdi32.dll"] -> @v1. :hostlibrary["kernel32.dll"] -> @v2.
+ ? (@v0 == 0) + (@v1 == 0) + (@v2 == 0) [ !exit[20]. ]
+ !store64[@u13 | :hostsymbol[@v0 | "CreateWindowExA"]].
+ !store64[@u13 + 8 | :hostsymbol[@v0 | "PeekMessageA"]].
+ !store64[@u13 + 16 | :hostsymbol[@v0 | "TranslateMessage"]].
+ !store64[@u13 + 24 | :hostsymbol[@v0 | "DispatchMessageA"]].
+ !store64[@u13 + 32 | :hostsymbol[@v0 | "GetDC"]].
+ !store64[@u13 + 40 | :hostsymbol[@v0 | "ReleaseDC"]].
+ !store64[@u13 + 48 | :hostsymbol[@v0 | "ValidateRect"]].
+ !store64[@u13 + 56 | :hostsymbol[@v0 | "DestroyWindow"]].
+ !store64[@u13 + 64 | :hostsymbol[@v0 | "GetKeyState"]].
+ !store64[@u13 + 72 | :hostsymbol[@v1 | "SetDIBitsToDevice"]].
+ !store64[@u13 + 80 | :hostsymbol[@v0 | "LoadCursorA"]].
+ !store64[@u13 + 88 | :hostsymbol[@v0 | "SetCursor"]].
+ !store64[@u13 + 96 | :hostsymbol[@v0 | "SetForegroundWindow"]].
+ !store64[@u13 + 104 | :hostsymbol[@v0 | "SetFocus"]].
+ !store64[@u13 + 112 | :hostsymbol[@v2 | "MoveFileExA"]].
+ !store64[@u13 + 120 | :hostsymbol[@v0 | "AdjustWindowRectEx"]].
+ !store64[@u13 + 128 | :hostsymbol[@v0 | "RegisterRawInputDevices"]].
+ !store64[@u13 + 136 | :hostsymbol[@v0 | "GetRawInputData"]].
+ !store64[@u13 + 144 | :hostsymbol[@v0 | "IsWindow"]].
+ 0 -> @v3. ?? @v3 < 152 [ ? :load64[@u13 + @v3] == 0 [ !exit[21]. ] @v3 + 8 -> @v3. ]
+ # Fixed client canvas fits a 1080p desktop. Caption + system menu + minimize.
+ !store32[@u0 + 3144 | 800]. !store32[@u0 + 3148 | 600].
+ :hostcall12[:load64[@u13 + 120] | @u0 + 3136 | 0x10ca0000 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0] -> @v7.
+ :bitand[:load32[@u0 + 3144] - :load32[@u0 + 3136] | 0xffffffff] -> @v0.
+ :bitand[:load32[@u0 + 3148] - :load32[@u0 + 3140] | 0xffffffff] -> @v1.
+ :hostcall12[:load64[@u13] | 0 | "STATIC" | "Zero Web - original Zero browser  " | 0x10ca0000 | 30 | 30 | @v0 | @v1 | 0 | 0 | 0 | 0] -> @u9.
+ ? @u9 == 0 [ !exit[22]. ]
+ :hostcall12[:load64[@u13 + 96] | @u9 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0] -> @v7.
+ :hostcall12[:load64[@u13 + 104] | @u9 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0] -> @v7.
+ :hostcall12[:load64[@u13 + 80] | 0 | 32512 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0] -> @u10.
+ # BITMAPINFOHEADER: 32-bit BGRX, negative height is top-down.
+ !store32[@u0 + 3072 | 40]. !store32[@u0 + 3076 | 800]. !store32[@u0 + 3080 | -600].
+ !store16[@u0 + 3084 | 1]. !store16[@u0 + 3086 | 32].
+ # Receive queued mouse-wheel input independently of the STATIC class procedure.
+ # Legacy wheel messages are not counted as well, avoiding duplicate scrolling.
+ !store16[@u0+3160|1]. !store16[@u0+3162|2].
+ !store32[@u0+3164|0]. !store64[@u0+3168|@u9].
+ :hostcall12[:load64[@u13+128]|@u0+3160|1|16|0|0|0|0|0|0|0|0|0] -> @v0.
+ ? @v0 == 0 [ "Cannot register native mouse input." -> @u6. 0 -> @u4. 1 -> @u17. ]
+]
+
+?? @u4 [
+ 0 -> @u18. 0 -> @u20.
+
+? @u3 == 1 [
+ :load64[@u0 + 16] -> @v6.
+ :hostsyscall[45 | @u8 | @u14 + @v6 | 32 - @v6 | 64 | 0 | 0] -> @v7.
+ ? @v7 <= 32 - @v6 [
+  ? @v7 == 0 [ 0 -> @u4. 1 -> @u17. "X11 display disconnected." -> @u6. ] ~ [ @v6 + @v7 -> @v6. ]
+ ] ~ [ ? (@v7 != -11) * (@v7 != -4) [ 0 -> @u4. 1 -> @u17. "X11 event read failed." -> @u6. ] ]
+ !store64[@u0 + 16 | @v6].
+ ? @v6 == 32 [
+  !store64[@u0 + 16 | 0]. :bitand[:load8[@u14] | 127] -> @v1.
+  ? @v1 == 0 [ "X11 rejected a drawing request." -> @u6. 0 -> @u4. 1 -> @u17. ]
+  ? @v1 == 12 [ 1 -> @u5. ]
+  ? @v1 == 17 [ 1004 -> @u18. ]
+  ? @v1 == 33 [ ? :load32[@u14 + 12] == :load64[@u0 + 312] [ 1004 -> @u18. ] ]
+  ? @v1 == 4 [
+   :load8[@u14 + 1] -> @v7.
+   ? @v7 == 1 [ :load16[@u14 + 24] -> @v13. :load16[@u14 + 26] -> @v14. 2 -> @u20. ]
+   ? @v7 == 4 [ 3 -> @u18. ] ? @v7 == 5 [ 4 -> @u18. ]
+  ]
+  ? @v1 == 2 [
+   :load8[@u14 + 1] -> @v7. :load16[@u14 + 28] -> @u19.
+   ? (@v7 >= :load64[@u0 + 288]) * (@v7 < :load64[@u0 + 288] + :load64[@u0 + 296]) [
+    @u15 + (@v7 - :load64[@u0 + 288]) * @u16 * 4 -> @v0.
+    :load32[@v0] -> @v7.
+    ? :bitand[@u19 | 1] [ ? @u16 > 1 [ :load32[@v0 + 4] -> @v7. ? @v7 == 0 [ :load32[@v0] -> @v7. ] ] ]
+    ? :bitand[@u19 | 2] [ ? (@v7 >= 97) * (@v7 <= 122) [ @v7 - 32 -> @v7. ] ~ [ ? (@v7 >= 65) * (@v7 <= 90) [ @v7 + 32 -> @v7. ] ] ]
+    ? (@v7 >= 32) * (@v7 <= 126) [ @v7 -> @u18. ]
+    ? @v7 == 65361 [ 1 -> @u18. ] ? @v7 == 65363 [ 2 -> @u18. ] ? @v7 == 65362 [ 3 -> @u18. ] ? @v7 == 65364 [ 4 -> @u18. ]
+    ? @v7 == 65360 [ 5 -> @u18. ] ? @v7 == 65367 [ 6 -> @u18. ] ? @v7 == 65365 [ 7 -> @u18. ] ? @v7 == 65366 [ 8 -> @u18. ]
+    ? @v7 == 65535 [ 9 -> @u18. ] ? @v7 == 65288 [ 10 -> @u18. ] ? @v7 == 65293 [ 11 -> @u18. ] ? @v7 == 65289 [ 12 -> @u18. ]
+    ? @v7 == 65307 [ 1006 -> @u18. ] ? @v7 == 65474 [ 1003 -> @u18. ]
+    ? :bitand[@u19 | 4] [
+     0 -> @u18. ? (@v7 == 111) + (@v7 == 79) [ 1001 -> @u18. ] ? (@v7 == 115) + (@v7 == 83) [ 1002 -> @u18. ] ? (@v7 == 113) + (@v7 == 81) [ 1004 -> @u18. ]
+    ]
+   ]
+  ]
+ ]
+]
+
+? @u3 == 2 [
+ :hostcall12[:load64[@u13 + 8] | @u14 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0] -> @v0.
+ ? @v0 != 0 [
+  :load32[@u14 + 8] -> @v1. :load64[@u14 + 16] -> @v7.
+  ? @v1 == 256 [
+   :hostcall12[:load64[@u13 + 64] | 17 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0] -> @u19.
+   :bitand[@u19 | 32768] -> @u19.
+   ? @v7 == 37 [ 1 -> @u18. ] ? @v7 == 39 [ 2 -> @u18. ] ? @v7 == 38 [ 3 -> @u18. ] ? @v7 == 40 [ 4 -> @u18. ]
+   ? @v7 == 36 [ 5 -> @u18. ] ? @v7 == 35 [ 6 -> @u18. ] ? @v7 == 33 [ 7 -> @u18. ] ? @v7 == 34 [ 8 -> @u18. ]
+   ? @v7 == 46 [ 9 -> @u18. ] ? @v7 == 27 [ 1006 -> @u18. ] ? @v7 == 116 [ 1003 -> @u18. ]
+   ? @u19 != 0 [
+    ? @v7 == 79 [ 1001 -> @u18. ] ? @v7 == 83 [ 1002 -> @u18. ] ? @v7 == 81 [ 1004 -> @u18. ]
+   ]
+   :hostcall12[:load64[@u13 + 16] | @u14 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0] -> @v0.
+  ]
+  ? @v1 == 258 [
+   ? (@v7 >= 32) * (@v7 <= 126) [ @v7 -> @u18. ]
+   ? @v7 == 8 [ 10 -> @u18. ] ? @v7 == 13 [ 11 -> @u18. ] ? @v7 == 9 [ 12 -> @u18. ]
+  ]
+  ? @v1 == 255 [
+   !store32[@u0+3328|128].
+   :hostcall12[:load64[@u13+136]|:load64[@u14+24]|0x10000003|@u0+3200|@u0+3328|24|0|0|0|0|0|0|0] -> @v0.
+   ? (@v0 >= 48)*(@v0 <= 128) [
+    ? (:load32[@u0+3200] == 0)*(:load32[@u0+3204] == @v0)*(:bitand[:load16[@u0+3228]|1024] != 0) [
+     :load16[@u0+3230] -> @v0.
+     ? (@v0 > 0)*(@v0 < 32768) [ 3 -> @u18. ]
+     ? @v0 >= 32768 [ 4 -> @u18. ]
+    ]
+   ]
+  ]
+  ? @v1 == 513 [ :bitand[:load64[@u14 + 24] | 65535] -> @v13. :bitand[:shr[:load64[@u14 + 24] | 16] | 65535] -> @v14. 2 -> @u20. ]
+  ? @v1 == 15 [ 1 -> @u5. ]
+  ? @v1 == 32 [ :hostcall12[:load64[@u13 + 88] | @u10 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0] -> @v0. ]
+  ? (@v1 == 16) + (@v1 == 18) [ 1004 -> @u18. ]
+  ? (@v1 != 16) * (@v1 != 18) * (@v1 != 15) * (@v1 != 32) * (@v1 != 256) * (@v1 != 258) [
+   :hostcall12[:load64[@u13 + 24] | @u14 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0] -> @v0.
+  ]
+ ]
+ # A synchronous native close may be handled during PeekMessage itself.
+ :hostcall12[:load64[@u13+144]|@u9|0|0|0|0|0|0|0|0|0|0|0] -> @v0.
+ ? @v0 == 0 [ 0 -> @u4. 0 -> @u9. ]
+]
+
+
+ ? (@u18 == 1004)+(@u18 == 1006) [ 0 -> @u4. ]
+ ? ((@u18 >= 3)*(@u18 <= 8))*@u4 [
+  :load64[@web+80] -> @v0. 0 -> @v1.
+  ? :load64[@web+88] > 600 [ :load64[@web+88]-600 -> @v1. ]
+  40 -> @v2. ? (@u18 == 7)+(@u18 == 8) [ 520 -> @v2. ]
+  ? (@u18 == 3)+(@u18 == 7) [
+   ? @v0 > @v2 [ @v0-@v2 -> @v0. ] ~ [ 0 -> @v0. ]
+  ]
+  ? (@u18 == 4)+(@u18 == 8) [
+   ? @v0 > @v1 [ @v1 -> @v0. ]
+   ? @v2 < @v1-@v0 [ @v0+@v2 -> @v0. ] ~ [ @v1 -> @v0. ]
+  ]
+  ? @u18 == 5 [ 0 -> @v0. ] ? @u18 == 6 [ @v1 -> @v0. ]
+  ? @v0 != :load64[@web+80] [
+   !store64[@web+80|@v0].
+   !switch[@web+1024|@web+1664].
+   ? :load64[@web+16] [ 0 -> @u4. 1 -> @u17. "The document renderer failed." -> @u6. ]
+   1 -> @u5.
+  ]
+ ]
+ ? @u5*@u4 [
+
+? @u3 == 1 [
+ 0 -> @v11. ?? (@v11 < 600) * @u4 [
+  48 -> @v12. ? @v12 > 600 - @v11 [ 600 - @v11 -> @v12. ]
+  @v12 * 3200 -> @v8.
+  !store8[@u2 | 72]. !store8[@u2 + 1 | 2]. !store16[@u2 + 2 | :shr[@v8 + 24 | 2]].
+  !store32[@u2 + 4 | @u9]. !store32[@u2 + 8 | @u10]. !store16[@u2 + 12 | 800]. !store16[@u2 + 14 | @v12].
+  !store16[@u2 + 16 | 0]. !store16[@u2 + 18 | @v11]. !store8[@u2 + 20 | 0]. !store8[@u2 + 21 | @u12]. !store16[@u2 + 22 | 0].
+  0 -> @v3. ?? @v3 < @v8 [ !store64[@u2 + 24 + @v3 | :load64[@u1 + @v11 * 3200 + @v3]]. @v3 + 8 -> @v3. ]
+  @v8 + 24 -> @v8. 0 -> @v6.
+  ?? (@v6 < @v8) * @u4 [
+   :hostsyscall[44 | @u8 | @u2 + @v6 | @v8 - @v6 | 16384 | 0 | 0] -> @v7.
+   ? (@v7 == 0) + (@v7 > @v8 - @v6) [ 0 -> @u4. 1 -> @u17. "X11 presentation failed." -> @u6. ] ~ [ @v6 + @v7 -> @v6. ]
+  ] @v11 + @v12 -> @v11.
+ ]
+]
+
+? @u3 == 2 [
+ :hostcall12[:load64[@u13 + 32] | @u9 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0] -> @v0.
+ ? @v0 != 0 [
+  :hostcall12[:load64[@u13 + 72] | @v0 | 0 | 0 | 800 | 600 | 0 | 0 | 0 | 600 | @u1 | @u0 + 3072 | 0] -> @v1.
+  :hostcall12[:load64[@u13 + 40] | @u9 | @v0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0] -> @v1.
+ ]
+ :hostcall12[:load64[@u13 + 48] | @u9 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0] -> @v1.
+]
+
+
+ 0 -> @u5.
+ ]
+ :hostwait[10] -> @v0.
+]
+? @u3 == 1 [ ? @u8 <= 2147483647 [ :hostsyscall[3|@u8|0|0|0|0|0] -> @v0. ] ]
+? @u3 == 2 [ ? @u9 [ :hostcall12[:load64[@u13+56]|@u9|0|0|0|0|0|0|0|0|0|0|0] -> @v0. ] ]
+? @u17 [
+ 0 -> @v3. ?? :load8[@u6+@v3] [ !put[:load8[@u6+@v3]]. @v3+1 -> @v3. ] !put[10].
+ ? :load64[@web+16] == 0 [ !store64[@web+16|74]. ]
+]
+:hostfree[@u2|262144] -> @v0. :hostfree[@u0|1048576] -> @v0.
+]

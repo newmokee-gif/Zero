@@ -1,0 +1,593 @@
+0 => @video_width.
+0 => @video_height.
+0 => @video_pass.
+0 => @mode_valid.
+0 => @screenValid.
+0 => @width.
+0 => @height.
+0 => @candidate.
+0xffffffff => @chosenMode.
+0xffffffff => @fallbackMode.
+0 => @modeRank.
+0 => @fallbackRank.
+0 -> @video_pass. 1920 -> @video_width. 1080 -> @video_height. 1 -> @mode_valid.
+                        ? @video_width < 640 [ 0 -> @mode_valid. ]
+                        ? @video_width > 1920 [ 0 -> @mode_valid. ]
+                        ? @video_height < 480 [ 0 -> @mode_valid. ]
+                        ? @video_height > 1080 [ 0 -> @mode_valid. ]
+                        ? @video_pass == 0 [
+                            ? @video_width != 1920 [ 0 -> @mode_valid. ]
+                            ? @video_height != 1080 [ 0 -> @mode_valid. ]
+                        ]
+                        ? @video_pass == 1 [
+                            ? @video_width != 800 [ 0 -> @mode_valid. ]
+                            ? @video_height != 600 [ 0 -> @mode_valid. ]
+                        ]
+                        ? @video_pass == 2 [
+                            ? @video_width > 800 [ 0 -> @mode_valid. ]
+                            ? @video_height > 600 [ 0 -> @mode_valid. ]
+                        ]
+? @mode_valid != 1 [ !exit[1]. ]
+0 -> @video_pass. 800 -> @video_width. 600 -> @video_height. 1 -> @mode_valid.
+                        ? @video_width < 640 [ 0 -> @mode_valid. ]
+                        ? @video_width > 1920 [ 0 -> @mode_valid. ]
+                        ? @video_height < 480 [ 0 -> @mode_valid. ]
+                        ? @video_height > 1080 [ 0 -> @mode_valid. ]
+                        ? @video_pass == 0 [
+                            ? @video_width != 1920 [ 0 -> @mode_valid. ]
+                            ? @video_height != 1080 [ 0 -> @mode_valid. ]
+                        ]
+                        ? @video_pass == 1 [
+                            ? @video_width != 800 [ 0 -> @mode_valid. ]
+                            ? @video_height != 600 [ 0 -> @mode_valid. ]
+                        ]
+                        ? @video_pass == 2 [
+                            ? @video_width > 800 [ 0 -> @mode_valid. ]
+                            ? @video_height > 600 [ 0 -> @mode_valid. ]
+                        ]
+? @mode_valid != 0 [ !exit[2]. ]
+0 -> @video_pass. 640 -> @video_width. 480 -> @video_height. 1 -> @mode_valid.
+                        ? @video_width < 640 [ 0 -> @mode_valid. ]
+                        ? @video_width > 1920 [ 0 -> @mode_valid. ]
+                        ? @video_height < 480 [ 0 -> @mode_valid. ]
+                        ? @video_height > 1080 [ 0 -> @mode_valid. ]
+                        ? @video_pass == 0 [
+                            ? @video_width != 1920 [ 0 -> @mode_valid. ]
+                            ? @video_height != 1080 [ 0 -> @mode_valid. ]
+                        ]
+                        ? @video_pass == 1 [
+                            ? @video_width != 800 [ 0 -> @mode_valid. ]
+                            ? @video_height != 600 [ 0 -> @mode_valid. ]
+                        ]
+                        ? @video_pass == 2 [
+                            ? @video_width > 800 [ 0 -> @mode_valid. ]
+                            ? @video_height > 600 [ 0 -> @mode_valid. ]
+                        ]
+? @mode_valid != 0 [ !exit[3]. ]
+0 -> @video_pass. 1920 -> @video_width. 1079 -> @video_height. 1 -> @mode_valid.
+                        ? @video_width < 640 [ 0 -> @mode_valid. ]
+                        ? @video_width > 1920 [ 0 -> @mode_valid. ]
+                        ? @video_height < 480 [ 0 -> @mode_valid. ]
+                        ? @video_height > 1080 [ 0 -> @mode_valid. ]
+                        ? @video_pass == 0 [
+                            ? @video_width != 1920 [ 0 -> @mode_valid. ]
+                            ? @video_height != 1080 [ 0 -> @mode_valid. ]
+                        ]
+                        ? @video_pass == 1 [
+                            ? @video_width != 800 [ 0 -> @mode_valid. ]
+                            ? @video_height != 600 [ 0 -> @mode_valid. ]
+                        ]
+                        ? @video_pass == 2 [
+                            ? @video_width > 800 [ 0 -> @mode_valid. ]
+                            ? @video_height > 600 [ 0 -> @mode_valid. ]
+                        ]
+? @mode_valid != 0 [ !exit[4]. ]
+0 -> @video_pass. 1921 -> @video_width. 1080 -> @video_height. 1 -> @mode_valid.
+                        ? @video_width < 640 [ 0 -> @mode_valid. ]
+                        ? @video_width > 1920 [ 0 -> @mode_valid. ]
+                        ? @video_height < 480 [ 0 -> @mode_valid. ]
+                        ? @video_height > 1080 [ 0 -> @mode_valid. ]
+                        ? @video_pass == 0 [
+                            ? @video_width != 1920 [ 0 -> @mode_valid. ]
+                            ? @video_height != 1080 [ 0 -> @mode_valid. ]
+                        ]
+                        ? @video_pass == 1 [
+                            ? @video_width != 800 [ 0 -> @mode_valid. ]
+                            ? @video_height != 600 [ 0 -> @mode_valid. ]
+                        ]
+                        ? @video_pass == 2 [
+                            ? @video_width > 800 [ 0 -> @mode_valid. ]
+                            ? @video_height > 600 [ 0 -> @mode_valid. ]
+                        ]
+? @mode_valid != 0 [ !exit[5]. ]
+0 -> @video_pass. 1920 -> @video_width. 1081 -> @video_height. 1 -> @mode_valid.
+                        ? @video_width < 640 [ 0 -> @mode_valid. ]
+                        ? @video_width > 1920 [ 0 -> @mode_valid. ]
+                        ? @video_height < 480 [ 0 -> @mode_valid. ]
+                        ? @video_height > 1080 [ 0 -> @mode_valid. ]
+                        ? @video_pass == 0 [
+                            ? @video_width != 1920 [ 0 -> @mode_valid. ]
+                            ? @video_height != 1080 [ 0 -> @mode_valid. ]
+                        ]
+                        ? @video_pass == 1 [
+                            ? @video_width != 800 [ 0 -> @mode_valid. ]
+                            ? @video_height != 600 [ 0 -> @mode_valid. ]
+                        ]
+                        ? @video_pass == 2 [
+                            ? @video_width > 800 [ 0 -> @mode_valid. ]
+                            ? @video_height > 600 [ 0 -> @mode_valid. ]
+                        ]
+? @mode_valid != 0 [ !exit[6]. ]
+1 -> @video_pass. 800 -> @video_width. 600 -> @video_height. 1 -> @mode_valid.
+                        ? @video_width < 640 [ 0 -> @mode_valid. ]
+                        ? @video_width > 1920 [ 0 -> @mode_valid. ]
+                        ? @video_height < 480 [ 0 -> @mode_valid. ]
+                        ? @video_height > 1080 [ 0 -> @mode_valid. ]
+                        ? @video_pass == 0 [
+                            ? @video_width != 1920 [ 0 -> @mode_valid. ]
+                            ? @video_height != 1080 [ 0 -> @mode_valid. ]
+                        ]
+                        ? @video_pass == 1 [
+                            ? @video_width != 800 [ 0 -> @mode_valid. ]
+                            ? @video_height != 600 [ 0 -> @mode_valid. ]
+                        ]
+                        ? @video_pass == 2 [
+                            ? @video_width > 800 [ 0 -> @mode_valid. ]
+                            ? @video_height > 600 [ 0 -> @mode_valid. ]
+                        ]
+? @mode_valid != 1 [ !exit[7]. ]
+1 -> @video_pass. 1920 -> @video_width. 1080 -> @video_height. 1 -> @mode_valid.
+                        ? @video_width < 640 [ 0 -> @mode_valid. ]
+                        ? @video_width > 1920 [ 0 -> @mode_valid. ]
+                        ? @video_height < 480 [ 0 -> @mode_valid. ]
+                        ? @video_height > 1080 [ 0 -> @mode_valid. ]
+                        ? @video_pass == 0 [
+                            ? @video_width != 1920 [ 0 -> @mode_valid. ]
+                            ? @video_height != 1080 [ 0 -> @mode_valid. ]
+                        ]
+                        ? @video_pass == 1 [
+                            ? @video_width != 800 [ 0 -> @mode_valid. ]
+                            ? @video_height != 600 [ 0 -> @mode_valid. ]
+                        ]
+                        ? @video_pass == 2 [
+                            ? @video_width > 800 [ 0 -> @mode_valid. ]
+                            ? @video_height > 600 [ 0 -> @mode_valid. ]
+                        ]
+? @mode_valid != 0 [ !exit[8]. ]
+1 -> @video_pass. 640 -> @video_width. 480 -> @video_height. 1 -> @mode_valid.
+                        ? @video_width < 640 [ 0 -> @mode_valid. ]
+                        ? @video_width > 1920 [ 0 -> @mode_valid. ]
+                        ? @video_height < 480 [ 0 -> @mode_valid. ]
+                        ? @video_height > 1080 [ 0 -> @mode_valid. ]
+                        ? @video_pass == 0 [
+                            ? @video_width != 1920 [ 0 -> @mode_valid. ]
+                            ? @video_height != 1080 [ 0 -> @mode_valid. ]
+                        ]
+                        ? @video_pass == 1 [
+                            ? @video_width != 800 [ 0 -> @mode_valid. ]
+                            ? @video_height != 600 [ 0 -> @mode_valid. ]
+                        ]
+                        ? @video_pass == 2 [
+                            ? @video_width > 800 [ 0 -> @mode_valid. ]
+                            ? @video_height > 600 [ 0 -> @mode_valid. ]
+                        ]
+? @mode_valid != 0 [ !exit[9]. ]
+2 -> @video_pass. 640 -> @video_width. 480 -> @video_height. 1 -> @mode_valid.
+                        ? @video_width < 640 [ 0 -> @mode_valid. ]
+                        ? @video_width > 1920 [ 0 -> @mode_valid. ]
+                        ? @video_height < 480 [ 0 -> @mode_valid. ]
+                        ? @video_height > 1080 [ 0 -> @mode_valid. ]
+                        ? @video_pass == 0 [
+                            ? @video_width != 1920 [ 0 -> @mode_valid. ]
+                            ? @video_height != 1080 [ 0 -> @mode_valid. ]
+                        ]
+                        ? @video_pass == 1 [
+                            ? @video_width != 800 [ 0 -> @mode_valid. ]
+                            ? @video_height != 600 [ 0 -> @mode_valid. ]
+                        ]
+                        ? @video_pass == 2 [
+                            ? @video_width > 800 [ 0 -> @mode_valid. ]
+                            ? @video_height > 600 [ 0 -> @mode_valid. ]
+                        ]
+? @mode_valid != 1 [ !exit[10]. ]
+2 -> @video_pass. 800 -> @video_width. 600 -> @video_height. 1 -> @mode_valid.
+                        ? @video_width < 640 [ 0 -> @mode_valid. ]
+                        ? @video_width > 1920 [ 0 -> @mode_valid. ]
+                        ? @video_height < 480 [ 0 -> @mode_valid. ]
+                        ? @video_height > 1080 [ 0 -> @mode_valid. ]
+                        ? @video_pass == 0 [
+                            ? @video_width != 1920 [ 0 -> @mode_valid. ]
+                            ? @video_height != 1080 [ 0 -> @mode_valid. ]
+                        ]
+                        ? @video_pass == 1 [
+                            ? @video_width != 800 [ 0 -> @mode_valid. ]
+                            ? @video_height != 600 [ 0 -> @mode_valid. ]
+                        ]
+                        ? @video_pass == 2 [
+                            ? @video_width > 800 [ 0 -> @mode_valid. ]
+                            ? @video_height > 600 [ 0 -> @mode_valid. ]
+                        ]
+? @mode_valid != 1 [ !exit[11]. ]
+2 -> @video_pass. 720 -> @video_width. 576 -> @video_height. 1 -> @mode_valid.
+                        ? @video_width < 640 [ 0 -> @mode_valid. ]
+                        ? @video_width > 1920 [ 0 -> @mode_valid. ]
+                        ? @video_height < 480 [ 0 -> @mode_valid. ]
+                        ? @video_height > 1080 [ 0 -> @mode_valid. ]
+                        ? @video_pass == 0 [
+                            ? @video_width != 1920 [ 0 -> @mode_valid. ]
+                            ? @video_height != 1080 [ 0 -> @mode_valid. ]
+                        ]
+                        ? @video_pass == 1 [
+                            ? @video_width != 800 [ 0 -> @mode_valid. ]
+                            ? @video_height != 600 [ 0 -> @mode_valid. ]
+                        ]
+                        ? @video_pass == 2 [
+                            ? @video_width > 800 [ 0 -> @mode_valid. ]
+                            ? @video_height > 600 [ 0 -> @mode_valid. ]
+                        ]
+? @mode_valid != 1 [ !exit[12]. ]
+2 -> @video_pass. 1024 -> @video_width. 768 -> @video_height. 1 -> @mode_valid.
+                        ? @video_width < 640 [ 0 -> @mode_valid. ]
+                        ? @video_width > 1920 [ 0 -> @mode_valid. ]
+                        ? @video_height < 480 [ 0 -> @mode_valid. ]
+                        ? @video_height > 1080 [ 0 -> @mode_valid. ]
+                        ? @video_pass == 0 [
+                            ? @video_width != 1920 [ 0 -> @mode_valid. ]
+                            ? @video_height != 1080 [ 0 -> @mode_valid. ]
+                        ]
+                        ? @video_pass == 1 [
+                            ? @video_width != 800 [ 0 -> @mode_valid. ]
+                            ? @video_height != 600 [ 0 -> @mode_valid. ]
+                        ]
+                        ? @video_pass == 2 [
+                            ? @video_width > 800 [ 0 -> @mode_valid. ]
+                            ? @video_height > 600 [ 0 -> @mode_valid. ]
+                        ]
+? @mode_valid != 0 [ !exit[13]. ]
+2 -> @video_pass. 1920 -> @video_width. 1080 -> @video_height. 1 -> @mode_valid.
+                        ? @video_width < 640 [ 0 -> @mode_valid. ]
+                        ? @video_width > 1920 [ 0 -> @mode_valid. ]
+                        ? @video_height < 480 [ 0 -> @mode_valid. ]
+                        ? @video_height > 1080 [ 0 -> @mode_valid. ]
+                        ? @video_pass == 0 [
+                            ? @video_width != 1920 [ 0 -> @mode_valid. ]
+                            ? @video_height != 1080 [ 0 -> @mode_valid. ]
+                        ]
+                        ? @video_pass == 1 [
+                            ? @video_width != 800 [ 0 -> @mode_valid. ]
+                            ? @video_height != 600 [ 0 -> @mode_valid. ]
+                        ]
+                        ? @video_pass == 2 [
+                            ? @video_width > 800 [ 0 -> @mode_valid. ]
+                            ? @video_height > 600 [ 0 -> @mode_valid. ]
+                        ]
+? @mode_valid != 0 [ !exit[14]. ]
+2 -> @video_pass. 639 -> @video_width. 480 -> @video_height. 1 -> @mode_valid.
+                        ? @video_width < 640 [ 0 -> @mode_valid. ]
+                        ? @video_width > 1920 [ 0 -> @mode_valid. ]
+                        ? @video_height < 480 [ 0 -> @mode_valid. ]
+                        ? @video_height > 1080 [ 0 -> @mode_valid. ]
+                        ? @video_pass == 0 [
+                            ? @video_width != 1920 [ 0 -> @mode_valid. ]
+                            ? @video_height != 1080 [ 0 -> @mode_valid. ]
+                        ]
+                        ? @video_pass == 1 [
+                            ? @video_width != 800 [ 0 -> @mode_valid. ]
+                            ? @video_height != 600 [ 0 -> @mode_valid. ]
+                        ]
+                        ? @video_pass == 2 [
+                            ? @video_width > 800 [ 0 -> @mode_valid. ]
+                            ? @video_height > 600 [ 0 -> @mode_valid. ]
+                        ]
+? @mode_valid != 0 [ !exit[15]. ]
+2 -> @video_pass. 640 -> @video_width. 479 -> @video_height. 1 -> @mode_valid.
+                        ? @video_width < 640 [ 0 -> @mode_valid. ]
+                        ? @video_width > 1920 [ 0 -> @mode_valid. ]
+                        ? @video_height < 480 [ 0 -> @mode_valid. ]
+                        ? @video_height > 1080 [ 0 -> @mode_valid. ]
+                        ? @video_pass == 0 [
+                            ? @video_width != 1920 [ 0 -> @mode_valid. ]
+                            ? @video_height != 1080 [ 0 -> @mode_valid. ]
+                        ]
+                        ? @video_pass == 1 [
+                            ? @video_width != 800 [ 0 -> @mode_valid. ]
+                            ? @video_height != 600 [ 0 -> @mode_valid. ]
+                        ]
+                        ? @video_pass == 2 [
+                            ? @video_width > 800 [ 0 -> @mode_valid. ]
+                            ? @video_height > 600 [ 0 -> @mode_valid. ]
+                        ]
+? @mode_valid != 0 [ !exit[16]. ]
+0xffffffff -> @chosenMode. 0xffffffff -> @fallbackMode. 0 -> @fallbackRank.
+0 -> @candidate. 640 -> @width. 480 -> @height. 1 -> @screenValid.
+                        ? @screenValid [
+                            ? (@width == 1920) * (@height == 1080) [
+                                ? @chosenMode == 0xffffffff [ @candidate -> @chosenMode. ]
+                            ] ~ [
+                                1 -> @modeRank.
+                                ? (@width == 640) * (@height == 480) [ 2 -> @modeRank. ]
+                                ? (@width == 800) * (@height == 600) [ 3 -> @modeRank. ]
+                                ? @modeRank > @fallbackRank [
+                                    @candidate -> @fallbackMode. @modeRank -> @fallbackRank.
+                                ]
+                            ]
+                        ]
+1 -> @candidate. 800 -> @width. 600 -> @height. 1 -> @screenValid.
+                        ? @screenValid [
+                            ? (@width == 1920) * (@height == 1080) [
+                                ? @chosenMode == 0xffffffff [ @candidate -> @chosenMode. ]
+                            ] ~ [
+                                1 -> @modeRank.
+                                ? (@width == 640) * (@height == 480) [ 2 -> @modeRank. ]
+                                ? (@width == 800) * (@height == 600) [ 3 -> @modeRank. ]
+                                ? @modeRank > @fallbackRank [
+                                    @candidate -> @fallbackMode. @modeRank -> @fallbackRank.
+                                ]
+                            ]
+                        ]
+2 -> @candidate. 1920 -> @width. 1080 -> @height. 1 -> @screenValid.
+                        ? @screenValid [
+                            ? (@width == 1920) * (@height == 1080) [
+                                ? @chosenMode == 0xffffffff [ @candidate -> @chosenMode. ]
+                            ] ~ [
+                                1 -> @modeRank.
+                                ? (@width == 640) * (@height == 480) [ 2 -> @modeRank. ]
+                                ? (@width == 800) * (@height == 600) [ 3 -> @modeRank. ]
+                                ? @modeRank > @fallbackRank [
+                                    @candidate -> @fallbackMode. @modeRank -> @fallbackRank.
+                                ]
+                            ]
+                        ]
+? @chosenMode != 2 [ !exit[17]. ]
+? @fallbackMode != 1 [ !exit[18]. ]
+? @fallbackRank != 3 [ !exit[19]. ]
+0xffffffff -> @chosenMode. 0xffffffff -> @fallbackMode. 0 -> @fallbackRank.
+0 -> @candidate. 1920 -> @width. 1080 -> @height. 1 -> @screenValid.
+                        ? @screenValid [
+                            ? (@width == 1920) * (@height == 1080) [
+                                ? @chosenMode == 0xffffffff [ @candidate -> @chosenMode. ]
+                            ] ~ [
+                                1 -> @modeRank.
+                                ? (@width == 640) * (@height == 480) [ 2 -> @modeRank. ]
+                                ? (@width == 800) * (@height == 600) [ 3 -> @modeRank. ]
+                                ? @modeRank > @fallbackRank [
+                                    @candidate -> @fallbackMode. @modeRank -> @fallbackRank.
+                                ]
+                            ]
+                        ]
+1 -> @candidate. 640 -> @width. 480 -> @height. 1 -> @screenValid.
+                        ? @screenValid [
+                            ? (@width == 1920) * (@height == 1080) [
+                                ? @chosenMode == 0xffffffff [ @candidate -> @chosenMode. ]
+                            ] ~ [
+                                1 -> @modeRank.
+                                ? (@width == 640) * (@height == 480) [ 2 -> @modeRank. ]
+                                ? (@width == 800) * (@height == 600) [ 3 -> @modeRank. ]
+                                ? @modeRank > @fallbackRank [
+                                    @candidate -> @fallbackMode. @modeRank -> @fallbackRank.
+                                ]
+                            ]
+                        ]
+2 -> @candidate. 800 -> @width. 600 -> @height. 1 -> @screenValid.
+                        ? @screenValid [
+                            ? (@width == 1920) * (@height == 1080) [
+                                ? @chosenMode == 0xffffffff [ @candidate -> @chosenMode. ]
+                            ] ~ [
+                                1 -> @modeRank.
+                                ? (@width == 640) * (@height == 480) [ 2 -> @modeRank. ]
+                                ? (@width == 800) * (@height == 600) [ 3 -> @modeRank. ]
+                                ? @modeRank > @fallbackRank [
+                                    @candidate -> @fallbackMode. @modeRank -> @fallbackRank.
+                                ]
+                            ]
+                        ]
+? @chosenMode != 0 [ !exit[20]. ]
+? @fallbackMode != 2 [ !exit[21]. ]
+? @fallbackRank != 3 [ !exit[22]. ]
+0xffffffff -> @chosenMode. 0xffffffff -> @fallbackMode. 0 -> @fallbackRank.
+0 -> @candidate. 1024 -> @width. 768 -> @height. 1 -> @screenValid.
+                        ? @screenValid [
+                            ? (@width == 1920) * (@height == 1080) [
+                                ? @chosenMode == 0xffffffff [ @candidate -> @chosenMode. ]
+                            ] ~ [
+                                1 -> @modeRank.
+                                ? (@width == 640) * (@height == 480) [ 2 -> @modeRank. ]
+                                ? (@width == 800) * (@height == 600) [ 3 -> @modeRank. ]
+                                ? @modeRank > @fallbackRank [
+                                    @candidate -> @fallbackMode. @modeRank -> @fallbackRank.
+                                ]
+                            ]
+                        ]
+1 -> @candidate. 640 -> @width. 480 -> @height. 1 -> @screenValid.
+                        ? @screenValid [
+                            ? (@width == 1920) * (@height == 1080) [
+                                ? @chosenMode == 0xffffffff [ @candidate -> @chosenMode. ]
+                            ] ~ [
+                                1 -> @modeRank.
+                                ? (@width == 640) * (@height == 480) [ 2 -> @modeRank. ]
+                                ? (@width == 800) * (@height == 600) [ 3 -> @modeRank. ]
+                                ? @modeRank > @fallbackRank [
+                                    @candidate -> @fallbackMode. @modeRank -> @fallbackRank.
+                                ]
+                            ]
+                        ]
+? @chosenMode != 4294967295 [ !exit[23]. ]
+? @fallbackMode != 1 [ !exit[24]. ]
+? @fallbackRank != 2 [ !exit[25]. ]
+0xffffffff -> @chosenMode. 0xffffffff -> @fallbackMode. 0 -> @fallbackRank.
+0 -> @candidate. 1024 -> @width. 768 -> @height. 1 -> @screenValid.
+                        ? @screenValid [
+                            ? (@width == 1920) * (@height == 1080) [
+                                ? @chosenMode == 0xffffffff [ @candidate -> @chosenMode. ]
+                            ] ~ [
+                                1 -> @modeRank.
+                                ? (@width == 640) * (@height == 480) [ 2 -> @modeRank. ]
+                                ? (@width == 800) * (@height == 600) [ 3 -> @modeRank. ]
+                                ? @modeRank > @fallbackRank [
+                                    @candidate -> @fallbackMode. @modeRank -> @fallbackRank.
+                                ]
+                            ]
+                        ]
+1 -> @candidate. 800 -> @width. 600 -> @height. 1 -> @screenValid.
+                        ? @screenValid [
+                            ? (@width == 1920) * (@height == 1080) [
+                                ? @chosenMode == 0xffffffff [ @candidate -> @chosenMode. ]
+                            ] ~ [
+                                1 -> @modeRank.
+                                ? (@width == 640) * (@height == 480) [ 2 -> @modeRank. ]
+                                ? (@width == 800) * (@height == 600) [ 3 -> @modeRank. ]
+                                ? @modeRank > @fallbackRank [
+                                    @candidate -> @fallbackMode. @modeRank -> @fallbackRank.
+                                ]
+                            ]
+                        ]
+2 -> @candidate. 640 -> @width. 480 -> @height. 1 -> @screenValid.
+                        ? @screenValid [
+                            ? (@width == 1920) * (@height == 1080) [
+                                ? @chosenMode == 0xffffffff [ @candidate -> @chosenMode. ]
+                            ] ~ [
+                                1 -> @modeRank.
+                                ? (@width == 640) * (@height == 480) [ 2 -> @modeRank. ]
+                                ? (@width == 800) * (@height == 600) [ 3 -> @modeRank. ]
+                                ? @modeRank > @fallbackRank [
+                                    @candidate -> @fallbackMode. @modeRank -> @fallbackRank.
+                                ]
+                            ]
+                        ]
+? @chosenMode != 4294967295 [ !exit[26]. ]
+? @fallbackMode != 1 [ !exit[27]. ]
+? @fallbackRank != 3 [ !exit[28]. ]
+0xffffffff -> @chosenMode. 0xffffffff -> @fallbackMode. 0 -> @fallbackRank.
+0 -> @candidate. 1920 -> @width. 1080 -> @height. 0 -> @screenValid.
+                        ? @screenValid [
+                            ? (@width == 1920) * (@height == 1080) [
+                                ? @chosenMode == 0xffffffff [ @candidate -> @chosenMode. ]
+                            ] ~ [
+                                1 -> @modeRank.
+                                ? (@width == 640) * (@height == 480) [ 2 -> @modeRank. ]
+                                ? (@width == 800) * (@height == 600) [ 3 -> @modeRank. ]
+                                ? @modeRank > @fallbackRank [
+                                    @candidate -> @fallbackMode. @modeRank -> @fallbackRank.
+                                ]
+                            ]
+                        ]
+1 -> @candidate. 800 -> @width. 600 -> @height. 1 -> @screenValid.
+                        ? @screenValid [
+                            ? (@width == 1920) * (@height == 1080) [
+                                ? @chosenMode == 0xffffffff [ @candidate -> @chosenMode. ]
+                            ] ~ [
+                                1 -> @modeRank.
+                                ? (@width == 640) * (@height == 480) [ 2 -> @modeRank. ]
+                                ? (@width == 800) * (@height == 600) [ 3 -> @modeRank. ]
+                                ? @modeRank > @fallbackRank [
+                                    @candidate -> @fallbackMode. @modeRank -> @fallbackRank.
+                                ]
+                            ]
+                        ]
+? @chosenMode != 4294967295 [ !exit[29]. ]
+? @fallbackMode != 1 [ !exit[30]. ]
+? @fallbackRank != 3 [ !exit[31]. ]
+0xffffffff -> @chosenMode. 0xffffffff -> @fallbackMode. 0 -> @fallbackRank.
+0 -> @candidate. 1920 -> @width. 1080 -> @height. 1 -> @screenValid.
+                        ? @screenValid [
+                            ? (@width == 1920) * (@height == 1080) [
+                                ? @chosenMode == 0xffffffff [ @candidate -> @chosenMode. ]
+                            ] ~ [
+                                1 -> @modeRank.
+                                ? (@width == 640) * (@height == 480) [ 2 -> @modeRank. ]
+                                ? (@width == 800) * (@height == 600) [ 3 -> @modeRank. ]
+                                ? @modeRank > @fallbackRank [
+                                    @candidate -> @fallbackMode. @modeRank -> @fallbackRank.
+                                ]
+                            ]
+                        ]
+1 -> @candidate. 1920 -> @width. 1080 -> @height. 1 -> @screenValid.
+                        ? @screenValid [
+                            ? (@width == 1920) * (@height == 1080) [
+                                ? @chosenMode == 0xffffffff [ @candidate -> @chosenMode. ]
+                            ] ~ [
+                                1 -> @modeRank.
+                                ? (@width == 640) * (@height == 480) [ 2 -> @modeRank. ]
+                                ? (@width == 800) * (@height == 600) [ 3 -> @modeRank. ]
+                                ? @modeRank > @fallbackRank [
+                                    @candidate -> @fallbackMode. @modeRank -> @fallbackRank.
+                                ]
+                            ]
+                        ]
+2 -> @candidate. 800 -> @width. 600 -> @height. 1 -> @screenValid.
+                        ? @screenValid [
+                            ? (@width == 1920) * (@height == 1080) [
+                                ? @chosenMode == 0xffffffff [ @candidate -> @chosenMode. ]
+                            ] ~ [
+                                1 -> @modeRank.
+                                ? (@width == 640) * (@height == 480) [ 2 -> @modeRank. ]
+                                ? (@width == 800) * (@height == 600) [ 3 -> @modeRank. ]
+                                ? @modeRank > @fallbackRank [
+                                    @candidate -> @fallbackMode. @modeRank -> @fallbackRank.
+                                ]
+                            ]
+                        ]
+? @chosenMode != 0 [ !exit[32]. ]
+? @fallbackMode != 2 [ !exit[33]. ]
+? @fallbackRank != 3 [ !exit[34]. ]
+0xffffffff -> @chosenMode. 0xffffffff -> @fallbackMode. 0 -> @fallbackRank.
+0 -> @candidate. 800 -> @width. 600 -> @height. 1 -> @screenValid.
+                        ? @screenValid [
+                            ? (@width == 1920) * (@height == 1080) [
+                                ? @chosenMode == 0xffffffff [ @candidate -> @chosenMode. ]
+                            ] ~ [
+                                1 -> @modeRank.
+                                ? (@width == 640) * (@height == 480) [ 2 -> @modeRank. ]
+                                ? (@width == 800) * (@height == 600) [ 3 -> @modeRank. ]
+                                ? @modeRank > @fallbackRank [
+                                    @candidate -> @fallbackMode. @modeRank -> @fallbackRank.
+                                ]
+                            ]
+                        ]
+1 -> @candidate. 800 -> @width. 600 -> @height. 1 -> @screenValid.
+                        ? @screenValid [
+                            ? (@width == 1920) * (@height == 1080) [
+                                ? @chosenMode == 0xffffffff [ @candidate -> @chosenMode. ]
+                            ] ~ [
+                                1 -> @modeRank.
+                                ? (@width == 640) * (@height == 480) [ 2 -> @modeRank. ]
+                                ? (@width == 800) * (@height == 600) [ 3 -> @modeRank. ]
+                                ? @modeRank > @fallbackRank [
+                                    @candidate -> @fallbackMode. @modeRank -> @fallbackRank.
+                                ]
+                            ]
+                        ]
+? @chosenMode != 4294967295 [ !exit[35]. ]
+? @fallbackMode != 0 [ !exit[36]. ]
+? @fallbackRank != 3 [ !exit[37]. ]
+0xffffffff -> @chosenMode. 0xffffffff -> @fallbackMode. 0 -> @fallbackRank.
+0 -> @candidate. 640 -> @width. 480 -> @height. 0 -> @screenValid.
+                        ? @screenValid [
+                            ? (@width == 1920) * (@height == 1080) [
+                                ? @chosenMode == 0xffffffff [ @candidate -> @chosenMode. ]
+                            ] ~ [
+                                1 -> @modeRank.
+                                ? (@width == 640) * (@height == 480) [ 2 -> @modeRank. ]
+                                ? (@width == 800) * (@height == 600) [ 3 -> @modeRank. ]
+                                ? @modeRank > @fallbackRank [
+                                    @candidate -> @fallbackMode. @modeRank -> @fallbackRank.
+                                ]
+                            ]
+                        ]
+1 -> @candidate. 1920 -> @width. 1080 -> @height. 0 -> @screenValid.
+                        ? @screenValid [
+                            ? (@width == 1920) * (@height == 1080) [
+                                ? @chosenMode == 0xffffffff [ @candidate -> @chosenMode. ]
+                            ] ~ [
+                                1 -> @modeRank.
+                                ? (@width == 640) * (@height == 480) [ 2 -> @modeRank. ]
+                                ? (@width == 800) * (@height == 600) [ 3 -> @modeRank. ]
+                                ? @modeRank > @fallbackRank [
+                                    @candidate -> @fallbackMode. @modeRank -> @fallbackRank.
+                                ]
+                            ]
+                        ]
+? @chosenMode != 4294967295 [ !exit[38]. ]
+? @fallbackMode != 4294967295 [ !exit[39]. ]
+? @fallbackRank != 0 [ !exit[40]. ]
+!put[80]. !put[65]. !put[83]. !put[83]. !put[10]. !exit[0].

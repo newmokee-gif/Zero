@@ -1,0 +1,168 @@
+0 => @memory.
+0 => @source.
+0 => @tokens.
+0 => @output.
+0 => @stack.
+0 => @symbols.
+0 => @templates.
+0 => @decoded.
+0 => @scratch.
+0 => @meta.
+0 => @names.
+0 => @flags.
+0 => @mode.
+0 => @arch.
+0 => @limit.
+0 => @p.
+0 => @n.
+0 => @c.
+0 => @d.
+0 => @v.
+0 => @base.
+0 => @x.
+0 => @y.
+0 => @z.
+0 => @k.
+0 => @j.
+0 => @i.
+0 => @ti.
+0 => @tt.
+0 => @tv.
+0 => @op.
+0 => @a.
+0 => @b.
+0 => @sp.
+0 => @vars.
+0 => @ed.
+0 => @bd.
+0 => @out.
+0 => @fail.
+0 => @done.
+0 => @e0.
+0 => @e1.
+0 => @e2.
+0 => @e3.
+0 => @suffix.
+0 => @width.
+0 => @imm.
+0 => @tail.
+0 => @next.
+0 => @na.
+0 => @nb.
+0 => @name.
+0 => @nlen.
+0 => @count.
+0 => @len.
+0 => @str.
+0 => @emit.
+0 => @id.
+0 => @idx.
+:reserve[0] -> @memory.
+:load64[@memory + 4194816] -> @n.
+? @n > 2 [ !exit[1]. ]
+? @n == 2 [
+ :load64[@memory + 4194832] -> @str.
+ "--host|--raw|--efi|--raw32|--efi32|--real|--windows|--app64|--app32|" -> @flags.
+ 0 -> @p. 1 -> @k.
+ ?? @k < 10 [
+  0 -> @j. 1 -> @x.
+  ?? :load8[@flags + @p + @j] != 124 [
+   ? @x == 1 [ ? :load8[@flags + @p + @j] != :load8[@str + @j] [ 0 -> @x. ] ]
+   @j + 1 -> @j.
+  ]
+  ? @x == 1 [ ? :load8[@str + @j] != 0 [ 0 -> @x. ] ]
+  ? @x == 1 [ @k -> @mode. ]
+  @p + @j + 1 -> @p. @k + 1 -> @k.
+ ]
+ ? @mode == 0 [ !exit[1]. ]
+]
+:reserve[4022880] -> @memory.
+@memory -> @source.
+@memory + 262160 -> @tokens.
+@memory + 3407904 -> @output.
+@memory + 3899440 -> @stack.
+@memory + 3932224 -> @symbols.
+@memory + 3934272 -> @templates.
+@memory + 3940416 -> @decoded.
+@memory + 3973184 -> @scratch.
+@memory + 3977880 -> @meta.
+"put exit store8 store16 store32 store64 out8 out16 halt disable load8 load16 load32 load64 in8 in16 reserve arg0 arg1 call enter read write call7 enable bios biosreset bioscheck biosmode biosput cpuid lgdt cr0 cr3 cr4 rdmsr wrmsr longjump protectedjump var if else while fork switch vbe far16 pread pwrite bitxor bitand shr memmap fsync in32 out32 biosmove host argcount argument fileopen fileread filewrite filesize fileclose filedelete makedir dirempty filemove hostalloc hostprotect hostfree program " -> @names.
+? (@mode == 4) + (@mode == 5) + (@mode == 9) [ 1 -> @arch. ]
+? @mode == 6 [ 2 -> @arch. ]
+491520 -> @limit.
+? @arch == 2 [ 16384 -> @limit. ]
+0 -> @i.
+?? @i < 6144 [
+ !store64[@templates + @i | 0].
+ @i + 8 -> @i.
+]
+!store64[@meta + 0 | 43]. !store64[@meta + 8 | 1]. !store64[@meta + 16 | 1].
+!store64[@meta + 24 | 44]. !store64[@meta + 32 | 1]. !store64[@meta + 40 | 1].
+!store64[@meta + 48 | 26]. !store64[@meta + 56 | 2]. !store64[@meta + 64 | 1].
+!store64[@meta + 72 | 27]. !store64[@meta + 80 | 2]. !store64[@meta + 88 | 1].
+!store64[@meta + 96 | 28]. !store64[@meta + 104 | 2]. !store64[@meta + 112 | 1].
+!store64[@meta + 120 | 29]. !store64[@meta + 128 | 2]. !store64[@meta + 136 | 1].
+!store64[@meta + 144 | 32]. !store64[@meta + 152 | 2]. !store64[@meta + 160 | 1].
+!store64[@meta + 168 | 33]. !store64[@meta + 176 | 2]. !store64[@meta + 184 | 1].
+!store64[@meta + 192 | 40]. !store64[@meta + 200 | 0]. !store64[@meta + 208 | 1].
+!store64[@meta + 216 | 39]. !store64[@meta + 224 | 0]. !store64[@meta + 232 | 1].
+!store64[@meta + 240 | 22]. !store64[@meta + 248 | 1]. !store64[@meta + 256 | 0].
+!store64[@meta + 264 | 23]. !store64[@meta + 272 | 1]. !store64[@meta + 280 | 0].
+!store64[@meta + 288 | 24]. !store64[@meta + 296 | 1]. !store64[@meta + 304 | 0].
+!store64[@meta + 312 | 25]. !store64[@meta + 320 | 1]. !store64[@meta + 328 | 0].
+!store64[@meta + 336 | 30]. !store64[@meta + 344 | 1]. !store64[@meta + 352 | 0].
+!store64[@meta + 360 | 31]. !store64[@meta + 368 | 1]. !store64[@meta + 376 | 0].
+!store64[@meta + 384 | 34]. !store64[@meta + 392 | 1]. !store64[@meta + 400 | 0].
+!store64[@meta + 408 | 35]. !store64[@meta + 416 | 0]. !store64[@meta + 424 | 0].
+!store64[@meta + 432 | 36]. !store64[@meta + 440 | 0]. !store64[@meta + 448 | 0].
+!store64[@meta + 456 | 37]. !store64[@meta + 464 | 6]. !store64[@meta + 472 | 0].
+!store64[@meta + 480 | 38]. !store64[@meta + 488 | 3]. !store64[@meta + 496 | 1].
+!store64[@meta + 504 | 41]. !store64[@meta + 512 | 2]. !store64[@meta + 520 | 0].
+!store64[@meta + 528 | 42]. !store64[@meta + 536 | 2]. !store64[@meta + 544 | 0].
+!store64[@meta + 552 | 51]. !store64[@meta + 560 | 8]. !store64[@meta + 568 | 0].
+!store64[@meta + 576 | 53]. !store64[@meta + 584 | 0]. !store64[@meta + 592 | 1].
+!store64[@meta + 600 | 54]. !store64[@meta + 608 | 2]. !store64[@meta + 616 | 0].
+!store64[@meta + 624 | 55]. !store64[@meta + 632 | 1]. !store64[@meta + 640 | 0].
+!store64[@meta + 648 | 56]. !store64[@meta + 656 | 1]. !store64[@meta + 664 | 0].
+!store64[@meta + 672 | 57]. !store64[@meta + 680 | 1]. !store64[@meta + 688 | 1].
+!store64[@meta + 696 | 58]. !store64[@meta + 704 | 1]. !store64[@meta + 712 | 1].
+!store64[@meta + 720 | 59]. !store64[@meta + 728 | 2]. !store64[@meta + 736 | 0].
+!store64[@meta + 744 | 60]. !store64[@meta + 752 | 1]. !store64[@meta + 760 | 1].
+!store64[@meta + 768 | 61]. !store64[@meta + 776 | 1]. !store64[@meta + 784 | 1].
+!store64[@meta + 792 | 62]. !store64[@meta + 800 | 1]. !store64[@meta + 808 | 1].
+!store64[@meta + 816 | 63]. !store64[@meta + 824 | 1]. !store64[@meta + 832 | 1].
+!store64[@meta + 840 | 64]. !store64[@meta + 848 | 1]. !store64[@meta + 856 | 0].
+!store64[@meta + 864 | 65]. !store64[@meta + 872 | 3]. !store64[@meta + 880 | 1].
+!store64[@meta + 888 | 66]. !store64[@meta + 896 | 4]. !store64[@meta + 904 | 1].
+!store64[@meta + 912 | 69]. !store64[@meta + 920 | 4]. !store64[@meta + 928 | 1].
+!store64[@meta + 1032 | 71]. !store64[@meta + 1040 | 3]. !store64[@meta + 1048 | 0].
+!store64[@meta + 1056 | 72]. !store64[@meta + 1064 | 2]. !store64[@meta + 1072 | 1].
+!store64[@meta + 1080 | 73]. !store64[@meta + 1088 | 4]. !store64[@meta + 1096 | 0].
+!store64[@meta + 1104 | 74]. !store64[@meta + 1112 | 2]. !store64[@meta + 1120 | 0].
+!store64[@meta + 1128 | 75]. !store64[@meta + 1136 | 4]. !store64[@meta + 1144 | 0].
+!store64[@meta + 1152 | 76]. !store64[@meta + 1160 | 4]. !store64[@meta + 1168 | 0].
+!store64[@meta + 1176 | 77]. !store64[@meta + 1184 | 2]. !store64[@meta + 1192 | 0].
+!store64[@meta + 1200 | 78]. !store64[@meta + 1208 | 2]. !store64[@meta + 1216 | 0].
+!store64[@meta + 1224 | 79]. !store64[@meta + 1232 | 2]. !store64[@meta + 1240 | 0].
+!store64[@meta + 1248 | 80]. !store64[@meta + 1256 | 2]. !store64[@meta + 1264 | 0].
+!store64[@meta + 1272 | 81]. !store64[@meta + 1280 | 1]. !store64[@meta + 1288 | 0].
+!store64[@meta + 1296 | 82]. !store64[@meta + 1304 | 1]. !store64[@meta + 1312 | 0].
+!store64[@meta + 1320 | 83]. !store64[@meta + 1328 | 2]. !store64[@meta + 1336 | 1].
+!store64[@meta + 1344 | 85]. !store64[@meta + 1352 | 2]. !store64[@meta + 1360 | 0].
+# Original host interoperability metadata.
+!store64[@meta + 1368 | 86]. !store64[@meta + 1376 | 0]. !store64[@meta + 1384 | 0].
+!store64[@meta + 1392 | 87]. !store64[@meta + 1400 | 0]. !store64[@meta + 1408 | 0].
+!store64[@meta + 1416 | 88]. !store64[@meta + 1424 | 1]. !store64[@meta + 1432 | 0].
+!store64[@meta + 1440 | 89]. !store64[@meta + 1448 | 2]. !store64[@meta + 1456 | 0].
+!store64[@meta + 1464 | 90]. !store64[@meta + 1472 | 3]. !store64[@meta + 1480 | 0].
+!store64[@meta + 1488 | 91]. !store64[@meta + 1496 | 3]. !store64[@meta + 1504 | 0].
+!store64[@meta + 1512 | 92]. !store64[@meta + 1520 | 1]. !store64[@meta + 1528 | 0].
+!store64[@meta + 1536 | 93]. !store64[@meta + 1544 | 1]. !store64[@meta + 1552 | 0].
+!store64[@meta + 1560 | 94]. !store64[@meta + 1568 | 1]. !store64[@meta + 1576 | 0].
+!store64[@meta + 1584 | 95]. !store64[@meta + 1592 | 1]. !store64[@meta + 1600 | 0].
+!store64[@meta + 1608 | 96]. !store64[@meta + 1616 | 1]. !store64[@meta + 1624 | 0].
+!store64[@meta + 1632 | 97]. !store64[@meta + 1640 | 2]. !store64[@meta + 1648 | 0].
+!store64[@meta + 1656 | 98]. !store64[@meta + 1664 | 1]. !store64[@meta + 1672 | 0].
+!store64[@meta + 1680 | 99]. !store64[@meta + 1688 | 3]. !store64[@meta + 1696 | 0].
+!store64[@meta + 1704 | 100]. !store64[@meta + 1712 | 2]. !store64[@meta + 1720 | 0].
+!store64[@meta + 1728 | 101]. !store64[@meta + 1736 | 0]. !store64[@meta + 1744 | 0].

@@ -1,0 +1,5 @@
+  ? @i == 25 [ "FindFirstFileW" -> @str. ]
+  ? @i == 26 [ "FindNextFileW" -> @str. ]
+  ? @i == 27 [ "FindClose" -> @str. ]
+  ? @i == 28 [ "SetCurrentDirectoryW" -> @str. ]
+  ? @i == 29 [ "GetLogicalDrives" -> @str. ]

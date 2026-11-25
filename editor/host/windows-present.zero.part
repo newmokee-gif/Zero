@@ -1,0 +1,8 @@
+? @platform == 2 [
+ :hostcall12[:load64[@api + 32] | @window | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0] -> @a.
+ ? @a != 0 [
+  :hostcall12[:load64[@api + 72] | @a | 0 | 0 | 1280 | 800 | 0 | 0 | 0 | 800 | @pixels | @e + 3072 | 0] -> @b.
+  :hostcall12[:load64[@api + 40] | @window | @a | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0] -> @b.
+ ]
+ :hostcall12[:load64[@api + 48] | @window | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0] -> @b.
+]

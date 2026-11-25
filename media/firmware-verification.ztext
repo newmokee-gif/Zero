@@ -1,0 +1,69 @@
+ZTEXT00100000f1bf57b44760000000
+ZERO FLASH FIRMWARE VERIFICATION - 0.14
+2026-11-20 UTC. All product implementation and format code is Zero.
+
+Final tested binaries
+FLASHX64.EFI SHA256
+247ebf6ac7acffdca7d72f3d732161add99492f87a42e357f97baa029b9141cb
+FLASHIA32.EFI SHA256
+51da3735757de1738ec239209498df12e4a65385ef16d772b81246a6e090d263
+These match the corresponding final66-artifact build-release files.
+
+25 actual QEMU/OVMF firmware scenarios passed, with disposable USB disk files.
+11 scenarios ran on each of x86-64 and IA32:
+1. Full18,874,368-byte disk payload: write, flush and complete readback.
+2. User declines ERASE confirmation: complete target unchanged.
+3. Non-removable target excluded: complete target unchanged.
+4. Read-only target excluded: complete target unchanged.
+5. Corrupt source SHA256 rejected: complete target unchanged.
+6. Target USB removed after confirmation prompt: fresh protocol lookup fails,
+   complete target unchanged; no stale protocol pointer is dereferenced.
+7. Target exactly one sector larger than512-byte payload: tail cleanup does
+   not overlap the payload and the single extra sector is zero.
+8. Target exactly equal to512-byte payload: no out-of-range tail write.
+9. Utility booted from removable USB: boot/source device excluded; a second
+   USB disk is detected even when firmware initially connected only boot USB.
+10. Source system.zmedia on a different removable USB volume: source excluded,
+    independent target written successfully.
+11. Multiple source volumes: numbered source selection works and selected
+    source disk is excluded from targets.
+
+Additional IA32 scenario23: sparse USB target2TiB+1MiB,512-byte payload.
+Actual firmware recognized2,199,024,304,128-byte capacity. The full64-bit block
+address was passed using both ABI words. The final33 sectors were zeroed and
+read back at their true high address; a seeded low-LBA alias region remained
+unchanged. This catches truncation of the high LBA word without allocating a
+multi-terabyte physical test medium.
+
+Final integrated scenarios24 and25: both UEFI architectures.
+Booted the exact final Zero USB payload from its own removable USB disk;
+selected2 Flash Writer in the Zero menu; discovered a separate source volume;
+loaded final system.zmedia (SHA256 below); selected and confirmed a third,
+blank64MiB USB disk; wrote and verified its entire payload and cleared tail;
+pressed Enter to return to the Zero menu; selected1 and reached the Zero OS
+terminal. Both the original boot USB and source-file SHA256 stayed unchanged.
+
+Final integrated system.zmedia SHA256
+cff6bdf74fc41545c6cbc3087bbb02d8defcdc61bda0bb436b18c5d03adf3325
+
+Independent readback
+All10 negative-case64MiB targets were hashed in their entirety and matched
+all pre-write bytes. All14 finite positive targets were compared by complete
+expected-byte SHA256, including payload, unchanged middle and cleared tail.
+The sparse >2TiB case checked the written first sector, final33 sectors and
+seeded incorrect-low-address guard separately. The utility itself reread every
+written payload and cleared-tail byte before displaying success.
+
+Reproducibility
+The Zero firmware composer regenerates both canonical source files byte for
+byte from the shared Zero parts. All40 IA32 composition replacements must
+match, including exact-once source insertion. Existing output paths are
+refused. The composer retains a partial new output on failure, avoiding a
+path-based cleanup race. IA32 page allocations are explicitly bounded below
+4GiB using AllocateMaxAddress.
+
+External test control used QEMU, OVMF and private host harnesses outside the
+product tree. No physical USB hardware, native VirtualBox, BIOS writer or
+in-kernel Zero USB driver is claimed. The application is a UEFI utility and
+runs before ExitBootServices. Its source-volume filesystem and USB controller
+support are provided by the firmware platform interface.

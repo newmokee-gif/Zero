@@ -1,0 +1,240 @@
+# Entire UEFI loader in Zero. Firmware is an external platform interface.
+var image = arg0;
+var system = arg1;
+var services = load64(system + 96);
+var status = 0;
+var scratch = reserve(1024);
+var guid = scratch;
+var result = scratch + 32;
+var rootOut = scratch + 40;
+var fileOut = scratch + 48;
+var sizeOut = scratch + 56;
+var path = scratch + 80;
+var fileInfo = scratch + 256;
+var text = "ZERO loader: UEFI -> own kernel\r\n";
+var index = 0;
+var ch = 0;
+var protocol = 0;
+var device = 0;
+var root = 0;
+var file = 0;
+var fileSize = 0;
+var code = 0;
+var received = 0;
+var stack = 0;
+var handoff = 0;
+var map = 0;
+var attempts = 0;
+var step = 0;
+var done = 0;
+var uart = 0;
+var wait = 0;
+# Own UART setup for loader diagnostics.
+out8(0x3f9,0);
+out8(0x3fb,128);
+out8(0x3f8,1);
+out8(0x3f9,0);
+out8(0x3fb,3);
+out8(0x3fa,199);
+out8(0x3fc,11);
+while load8(text+index) != 0 {
+    uart=0; wait=0;
+    while uart < 32 {
+        uart=in8(0x3fd);
+        if uart >= 128 { uart=uart-128; }
+        if uart >= 64 { uart=uart-64; }
+        wait=wait+1;
+        if wait > 1000000 { halt; }
+    }
+    out8(0x3f8,load8(text+index));
+    index=index+1;
+}
+# Disable firmware watchdog before leaving firmware.
+status=call(load64(services+256),0,0,0,0,0);
+if status == 0 {
+    step=1;
+    # EFI_LOADED_IMAGE_PROTOCOL on this application handle.
+    store64(guid,0x11d295625b1b31a1);
+    store64(guid+8,0x3b7269c9a0003f8e);
+    store64(result,0);
+    status=call(load64(services+152),image,guid,result,0,0);
+}
+if status == 0 {
+    protocol=load64(result);
+    device=load64(protocol+24);
+    step=2;
+    store64(guid,0x11d26459964e5b22);
+    store64(guid+8,0x3b7269c9a000398e);
+    store64(result,0);
+    status=call(load64(services+152),device,guid,result,0,0);
+}
+if status == 0 {
+    protocol=load64(result);
+    step=3;
+    store64(rootOut,0);
+    status=call(load64(protocol+8),protocol,rootOut,0,0,0);
+}
+if status == 0 {
+    root=load64(rootOut);
+    text="\\kernel.bin";
+    index=0;
+    while load8(text+index) != 0 {
+        store16(path+index*2,load8(text+index));
+        index=index+1;
+    }
+    store16(path+index*2,0);
+    step=4;
+    store64(fileOut,0);
+    status=call(load64(root+8),root,fileOut,path,1,0);
+}
+if status == 0 {
+    file=load64(fileOut);
+    step=5;
+    store64(guid,0x11d26d3f09576e92);
+    store64(guid+8,0x3b7269c9a000398e);
+    store64(sizeOut,512);
+    status=call(load64(file+64),file,guid,sizeOut,fileInfo,0);
+    if status == 0 {
+        fileSize=load64(fileInfo+8);
+        if fileSize == 0 { status=0x8000000000000001; }
+        if fileSize > 131072 { status=0x8000000000000001; }
+    }
+}
+if status == 0 {
+    step=6;
+    store64(result,0);
+    status=call(load64(services+40),0,1,32,result,0);
+    code=load64(result);
+}
+# File completion has its own flag; no EFI warning can mean completion.
+while done == 0 {
+    if status != 0 { done=1; } else {
+        if received == fileSize { done=1; } else {
+            step=7;
+            store64(sizeOut,fileSize-received);
+            status=call(load64(file+32),file,sizeOut,code+received,0,0);
+            if status == 0 {
+                ch=load64(sizeOut);
+                if ch == 0 { status=0x8000000000000001; }
+                if ch > fileSize-received { status=0x8000000000000001; }
+                if status == 0 { received=received+ch; }
+            }
+        }
+    }
+}
+if status == 0 {
+    step=8;
+    status=call(load64(file+16),file,0,0,0,0);
+    if status == 0 { status=call(load64(root+16),root,0,0,0,0); }
+}
+if status == 0 {
+    step=9;
+    store64(result,0);
+    status=call(load64(services+40),0,2,64,result,0);
+    stack=load64(result);
+}
+if status == 0 {
+    step=10;
+    store64(result,0);
+    status=call(load64(services+40),0,2,17,result,0);
+    handoff=load64(result);
+    map=handoff+4096;
+}
+if status != 0 {
+    text="ZERO loader: failed before exit; stage=";
+    index=0;
+    while load8(text+index) != 0 {
+        uart=0; wait=0;
+        while uart < 32 {
+            uart=in8(0x3fd);
+            if uart >= 128 { uart=uart-128; }
+            if uart >= 64 { uart=uart-64; }
+            wait=wait+1;
+            if wait > 1000000 { halt; }
+        }
+        out8(0x3f8,load8(text+index)); index=index+1;
+    }
+    # Format stages 0..10 in decimal and poll before every diagnostic byte.
+    index=0;
+    if step == 10 { store8(path,49); index=1; step=0; }
+    store8(path+index,48+step);
+    store8(path+index+1,13);
+    store8(path+index+2,10);
+    store8(path+index+3,0);
+    index=0;
+    while load8(path+index) != 0 {
+        uart=0; wait=0;
+        while uart < 32 {
+            uart=in8(0x3fd);
+            if uart >= 128 { uart=uart-128; }
+            if uart >= 64 { uart=uart-64; }
+            wait=wait+1;
+            if wait > 1000000 { halt; }
+        }
+        out8(0x3f8,load8(path+index)); index=index+1;
+    }
+    halt;
+}
+# Handoff header +0 size, +8 stride, +16 map, +24 code pages;
+# +32 map key, +40 descriptor version. All in our allocated LoaderData.
+store64(handoff+16,map);
+store64(handoff+24,32);
+text="ZERO loader: leaving boot services\r\n";
+index=0;
+while load8(text+index) != 0 {
+    uart=0; wait=0;
+    while uart < 32 {
+        uart=in8(0x3fd);
+        if uart >= 128 { uart=uart-128; }
+        if uart >= 64 { uart=uart-64; }
+        wait=wait+1;
+        if wait > 1000000 { halt; }
+    }
+    out8(0x3f8,load8(text+index)); index=index+1;
+}
+# After the first attempt only GetMemoryMap/ExitBootServices may use firmware.
+# Retry within the preallocated 64 KiB map; diagnostics use our UART only.
+done=0;
+while done == 0 {
+    store64(handoff,65536);
+    status=call(load64(services+56),handoff,map,handoff+32,handoff+8,handoff+40);
+    if status != 0 {
+        text="ZERO loader: GetMemoryMap failed\r\n";
+        done=1;
+    } else {
+        if load64(handoff) > 65536 { done=1; }
+        if load64(handoff+8) < 40 { done=1; }
+        if load64(handoff+8) > load64(handoff) { done=1; }
+        if done != 0 {
+            text="ZERO loader: invalid memory map\r\n";
+        } else {
+            status=call(load64(services+232),image,load64(handoff+32)+1,0,0,0);
+            if status == 0 {
+                enter(code,handoff,stack+262144);
+            }
+            attempts=attempts+1;
+            if status != 0x8000000000000002 {
+                text="ZERO loader: ExitBootServices failed\r\n";
+                done=1;
+            } else {
+                if attempts == 4 {
+                    text="ZERO loader: ExitBootServices retry limit\r\n";
+                    done=1;
+                }
+            }
+        }
+    }
+}
+index=0;
+while load8(text+index) != 0 {
+    uart=0; wait=0;
+    while uart < 32 {
+        uart=in8(0x3fd);
+        if uart >= 128 { uart=uart-128; }
+        if uart >= 64 { uart=uart-64; }
+        wait=wait+1;
+        if wait > 1000000 { halt; }
+    }
+    out8(0x3f8,load8(text+index)); index=index+1;
+}
+halt;

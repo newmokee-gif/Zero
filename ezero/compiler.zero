@@ -1,0 +1,1494 @@
+0 => @memory.
+0 => @source.
+0 => @tokens.
+0 => @constants.
+0 => @code.
+0 => @functions.
+0 => @symbols.
+0 => @actions.
+0 => @blocks.
+0 => @output.
+0 => @scratch.
+0 => @n.
+0 => @nt.
+0 => @nc.
+0 => @ni.
+0 => @nf.
+0 => @scope.
+0 => @line.
+0 => @fail.
+0 => @errline.
+0 => @p.
+0 => @c.
+0 => @d.
+0 => @v.
+0 => @start.
+0 => @length.
+0 => @kind.
+0 => @i.
+0 => @j.
+0 => @x.
+0 => @y.
+0 => @tmp.
+0 => @ok.
+0 => @state.
+0 => @pos.
+0 => @sp.
+0 => @bp.
+0 => @ed.
+0 => @frame.
+0 => @a.
+0 => @b.
+0 => @q.
+0 => @r.
+0 => @t.
+0 => @u.
+0 => @w.
+0 => @name.
+0 => @nlen.
+0 => @id.
+0 => @slot.
+0 => @count.
+0 => @op.
+0 => @arg.
+0 => @argb.
+0 => @emitline.
+0 => @returnstate.
+# Ezero frontend: original Zero tokenizer and explicit parser continuation stack.
+:reserve[2850000] -> @memory.
+@memory -> @source.
+@memory + 65552 -> @tokens.
+@memory + 2162752 -> @constants.
+@memory + 2179136 -> @code.
+@memory + 2228288 -> @functions.
+@memory + 2232384 -> @symbols.
+@memory + 2756672 -> @actions.
+@memory + 2773056 -> @blocks.
+@memory + 2775104 -> @output.
+@memory + 2845120 -> @scratch.
+# Symbols and function records are initialized before any name lookup.
+0 -> @i. ?? @i < 528384 [ !store64[@functions + @i | 0]. @i + 8 -> @i. ]
+1 -> @nf. 1 -> @line. 1 -> @errline.
+0 -> @ok.
+?? (@ok == 0) * (@fail == 0) [
+ :read[@source + @n | 65537 - @n] -> @v.
+ ? @v == 0 [ 1 -> @ok. ] ~ [
+  ? @v != -4 [
+   ? @v > 65537 - @n [ "cannot read source" -> @fail. ] ~ [
+    @n + @v -> @n.
+    ? @n > 65536 [ "source exceeds 65536 bytes" -> @fail. ]
+   ]
+  ]
+ ]
+]
+# Ezero lexer, original Zero implementation. Parent owns all storage/locals.
+# Token = kind,value,length,line as four u64 fields. Source is immutable.
+# First validate UTF-8 over the complete input, including comments and strings.
+0 -> @p. 1 -> @line.
+?? (@p < @n) * (@fail == 0) [
+ @line -> @errline. :load8[@source + @p] -> @c.
+ ? @c < 128 [
+  ? (@c < 32) * (@c != 9) * (@c != 10) * (@c != 13) [ "Invalid control byte in source" -> @fail. ]
+  ? @c == 127 [ "Invalid control byte in source" -> @fail. ]
+  ? @c == 10 [ @line + 1 -> @line. ]
+  ? @c == 13 [
+   @line + 1 -> @line.
+   ? @p + 1 < @n [ ? :load8[@source + @p + 1] == 10 [ @p + 1 -> @p. ] ]
+  ]
+  @p + 1 -> @p.
+ ] ~ [
+  0 -> @length.
+  ? (@c >= 194) * (@c <= 223) [ 2 -> @length. ]
+  ? (@c >= 224) * (@c <= 239) [ 3 -> @length. ]
+  ? (@c >= 240) * (@c <= 244) [ 4 -> @length. ]
+  ? @length == 0 [ "Invalid UTF-8 leading byte" -> @fail. ]
+  ? @p + @length > @n [ "Incomplete UTF-8 sequence" -> @fail. ]
+  ? @fail == 0 [
+   1 -> @i.
+   ?? (@i < @length) * (@fail == 0) [
+    :load8[@source + @p + @i] -> @d.
+    ? (@d < 128) + (@d > 191) [ "Invalid UTF-8 continuation byte" -> @fail. ]
+    ? @i == 1 [
+     ? (@c == 224) * (@d < 160) [ "Overlong UTF-8 sequence" -> @fail. ]
+     ? (@c == 237) * (@d > 159) [ "UTF-8 surrogate is not a scalar" -> @fail. ]
+     ? (@c == 240) * (@d < 144) [ "Overlong UTF-8 sequence" -> @fail. ]
+     ? (@c == 244) * (@d > 143) [ "UTF-8 scalar exceeds Unicode range" -> @fail. ]
+    ]
+    @i + 1 -> @i.
+   ]
+  ]
+  @p + @length -> @p.
+ ]
+]
+0 -> @nt. 0 -> @nc. 0 -> @p. 1 -> @line.
+?? (@p < @n) * (@fail == 0) [
+ @line -> @errline. :load8[@source + @p] -> @c.
+ 0 -> @kind. 0 -> @v. 0 -> @length. 0 -> @ok.
+ ? (@c == 32) + (@c == 9) [ @p + 1 -> @p. 1 -> @ok. ]
+ ? (@c == 10) + (@c == 13) [
+  10 -> @kind. 1 -> @ok. @p + 1 -> @p.
+  ? (@c == 13) * (@p < @n) [ ? :load8[@source + @p] == 10 [ @p + 1 -> @p. ] ]
+  @line + 1 -> @line.
+ ]
+ ? @c == 35 [
+  1 -> @ok. @p + 1 -> @p. 0 -> @x.
+  ?? (@p < @n) * (@x == 0) [
+   :load8[@source + @p] -> @d.
+   ? (@d == 10) + (@d == 13) [ 1 -> @x. ] ~ [ @p + 1 -> @p. ]
+  ]
+ ]
+ ? (@ok == 0) * (@c >= 48) * (@c <= 57) [
+  1 -> @ok. 256 -> @kind. 0 -> @v. 0 -> @x.
+  ?? (@p < @n) * (@x == 0) * (@fail == 0) [
+   :load8[@source + @p] -> @d.
+   ? (@d >= 48) * (@d <= 57) [
+    @d - 48 -> @d.
+    ? (@v > 1844674407370955161) + ((@v == 1844674407370955161) * (@d > 5)) [
+     "Number exceeds unsigned 64-bit range" -> @fail.
+    ] ~ [ @v * 10 + @d -> @v. @p + 1 -> @p. ]
+   ] ~ [ 1 -> @x. ]
+  ]
+ ]
+ ? (@ok == 0) * (@c == 34) [
+  1 -> @ok. 257 -> @kind. @nc -> @start.
+  @p + 1 -> @p. 0 -> @x. 0 -> @length.
+  ?? (@p < @n) * (@x == 0) * (@fail == 0) [
+   :load8[@source + @p] -> @d.
+   ? @d == 34 [ 1 -> @x. @p + 1 -> @p. ] ~ [
+    ? (@d < 32) + (@d == 127) [ "String needs printable text or an escape" -> @fail. ]
+    ? @d == 92 [
+     @p + 1 -> @p.
+     ? @p >= @n [ "Unfinished string escape" -> @fail. ] ~ [
+      :load8[@source + @p] -> @d. 0 -> @y.
+      ? @d == 110 [ 10 -> @d. 1 -> @y. ]
+      ? @d == 114 [ 13 -> @d. 1 -> @y. ]
+      ? @d == 116 [ 9 -> @d. 1 -> @y. ]
+      ? (@d == 92) + (@d == 34) [ 1 -> @y. ]
+      ? @y == 0 [ "Unknown string escape" -> @fail. ]
+     ]
+    ]
+    ? @fail == 0 [
+     ? @length >= 4096 [ "String exceeds 4096 bytes" -> @fail. ]
+     ? @nc >= 16384 [ "Text constants exceed 16384 bytes" -> @fail. ]
+     ? @fail == 0 [
+      !store8[@constants + @nc | @d].
+      @nc + 1 -> @nc. @length + 1 -> @length. @p + 1 -> @p.
+     ]
+    ]
+   ]
+  ]
+  ? (@x == 0) * (@fail == 0) [ "Unclosed string" -> @fail. ]
+  @start -> @v.
+ ]
+ ? @ok == 0 [
+  0 -> @d. ? @p + 1 < @n [ :load8[@source + @p + 1] -> @d. ]
+  ? (@c == 43) + (@c == 45) + (@c == 42) + (@c == 40) + (@c == 41) + (@c == 91) + (@c == 93) + (@c == 124) + (@c == 126) [ @c -> @kind. ]
+  ? @c == 60 [ 60 -> @kind. ? @d == 61 [ 263 -> @kind. ] ]
+  ? @c == 62 [ 62 -> @kind. ? @d == 61 [ 264 -> @kind. ] ]
+  ? (@c == 61) * (@d == 62) [ 259 -> @kind. ]
+  ? (@c == 58) * (@d == 58) [ 260 -> @kind. ]
+  ? (@c == 61) * (@d == 61) [ 261 -> @kind. ]
+  ? (@c == 33) * (@d == 61) [ 262 -> @kind. ]
+  ? @kind [
+   1 -> @ok. @p + 1 -> @p. ? @kind >= 259 [ @p + 1 -> @p. ]
+  ]
+  ? (@kind == 0) * (@c == 61) [ "Use => for a binding or == for comparison" -> @fail. ]
+ ]
+ ? (@ok == 0) * (@fail == 0) [
+  # Bare word: punctuation such as ! . , : is text, except reserved operators.
+  # ASCII identifiers of at most31 bytes remain NAME tokens for name lookup.
+  # Longer ASCII words, Unicode and punctuation-containing words are WORD269.
+  @p -> @start. 0 -> @length. 0 -> @x. 1 -> @i. 269 -> @kind.
+  ? (((@c >= 65) * (@c <= 90)) + ((@c >= 97) * (@c <= 122)) + (@c == 95)) == 0 [ 0 -> @i. ]
+  ?? (@p < @n) * (@x == 0) * (@fail == 0) [
+   :load8[@source + @p] -> @d. 0 -> @y.
+   ? @p + 1 < @n [ :load8[@source + @p + 1] -> @y. ]
+   0 -> @tmp.
+   ? (@d == 32) + (@d == 9) + (@d == 10) + (@d == 13) + (@d == 35) + (@d == 34) + (@d == 43) + (@d == 45) + (@d == 42) + (@d == 40) + (@d == 41) + (@d == 91) + (@d == 93) + (@d == 124) + (@d == 126) + (@d == 60) + (@d == 62) + (@d == 61) [ 1 -> @tmp. ]
+   # A Zero volume prefix is one bare text value, not an argument separator.
+   ? (@d == 124) * (@length == 2) [
+    :load8[@source + @start] -> @j.
+    ? (((@j >= 65) * (@j <= 90)) + ((@j >= 97) * (@j <= 122))) * (:load8[@source + @start + 1] == 58) [ 0 -> @tmp. ]
+   ]
+   ? ((@d == 58) * (@y == 58)) + ((@d == 33) * (@y == 61)) [ 1 -> @tmp. ]
+   ? @tmp [ 1 -> @x. ] ~ [
+    ? (((@d >= 65) * (@d <= 90)) + ((@d >= 97) * (@d <= 122)) + ((@d >= 48) * (@d <= 57)) + (@d == 95)) == 0 [ 0 -> @i. ]
+    @length + 1 -> @length. @p + 1 -> @p.
+    ? @length > 4096 [ "Text word exceeds 4096 bytes" -> @fail. ]
+   ]
+  ]
+  @start -> @v.
+  ? @length == 0 [ "Unexpected character" -> @fail. ]
+  ? @i * (@length <= 31) [
+   258 -> @kind.
+   "show|return|repeat|when|each|size|true|false|empty|readfile|writefile|fileexists|arguments|host|lines|join|create|del|watch|search|save|read|rm|go|disks|" -> @tmp.
+   0 -> @y. 300 -> @x.
+   ?? (@x < 325) * (@fail == 0) [
+    0 -> @j. 1 -> @i.
+    ?? :load8[@tmp + @y + @j] != 124 [
+     ? @j >= @length [ 0 -> @i. ] ~ [
+      ? :load8[@source + @start + @j] != :load8[@tmp + @y + @j] [ 0 -> @i. ]
+     ]
+     @j + 1 -> @j.
+    ]
+    ? @j != @length [ 0 -> @i. ]
+    ? @i [ @x -> @kind. ]
+    @y + @j + 1 -> @y. @x + 1 -> @x.
+   ]
+   ? @kind == 321 [ 309 -> @kind. ]
+   ? @kind == 322 [ 317 -> @kind. ]
+   ? @kind >= 323 [ @kind - 2 -> @kind. ]
+  ]
+ ]
+ ? (@kind != 0) * (@fail == 0) [
+  !store64[@tokens + @nt * 32 | @kind].
+  !store64[@tokens + @nt * 32 + 8 | @v].
+  !store64[@tokens + @nt * 32 + 16 | @length].
+  !store64[@tokens + @nt * 32 + 24 | @errline].
+  @nt + 1 -> @nt.
+ ]
+]
+? @fail == 0 [
+ !store64[@tokens + @nt * 32 | 0].
+ !store64[@tokens + @nt * 32 + 8 | 0].
+ !store64[@tokens + @nt * 32 + 16 | 0].
+ !store64[@tokens + @nt * 32 + 24 | @line].
+ @nt + 1 -> @nt.
+]
+# Main parser: statement states and explicit expression continuations.
+0 -> @state. 0 -> @pos. 0 -> @sp. 0 -> @bp. 0 -> @ed.
+?? (@state != 999) * (@fail == 0) [
+ ? @state == 0 [
+?? :load64[@tokens + @pos * 32] == 10 [ @pos + 1 -> @pos. ]
+
+ :load64[@tokens + @pos * 32 + 24] -> @errline. @errline -> @emitline.
+ :load64[@tokens + @pos * 32] -> @t.
+ ? @t == 0 [
+  ? @bp [ "unclosed block" -> @fail. ] ~ [
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | 0].
+ !store64[@code + @ni * 32 + 8 | 0].
+ !store64[@code + @ni * 32 + 16 | 0].
+ !store64[@code + @ni * 32 + 24 | @emitline].
+ @ni + 1 -> @ni.
+ ]
+ ]
+999 -> @state. ]
+ ] ~ [
+  ? @t == 93 [ 30 -> @state. ] ~ [
+   ? (@t == 258) * (:load64[@tokens + (@pos + 1) * 32] == 260) [ 40 -> @state. ] ~ [
+    10 -> @returnstate. 100 -> @state.
+? @sp >= 256 [ "expression continuation limit exceeded" -> @fail. ] ~ [
+ !store64[@actions + @sp * 48 | 1].
+ !store64[@actions + @sp * 48 + 8 | 0].
+ !store64[@actions + @sp * 48 + 16 | 0].
+ !store64[@actions + @sp * 48 + 24 | 0].
+ !store64[@actions + @sp * 48 + 32 | 0].
+ !store64[@actions + @sp * 48 + 40 | 0].
+ @sp + 1 -> @sp.
+ ]
+
+   ]
+  ]
+ ]
+ ]
+ ? @state == 10 [
+  :load64[@tokens + @pos * 32 + 24] -> @errline. @errline -> @emitline.
+  ? :load64[@tokens + @pos * 32] != 259 [ "expected => after value" -> @fail. ] ~ [
+   @pos + 1 -> @pos. :load64[@tokens + @pos * 32] -> @t.
+   11 -> @state.
+   ? @t == 300 [
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | 19].
+ !store64[@code + @ni * 32 + 8 | 0].
+ !store64[@code + @ni * 32 + 16 | 0].
+ !store64[@code + @ni * 32 + 24 | @emitline].
+ @ni + 1 -> @ni.
+ ]
+ ]
+ @pos + 1 -> @pos.
+   ] ~ [ ? @t == 301 [
+    ? @scope == 0 [ "return requires a function" -> @fail. ] ~ [
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | 24].
+ !store64[@code + @ni * 32 + 8 | 0].
+ !store64[@code + @ni * 32 + 16 | 0].
+ !store64[@code + @ni * 32 + 24 | @emitline].
+ @ni + 1 -> @ni.
+ ]
+ ]
+ ] @pos + 1 -> @pos.
+   ] ~ [ ? @t == 258 [
+:load64[@tokens + @pos * 32 + 8] -> @name. :load64[@tokens + @pos * 32 + 16] -> @nlen.
+64 -> @id. 1 -> @i.
+ ?? @i < @nf [
+  1 -> @ok. 0 -> @j.
+  ?? @j < @nlen [
+   ? :load8[@functions + @i * 64 + @j] != :load8[@source + @name + @j] [ 0 -> @ok. ]
+   @j + 1 -> @j.
+  ]
+  ? :load8[@functions + @i * 64 + @nlen] != 0 [ 0 -> @ok. ]
+  ? @ok [ @i -> @id. ]
+  @i + 1 -> @i.
+ ]
+
+    ? @id != 64 [ "variable conflicts with function" -> @fail. ]
+256 -> @slot. 0 -> @i.
+ ?? @i < :load64[@functions + @scope * 64 + 48] [
+  1 -> @ok. 0 -> @j.
+  ?? @j < @nlen [
+   ? :load8[@symbols + @scope * 8192 + @i * 32 + @j] != :load8[@source + @name + @j] [ 0 -> @ok. ]
+   @j + 1 -> @j.
+  ]
+  ? :load8[@symbols + @scope * 8192 + @i * 32 + @nlen] != 0 [ 0 -> @ok. ]
+  ? @ok [ @i -> @slot. ]
+  @i + 1 -> @i.
+ ]
+? @slot == 256 [
+  :load64[@functions + @scope * 64 + 48] -> @slot.
+  ? @slot >= 256 [ "variable limit exceeded" -> @fail. ] ~ [
+   0 -> @j. ?? @j < @nlen [
+    !store8[@symbols + @scope * 8192 + @slot * 32 + @j | :load8[@source + @name + @j]]. @j + 1 -> @j.
+   ]
+   !store8[@symbols + @scope * 8192 + @slot * 32 + @nlen | 0].
+   !store64[@functions + @scope * 64 + 48 | @slot + 1].
+  ]
+ ]
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | 4 + 2 * (@scope != 0)].
+ !store64[@code + @ni * 32 + 8 | @slot].
+ !store64[@code + @ni * 32 + 16 | 0].
+ !store64[@code + @ni * 32 + 24 | @emitline].
+ @ni + 1 -> @ni.
+ ]
+ ]
+ @pos + 1 -> @pos.
+   ] ~ [ ? (@t == 302) + (@t == 303) + (@t == 304) [
+    20 -> @state.
+   ] ~ [ "expected name, show, return or control action" -> @fail. ] ] ] ]
+  ]
+ ]
+ ? @state == 11 [
+  :load64[@tokens + @pos * 32] -> @t.
+  ? (@t != 0) * (@t != 10) * (@t != 93) [ "expected newline after statement" -> @fail. ]
+  0 -> @state.
+ ]
+ ? @state == 20 [
+  ? @bp >= 32 [ "block nesting limit exceeded" -> @fail. ] ~ [
+   @blocks + @bp * 64 -> @frame.
+   0 -> @i. ?? @i < 64 [ !store64[@frame + @i | 0]. @i + 8 -> @i. ]
+   !store64[@frame + 48 | @emitline].
+   :load64[@tokens + @pos * 32] -> @t. @pos + 1 -> @pos.
+   ? @t == 303 [
+    !store64[@frame | 1]. !store64[@frame + 8 | @ni].
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | 22].
+ !store64[@code + @ni * 32 + 8 | 0].
+ !store64[@code + @ni * 32 + 16 | 0].
+ !store64[@code + @ni * 32 + 24 | @emitline].
+ @ni + 1 -> @ni.
+ ]
+ ]
+
+   ]
+   ? @t == 302 [
+    !store64[@frame | 3].
+:load64[@functions + @scope * 64 + 48] -> @slot.
+ ? @slot + 1 > 256 [ "variable limit exceeded" -> @fail. ] ~ [
+ !store64[@functions + @scope * 64 + 48 | @slot + 1].
+ ]
+ !store64[@frame + 24 | @slot].
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | 4 + 2 * (@scope != 0)].
+ !store64[@code + @ni * 32 + 8 | @slot].
+ !store64[@code + @ni * 32 + 16 | 0].
+ !store64[@code + @ni * 32 + 24 | @emitline].
+ @ni + 1 -> @ni.
+ ]
+ ]
+ !store64[@frame + 16 | @ni].
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | 3 + 2 * (@scope != 0)].
+ !store64[@code + @ni * 32 + 8 | @slot].
+ !store64[@code + @ni * 32 + 16 | 0].
+ !store64[@code + @ni * 32 + 24 | @emitline].
+ @ni + 1 -> @ni.
+ ]
+ ]
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | 1].
+ !store64[@code + @ni * 32 + 8 | 0].
+ !store64[@code + @ni * 32 + 16 | 0].
+ !store64[@code + @ni * 32 + 24 | @emitline].
+ @ni + 1 -> @ni.
+ ]
+ ]
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | 14].
+ !store64[@code + @ni * 32 + 8 | 0].
+ !store64[@code + @ni * 32 + 16 | 0].
+ !store64[@code + @ni * 32 + 24 | @emitline].
+ @ni + 1 -> @ni.
+ ]
+ ]
+ !store64[@frame + 8 | @ni].
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | 22].
+ !store64[@code + @ni * 32 + 8 | 0].
+ !store64[@code + @ni * 32 + 16 | 0].
+ !store64[@code + @ni * 32 + 24 | @emitline].
+ @ni + 1 -> @ni.
+ ]
+ ]
+
+   ]
+   ? @t == 304 [
+    !store64[@frame | 5].
+    ? :load64[@tokens + @pos * 32] != 258 [ "each requires an ASCII binding name" -> @fail. ] ~ [
+:load64[@tokens + @pos * 32 + 8] -> @name. :load64[@tokens + @pos * 32 + 16] -> @nlen.
+64 -> @id. 1 -> @i.
+ ?? @i < @nf [
+  1 -> @ok. 0 -> @j.
+  ?? @j < @nlen [
+   ? :load8[@functions + @i * 64 + @j] != :load8[@source + @name + @j] [ 0 -> @ok. ]
+   @j + 1 -> @j.
+  ]
+  ? :load8[@functions + @i * 64 + @nlen] != 0 [ 0 -> @ok. ]
+  ? @ok [ @i -> @id. ]
+  @i + 1 -> @i.
+ ]
+? @id != 64 [ "binding conflicts with function" -> @fail. ]
+256 -> @slot. 0 -> @i.
+ ?? @i < :load64[@functions + @scope * 64 + 48] [
+  1 -> @ok. 0 -> @j.
+  ?? @j < @nlen [
+   ? :load8[@symbols + @scope * 8192 + @i * 32 + @j] != :load8[@source + @name + @j] [ 0 -> @ok. ]
+   @j + 1 -> @j.
+  ]
+  ? :load8[@symbols + @scope * 8192 + @i * 32 + @nlen] != 0 [ 0 -> @ok. ]
+  ? @ok [ @i -> @slot. ]
+  @i + 1 -> @i.
+ ]
+? @slot == 256 [
+  :load64[@functions + @scope * 64 + 48] -> @slot.
+  ? @slot >= 256 [ "variable limit exceeded" -> @fail. ] ~ [
+   0 -> @j. ?? @j < @nlen [
+    !store8[@symbols + @scope * 8192 + @slot * 32 + @j | :load8[@source + @name + @j]]. @j + 1 -> @j.
+   ]
+   !store8[@symbols + @scope * 8192 + @slot * 32 + @nlen | 0].
+   !store64[@functions + @scope * 64 + 48 | @slot + 1].
+  ]
+ ]
+!store64[@frame + 40 | @slot]. @pos + 1 -> @pos.
+:load64[@functions + @scope * 64 + 48] -> @slot.
+ ? @slot + 2 > 256 [ "variable limit exceeded" -> @fail. ] ~ [
+ !store64[@functions + @scope * 64 + 48 | @slot + 2].
+ ]
+ !store64[@frame + 24 | @slot]. !store64[@frame + 32 | @slot + 1].
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | 4 + 2 * (@scope != 0)].
+ !store64[@code + @ni * 32 + 8 | @slot].
+ !store64[@code + @ni * 32 + 16 | 0].
+ !store64[@code + @ni * 32 + 24 | @emitline].
+ @ni + 1 -> @ni.
+ ]
+ ]
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | 1].
+ !store64[@code + @ni * 32 + 8 | 1].
+ !store64[@code + @ni * 32 + 16 | 0].
+ !store64[@code + @ni * 32 + 24 | @emitline].
+ @ni + 1 -> @ni.
+ ]
+ ]
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | 4 + 2 * (@scope != 0)].
+ !store64[@code + @ni * 32 + 8 | @slot + 1].
+ !store64[@code + @ni * 32 + 16 | 0].
+ !store64[@code + @ni * 32 + 24 | @emitline].
+ @ni + 1 -> @ni.
+ ]
+ ]
+!store64[@frame + 16 | @ni].
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | 3 + 2 * (@scope != 0)].
+ !store64[@code + @ni * 32 + 8 | @slot + 1].
+ !store64[@code + @ni * 32 + 16 | 0].
+ !store64[@code + @ni * 32 + 24 | @emitline].
+ @ni + 1 -> @ni.
+ ]
+ ]
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | 3 + 2 * (@scope != 0)].
+ !store64[@code + @ni * 32 + 8 | @slot].
+ !store64[@code + @ni * 32 + 16 | 0].
+ !store64[@code + @ni * 32 + 24 | @emitline].
+ @ni + 1 -> @ni.
+ ]
+ ]
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | 18].
+ !store64[@code + @ni * 32 + 8 | 0].
+ !store64[@code + @ni * 32 + 16 | 0].
+ !store64[@code + @ni * 32 + 24 | @emitline].
+ @ni + 1 -> @ni.
+ ]
+ ]
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | 13].
+ !store64[@code + @ni * 32 + 8 | 0].
+ !store64[@code + @ni * 32 + 16 | 0].
+ !store64[@code + @ni * 32 + 24 | @emitline].
+ @ni + 1 -> @ni.
+ ]
+ ]
+!store64[@frame + 8 | @ni].
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | 22].
+ !store64[@code + @ni * 32 + 8 | 0].
+ !store64[@code + @ni * 32 + 16 | 0].
+ !store64[@code + @ni * 32 + 24 | @emitline].
+ @ni + 1 -> @ni.
+ ]
+ ]
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | 3 + 2 * (@scope != 0)].
+ !store64[@code + @ni * 32 + 8 | @slot].
+ !store64[@code + @ni * 32 + 16 | 0].
+ !store64[@code + @ni * 32 + 24 | @emitline].
+ @ni + 1 -> @ni.
+ ]
+ ]
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | 3 + 2 * (@scope != 0)].
+ !store64[@code + @ni * 32 + 8 | @slot + 1].
+ !store64[@code + @ni * 32 + 16 | 0].
+ !store64[@code + @ni * 32 + 24 | @emitline].
+ @ni + 1 -> @ni.
+ ]
+ ]
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | 17].
+ !store64[@code + @ni * 32 + 8 | 0].
+ !store64[@code + @ni * 32 + 16 | 0].
+ !store64[@code + @ni * 32 + 24 | @emitline].
+ @ni + 1 -> @ni.
+ ]
+ ]
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | 4 + 2 * (@scope != 0)].
+ !store64[@code + @ni * 32 + 8 | :load64[@frame + 40]].
+ !store64[@code + @ni * 32 + 16 | 0].
+ !store64[@code + @ni * 32 + 24 | @emitline].
+ @ni + 1 -> @ni.
+ ]
+ ]
+
+    ]
+   ]
+   ? :load64[@tokens + @pos * 32] != 91 [ "expected [ after control action" -> @fail. ] ~ [
+    @pos + 1 -> @pos. @bp + 1 -> @bp. 0 -> @state.
+   ]
+  ]
+ ]
+ ? @state == 30 [
+  ? @bp == 0 [ "unexpected closing ]" -> @fail. ] ~ [
+   @blocks + (@bp - 1) * 64 -> @frame.
+   :load64[@frame] -> @t. :load64[@frame + 48] -> @emitline.
+   @pos + 1 -> @pos. 11 -> @state.
+   ? @t == 1 [
+    @pos -> @q. ?? :load64[@tokens + @q * 32] == 10 [ @q + 1 -> @q. ]
+    ? :load64[@tokens + @q * 32] == 126 [
+     @ni -> @u.
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | 21].
+ !store64[@code + @ni * 32 + 8 | 0].
+ !store64[@code + @ni * 32 + 16 | 0].
+ !store64[@code + @ni * 32 + 24 | @emitline].
+ @ni + 1 -> @ni.
+ ]
+ ]
+
+     !store64[@code + :load64[@frame + 8] * 32 + 8 | @ni].
+     !store64[@frame | 2]. !store64[@frame + 8 | @u].
+     @q + 1 -> @pos.
+     ? :load64[@tokens + @pos * 32] != 91 [ "expected [ after ~" -> @fail. ] ~ [ @pos + 1 -> @pos. 0 -> @state. ]
+    ] ~ [ !store64[@code + :load64[@frame + 8] * 32 + 8 | @ni]. @bp - 1 -> @bp. ]
+   ]
+   ? @t == 2 [ !store64[@code + :load64[@frame + 8] * 32 + 8 | @ni]. @bp - 1 -> @bp. ]
+   ? @t == 3 [
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | 3 + 2 * (@scope != 0)].
+ !store64[@code + @ni * 32 + 8 | :load64[@frame + 24]].
+ !store64[@code + @ni * 32 + 16 | 0].
+ !store64[@code + @ni * 32 + 24 | @emitline].
+ @ni + 1 -> @ni.
+ ]
+ ]
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | 1].
+ !store64[@code + @ni * 32 + 8 | 1].
+ !store64[@code + @ni * 32 + 16 | 0].
+ !store64[@code + @ni * 32 + 24 | @emitline].
+ @ni + 1 -> @ni.
+ ]
+ ]
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | 8].
+ !store64[@code + @ni * 32 + 8 | 0].
+ !store64[@code + @ni * 32 + 16 | 0].
+ !store64[@code + @ni * 32 + 24 | @emitline].
+ @ni + 1 -> @ni.
+ ]
+ ]
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | 4 + 2 * (@scope != 0)].
+ !store64[@code + @ni * 32 + 8 | :load64[@frame + 24]].
+ !store64[@code + @ni * 32 + 16 | 0].
+ !store64[@code + @ni * 32 + 24 | @emitline].
+ @ni + 1 -> @ni.
+ ]
+ ]
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | 21].
+ !store64[@code + @ni * 32 + 8 | :load64[@frame + 16]].
+ !store64[@code + @ni * 32 + 16 | 0].
+ !store64[@code + @ni * 32 + 24 | @emitline].
+ @ni + 1 -> @ni.
+ ]
+ ]
+
+    !store64[@code + :load64[@frame + 8] * 32 + 8 | @ni]. @bp - 1 -> @bp.
+   ]
+   ? @t == 5 [
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | 3 + 2 * (@scope != 0)].
+ !store64[@code + @ni * 32 + 8 | :load64[@frame + 32]].
+ !store64[@code + @ni * 32 + 16 | 0].
+ !store64[@code + @ni * 32 + 24 | @emitline].
+ @ni + 1 -> @ni.
+ ]
+ ]
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | 1].
+ !store64[@code + @ni * 32 + 8 | 1].
+ !store64[@code + @ni * 32 + 16 | 0].
+ !store64[@code + @ni * 32 + 24 | @emitline].
+ @ni + 1 -> @ni.
+ ]
+ ]
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | 7].
+ !store64[@code + @ni * 32 + 8 | 0].
+ !store64[@code + @ni * 32 + 16 | 0].
+ !store64[@code + @ni * 32 + 24 | @emitline].
+ @ni + 1 -> @ni.
+ ]
+ ]
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | 4 + 2 * (@scope != 0)].
+ !store64[@code + @ni * 32 + 8 | :load64[@frame + 32]].
+ !store64[@code + @ni * 32 + 16 | 0].
+ !store64[@code + @ni * 32 + 24 | @emitline].
+ @ni + 1 -> @ni.
+ ]
+ ]
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | 21].
+ !store64[@code + @ni * 32 + 8 | :load64[@frame + 16]].
+ !store64[@code + @ni * 32 + 16 | 0].
+ !store64[@code + @ni * 32 + 24 | @emitline].
+ @ni + 1 -> @ni.
+ ]
+ ]
+
+    !store64[@code + :load64[@frame + 8] * 32 + 8 | @ni]. @bp - 1 -> @bp.
+   ]
+   ? @t == 4 [
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | 1].
+ !store64[@code + @ni * 32 + 8 | 0].
+ !store64[@code + @ni * 32 + 16 | 0].
+ !store64[@code + @ni * 32 + 24 | @emitline].
+ @ni + 1 -> @ni.
+ ]
+ ]
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | 24].
+ !store64[@code + @ni * 32 + 8 | 0].
+ !store64[@code + @ni * 32 + 16 | 0].
+ !store64[@code + @ni * 32 + 24 | @emitline].
+ @ni + 1 -> @ni.
+ ]
+ ]
+
+    !store64[@code + :load64[@frame + 8] * 32 + 8 | @ni]. @bp - 1 -> @bp. 0 -> @scope.
+   ]
+  ]
+ ]
+ ? @state == 40 [
+  ? (@scope != 0) + (@bp != 0) [ "functions must be defined at top level" -> @fail. ] ~ [
+:load64[@tokens + @pos * 32 + 8] -> @name. :load64[@tokens + @pos * 32 + 16] -> @nlen.
+64 -> @id. 1 -> @i.
+ ?? @i < @nf [
+  1 -> @ok. 0 -> @j.
+  ?? @j < @nlen [
+   ? :load8[@functions + @i * 64 + @j] != :load8[@source + @name + @j] [ 0 -> @ok. ]
+   @j + 1 -> @j.
+  ]
+  ? :load8[@functions + @i * 64 + @nlen] != 0 [ 0 -> @ok. ]
+  ? @ok [ @i -> @id. ]
+  @i + 1 -> @i.
+ ]
+256 -> @slot. 0 -> @i.
+ ?? @i < :load64[@functions + @scope * 64 + 48] [
+  1 -> @ok. 0 -> @j.
+  ?? @j < @nlen [
+   ? :load8[@symbols + @scope * 8192 + @i * 32 + @j] != :load8[@source + @name + @j] [ 0 -> @ok. ]
+   @j + 1 -> @j.
+  ]
+  ? :load8[@symbols + @scope * 8192 + @i * 32 + @nlen] != 0 [ 0 -> @ok. ]
+  ? @ok [ @i -> @slot. ]
+  @i + 1 -> @i.
+ ]
+
+   ? (@id != 64) + (@slot != 256) [ "duplicate or conflicting function name" -> @fail. ]
+   ? @nf >= 64 [ "function limit exceeded" -> @fail. ]
+   ? @fail == 0 [
+    @functions + @nf * 64 -> @q.
+    0 -> @j. ?? @j < @nlen [ !store8[@q + @j | :load8[@source + @name + @j]]. @j + 1 -> @j. ]
+    !store8[@q + @nlen | 0].
+    @blocks -> @frame. !store64[@frame | 4]. !store64[@frame + 8 | @ni]. !store64[@frame + 48 | @emitline].
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | 21].
+ !store64[@code + @ni * 32 + 8 | 0].
+ !store64[@code + @ni * 32 + 16 | 0].
+ !store64[@code + @ni * 32 + 24 | @emitline].
+ @ni + 1 -> @ni.
+ ]
+ ]
+
+    !store64[@q + 32 | @ni]. @nf -> @scope. @nf + 1 -> @nf. @pos + 2 -> @pos.
+    0 -> @count. 0 -> @w.
+
+    ?? (:load64[@tokens + @pos * 32] != 91) * (@fail == 0) [
+     ? @w == 0 [
+      ? :load64[@tokens + @pos * 32] != 258 [ "expected parameter name or [" -> @fail. ] ~ [
+:load64[@tokens + @pos * 32 + 8] -> @name. :load64[@tokens + @pos * 32 + 16] -> @nlen.
+256 -> @slot. 0 -> @i.
+ ?? @i < :load64[@functions + @scope * 64 + 48] [
+  1 -> @ok. 0 -> @j.
+  ?? @j < @nlen [
+   ? :load8[@symbols + @scope * 8192 + @i * 32 + @j] != :load8[@source + @name + @j] [ 0 -> @ok. ]
+   @j + 1 -> @j.
+  ]
+  ? :load8[@symbols + @scope * 8192 + @i * 32 + @nlen] != 0 [ 0 -> @ok. ]
+  ? @ok [ @i -> @slot. ]
+  @i + 1 -> @i.
+ ]
+
+       ? @slot != 256 [ "duplicate parameter" -> @fail. ]
+       ? @count >= 16 [ "parameter limit exceeded" -> @fail. ]
+? @slot == 256 [
+  :load64[@functions + @scope * 64 + 48] -> @slot.
+  ? @slot >= 256 [ "variable limit exceeded" -> @fail. ] ~ [
+   0 -> @j. ?? @j < @nlen [
+    !store8[@symbols + @scope * 8192 + @slot * 32 + @j | :load8[@source + @name + @j]]. @j + 1 -> @j.
+   ]
+   !store8[@symbols + @scope * 8192 + @slot * 32 + @nlen | 0].
+   !store64[@functions + @scope * 64 + 48 | @slot + 1].
+  ]
+ ]
+
+       @count + 1 -> @count. @pos + 1 -> @pos. 1 -> @w.
+      ]
+     ] ~ [
+      ? :load64[@tokens + @pos * 32] != 124 [ "expected | or [ after parameter" -> @fail. ] ~ [ @pos + 1 -> @pos. 0 -> @w. ]
+     ]
+    ]
+    ? (@count > 0) * (@w == 0) [ "missing parameter after |" -> @fail. ]
+    !store64[@functions + @scope * 64 + 40 | @count].
+    @pos + 1 -> @pos. 1 -> @bp. 0 -> @state.
+   ]
+  ]
+ ]
+
+ ? @state == 100 [
+  ? @sp == 0 [ @returnstate -> @state. ] ~ [
+   @sp - 1 -> @sp. @actions + @sp * 48 -> @frame.
+   :load64[@frame] -> @kind. :load64[@frame + 8] -> @a.
+   :load64[@frame + 16] -> @b. :load64[@frame + 24] -> @c.
+   :load64[@frame + 32] -> @d. :load64[@frame + 40] -> @v.
+   :load64[@tokens + @pos * 32 + 24] -> @errline. @errline -> @emitline.
+   ? @kind == 1 [
+    ? @b [
+?? :load64[@tokens + @pos * 32] == 10 [ @pos + 1 -> @pos. ]
+
+    ]
+    :load64[@tokens + @pos * 32 + 24] -> @errline. @errline -> @emitline.
+    @ed + 1 -> @ed. ? @ed > 32 [ "expression nesting limit exceeded" -> @fail. ]
+? @sp >= 256 [ "expression continuation limit exceeded" -> @fail. ] ~ [
+ !store64[@actions + @sp * 48 | 9].
+ !store64[@actions + @sp * 48 + 8 | 0].
+ !store64[@actions + @sp * 48 + 16 | 0].
+ !store64[@actions + @sp * 48 + 24 | 0].
+ !store64[@actions + @sp * 48 + 32 | 0].
+ !store64[@actions + @sp * 48 + 40 | 0].
+ @sp + 1 -> @sp.
+ ]
+? @sp >= 256 [ "expression continuation limit exceeded" -> @fail. ] ~ [
+ !store64[@actions + @sp * 48 | 2].
+ !store64[@actions + @sp * 48 + 8 | @a].
+ !store64[@actions + @sp * 48 + 16 | @b].
+ !store64[@actions + @sp * 48 + 24 | 0].
+ !store64[@actions + @sp * 48 + 32 | 1].
+ !store64[@actions + @sp * 48 + 40 | 0].
+ @sp + 1 -> @sp.
+ ]
+
+    :load64[@tokens + @pos * 32] -> @t.
+    :load64[@tokens + @pos * 32 + 8] -> @u.
+    :load64[@tokens + @pos * 32 + 16] -> @w.
+    ? @t == 256 [
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | 1].
+ !store64[@code + @ni * 32 + 8 | @u].
+ !store64[@code + @ni * 32 + 16 | 0].
+ !store64[@code + @ni * 32 + 24 | @emitline].
+ @ni + 1 -> @ni.
+ ]
+ ]
+ @pos + 1 -> @pos.
+    ] ~ [ ? @t == 257 [
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | 2].
+ !store64[@code + @ni * 32 + 8 | @u].
+ !store64[@code + @ni * 32 + 16 | @w].
+ !store64[@code + @ni * 32 + 24 | @emitline].
+ @ni + 1 -> @ni.
+ ]
+ ]
+ @pos + 1 -> @pos.
+    ] ~ [ ? (@t == 306) + (@t == 307) [
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | 1].
+ !store64[@code + @ni * 32 + 8 | @t == 306].
+ !store64[@code + @ni * 32 + 16 | 0].
+ !store64[@code + @ni * 32 + 24 | @emitline].
+ @ni + 1 -> @ni.
+ ]
+ ]
+ @pos + 1 -> @pos.
+    ] ~ [ ? @t == 308 [
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | 2].
+ !store64[@code + @ni * 32 + 8 | 0].
+ !store64[@code + @ni * 32 + 16 | 0].
+ !store64[@code + @ni * 32 + 24 | @emitline].
+ @ni + 1 -> @ni.
+ ]
+ ]
+ @pos + 1 -> @pos.
+    ] ~ [ ? (@t == 258) * (:load64[@tokens + (@pos + 1) * 32] == 40) + (@t == 305) + ((@t >= 309) * (@t <= 322)) [
+     64 -> @id.
+     ? (@t >= 309) * (@t <= 322) [ @t - 244 -> @id. ]
+     ? @t == 258 [
+:load64[@tokens + @pos * 32 + 8] -> @name. :load64[@tokens + @pos * 32 + 16] -> @nlen.
+64 -> @id. 1 -> @i.
+ ?? @i < @nf [
+  1 -> @ok. 0 -> @j.
+  ?? @j < @nlen [
+   ? :load8[@functions + @i * 64 + @j] != :load8[@source + @name + @j] [ 0 -> @ok. ]
+   @j + 1 -> @j.
+  ]
+  ? :load8[@functions + @i * 64 + @nlen] != 0 [ 0 -> @ok. ]
+  ? @ok [ @i -> @id. ]
+  @i + 1 -> @i.
+ ]
+ ? @id == 64 [ "unknown function" -> @fail. ]
+     ]
+     @pos + 1 -> @pos.
+     ? :load64[@tokens + @pos * 32] != 40 [ "expected ( after function name" -> @fail. ] ~ [
+      @pos + 1 -> @pos.
+?? :load64[@tokens + @pos * 32] == 10 [ @pos + 1 -> @pos. ]
+
+      ? :load64[@tokens + @pos * 32] == 41 [
+       ? @id >= 64 [
+        ? @id == 64 [ "size requires one argument" -> @fail. ]
+        ? @id == 65 [ "readfile requires one path" -> @fail. ]
+        ? @id == 66 [ "writefile requires path | text" -> @fail. ]
+        ? @id == 67 [ "fileexists requires one path" -> @fail. ]
+        ? @id == 70 [ "lines requires one text" -> @fail. ]
+        ? @id == 71 [ "join requires list | separator" -> @fail. ]
+        ? @id == 72 [ "create requires one path" -> @fail. ]
+        ? @id == 73 [ "del requires one path" -> @fail. ]
+        ? @id == 74 [ "watch requires one root" -> @fail. ]
+        ? @id == 75 [ "search requires one path pattern" -> @fail. ]
+        ? @id == 76 [ "save requires path | text" -> @fail. ]
+        ? @id == 77 [ "go requires one root" -> @fail. ]
+        ? @fail == 0 [
+         ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+          !store64[@code + @ni * 32 | @id - 38].
+          !store64[@code + @ni * 32 + 8 | 0].
+          !store64[@code + @ni * 32 + 16 | 0].
+          !store64[@code + @ni * 32 + 24 | @emitline].
+          @ni + 1 -> @ni.
+         ]
+        ]
+       ] ~ [
+        ? :load64[@functions + @id * 64 + 40] != 0 [ "wrong function argument count" -> @fail. ]
+        ? @fail == 0 [
+         ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+          !store64[@code + @ni * 32 | 23].
+          !store64[@code + @ni * 32 + 8 | @id].
+          !store64[@code + @ni * 32 + 16 | 0].
+          !store64[@code + @ni * 32 + 24 | @emitline].
+          @ni + 1 -> @ni.
+         ]
+        ]
+       ]
+       @pos + 1 -> @pos.
+      ] ~ [
+? @sp >= 256 [ "expression continuation limit exceeded" -> @fail. ] ~ [
+ !store64[@actions + @sp * 48 | 5].
+ !store64[@actions + @sp * 48 + 8 | @id].
+ !store64[@actions + @sp * 48 + 16 | 1].
+ !store64[@actions + @sp * 48 + 24 | 0].
+ !store64[@actions + @sp * 48 + 32 | 0].
+ !store64[@actions + @sp * 48 + 40 | 0].
+ @sp + 1 -> @sp.
+ ]
+? @sp >= 256 [ "expression continuation limit exceeded" -> @fail. ] ~ [
+ !store64[@actions + @sp * 48 | 1].
+ !store64[@actions + @sp * 48 + 8 | 0].
+ !store64[@actions + @sp * 48 + 16 | 1].
+ !store64[@actions + @sp * 48 + 24 | 0].
+ !store64[@actions + @sp * 48 + 32 | 0].
+ !store64[@actions + @sp * 48 + 40 | 0].
+ @sp + 1 -> @sp.
+ ]
+
+      ]
+     ]
+    ] ~ [ ? @t == 40 [
+     @pos + 1 -> @pos.
+? @sp >= 256 [ "expression continuation limit exceeded" -> @fail. ] ~ [
+ !store64[@actions + @sp * 48 | 4].
+ !store64[@actions + @sp * 48 + 8 | 41].
+ !store64[@actions + @sp * 48 + 16 | 0].
+ !store64[@actions + @sp * 48 + 24 | 0].
+ !store64[@actions + @sp * 48 + 32 | 0].
+ !store64[@actions + @sp * 48 + 40 | 0].
+ @sp + 1 -> @sp.
+ ]
+? @sp >= 256 [ "expression continuation limit exceeded" -> @fail. ] ~ [
+ !store64[@actions + @sp * 48 | 1].
+ !store64[@actions + @sp * 48 + 8 | 0].
+ !store64[@actions + @sp * 48 + 16 | 1].
+ !store64[@actions + @sp * 48 + 24 | 0].
+ !store64[@actions + @sp * 48 + 32 | 0].
+ !store64[@actions + @sp * 48 + 40 | 0].
+ @sp + 1 -> @sp.
+ ]
+
+    ] ~ [ ? @t == 91 [
+     @pos + 1 -> @pos.
+?? :load64[@tokens + @pos * 32] == 10 [ @pos + 1 -> @pos. ]
+
+     ? :load64[@tokens + @pos * 32] == 93 [
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | 16].
+ !store64[@code + @ni * 32 + 8 | 0].
+ !store64[@code + @ni * 32 + 16 | 0].
+ !store64[@code + @ni * 32 + 24 | @emitline].
+ @ni + 1 -> @ni.
+ ]
+ ]
+ @pos + 1 -> @pos.
+     ] ~ [
+? @sp >= 256 [ "expression continuation limit exceeded" -> @fail. ] ~ [
+ !store64[@actions + @sp * 48 | 6].
+ !store64[@actions + @sp * 48 + 8 | 1].
+ !store64[@actions + @sp * 48 + 16 | 0].
+ !store64[@actions + @sp * 48 + 24 | 0].
+ !store64[@actions + @sp * 48 + 32 | 0].
+ !store64[@actions + @sp * 48 + 40 | 0].
+ @sp + 1 -> @sp.
+ ]
+? @sp >= 256 [ "expression continuation limit exceeded" -> @fail. ] ~ [
+ !store64[@actions + @sp * 48 | 1].
+ !store64[@actions + @sp * 48 + 8 | 0].
+ !store64[@actions + @sp * 48 + 16 | 1].
+ !store64[@actions + @sp * 48 + 24 | 0].
+ !store64[@actions + @sp * 48 + 32 | 0].
+ !store64[@actions + @sp * 48 + 40 | 0].
+ @sp + 1 -> @sp.
+ ]
+
+     ]
+    ] ~ [ ? (@t == 258) + (@t == 269) [
+     256 -> @slot. 3 -> @x.
+     ? @t == 258 [
+:load64[@tokens + @pos * 32 + 8] -> @name. :load64[@tokens + @pos * 32 + 16] -> @nlen.
+256 -> @slot. 0 -> @i.
+ ?? @i < :load64[@functions + @scope * 64 + 48] [
+  1 -> @ok. 0 -> @j.
+  ?? @j < @nlen [
+   ? :load8[@symbols + @scope * 8192 + @i * 32 + @j] != :load8[@source + @name + @j] [ 0 -> @ok. ]
+   @j + 1 -> @j.
+  ]
+  ? :load8[@symbols + @scope * 8192 + @i * 32 + @nlen] != 0 [ 0 -> @ok. ]
+  ? @ok [ @i -> @slot. ]
+  @i + 1 -> @i.
+ ]
+
+      ? @scope [ 5 -> @x. ? @slot == 256 [
+256 -> @slot. 0 -> @i.
+ ?? @i < :load64[@functions + 0 * 64 + 48] [
+  1 -> @ok. 0 -> @j.
+  ?? @j < @nlen [
+   ? :load8[@symbols + 0 * 8192 + @i * 32 + @j] != :load8[@source + @name + @j] [ 0 -> @ok. ]
+   @j + 1 -> @j.
+  ]
+  ? :load8[@symbols + 0 * 8192 + @i * 32 + @nlen] != 0 [ 0 -> @ok. ]
+  ? @ok [ @i -> @slot. ]
+  @i + 1 -> @i.
+ ]
+ 3 -> @x. ] ]
+     ]
+     ? @slot != 256 [
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | @x].
+ !store64[@code + @ni * 32 + 8 | @slot].
+ !store64[@code + @ni * 32 + 16 | 0].
+ !store64[@code + @ni * 32 + 24 | @emitline].
+ @ni + 1 -> @ni.
+ ]
+ ]
+ @pos + 1 -> @pos.
+     ] ~ [
+      # Consecutive unbound bare words form one literal UTF-8 text segment.
+      @nc -> @u. 0 -> @length. 0 -> @count. 1 -> @r.
+      ?? @r * (@fail == 0) [
+       :load64[@tokens + @pos * 32] -> @p.
+       ? (@p != 258) * (@p != 269) [ 0 -> @r. ] ~ [
+:load64[@tokens + @pos * 32 + 8] -> @name. :load64[@tokens + @pos * 32 + 16] -> @nlen.
+
+        ? @p == 258 [
+256 -> @slot. 0 -> @i.
+ ?? @i < :load64[@functions + @scope * 64 + 48] [
+  1 -> @ok. 0 -> @j.
+  ?? @j < @nlen [
+   ? :load8[@symbols + @scope * 8192 + @i * 32 + @j] != :load8[@source + @name + @j] [ 0 -> @ok. ]
+   @j + 1 -> @j.
+  ]
+  ? :load8[@symbols + @scope * 8192 + @i * 32 + @nlen] != 0 [ 0 -> @ok. ]
+  ? @ok [ @i -> @slot. ]
+  @i + 1 -> @i.
+ ]
+? (@slot == 256) * (@scope != 0) [
+256 -> @slot. 0 -> @i.
+ ?? @i < :load64[@functions + 0 * 64 + 48] [
+  1 -> @ok. 0 -> @j.
+  ?? @j < @nlen [
+   ? :load8[@symbols + 0 * 8192 + @i * 32 + @j] != :load8[@source + @name + @j] [ 0 -> @ok. ]
+   @j + 1 -> @j.
+  ]
+  ? :load8[@symbols + 0 * 8192 + @i * 32 + @nlen] != 0 [ 0 -> @ok. ]
+  ? @ok [ @i -> @slot. ]
+  @i + 1 -> @i.
+ ]
+ ]
+         ? @slot != 256 [ 0 -> @r. ]
+         ? :load64[@tokens + (@pos + 1) * 32] == 40 [ 0 -> @r. ]
+        ]
+        ? @r [
+         ? @length + @nlen + (@count > 0) > 4096 [ "text segment exceeds 4096 bytes" -> @fail. ]
+         ? @nc + @nlen + (@count > 0) > 16384 [ "text constant limit exceeded" -> @fail. ]
+         ? @fail == 0 [
+          ? @count [ !store8[@constants + @nc | 32]. @nc + 1 -> @nc. @length + 1 -> @length. ]
+          0 -> @j. ?? @j < @nlen [
+           !store8[@constants + @nc | :load8[@source + @name + @j]].
+           @nc + 1 -> @nc. @j + 1 -> @j.
+          ]
+          @length + @nlen -> @length. @count + 1 -> @count. @pos + 1 -> @pos.
+         ]
+        ]
+       ]
+      ]
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | 2].
+ !store64[@code + @ni * 32 + 8 | @u].
+ !store64[@code + @ni * 32 + 16 | @length].
+ !store64[@code + @ni * 32 + 24 | @emitline].
+ @ni + 1 -> @ni.
+ ]
+ ]
+
+     ]
+    ] ~ [ "expected value" -> @fail. ] ] ] ] ] ] ] ]
+   ]
+   ? @kind == 2 [
+    ? @b [
+?? :load64[@tokens + @pos * 32] == 10 [ @pos + 1 -> @pos. ]
+
+    ]
+    :load64[@tokens + @pos * 32] -> @t.
+    :load64[@tokens + @pos * 32 + 24] -> @emitline. @emitline -> @errline.
+    ? @t == 91 [
+     @pos + 1 -> @pos.
+? @sp >= 256 [ "expression continuation limit exceeded" -> @fail. ] ~ [
+ !store64[@actions + @sp * 48 | 2].
+ !store64[@actions + @sp * 48 + 8 | @a].
+ !store64[@actions + @sp * 48 + 16 | @b].
+ !store64[@actions + @sp * 48 + 24 | @c].
+ !store64[@actions + @sp * 48 + 32 | @d].
+ !store64[@actions + @sp * 48 + 40 | 0].
+ @sp + 1 -> @sp.
+ ]
+? @sp >= 256 [ "expression continuation limit exceeded" -> @fail. ] ~ [
+ !store64[@actions + @sp * 48 | 7].
+ !store64[@actions + @sp * 48 + 8 | 0].
+ !store64[@actions + @sp * 48 + 16 | 0].
+ !store64[@actions + @sp * 48 + 24 | 0].
+ !store64[@actions + @sp * 48 + 32 | 0].
+ !store64[@actions + @sp * 48 + 40 | 0].
+ @sp + 1 -> @sp.
+ ]
+? @sp >= 256 [ "expression continuation limit exceeded" -> @fail. ] ~ [
+ !store64[@actions + @sp * 48 | 1].
+ !store64[@actions + @sp * 48 + 8 | 0].
+ !store64[@actions + @sp * 48 + 16 | 1].
+ !store64[@actions + @sp * 48 + 24 | 0].
+ !store64[@actions + @sp * 48 + 32 | 0].
+ !store64[@actions + @sp * 48 + 40 | 0].
+ @sp + 1 -> @sp.
+ ]
+
+    ] ~ [
+     0 -> @op. 0 -> @q.
+     ? @t == 42 [ 9 -> @op. 3 -> @q. ]
+     ? @t == 43 [ 7 -> @op. 2 -> @q. ]
+     ? @t == 45 [ 8 -> @op. 2 -> @q. ]
+     ? @t == 261 [ 10 -> @op. 1 -> @q. ]
+     ? @t == 262 [ 11 -> @op. 1 -> @q. ]
+     ? @t == 60 [ 12 -> @op. 1 -> @q. ]
+     ? @t == 263 [ 13 -> @op. 1 -> @q. ]
+     ? @t == 62 [ 14 -> @op. 1 -> @q. ]
+     ? @t == 264 [ 15 -> @op. 1 -> @q. ]
+     ? (@op != 0) * (@q >= @a) [
+      ? @q == 1 [ ? @c [ "chained comparisons require grouping" -> @fail. ] 1 -> @c. ]
+      @pos + 1 -> @pos.
+? @sp >= 256 [ "expression continuation limit exceeded" -> @fail. ] ~ [
+ !store64[@actions + @sp * 48 | 2].
+ !store64[@actions + @sp * 48 + 8 | @a].
+ !store64[@actions + @sp * 48 + 16 | @b].
+ !store64[@actions + @sp * 48 + 24 | @c].
+ !store64[@actions + @sp * 48 + 32 | @d].
+ !store64[@actions + @sp * 48 + 40 | 0].
+ @sp + 1 -> @sp.
+ ]
+? @sp >= 256 [ "expression continuation limit exceeded" -> @fail. ] ~ [
+ !store64[@actions + @sp * 48 | 3].
+ !store64[@actions + @sp * 48 + 8 | @op].
+ !store64[@actions + @sp * 48 + 16 | 0].
+ !store64[@actions + @sp * 48 + 24 | 0].
+ !store64[@actions + @sp * 48 + 32 | @emitline].
+ !store64[@actions + @sp * 48 + 40 | 0].
+ @sp + 1 -> @sp.
+ ]
+? @sp >= 256 [ "expression continuation limit exceeded" -> @fail. ] ~ [
+ !store64[@actions + @sp * 48 | 1].
+ !store64[@actions + @sp * 48 + 8 | @q + 1].
+ !store64[@actions + @sp * 48 + 16 | @b].
+ !store64[@actions + @sp * 48 + 24 | 0].
+ !store64[@actions + @sp * 48 + 32 | 0].
+ !store64[@actions + @sp * 48 + 40 | 0].
+ @sp + 1 -> @sp.
+ ]
+
+     ] ~ [
+      0 -> @ok.
+      ? (@t == 256) + (@t == 257) + (@t == 258) + (@t == 269) + (@t == 305) + (@t == 306) + (@t == 307) + (@t == 308) + ((@t >= 309) * (@t <= 315)) + (@t == 40) [ 1 -> @ok. ]
+      ? (@a == 0) * @ok [
+? @sp >= 256 [ "expression continuation limit exceeded" -> @fail. ] ~ [
+ !store64[@actions + @sp * 48 | 2].
+ !store64[@actions + @sp * 48 + 8 | @a].
+ !store64[@actions + @sp * 48 + 16 | @b].
+ !store64[@actions + @sp * 48 + 24 | 0].
+ !store64[@actions + @sp * 48 + 32 | @d + 1].
+ !store64[@actions + @sp * 48 + 40 | 0].
+ @sp + 1 -> @sp.
+ ]
+? @sp >= 256 [ "expression continuation limit exceeded" -> @fail. ] ~ [
+ !store64[@actions + @sp * 48 | 1].
+ !store64[@actions + @sp * 48 + 8 | 1].
+ !store64[@actions + @sp * 48 + 16 | @b].
+ !store64[@actions + @sp * 48 + 24 | 0].
+ !store64[@actions + @sp * 48 + 32 | 0].
+ !store64[@actions + @sp * 48 + 40 | 0].
+ @sp + 1 -> @sp.
+ ]
+
+      ] ~ [
+       ? (@a == 0) * (@d > 1) [
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | 26].
+ !store64[@code + @ni * 32 + 8 | @d].
+ !store64[@code + @ni * 32 + 16 | 0].
+ !store64[@code + @ni * 32 + 24 | @emitline].
+ @ni + 1 -> @ni.
+ ]
+ ]
+
+       ]
+      ]
+     ]
+    ]
+   ]
+   ? @kind == 3 [
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | @a].
+ !store64[@code + @ni * 32 + 8 | 0].
+ !store64[@code + @ni * 32 + 16 | 0].
+ !store64[@code + @ni * 32 + 24 | @d].
+ @ni + 1 -> @ni.
+ ]
+ ]
+
+   ]
+   ? @kind == 4 [
+?? :load64[@tokens + @pos * 32] == 10 [ @pos + 1 -> @pos. ]
+
+    ? :load64[@tokens + @pos * 32] != @a [ "expected closing )" -> @fail. ] ~ [ @pos + 1 -> @pos. ]
+   ]
+   ? @kind == 5 [
+?? :load64[@tokens + @pos * 32] == 10 [ @pos + 1 -> @pos. ]
+
+    :load64[@tokens + @pos * 32] -> @t.
+    ? @t == 124 [
+     ? @b >= 16 [ "argument limit exceeded" -> @fail. ]
+     @pos + 1 -> @pos.
+? @sp >= 256 [ "expression continuation limit exceeded" -> @fail. ] ~ [
+ !store64[@actions + @sp * 48 | 5].
+ !store64[@actions + @sp * 48 + 8 | @a].
+ !store64[@actions + @sp * 48 + 16 | @b + 1].
+ !store64[@actions + @sp * 48 + 24 | 0].
+ !store64[@actions + @sp * 48 + 32 | 0].
+ !store64[@actions + @sp * 48 + 40 | 0].
+ @sp + 1 -> @sp.
+ ]
+? @sp >= 256 [ "expression continuation limit exceeded" -> @fail. ] ~ [
+ !store64[@actions + @sp * 48 | 1].
+ !store64[@actions + @sp * 48 + 8 | 0].
+ !store64[@actions + @sp * 48 + 16 | 1].
+ !store64[@actions + @sp * 48 + 24 | 0].
+ !store64[@actions + @sp * 48 + 32 | 0].
+ !store64[@actions + @sp * 48 + 40 | 0].
+ @sp + 1 -> @sp.
+ ]
+
+    ] ~ [ ? @t == 41 [
+     ? @a >= 64 [
+      1 -> @x. 18 -> @y.
+      ? @a >= 65 [ @a - 38 -> @y. ]
+      ? @a == 66 [ 2 -> @x. ]
+      ? (@a == 68) + (@a == 69) [ 0 -> @x. ]
+      ? @a == 71 [ 2 -> @x. ]
+      ? @a == 76 [ 2 -> @x. ]
+      ? @a == 78 [ 0 -> @x. ]
+      ? @b != @x [
+       ? @a == 64 [ "size requires one argument" -> @fail. ]
+       ? @a == 65 [ "readfile requires one path" -> @fail. ]
+       ? @a == 66 [ "writefile requires path | text" -> @fail. ]
+       ? @a == 67 [ "fileexists requires one path" -> @fail. ]
+       ? @a == 68 [ "arguments takes no arguments" -> @fail. ]
+       ? @a == 69 [ "host takes no arguments" -> @fail. ]
+       ? @a == 70 [ "lines requires one text" -> @fail. ]
+       ? @a == 71 [ "join requires list | separator" -> @fail. ]
+       ? @a == 72 [ "create requires one path" -> @fail. ]
+       ? @a == 73 [ "del requires one path" -> @fail. ]
+       ? @a == 74 [ "watch requires one root" -> @fail. ]
+       ? @a == 75 [ "search requires one path pattern" -> @fail. ]
+       ? @a == 76 [ "save requires path | text" -> @fail. ]
+       ? @a == 77 [ "go requires one root" -> @fail. ]
+       ? @a == 78 [ "disks takes no arguments" -> @fail. ]
+      ]
+      ? @fail == 0 [
+       ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+        !store64[@code + @ni * 32 | @y].
+        !store64[@code + @ni * 32 + 8 | 0].
+        !store64[@code + @ni * 32 + 16 | 0].
+        !store64[@code + @ni * 32 + 24 | @emitline].
+        @ni + 1 -> @ni.
+       ]
+      ]
+     ] ~ [
+      ? @b != :load64[@functions + @a * 64 + 40] [ "wrong function argument count" -> @fail. ]
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | 23].
+ !store64[@code + @ni * 32 + 8 | @a].
+ !store64[@code + @ni * 32 + 16 | @b].
+ !store64[@code + @ni * 32 + 24 | @emitline].
+ @ni + 1 -> @ni.
+ ]
+ ]
+
+     ]
+     @pos + 1 -> @pos.
+    ] ~ [ "expected | or ) after argument" -> @fail. ] ]
+   ]
+   ? @kind == 6 [
+?? :load64[@tokens + @pos * 32] == 10 [ @pos + 1 -> @pos. ]
+
+    :load64[@tokens + @pos * 32] -> @t.
+    ? @t == 124 [
+     ? @a >= 2048 [ "list item limit exceeded" -> @fail. ]
+     @pos + 1 -> @pos.
+? @sp >= 256 [ "expression continuation limit exceeded" -> @fail. ] ~ [
+ !store64[@actions + @sp * 48 | 6].
+ !store64[@actions + @sp * 48 + 8 | @a + 1].
+ !store64[@actions + @sp * 48 + 16 | 0].
+ !store64[@actions + @sp * 48 + 24 | 0].
+ !store64[@actions + @sp * 48 + 32 | 0].
+ !store64[@actions + @sp * 48 + 40 | 0].
+ @sp + 1 -> @sp.
+ ]
+? @sp >= 256 [ "expression continuation limit exceeded" -> @fail. ] ~ [
+ !store64[@actions + @sp * 48 | 1].
+ !store64[@actions + @sp * 48 + 8 | 0].
+ !store64[@actions + @sp * 48 + 16 | 1].
+ !store64[@actions + @sp * 48 + 24 | 0].
+ !store64[@actions + @sp * 48 + 32 | 0].
+ !store64[@actions + @sp * 48 + 40 | 0].
+ @sp + 1 -> @sp.
+ ]
+
+    ] ~ [ ? @t == 93 [
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | 16].
+ !store64[@code + @ni * 32 + 8 | @a].
+ !store64[@code + @ni * 32 + 16 | 0].
+ !store64[@code + @ni * 32 + 24 | @emitline].
+ @ni + 1 -> @ni.
+ ]
+ ]
+ @pos + 1 -> @pos.
+    ] ~ [ "expected | or ] after list item" -> @fail. ] ]
+   ]
+   ? @kind == 7 [
+?? :load64[@tokens + @pos * 32] == 10 [ @pos + 1 -> @pos. ]
+
+    ? :load64[@tokens + @pos * 32] != 93 [ "expected ] after index" -> @fail. ] ~ [
+? @fail == 0 [
+ ? @ni >= 1536 [ "instruction limit exceeded" -> @fail. ] ~ [
+ !store64[@code + @ni * 32 | 17].
+ !store64[@code + @ni * 32 + 8 | 0].
+ !store64[@code + @ni * 32 + 16 | 0].
+ !store64[@code + @ni * 32 + 24 | @emitline].
+ @ni + 1 -> @ni.
+ ]
+ ]
+ @pos + 1 -> @pos.
+    ]
+   ]
+   ? @kind == 9 [ @ed - 1 -> @ed. ]
+  ]
+ ]
+]
+# Publish a complete binary package only after successful source validation.
+? @fail [
+ "Ezero compile error on line " -> @name. 0 -> @i.
+ ?? :load8[@name + @i] [ !put[:load8[@name + @i]]. @i + 1 -> @i. ]
+ @errline -> @x. 100000 -> @q. 0 -> @ok.
+ ?? @q > 0 [
+  0 -> @v. ?? @x >= @q [ @x - @q -> @x. @v + 1 -> @v. ]
+  ? (@v > 0) + @ok + (@q == 1) [ !put[48 + @v]. 1 -> @ok. ]
+  # q is one of100000,10000,...,1; decimal division by10 via fixed mapping.
+  ? @q == 1 [ 0 -> @q. ]
+  ? @q == 10 [ 1 -> @q. ]
+  ? @q == 100 [ 10 -> @q. ]
+  ? @q == 1000 [ 100 -> @q. ]
+  ? @q == 10000 [ 1000 -> @q. ]
+  ? @q == 100000 [ 10000 -> @q. ]
+ ]
+ !put[58]. !put[32]. 0 -> @i.
+ ?? :load8[@fail + @i] [ !put[:load8[@fail + @i]]. @i + 1 -> @i. ]
+ !put[10]. !exit[1].
+]
+64 + @nf * 32 + @ni * 32 + @nc -> @length.
+!store64[@output | 0x31564d4f52455a45].
+!store64[@output + 8 | @length].
+!store64[@output + 16 | @ni]. !store64[@output + 24 | @nf].
+!store64[@output + 32 | :load64[@functions + 48]].
+!store64[@output + 40 | @nc]. !store64[@output + 48 | 1].
+!store64[@output + 56 | 0].
+0 -> @i.
+?? @i < @nf [
+ !store64[@output + 64 + @i * 32 | :load64[@functions + @i * 64 + 32]].
+ !store64[@output + 72 + @i * 32 | :load64[@functions + @i * 64 + 40]].
+ 0 -> @v. ? @i [ :load64[@functions + @i * 64 + 48] -> @v. ]
+ !store64[@output + 80 + @i * 32 | @v].
+ !store64[@output + 88 + @i * 32 | 0]. @i + 1 -> @i.
+]
+0 -> @i. ?? @i < @ni * 32 [
+ !store64[@output + 64 + @nf * 32 + @i | :load64[@code + @i]]. @i + 8 -> @i.
+]
+0 -> @i. ?? @i < @nc [
+ !store8[@output + 64 + @nf * 32 + @ni * 32 + @i | :load8[@constants + @i]]. @i + 1 -> @i.
+]
+0 -> @i.
+?? @i < @length [
+ :write[@output + @i | @length - @i] -> @v.
+ ? @v != -4 [
+  ? (@v == 0) + (@v > @length - @i) [ !exit[74]. ]
+  @i + @v -> @i.
+ ]
+]

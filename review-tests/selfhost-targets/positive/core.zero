@@ -1,0 +1,7 @@
+# Shared syntax and code generation, without target-only operations.
+7 => @value.
+0 => @n.
+? @value == 7 [ @value * 3 + 2 -> @value. ] ~ [ -@value -> @value. ]
+?? @n < 3 [ @n + 1 -> @n. ]
+"ASCII\n\r\t\\\"" => @text.
+(:load8[@text] + :load16[@text]) * :load32[@text] -> @value.

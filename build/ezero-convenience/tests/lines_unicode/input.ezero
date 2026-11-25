@@ -1,0 +1,2 @@
+lines("Привет\n🌍\r\né")[2] => show
+size(lines("Привет\n🌍\r\né")[3]) => show

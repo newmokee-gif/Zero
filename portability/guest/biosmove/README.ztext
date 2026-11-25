@@ -1,0 +1,83 @@
+ZTEXT00100001115dad9e3350000000
+Current original Zero workflow (0.12)
+
+Use the native tools on Linux or their .exe versions on Windows:
+  zero-integrate PROJECT_DIRECTORY NEW_KERNEL.zero
+  zero-build PROJECT_DIRECTORY NEW_OUTPUT_DIRECTORY NEW_KERNEL.zero
+  zero-check PROJECT_DIRECTORY NEW_TEST_DIRECTORY
+All destination paths must be new. The integrator preserves authored sources;
+the builder checks its compiler fixed point and builds the original targets;
+the verifier checks language behavior and host file operations in process.
+See tools/integrate.ztext, tools/build.ztext and checks/README.ztext.
+Read these documents with zero-text read FILE.
+
+The notes below preserve earlier implementation and test history. Any old
+shell/Python runner names, generated artifacts, JSON reports or commands are
+historical references: they were removed from the active project and are not
+current runnable instructions or current-release validation. Native host
+checks do not replace BIOS/UEFI, persistence or physical-hardware testing.
+
+Historical implementation notes
+
+Original Zero BIOS block move primitive
+
+Candidate integration (host text editing only):
+python3 portability/guest/biosmove/apply.py INPUT_COMPILER.zero OUTPUT_COMPILER.zero
+Compile the output with the current own Zero compiler, then self-compile once
+more and compare bytes. This task does not publish a live compiler itself.
+Builtin index56/token556, template85 are reserved for biosmove; guest headers
+use template84, and Windows uses existing host template overrides.
+
+REAL-only value operation:
+    :biosmove[0x6800 | 16384] -> @status.
+
+The primitive invokes BIOS INT15/AH87 with ES:SI pointing to the caller's
+48-byte descriptor table and CX containing the number of16-bit words. It
+copies no policy or device logic into the compiler. Table must be a physical
+low-memory address<=0xffd0; words must be1..32768. Invalid values return
+0xffffffff without accessing the table or entering BIOS. A successful BIOS
+call returns0. On CF error, nonzero AH is returned, or256 if BIOS setCF but
+leftAH zero. Both expression arguments follow the existing left-to-right
+Zero evaluation and binary operand convention.
+
+Original93-byte register shim is stored as Zero template data, not assembly
+input. It preserves general registers other than the EAX result, DS/ES and
+EFLAGS, then clearsDF like the existing BIOS primitives. Temporary result
+storage uses the existing CS:0x6e08 BIOS scratch. It enables interrupts for
+the firmware call and restores the caller's interrupt state on completion.
+The BIOS may alter A20 state; callers must reenable/verify A20 before directly
+accessing high memory or entering protected/long mode.
+
+Descriptor table owned by caller
+Initialize all48 bytes before each call; firmware may modify its work entries.
+Entries0/1 (bytes0..15): clear/reserved for BIOS.
+Entry2 at+16: source data segment.
+Entry3 at+24: destination data segment.
+Entries4/5 (bytes32..47): BIOS work space.
+For each source/destination descriptor:
+  +0 u16 limit=byte_count-1 (up to65535)
+  +2 u16 base bits0..15
+  +4 u8  base bits16..23
+  +5 u8  access0x93 (present writable data)
+  +6 u8  flags/upper limit0
+  +7 u8  base bits24..31
+The shim does not validate descriptor contents, address ownership, usable RAM,
+source/destination overlap or firmware support. The Zero boot loader supplies
+those policies, including BIOS E820 checks for its target range.
+
+Native verification
+python3 portability/guest/biosmove/run.py [CANDIDATE_COMPILER]
+
+probe.zero executes an actual BIOS optical read of32KiB into physical0x20000,
+then performs two32-byte guard initializations and a32KiB payload copy at each
+of4MiB,8MiB and32MiB. Host QMP memory reads independently compare every byte,
+including the first/last payload bytes and both guards. Invalid argument cases
+are checked inside the guest before real copies. All nine firmware calls
+return0. The VM is stopped and no writable user disk is attached.
+
+The32MiB test demonstrates that this tested SeaBIOS honors descriptor base
+bits above24. It does not establish arbitrary4GiB support, an ISA guarantee
+for every BIOS, native VirtualBox success, or physical-hardware compatibility.
+The original AH87 interface historically includes24-bit-address BIOSes; the
+planned4..5MiB bundle destination stays below that16MiB limit. Firmware failure
+must be handled by the loader. Evidence: verification/biosmove/.

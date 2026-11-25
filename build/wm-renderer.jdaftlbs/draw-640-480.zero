@@ -1,0 +1,414 @@
+# Own Zero kernel: native cooperative threads, pixel desktop and persistent files.
+:reserve[65536] => @memory.
+@memory => @bank_a.
+@memory + 4608 => @bank_b.
+@memory + 9216 => @work.
+@memory + 13824 => @line.
+@memory + 14336 => @listing.
+@memory + 16380 => @echo_byte.
+0 => @state.
+0 => @current.
+0 => @message.
+0 => @pointer.
+0 => @character.
+0 => @i.
+0 => @j.
+0 => @k.
+0 => @temporary.
+0 => @status.
+0 => @timeout.
+0 => @ready.
+0 => @valid.
+0 => @done.
+0 => @io_lba.
+0 => @io_buffer.
+0 => @io_count.
+0 => @io_write.
+0 => @io_return.
+0 => @io_ok.
+0 => @sector_index.
+0 => @word_index.
+0 => @command_status.
+0 => @validate_ptr.
+0 => @validate_return.
+0 => @validate_good.
+0 => @checksum.
+0 => @good_a.
+0 => @good_b.
+0 => @active_bank.
+0 => @fs_ready.
+0 => @disk_ready.
+0 => @disk_select.
+0 => @line_length.
+0 => @overflow.
+0 => @ignore_lf.
+0 => @arguments.
+0 => @command.
+0 => @operation.
+0 => @wanted.
+0 => @equal.
+0 => @name.
+0 => @text.
+0 => @name_length.
+0 => @file.
+0 => @free_file.
+0 => @text_length.
+0 => @slot.
+0 => @boot_information.
+@memory + 16384 => @console.
+# Original 5x7 ASCII glyph rows. Each character stores seven masks as 48+mask.
+"00000004444404:::0000:O::O:04?D>5N4IJ248;C<BD8EB=44800002488842842224804E>E40044O4400000448000O0000000004122488@>ACEIA>4<4444>>A1248ON11611N26:BO22O@@N11N68@NAA>O124888>AA>AA>>AA?12<04004000400448124842100O0O00@84248@>A12404>AGEG@>>AAOAAANAANAAN?@@@@@?NAAAAANO@@N@@OO@@N@@@?@@GAA?AAAOAAA>44444>72222B<ABDHDBA@@@@@@OAKEEAAAAIIECCA>AAAAA>NAAN@@@>AAAEB=NAANDBA?@@>11NO444444AAAAAA>AAAAA:4AAAEEKAAA:4:AAAA:4444O1248@O>88888>@884221>22222>4:A0000000000O842000000>1?A?@@NAAAN00?@@@?11?AAA?00>AO@?698N8880?AA?1>@@NAAAA40<444>20622B<@@BDHDB<44444>00JEEEE00NAAAA00>AAA>0NAAN@@0?AA?1100FI@@@00?@>1N88N889600AAAA?00AAA:400AAEE:00A:4:A0AAA?1>00O248O34484434444444H44244H009F000" => @font.
+0 => @c0.
+0 => @c1.
+0 => @c2.
+0 => @c3.
+0 => @c4.
+0 => @c5.
+0 -> @i.
+?? @i < 65536 [ !store8[@memory + @i| 0]. @i + 1 -> @i. ]
+
+:reserve[1259776] -> @file.
+!store64[@console + 2000 | @file].
+0 -> @i.
+?? @i < 1259776 [ !store32[@file + @i | 0x5a5a5a5a]. @i + 4 -> @i. ]
+!store64[@console | 2]. !store64[@console + 8 | @file + 128].
+!store64[@console + 16 | 640]. !store64[@console + 24 | 480].
+!store64[@console + 32 | 656]. !store64[@console + 40 | 1].
+:reserve[24576] -> @pointer.
+0 -> @i. ?? @i < 24576 [ !store8[@pointer + @i | 0]. @i + 1 -> @i. ]
+!store64[@console + 2048 | @pointer]. !store64[@console + 2056 | 3].
+!store64[@console + 2064 | 0]. !store64[@console + 2072 | 3].
+!store64[@console + 2080 | 0]. !store64[@console + 2088 | 1].
+:read[@echo_byte | 1] -> @i.
+? @i == 1 [
+ ? :load8[@echo_byte] == 115 [ !store64[@console + 2080 | 1]. !store64[@console + 2064 | 1]. ]
+ ? :load8[@echo_byte] == 114 [ !store64[@console + 40 | 0]. ]
+]
+0 -> @k.
+?? @k < 3 [
+ @pointer + @k * 8192 -> @c0.
+ !store64[@c0 | 1]. !store64[@c0 + 8 | @k + 1]. !store64[@c0 + 64 | 1].
+ "A:|> help\r\nZero windows.\r\nA:|> write FIRST\r\nFIRST\r\nA:|> " -> @message.
+ ? @k == 1 [ "B:|> read second\r\nSecond terminal\r\nB:|> " -> @message. ]
+ ? @k == 2 [ "A:|> tasks\r\nterminal RUN\r\ngraphics RUN\r\ncompute RUN\r\nA:|> " -> @message. ]
+ 0 -> @i. ?? :load8[@message + @i] [ !store8[@c0 + 1024 + @i | :load8[@message + @i]]. @i + 1 -> @i. ]
+ !store64[@c0 + 16 | @i]. !store64[@c0 + 24 | @i].
+ @k + 1 -> @k.
+]
+# Zero window renderer. Private thread locals; shared ABI at console+2048.
+# Only this worker owns framebuffer/VGA output while the window pool exists.
+-1 -> @status. -1 -> @timeout. !store64[@console + 2384 | 2].
+?? :load64[@console + 328] == 0 [
+ 0 -> @valid. 0 -> @done.
+ :load64[@console + 2048] -> @validate_ptr.
+ :load64[@console + 2056] -> @validate_good.
+ :load64[@console + 2088] -> @current.
+ :load64[@console + 2064] -> @disk_select.
+ :load64[@console + 336] -> @fs_ready.
+ 1 -> @ready.
+ ? :load64[@console + 320] [ 1 - :bitand[:shr[:load64[@console + 440] | 2] | 1] -> @ready. ]
+ !store64[@console + 2368 | @ready].
+ !store64[@console + 2376 | @ready != :load64[@console + 2384]].
+ 0 -> @state.
+ ? (@current != @status) + (@fs_ready != @timeout) + (:load64[@console + 328] == 0) [ 1 -> @state. ]
+ ? (@validate_ptr != 0) * (@validate_good > 0) [
+  :load64[@console + 8] -> @file. :load64[@console + 16] -> @wanted.
+  :load64[@console + 24] -> @name. :load64[@console + 32] -> @slot.
+  :load64[@console + 40] -> @free_file.
+  # Resolve focus ordinal among live slots; holes do not become blank tiles.
+  0 -> @sector_index. 0 -> @active_bank. 0 -> @word_index.
+  ?? @sector_index < @validate_good [
+   ? :load64[@validate_ptr + @sector_index * 8192] [
+    ? @sector_index == @disk_select [ @word_index -> @active_bank. ]
+    @word_index + 1 -> @word_index.
+   ]
+   @sector_index + 1 -> @sector_index.
+  ]
+  @active_bank -> @i. 0 -> @good_a.
+  ?? @i >= 3 [ @i - 3 -> @i. @good_a + 3 -> @good_a. ]
+  0 -> @good_b.
+  ? @word_index > @good_a [ @word_index - @good_a -> @good_b. ]
+  ? @good_b > 3 [ 3 -> @good_b. ]
+  ? :load64[@console] == 2 [
+   ? @state [
+    # Full refresh clears old layouts; no worker drawing touches user disks.
+    0 -> @j.
+    ?? (@j < @name) * (@valid == 0) [
+     ? :load64[@console + 2088] != @current [ 1 -> @valid. ]
+     ? @valid == 0 [
+      0x0b101b -> @checksum. ? @fs_ready [ 0x0b171b -> @checksum. ]
+      ? (@j < 58) + (@j >= @name - 26) [ 0x111a2a -> @checksum. ? @fs_ready [ 0x11262a -> @checksum. ] ]
+      ? (@j == 57) + (@j == @name - 26) [ 0x2a374d -> @checksum. ]
+      ? @free_file == 0 [ :bitand[@checksum | 255] * 65536 + :bitand[@checksum | 65280] + :shr[@checksum | 16] -> @checksum. ]
+      @file + @j * @slot * 4 -> @temporary. 0 -> @i.
+      ?? @i < @wanted [ !store32[@temporary + @i * 4 | @checksum]. @i + 1 -> @i. ]
+      
+     ]
+     @j + 1 -> @j.
+    ]
+    # Header labels and key hints. All glyphs remain our original ASCII font.
+    "000 WINDOWS" -> @message. 0 -> @i.
+    ?? @i < 12 [ !store8[@console + 2304 + @i | :load8[@message + @i]]. @i + 1 -> @i. ]
+    @word_index -> @i. 0 -> @j. ?? @i >= 100 [ @i - 100 -> @i. @j + 1 -> @j. ]
+    !store8[@console + 2304 | 48 + @j]. 0 -> @j. ?? @i >= 10 [ @i - 10 -> @i. @j + 1 -> @j. ]
+    !store8[@console + 2305 | 48 + @j]. !store8[@console + 2306 | 48 + @i].
+    0 -> @ready.
+    ?? (@ready < 5) * (@valid == 0) [
+     18 -> @io_lba. 15 -> @io_buffer. 2 -> @k. 0xdce3ef -> @checksum.
+     "ZERO / TILES" -> @message. ? :load64[@console + 2080] [ "ZERO / SCROLL" -> @message. ]
+     ? @ready == 1 [ 73 -> @io_buffer. ? @name < 600 [ 63 -> @io_buffer. ] 1 -> @k. "WORKSPACE" -> @message. 0x8596af -> @checksum. ]
+     ? @ready == 2 [ @wanted - 112 -> @io_lba. 23 -> @io_buffer. 1 -> @k. @console + 2304 -> @message. ]
+     ? @ready == 3 [ @name - 19 -> @io_buffer. 1 -> @k. "F1 NEW  F2 CLOSE  F3 NEXT  F4 PREV  F5 LAYOUT" -> @message. 0x8596af -> @checksum. ]
+     ? @ready == 4 [
+      @wanted - 200 -> @io_lba. 73 -> @io_buffer. ? @name < 600 [ 63 -> @io_buffer. ]
+      1 -> @k. "AUTO TILE" -> @message. ? :load64[@console + 2080] [ "HORIZONTAL STRIP" -> @message. ] 0x89d8cd -> @checksum.
+     ]
+     ? @free_file == 0 [ :bitand[@checksum | 255] * 65536 + :bitand[@checksum | 65280] + :shr[@checksum | 16] -> @checksum. ]
+     0 -> @i.
+     ?? (:load8[@message + @i] != 0) * (@valid == 0) [
+      :load8[@message + @i] -> @character. 0 -> @j.
+      ?? (@j < 14 * @k) * (@valid == 0) [
+       ? :load64[@console + 2088] != @current [ 1 -> @valid. ]
+       ? @valid == 0 [
+        :shr[@j | 1] -> @c0. ? @k == 2 [ :shr[@c0 | 1] -> @c0. ]
+        :load8[@font + (@character - 32) * 7 + @c0] - 48 -> @c1.
+        0 -> @c2.
+        ?? @c2 < 5 * @k [
+         @c2 -> @c3. ? @k == 2 [ :shr[@c3 | 1] -> @c3. ]
+         ? :bitand[@c1 | :shr[16 | @c3]] [
+          @io_lba + @i * 8 * @k + @c2 -> @c4. @io_buffer + @j -> @c5.
+          ? (@c4 < @wanted) * (@c5 < @name) [ !store32[@file + (@c5 * @slot + @c4) * 4 | @checksum]. ]
+         ]
+         @c2 + 1 -> @c2.
+        ]
+       ]
+       @j + 1 -> @j.
+      ]
+      
+      @i + 1 -> @i.
+     ]
+     @ready + 1 -> @ready.
+    ]
+    1 -> @done.
+   ]
+  ]
+  # Scan visible live slots. Tiles show pages of3, scrolling centers focus.
+  0 -> @sector_index. 0 -> @word_index.
+  ?? (@sector_index < @validate_good) * (@valid == 0) [
+   @validate_ptr + @sector_index * 8192 -> @pointer.
+   ? :load64[@pointer] [
+    0 -> @equal.
+    ? :load64[@console] == 1 [ ? @sector_index == @disk_select [ 1 -> @equal. ] ]
+    ? :load64[@console] == 2 [
+     ? :load64[@console + 2080] == 0 [
+      ? (@word_index >= @good_a) * (@word_index < @good_a + 3) [ 1 -> @equal. ]
+     ] ~ [
+      ? (@word_index + 1 >= @active_bank) * (@word_index <= @active_bank + 1) [ 1 -> @equal. ]
+     ]
+    ]
+    :load64[@pointer + 64] -> @validate_return.
+    ? @equal * ((@state != 0) + (@validate_return != :load64[@pointer + 72]) + ((@sector_index == @disk_select) * :load64[@console + 2376])) [
+     # Geometry represents a cropped logical window with unsigned coordinates.
+     0 -> @io_return. 16 -> @io_lba. 104 -> @io_buffer.
+     ? @name < 600 [ 80 -> @io_buffer. ]
+     @name - @io_buffer - 60 -> @io_write. @wanted - 32 -> @io_count.
+     ? :load64[@console] == 2 [
+      ? :load64[@console + 2080] == 0 [
+       ? @good_b >= 2 [
+        :shr[@wanted - 48 | 1] -> @io_count.
+        ? @good_b == 3 [ :shr[@wanted | 1] + 40 -> @io_count. ]
+        ? @word_index > @good_a [
+         @io_count + 32 -> @io_lba. @wanted - @io_count - 48 -> @io_count.
+         ? @good_b == 3 [
+          :shr[@io_write - 16 | 1] -> @io_write.
+          ? @word_index == @good_a + 2 [ @io_buffer + @io_write + 16 -> @io_buffer. ]
+         ]
+        ]
+       ]
+      ] ~ [
+       :shr[@wanted | 1] - 32 -> @io_count. ? @io_count > 768 [ 768 -> @io_count. ]
+       :shr[@wanted - @io_count | 1] -> @io_lba.
+       ? @word_index < @active_bank [
+        ? @io_lba >= @io_count + 16 [ @io_lba - @io_count - 16 -> @io_lba. ]
+        ~ [ @io_count + 16 - @io_lba -> @io_return. 0 -> @io_lba. ]
+       ]
+       ? @word_index > @active_bank [ @io_lba + @io_count + 16 -> @io_lba. ]
+      ]
+      :shr[@io_count - 32 | 3] -> @line_length. ? @line_length > 96 [ 96 -> @line_length. ]
+      :shr[@io_write - 76 | 4] -> @text_length. ? @text_length > 48 [ 48 -> @text_length. ]
+     ] ~ [ 80 -> @line_length. 24 -> @text_length. ]
+     # Replay the byte ring into a circular-row text grid, without yielding.
+     # The maximum grid occupies exactly console+3072..+7679.
+     0 -> @i.
+     ?? @i < @line_length * @text_length [ !store8[@console + 3072 + @i | 32]. @i + 1 -> @i. ]
+     0 -> @overflow. 0 -> @ignore_lf. 0 -> @arguments.
+     :load64[@pointer + 16] -> @command. :load64[@pointer + 24] -> @operation.
+     ? @operation > 7168 [ 7168 -> @operation. ]
+     ? @command >= 7168 [ 0 -> @command. ]
+     ? @command >= @operation [ @command - @operation -> @command. ]
+     ~ [ @command + 7168 - @operation -> @command. ]
+     ?? @operation [
+      :load8[@pointer + 1024 + @command] -> @character.
+      ? @character == 13 [ 0 -> @ignore_lf. ]
+      ? @character == 8 [
+       ? @ignore_lf [ @ignore_lf - 1 -> @ignore_lf. ]
+       ~ [ ? @arguments [ @arguments - 1 -> @arguments. @line_length - 1 -> @ignore_lf. ] ]
+      ]
+      ? (@character == 10) + ((@character >= 32) * (@character <= 126) * (@ignore_lf >= @line_length)) [
+       0 -> @ignore_lf. @arguments + 1 -> @arguments.
+       ? @arguments >= @text_length [
+        @text_length - 1 -> @arguments. @overflow + 1 -> @overflow.
+        ? @overflow >= @text_length [ 0 -> @overflow. ]
+        @overflow + @arguments -> @i. ? @i >= @text_length [ @i - @text_length -> @i. ]
+        0 -> @j. ?? @j < @line_length [ !store8[@console + 3072 + @i * @line_length + @j | 32]. @j + 1 -> @j. ]
+       ]
+      ]
+      ? (@character >= 32) * (@character <= 126) [
+       @overflow + @arguments -> @i. ? @i >= @text_length [ @i - @text_length -> @i. ]
+       !store8[@console + 3072 + @i * @line_length + @ignore_lf | @character].
+       @ignore_lf + 1 -> @ignore_lf.
+      ]
+      @command + 1 -> @command. ? @command >= 7168 [ 0 -> @command. ]
+      @operation - 1 -> @operation.
+     ]
+     ? (@sector_index == @disk_select) * (@ignore_lf < @line_length) * :load64[@console + 2368] [
+      @overflow + @arguments -> @i. ? @i >= @text_length [ @i - @text_length -> @i. ]
+      !store8[@console + 3072 + @i * @line_length + @ignore_lf | 95].
+     ]
+     "TERMINAL 000" -> @message. 0 -> @i.
+     ?? @i < 13 [ !store8[@console + 2336 + @i | :load8[@message + @i]]. @i + 1 -> @i. ]
+     :load64[@pointer + 8] -> @i. 0 -> @j. ?? @i >= 100 [ @i - 100 -> @i. @j + 1 -> @j. ]
+     !store8[@console + 2345 | 48 + @j]. 0 -> @j. ?? @i >= 10 [ @i - 10 -> @i. @j + 1 -> @j. ]
+     !store8[@console + 2346 | 48 + @j]. !store8[@console + 2347 | 48 + @i].
+     ? :load64[@console] == 2 [
+      # Window fill, title and border; every row is a bounded cooperative slice.
+      0 -> @j.
+      ?? (@j < @io_write) * (@valid == 0) [
+       ? :load64[@console + 2088] != @current [ 1 -> @valid. ]
+       ? @valid == 0 [
+        0 -> @i.
+        ?? (@i + @io_return < @io_count) * (@i + @io_lba < @wanted) [
+         0x101927 -> @checksum. ? @fs_ready [ 0x102427 -> @checksum. ]
+         ? @j < 35 [ 0x111a2a -> @checksum. ? @sector_index == @disk_select [ 0x20263b -> @checksum. ] ]
+         ? @j >= @io_write - 25 [ 0x0e1522 -> @checksum. ]
+         ? (@j == 0) + (@j == @io_write - 1) + (@j == 34) + (@i + @io_return == 0) + (@i + @io_return == @io_count - 1) [
+          0x2a374d -> @checksum. ? @sector_index == @disk_select [ 0xac9ae8 -> @checksum. ? @fs_ready [ 0x89d8cd -> @checksum. ] ]
+         ]
+         ? @free_file == 0 [ :bitand[@checksum | 255] * 65536 + :bitand[@checksum | 65280] + :shr[@checksum | 16] -> @checksum. ]
+         ? @io_buffer + @j < @name [ !store32[@file + ((@io_buffer + @j) * @slot + @io_lba + @i) * 4 | @checksum]. ]
+         @i + 1 -> @i.
+        ]
+        
+       ]
+       @j + 1 -> @j.
+      ]
+      # Header, body rows and footer share the same clipped glyph path.
+      0 -> @ready.
+      ?? (@ready < @text_length + 2) * (@valid == 0) [
+       @console + 2336 -> @message. 12 -> @name_length.
+       @io_buffer + 10 -> @j. 0x8596af -> @checksum.
+       ? @sector_index == @disk_select [ 0xdce3ef -> @checksum. ]
+       ? (@ready > 0) * (@ready <= @text_length) [
+        @overflow + @ready - 1 -> @i. ? @i >= @text_length [ @i - @text_length -> @i. ]
+        @console + 3072 + @i * @line_length -> @message. @line_length -> @name_length.
+        @io_buffer + 50 + (@ready - 1) * 16 -> @j. 0xdce3ef -> @checksum.
+       ]
+       ? @ready == @text_length + 1 [
+        "READY" -> @message. 5 -> @name_length.
+        ? @sector_index == @disk_select [ "FOCUSED" -> @message. 7 -> @name_length. ]
+        @io_buffer + @io_write - 19 -> @j. 0x89d8cd -> @checksum.
+       ]
+       ? @free_file == 0 [ :bitand[@checksum | 255] * 65536 + :bitand[@checksum | 65280] + :shr[@checksum | 16] -> @checksum. ]
+       0 -> @c0.
+       ?? (@c0 < 14) * (@valid == 0) [
+        ? :load64[@console + 2088] != @current [ 1 -> @valid. ]
+        ? @valid == 0 [
+         0 -> @i.
+         ?? @i < @name_length [
+          :load8[@message + @i] -> @character.
+          ? (@character >= 32) * (@character <= 126) [
+           :load8[@font + (@character - 32) * 7 + :shr[@c0 | 1]] - 48 -> @c1. 0 -> @c2.
+           ?? @c2 < 5 [
+            ? :bitand[@c1 | :shr[16 | @c2]] [
+             16 + @i * 8 + @c2 -> @c3.
+             ? (@c3 >= @io_return) * (@c3 < @io_count - 8) [
+              @io_lba + @c3 - @io_return -> @c4. @j + @c0 -> @c5.
+              ? (@c4 < @wanted) * (@c5 < @name) [ !store32[@file + (@c5 * @slot + @c4) * 4 | @checksum]. ]
+             ]
+            ]
+            @c2 + 1 -> @c2.
+           ]
+          ]
+          @i + 1 -> @i.
+         ]
+         
+        ]
+        @c0 + 1 -> @c0.
+       ]
+       @ready + 1 -> @ready.
+      ]
+     ] ~ [
+      # VGA fallback displays the focused terminal, with a one-row title.
+      0 -> @j.
+      ?? (@j < 25) * (@valid == 0) [
+       ? :load64[@console + 2088] != @current [ 1 -> @valid. ]
+       ? @valid == 0 [
+        0 -> @i.
+        ?? @i < 80 [
+         32 -> @character.
+         ? @j == 0 [ ? @i < 12 [ :load8[@console + 2336 + @i] -> @character. ] ]
+         ~ [
+          @overflow + @j - 1 -> @k. ? @k >= 24 [ @k - 24 -> @k. ]
+          :load8[@console + 3072 + @k * 80 + @i] -> @character.
+         ]
+         !store16[0xb8000 + (@j * 80 + @i) * 2 | @character + 1792]. @i + 1 -> @i.
+        ]
+        
+       ]
+       @j + 1 -> @j.
+      ]
+     ]
+     ? (@valid == 0) * (:load64[@console + 2088] == @current) [ !store64[@pointer + 72 | @validate_return]. 1 -> @done. ]
+    ]
+    @word_index + 1 -> @word_index.
+   ]
+   @sector_index + 1 -> @sector_index.
+  ]
+ ]
+ ? (@valid == 0) * (:load64[@console + 2088] == @current) [
+  @current -> @status. @fs_ready -> @timeout. !store64[@console + 328 | 1].
+  !store64[@console + 2384 | :load64[@console + 2368]].
+  ? @done [ !store64[@console + 280 | :load64[@console + 280] + 1]. ]
+ ]
+ 
+]
+
+:load64[@console + 2000] -> @file.
+0 -> @i.
+?? @i < 128 [
+ ? :load8[@file + @i] != 90 [ !exit[77]. ]
+ ? :load8[@file + 1259648 + @i] != 90 [ !exit[78]. ]
+ @i + 1 -> @i.
+]
+@file + 128 -> @file.
+0 -> @j.
+?? @j < 480 [
+ 2560 -> @i.
+ ?? @i < 2624 [ ? :load8[@file + @j * 2624 + @i] != 90 [ !exit[79]. ] @i + 1 -> @i. ]
+ @j + 1 -> @j.
+]
+"P6\n640 480\n255\n" -> @message.
+:write[@message | 15] -> @i.
+0 -> @j.
+?? @j < 480 [
+ 0 -> @i.
+ ?? @i < 640 [
+  :load32[@file + (@j * 656 + @i) * 4] -> @c0.
+  ? :load64[@console + 40] [
+   !put[:shr[@c0 | 16]]. !put[:shr[@c0 | 8]]. !put[@c0].
+  ] ~ [ !put[@c0]. !put[:shr[@c0 | 8]]. !put[:shr[@c0 | 16]]. ]
+  @i + 1 -> @i.
+ ]
+ @j + 1 -> @j.
+]
+!exit[0].

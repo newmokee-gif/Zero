@@ -1,0 +1,40 @@
+ZTEXT0010000099e0d9aba710000000
+Zero OS 0.9 actual network, native compiler and UI verification
+
+From repository root, with a frozen ISO and its exact SHA256:
+  python3 verification/network-0.9.0/run.py --iso build/zero.iso --sha HASH \
+    --label UNIQUE_LABEL --guest-compilers --storage
+Use a new label to preserve old evidence. --modes selects BIOS32, BIOS64,
+UEFI32 and/or UEFI64. The default compute thread is 3; --compute-thread 2 is
+only for older candidate reproducibility and skips the new numbering/pixel
+checks. --public-host '' skips external DNS. The default public name
+10.0.2.2.nip.io resolves to the local HTTP fixture, not an Internet HTTP peer.
+
+The host Python files only orchestrate QEMU, keyboard, independent fixtures
+and assertions. Guest implementation is the project's own Zero code.
+The runner requires existing local QEMU/firmware/Pillow; it downloads nothing.
+Actual PCnet frames are captured with filter-dump and decoded independently;
+DHCP must finish before any input. BIOS guest memory snapshots are read-only.
+No guest state is patched. Native1920x1080 screenshots are not resized.
+
+Default runs attach no data disks. --storage copies only the existing private
+ZeroFS/ext4 verification fixtures and attaches those copies. It never attaches
+build/data.img or build/data.vdi. All private disk and ISO hashes must remain
+unchanged after VM shutdown. Pflash variables are also private copies.
+
+Current matrix verifies task numbering/pause behavior, one-based pixel corners
+and rejection bounds, automatic link recovery while computation actually stops,
+local HTTP, public DNS, production WiFi modal PS/2 handling and restoration.
+--guest-compilers tests default native Zero/Ezero commands, meaningful errors,
+u64, EOF, output cap and recovery. --storage adds one-based disk labels and
+absolute/relative ext4 read regression. See run.py for exact oracles.
+
+Stock QEMU has no native WiFi radio. The actual VM tests the production
+no-adapter modal; hosted simulated radio screens are separate evidence.
+Native VirtualBox/physical hardware and public HTTP remain outside this proof.
+A separate host-only example.com:80 probe records external egress availability.
+
+Per-mode JSON/text/serial logs and native PNGs are reviewable evidence. Private
+pflash variables, raw memory, PPMs, disk copies and PCAP are internal artifacts.
+Results apply only after completed runs against the recorded exact ISO hash.
+Current final result: final-880feb36/results.txt and matrix.json.

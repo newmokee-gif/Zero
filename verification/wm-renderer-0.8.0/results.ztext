@@ -1,0 +1,24 @@
+ZTEXT0010000051320c4577c0000000
+ZERO WM RENDERER - ISOLATED HOSTED CHECKS
+Worker SHA256: 4974d3f7f650cd041ff0576a8f4d97dc0af6bb77ea99d02973fc17318d15c2de
+Each source fixture is compiled by the own Zero compiler.
+Host checks use a bounded graphics-worker loop with yields removed.
+They do not replace integrated VM/input/scheduling tests.
+
+PASS 800x600: tile/scroll guard128B before+after and stride16pixels unchanged; RGB/BGR exact.
+PASS 640x480: tile/scroll guard128B before+after and stride16pixels unchanged; RGB/BGR exact.
+PASS 640x400: tile/scroll guard128B before+after and stride16pixels unchanged; RGB/BGR exact.
+PASS independent replay oracle: empty
+PASS independent replay oracle: crlf
+PASS independent replay oracle: erase
+PASS independent replay oracle: exact-width
+PASS independent replay oracle: wrap
+PASS independent replay oracle: cr-overwrite
+PASS independent replay oracle: backspace-start
+PASS independent replay oracle: scroll
+PASS independent replay oracle: ring-wrap
+
+All checks passed. Images depict isolated renderer fixtures, not VM sessions.
+No generation-abort/yield interleaving is exercised by this hosted suite.
+That contract requires VM scheduling checks or independent source review.
+Generated executables, PPM intermediates and full harnesses: /workspace/zero-foundation/build/wm-renderer.jdaftlbs

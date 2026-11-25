@@ -1,0 +1,95 @@
+ZTEXT0010000173cacf061cd0000000
+Zero Flash native device backend
+
+Implementation: original Zero source, compiled for Linux x86-64 and Windows
+x86-64 by the Zero compiler. No external disk utility is launched.
+
+zero-drives lists only disks that pass a read-only eligibility probe. Visible
+numbers start at one. Each result contains the exact target path and byte size.
+Administrative permissions are required to inspect raw devices. A missing
+result can mean insufficient access, mounted volumes, unsupported hardware or
+an unavailable hardware identity; it does not mean the computer has no disks.
+
+Linux targets
+Only canonical whole-device paths /dev/sd followed by one to three lowercase
+letters are accepted. Partitions, symlinks, regular files, NVMe disks, loops
+and other path aliases are rejected. The kernel must grant O_EXCL ownership
+and a nonblocking exclusive flock. The descriptor must refer to a block device.
+The sysfs path must pass through USB; removable must be one, ro must be zero,
+partition must be absent, and the sysfs device number must match fstat rdev.
+A nonempty SCSI WWID is required. Logical sectors must be 512 bytes. Capacity
+comes from the opened device, not from a caller-provided size.
+Mounted filesystems, active swap and claimed block devices prevent the
+exclusive open. The application never unmounts them automatically.
+
+Windows targets
+Only the exact PhysicalDrive device path followed by a canonical decimal
+number from zero to 255 is accepted. The storage descriptor must identify a
+removable USB disk and contain a nonempty serial number. Device-number,
+geometry and writable-state queries must succeed. Logical sectors must be
+512 bytes. The disk containing the Windows system directory is rejected.
+All volume GUIDs are enumerated, including volumes without drive letters.
+Every extent must be queryable. Any drive letter or directory mount path on
+the target causes refusal; no automatic dismount occurs. Writing additionally
+requires an unshared physical-disk handle and successful FSCTL_LOCK_VOLUME
+for every volume on that disk. Locks remain held through readback and cleanup.
+A volume that cannot be classified causes refusal, even if it might belong
+to another disk. This deliberately conservative case can include optical or
+unusual volume drivers. USB disks without removable/serial descriptors and
+USB adapters exposing fixed media are currently unsupported.
+
+Confirmation and transfer
+The front end probes first, closes the handle and asks for exact target
+confirmation. A second open must match the prior hardware fingerprint,
+capacity and native device number before write_allowed becomes one. The
+fingerprint is an FNV-1a device identity check, not an authenticity signature.
+Linux fingerprints the sysfs physical path and WWID; Windows fingerprints the
+bounded storage descriptor. Transfers are 512-byte aligned and independently
+checked against the opened device capacity, with an explicit byte limit per
+call. Short transfers are handled; partial, zero, unaligned or failed transfers
+stop the operation. The front end must flush and compare every written byte
+against the immutable, SHA-256-validated image snapshot.
+
+Backend ABI
+mh points to 8192 zero-initialized bytes. Set u64 handle at offset16 to -1.
+Open: offset0=1 read-only probe or2 confirmed writable;8=NUL target pointer.
+Outputs:16=native handle;24=capacity;32=sector size;40=error;48=message pointer;
+96=host kind;104=native identity;112=write_allowed;128=identity fingerprint.
+For writable open, set136=expected fingerprint,144=expected capacity,
+152=expected native identity. All three must match.
+I/O:56=1 read,2 write,3 flush;64=buffer;72=byte count;80=offset;88=done.
+Internal state176=Windows volume lock count,184=volume enumeration handle;
+200 is reserved for the front-end coroutine dispatcher. Backend API pointers
+start256; scratch buffers start512; locked-volume handles start6400.
+Call close on every path, including open or transfer errors. Cleanup preserves
+an earlier error. The backend uses thirteen Zero variable slots.
+
+Verification limits
+The Linux binary and Windows binary under Wine passed read-only discovery and
+malformed/unavailable target rejection probes. Separate original Zero tests
+exercise the exact I/O and cleanup implementation on private regular-file
+handles, including write/read/flush and failure cases. Those test handles are
+injected only by the separate test executable; the production opener rejects
+regular files. No real USB device was erased. Physical USB writing, Windows
+storage-driver behavior and hotplug behavior still require hardware validation.
+
+Preparing an actual USB disk
+On Linux, close applications using the USB disk, unmount all of its filesystems
+without disconnecting the device, and ensure none of its partitions is active
+swap. Start Zero Drives and Zero Flash with permission to open raw block
+storage. The tool itself never disables swap or unmounts a filesystem.
+On Windows, close applications using the USB disk and remove every drive-letter
+and directory mount point assigned to its volumes. Run Zero Drives and Zero
+Flash with administrator rights. A volume that cannot be locked remains
+protected and the write is refused. Removing a drive letter is distinct from
+formatting or deleting a partition; preparation does not require those actions.
+After successful writing and readback, safely remove the USB device and
+reconnect it before opening its new volumes or booting from it. This backend
+does not force a Windows partition-layout refresh or remount old filesystems.
+
+Final backend I/O test result
+Eighteen direct I/O cases passed on Linux and Windows/Wine, plus preservation
+of an existing error through cleanup. The tests compare actual 512-byte data
+and 3584 untouched guard bytes in private scratch files, exercise partial EOF,
+read-only write failure, alignment, capacity overflow, unconfirmed writes and
+invalid-host refusal. No physical USB write is implied by these results.

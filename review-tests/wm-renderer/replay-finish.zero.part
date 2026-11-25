@@ -1,0 +1,8 @@
+
+0 -> @j.
+?? @j < @text_length [
+ @overflow + @j -> @i. ? @i >= @text_length [ @i - @text_length -> @i. ]
+ :write[@console + 3072 + @i * @line_length | @line_length] -> @k.
+ ? @k != @line_length [ !exit[82]. ] !put[10]. @j + 1 -> @j.
+]
+!exit[0].

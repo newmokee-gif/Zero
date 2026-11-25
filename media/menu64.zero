@@ -1,0 +1,175 @@
+# Original Zero removable-media launcher. Source twin menu32.zero differs
+# only in pointer width. UEFI interfaces are platform compatibility calls.
+8 => @pointerbytes.
+:arg0[] => @imagehandle.
+:arg1[] => @system.
+0 => @services.
+0 => @consolein.
+0 => @consoleout.
+0 => @fn.
+0 => @status.
+0 => @protocol.
+0 => @device.
+0 => @devicepath.
+0 => @pathbytes.
+0 => @nodebytes.
+0 => @offset.
+0 => @i.
+0 => @j.
+0 => @ch.
+0 => @text.
+0 => @done.
+0 => @ticks.
+0 => @choice.
+0 => @entryhandle.
+0 => @error.
+0 => @launched.
+0 => @stackbase.
+0 => @spawned.
+:reserve[8192] => @scratch.
+@scratch => @guid.
+@scratch+32 => @result.
+@scratch+64 => @key.
+@scratch+128 => @wide.
+@scratch+1024 => @path.
+
+? @pointerbytes == 8 [
+ :load64[@system+96] -> @services.
+ :load64[@system+48] -> @consolein.
+ :load64[@system+64] -> @consoleout.
+] ~ [
+ :load32[@system+60] -> @services.
+ :load32[@system+36] -> @consolein.
+ :load32[@system+44] -> @consoleout.
+]
+? (@services == 0)+(@consolein == 0)+(@consoleout == 0) [ !halt. ]
+? @pointerbytes == 8 [ :load64[@services+256] -> @fn. ] ~ [ :load32[@services+140] -> @fn. ]
+:call[@fn|0|0|0|0|0] -> @status.
+? @status != 0 [ !halt. ]
+
+# Resolve and copy the complete device path of our own boot filesystem.
+!store64[@guid|0x11d295625b1b31a1]. !store64[@guid+8|0x3b7269c9a0003f8e].
+!store64[@result|0].
+? @pointerbytes == 8 [ :load64[@services+152] -> @fn. ] ~ [ :load32[@services+88] -> @fn. ]
+:call[@fn|@imagehandle|@guid|@result|0|0] -> @status.
+? @status != 0 [ 1 -> @error. ]
+? @error == 0 [
+ :load64[@result] -> @protocol.
+ ? @protocol == 0 [ 1 -> @error. ] ~ [
+  ? @pointerbytes == 8 [ :load64[@protocol+24] -> @device. ] ~ [ :load32[@protocol+12] -> @device. ]
+  !store64[@guid|0x11d26d3f09576e91]. !store64[@guid+8|0x3b7269c9a000398e].
+  !store64[@result|0].
+  :call[@fn|@device|@guid|@result|0|0] -> @status.
+  ? @status != 0 [ 1 -> @error. ] ~ [ :load64[@result] -> @devicepath. ? @devicepath == 0 [ 1 -> @error. ] ]
+ ]
+]
+?? (@done == 0)*(@error == 0) [
+ ? @offset > 4092 [ 1 -> @error. ] ~ [
+  :load16[@devicepath+@offset+2] -> @nodebytes.
+  ? (@nodebytes < 4)+(@nodebytes > 4096-@offset) [ 1 -> @error. ] ~ [
+   ? (:load8[@devicepath+@offset] == 127)*(:load8[@devicepath+@offset+1] == 255) [
+    ? @nodebytes != 4 [ 1 -> @error. ]
+    @offset -> @pathbytes. 1 -> @done.
+   ] ~ [
+    ? :load8[@devicepath+@offset] == 127 [ 1 -> @error. ] ~ [
+     0 -> @i. ?? @i < @nodebytes [ !store8[@path+@offset+@i|:load8[@devicepath+@offset+@i]]. @i+1 -> @i. ]
+     @offset+@nodebytes -> @offset.
+    ]
+   ]
+  ]
+ ]
+]
+
+?? @error == 0 [
+ "\r\nZERO MEDIA\r\n1  Start Zero OS\r\n2  Flash Writer\r\nEnter starts Zero. Automatic start in 3 seconds.\r\n" -> @text.
+ 0 -> @i.
+ ?? :load8[@text+@i] [ !store16[@wide+@i*2|:load8[@text+@i]]. @i+1 -> @i. ]
+ !store16[@wide+@i*2|0].
+ ? @pointerbytes == 8 [ :load64[@consoleout+8] -> @fn. ] ~ [ :load32[@consoleout+4] -> @fn. ]
+ :call[@fn|@consoleout|@wide|0|0|0] -> @status.
+ 0 -> @choice. 0 -> @ticks.
+ ?? (@choice == 0)*(@ticks < 300) [
+  !store64[@key|0].
+  ? @pointerbytes == 8 [ :load64[@consolein+8] -> @fn. ] ~ [ :load32[@consolein+4] -> @fn. ]
+  :call[@fn|@consolein|@key|0|0|0] -> @status.
+  ? @status == 0 [
+   :load16[@key+2] -> @ch.
+   ? (@ch == 49)+(@ch == 13) [ 1 -> @choice. ]
+   ? @ch == 50 [ 2 -> @choice. ]
+  ]
+  ? @choice == 0 [
+   ? @pointerbytes == 8 [ :load64[@services+248] -> @fn. ] ~ [ :load32[@services+136] -> @fn. ]
+   :call[@fn|10000|0|0|0|0] -> @status.
+   ? @status != 0 [ 300 -> @ticks. ] ~ [ @ticks+1 -> @ticks. ]
+  ]
+ ]
+ ? @choice == 0 [ 1 -> @choice. ]
+ "\\EFI\\BOOT\\OSX64.EFI" -> @text.
+ ? @pointerbytes == 4 [ "\\EFI\\BOOT\\OSIA32.EFI" -> @text. ]
+ ? @choice == 2 [
+  "\\EFI\\BOOT\\FLASHX64.EFI" -> @text.
+  ? @pointerbytes == 4 [ "\\EFI\\BOOT\\FLASH32.EFI" -> @text. ]
+ ]
+ 0 -> @i.
+ ?? :load8[@text+@i] [ !store16[@path+@pathbytes+4+@i*2|:load8[@text+@i]]. @i+1 -> @i. ]
+ !store16[@path+@pathbytes+4+@i*2|0].
+ 6+@i*2 -> @nodebytes.
+ !store16[@path+@pathbytes|0x0404]. !store16[@path+@pathbytes+2|@nodebytes].
+ !store32[@path+@pathbytes+@nodebytes|0x0004ff7f].
+ !store64[@result|0].
+ ? @pointerbytes == 8 [ :load64[@services+200] -> @fn. ] ~ [ :load32[@services+112] -> @fn. ]
+ :call7[@fn|0|@imagehandle|@path|0|0|@result|0] -> @status.
+ 0 -> @launched.
+ ? @status == 0 [
+  :load64[@result] -> @entryhandle.
+  ? @entryhandle != 0 [
+   # Nested Zero firmware applications each own a64KiB arena. Starting on
+   # the menu's firmware stack can exhaust a small IA32 firmware stack.
+   # Use an explicitly allocated1MiB continuation stack for StartImage and
+   # the child application; the parent's live arena stays untouched.
+   !store64[@result|0].
+   ? @pointerbytes == 8 [ :load64[@services+40] -> @fn. ] ~ [ :load32[@services+32] -> @fn. ]
+   :call[@fn|0|2|256|@result|0] -> @status.
+   ? @status == 0 [
+    :load64[@result] -> @stackbase.
+    512 -> @i. ?? @i < 768 [ !store64[@scratch+@i|0]. @i+8 -> @i. ]
+    :fork[@scratch+512|@stackbase|1048576] -> @spawned.
+    ? @spawned [
+     ? @pointerbytes == 8 [ :load64[@services+208] -> @fn. ] ~ [ :load32[@services+116] -> @fn. ]
+     :call[@fn|@entryhandle|0|0|0|0] -> @status.
+     !store64[@scratch+704|@status].
+     !switch[@scratch+512|@scratch+592].
+     !halt.
+    ] ~ [
+     !switch[@scratch+592|@scratch+512].
+     :load64[@scratch+704] -> @status.
+     1 -> @launched. ? @status != 0 [ 2 -> @launched. ]
+     ? @pointerbytes == 8 [
+      :load64[@services+48] -> @fn.
+      :call[@fn|@stackbase|256|0|0|0] -> @status.
+     ] ~ [
+      :load32[@services+36] -> @fn.
+      :call[@fn|@stackbase|0|256|0|0] -> @status.
+     ]
+    ]
+   ]
+   ? @pointerbytes == 8 [ :load64[@services+224] -> @fn. ] ~ [ :load32[@services+124] -> @fn. ]
+   :call[@fn|@entryhandle|0|0|0|0] -> @status.
+  ]
+ ]
+ # Firmware apps normally do not return. A returned app or load failure leaves
+ # the menu available; it never guesses a different target or writes a disk.
+ "\r\nApplication returned.\r\n" -> @text.
+ ? @launched == 0 [ "\r\nCannot start the selected application.\r\n" -> @text. ]
+ ? @launched == 2 [ "\r\nApplication returned with an error.\r\n" -> @text. ]
+ 0 -> @i. ?? :load8[@text+@i] [ !store16[@wide+@i*2|:load8[@text+@i]]. @i+1 -> @i. ]
+ !store16[@wide+@i*2|0].
+ ? @pointerbytes == 8 [ :load64[@consoleout+8] -> @fn. ] ~ [ :load32[@consoleout+4] -> @fn. ]
+ :call[@fn|@consoleout|@wide|0|0|0] -> @status.
+]
+"\r\nZero media boot device could not be resolved.\r\n" -> @text.
+0 -> @i. ?? :load8[@text+@i] [ !store16[@wide+@i*2|:load8[@text+@i]]. @i+1 -> @i. ]
+!store16[@wide+@i*2|0].
+? @pointerbytes == 8 [ :load64[@consoleout+8] -> @fn. ] ~ [ :load32[@consoleout+4] -> @fn. ]
+:call[@fn|@consoleout|@wide|0|0|0] -> @status.
+!halt.

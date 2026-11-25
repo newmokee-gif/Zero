@@ -1,0 +1,57 @@
+ZTEXT00100000bc8c915d8020000000
+Current original Zero workflow (0.12)
+
+Use the native tools on Linux or their .exe versions on Windows:
+  zero-integrate PROJECT_DIRECTORY NEW_KERNEL.zero
+  zero-build PROJECT_DIRECTORY NEW_OUTPUT_DIRECTORY NEW_KERNEL.zero
+  zero-check PROJECT_DIRECTORY NEW_TEST_DIRECTORY
+All destination paths must be new. The integrator preserves authored sources;
+the builder checks its compiler fixed point and builds the original targets;
+the verifier checks language behavior and host file operations in process.
+See tools/integrate.ztext, tools/build.ztext and checks/README.ztext.
+Read these documents with zero-text read FILE.
+
+The notes below preserve earlier implementation and test history. Any old
+shell/Python runner names, generated artifacts, JSON reports or commands are
+historical references: they were removed from the active project and are not
+current runnable instructions or current-release validation. Native host
+checks do not replace BIOS/UEFI, persistence or physical-hardware testing.
+
+Historical implementation notes
+
+Zero window session tests
+
+Run from the source tree with its existing own compiler:
+  bash review-tests/wm-sessions/run.sh
+
+The shell/awk harness substitutes the current wm/init.zero.part and
+wm/switch.zero.part into three original Zero scenario templates. It does not
+test an old copied implementation. All session operations and assertions
+execute as native programs compiled by build/zero --host.
+
+sessions.zero.in has50 numbered assertion sites and exercises:
+- UEFI-sized allocation:88 slots, two initially open, first-prompt state.
+- Independent unfinished input, overflow and selected volume; global LF state.
+- First-focus prompt versus silent later focus.
+- New/close/reuse and zeroed reused input/output metadata.
+- Explicit scrolling layout and toggle back to tiling.
+- Invalid numeric focus without losing input or changing focus.
+- Canary preservation below all slots and above the owned session region.
+- Creating up to all88 slots, then refusing the next allocation.
+- Closing back to one terminal and refusing to close the last terminal.
+
+init-bounds.zero.in has eight initialization scenarios:3MiB capacity344,
+minimum one-slot pool, one byte too small, unaligned base, address wrap,
+IA32 address ceiling, zero base and missing handoff.
+
+crlf.zero.in has20 assertions. It prepares unfinished input in window2,
+executes a deferred focus with pending CRLF suppression, checks that the
+framing flag survives, then applies the terminal LF framing rule and verifies
+that the unfinished command was not submitted. It also covers a pending LF
+across new-window creation and confirms the original input survives. Actual
+UART transport and the integrated parser are covered by the VM regression.
+
+Artifacts are written only to build/wm-sessions. Logs and source/compiler
+hashes are written to verification/wm-sessions-0.8.0. This does not start a VM,
+touch a disk fixture or verify graphical/keyboard/command-engine integration.
+Those checks belong to the integrated VM suite.

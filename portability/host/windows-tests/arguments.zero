@@ -1,0 +1,10 @@
+1 => @index.
+0 => @pointer.
+0 => @i.
+?? @index <= :argcount[] [
+ :argument[@index] -> @pointer. 0 -> @i.
+ ?? :load8[@pointer + @i] [ !put[:load8[@pointer + @i]]. @i + 1 -> @i. ]
+ !put[0]. @index + 1 -> @index.
+]
+? :argument[0] [ !exit[1]. ]
+? :argument[:argcount[] + 1] [ !exit[2]. ]

@@ -1,0 +1,13 @@
+
+0 => @h.
+? :makedir["directory"] != 0 [ !exit[1]. ]
+? :makedir["directory"] != -1 [ !exit[2]. ]
+:fileopen["directory/source" | 1] -> @h.
+? @h == -1 [ !exit[3]. ]
+? :filewrite[@h | "source" | 6] != 6 [ !exit[4]. ]
+? :fileclose[@h] != 0 [ !exit[5]. ]
+? :dirempty["directory"] != -1 [ !exit[6]. ]
+? :filemove["directory/source" | "existing"] != -1 [ !exit[7]. ]
+? :filemove["directory/source" | "moved"] != 0 [ !exit[8]. ]
+? :dirempty["directory"] != 0 [ !exit[9]. ]
+? :filedelete["missing"] != -1 [ !exit[10]. ] !exit[0].

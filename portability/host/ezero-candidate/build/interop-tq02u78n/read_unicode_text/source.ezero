@@ -1,0 +1,3 @@
+readfile(arguments()[1]) => text
+text => show
+size(text) => show

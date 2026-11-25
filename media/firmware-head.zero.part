@@ -1,0 +1,128 @@
+# Zero Flash firmware edition. Original Zero source; firmware supplies device I/O.
+# Runs BEFORE ExitBootServices, independently of the Zero kernel's ATA drivers.
+:reserve[1024] => @s.
+0 => @u.
+:arg0[] => @image.
+:arg1[] => @system.
+:load64[@system+96] => @services.
+0 => @status. 0 => @code. 0 => @i. 0 => @j. 0 => @k.
+0 => @p. 0 => @q. 0 => @r. 0 => @n. 0 => @t.
+0 => @x. 0 => @y. 0 => @z. 0 => @done. 0 => @selected.
+0 => @phase. 0 => @block. 0 => @last. 0 => @bytes.
+0 => @value. 0 => @align. 0 => @handle. 0 => @count.
+0 => @media. 0 => @source. 0 => @protocol. 0 => @out. 0 => @in.
+# Firmware entry arenas are64KiB; worker arenas are explicit firmware allocations.
+!store64[@s|0]. !store64[@s+8|0]. !store64[@s+16|0].
+:call[:load64[@services+40]|0|2|16|@s|0] -> @status.
+? @status == 0 [ 1 -> @count. :call[:load64[@services+40]|0|2|32|@s+8|0] -> @status. ]
+? @status == 0 [ 2 -> @count. :call[:load64[@services+40]|0|2|22|@s+16|0] -> @status. ]
+? @status [
+ ? @count >= 2 [ :call[:load64[@services+48]|:load64[@s+8]|32|0|0|0] -> @code. ]
+ ? @count >= 1 [ :call[:load64[@services+48]|:load64[@s]|16|0|0|0] -> @code. ]
+ :call[:load64[@services+216]|@image|@status|0|0|0] -> @code. !halt.
+]
+:load64[@s] -> @p. :load64[@s+8] -> @u. :load64[@s+16] -> @zm. @p -> @s.
+0 -> @i. ?? @i < 65536 [ !store64[@s+@i|0]. @i+8 -> @i. ]
+0 -> @i. ?? @i < 131072 [ !store64[@u+@i|0]. @i+8 -> @i. ]
+0 -> @i. ?? @i < 90112 [ !store64[@zm+@i|0]. @i+8 -> @i. ]
+!store64[@s|@image]. !store64[@s+8|@system]. !store64[@s+16|@services].
+!store64[@s+24|:load64[@system+64]]. !store64[@s+32|:load64[@system+48]].
+# s: source40,path48,root56,file64,allocation72,size80,payloadbytes88,payload96.
+# handles104,count112,target120,mediaid128,last136,sourcepathlen144,block152.
+# I/O160,targethandle168,targetpath176,eligiblecount184,diagnostic192.
+# guid1024,result1056,size1064,pointer1072; candidates4096..6143,32x64.
+# UI coroutine operations1 ASCII output,2 unsigned decimal,3 bounded ASCII input.
+:fork[@u+224|@u+32768|81920] -> @code.
+? @code == 1 [
+ ?? 1 [
+  :load64[@s+24] -> @out. :load64[@s+32] -> @in.
+  :load64[@u] -> @phase.
+  ? @phase == 1 [
+   :load64[@u+8] -> @p. 0 -> @i.
+   ?? :load8[@p+@i] [
+    0 -> @j.
+    ?? (:load8[@p+@i] != 0)*(@j < 255) [
+     !store16[@u+1024+@j*2|:load8[@p+@i]]. @i+1 -> @i. @j+1 -> @j.
+    ]
+    !store16[@u+1024+@j*2|0].
+    :call[:load64[@out+8]|@out|@u+1024|0|0|0] -> @code.
+   ]
+  ]
+  ? @phase == 2 [
+   :load64[@u+16] -> @value. 10000000000000000000 -> @x. 0 -> @j. 0 -> @z.
+   ?? @x [
+    0 -> @y. ?? @value >= @x [ @value-@x -> @value. @y+1 -> @y. ]
+    ? @y+@z+(@x == 1) [ !store16[@u+1024+@j*2|48+@y]. @j+1 -> @j. 1 -> @z. ]
+    # Decimal divisor reduction without division; 20 fixed powers.
+    1 -> @p. 0 -> @q. ?? @p < @x [ @p -> @q. @p*10 -> @p. ] @q -> @x.
+   ]
+   !store16[@u+1024+@j*2|0].
+   :call[:load64[@out+8]|@out|@u+1024|0|0|0] -> @code.
+  ]
+  ? @phase == 3 [
+   0 -> @i. 0 -> @done. !store64[@u+24|0].
+   ?? @done == 0 [
+    :call[:load64[@in+8]|@in|@u+2048|0|0|0] -> @code.
+    ? @code == 0 [
+     :load16[@u+2050] -> @value.
+     ? :load16[@u+2048] == 23 [ !store64[@u+24|-1]. 1 -> @done. ]
+     ? @value == 13 [ 1 -> @done. ]
+     ? (@value == 8)*(@i != 0) [
+      @i-1 -> @i. !store16[@u+1024|8]. !store16[@u+1026|32]. !store16[@u+1028|8]. !store16[@u+1030|0].
+      :call[:load64[@out+8]|@out|@u+1024|0|0|0] -> @code.
+     ]
+     ? (@value >= 32)*(@value <= 126)*(@i < 63) [
+      !store8[@u+4096+@i|@value]. @i+1 -> @i.
+      !store16[@u+1024|@value]. !store16[@u+1026|0].
+      :call[:load64[@out+8]|@out|@u+1024|0|0|0] -> @code.
+     ]
+    ] ~ [
+     ? @code != 0x8000000000000006 [ !store64[@u+24|-1]. 1 -> @done. ] ~ [
+      :call[:load64[@services+248]|1000|0|0|0|0] -> @code.
+     ]
+    ]
+   ]
+   !store8[@u+4096+@i|0]. ? :load64[@u+24] != -1 [ !store64[@u+24|@i]. ]
+   !store16[@u+1024|13]. !store16[@u+1026|10]. !store16[@u+1028|0].
+   :call[:load64[@out+8]|@out|@u+1024|0|0|0] -> @code.
+  ]
+  ? @phase == 4 [
+   :load64[@u+8] -> @p. 0 -> @i. 0 -> @done. 0 -> @z.
+   !store64[@u+24|-1]. !store64[@u+32|0].
+   ? @p == 0 [ 1 -> @done. ]
+   ?? @done == 0 [
+    ? @i > 4092 [ 1 -> @done. ] ~ [
+     :load16[@p+@i+2] -> @n.
+     ? (@n < 4)+(@n > 4096-@i) [ 1 -> @done. ] ~ [
+      ? :load8[@p+@i] == 127 [
+       ? (:load8[@p+@i+1] == 255)*(@n == 4) [ !store64[@u+24|@i]. !store64[@u+32|@z]. ]
+       1 -> @done.
+      ] ~ [
+       ? :load8[@p+@i] == 3 [
+        :load8[@p+@i+1] -> @x.
+        ? ((@x == 5)*(@n == 6))+((@x == 15)*(@n == 11))+((@x == 16)*(@n >= 10)) [ 1 -> @z. ]
+       ]
+       @i+@n -> @i.
+      ]
+     ]
+    ]
+   ]
+  ]
+  ? @phase == 5 [
+   :load64[@u+8] -> @p. :load64[@u+16] -> @n. 0 -> @i.
+   "0123456789abcdef" -> @r.
+   ?? @i < @n [
+    0 -> @j.
+    ?? (@i < @n)*(@j < 250) [
+     :load8[@p+@i] -> @x.
+     !store16[@u+1024+@j*2|:load8[@r+:shr[@x|4]]].
+     !store16[@u+1026+@j*2|:load8[@r+:bitand[@x|15]]].
+     @j+2 -> @j. @i+1 -> @i.
+    ]
+    !store16[@u+1024+@j*2|0].
+    :call[:load64[@out+8]|@out|@u+1024|0|0|0] -> @code.
+   ]
+  ]
+  !switch[@u+224|@u+128].
+ ]
+]

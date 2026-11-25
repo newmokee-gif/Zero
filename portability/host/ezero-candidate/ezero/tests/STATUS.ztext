@@ -1,0 +1,11 @@
+ZTEXT001000002a67dcdb42d0000000
+Hosted acceptance complete:85/85 passed.
+All implementation hashes unchanged during the final run.
+Report: ezero/tests/verification/results.json and results.txt.
+Internal generated artifacts: build/ezero-tests.npgtrhbh.
+Includes all six public examples and native Zero/Ezero Hello equivalence.
+UTF-8 text, typed phrases, one-based indexing, functions and five GC/frame
+scenarios passed. Diagnostics/bounds/capacities and failed-output preservation
+also passed. These are host-native tests, not Zero OS guest execution.
+Runtime hash: efccce6e555a6b7504a276bc7835300148d2e25acc3e5be8b29b4aef0f7fae5b
+Frontend hash: 4ca4ac45dee033db6985be99d5305c8292b33c0578cafd2d5d1d503ee272cc71

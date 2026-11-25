@@ -1,0 +1,9 @@
+# Real video primitives, emitted directly as our instruction encodings.
+# VBE consumes four pushed u32 values: AX, BX, CX, buffer. Buffer <= 65535.
+# Preserve general registers except EAX result, DS/ES and EFLAGS; clear DF.
+!store64[@templates + 1168 | "669c1e0666603667668b7c24283667668b4c242c3667668b5c24303667668b4424346681ffffff0000660f872c00000031d28eda8ec2fcfbcd10fa660fb7c02e66a3086e6661071f669dfc67668d6424102e66a1086e66e9020000000f0b"].
+!store64[@templates + 1176 | 94].
+# far16 consumes ECX segment and EAX offset; offset <= 65534.
+# The physical word address must be <= 0xffffe, within the first MiB.
+!store64[@templates + 1184 | "669c1e66526681f9ffff0000660f873c0000006681f8feff0000660f872e0000006689ca66c1e2046601c26681fafeff0f00660f87160000008ed96689c267660fb702665a1f669dfc66e9020000000f0b"].
+!store64[@templates + 1192 | 81].

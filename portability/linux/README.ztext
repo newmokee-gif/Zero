@@ -1,0 +1,24 @@
+ZTEXT001000004d3884c96da0000000
+Native Linux compiler workflow
+
+The compiler, Ezero frontend/runtime, builder, integrator, verifier and text
+codec are original Zero/Ezero code. Linux tools are native ELF programs.
+
+Compose and build from canonical sources:
+  zero-integrate PROJECT_DIRECTORY NEW_KERNEL.zero
+  zero-build PROJECT_DIRECTORY NEW_OUTPUT_DIRECTORY NEW_KERNEL.zero
+Run the native source/file checks:
+  zero-check PROJECT_DIRECTORY NEW_TEST_DIRECTORY
+The native programs refuse existing output paths. The builder validates the
+compiler fixed point before emitting artifacts. No foreign-language project
+script or interpreter is required by this workflow.
+
+The same authored sources also build native Windows PE tools. Compiler CLI
+companion libraries must remain adjacent to zero/ezero as documented in
+tools/compiler-cli.ztext. See tools/build.ztext for exact output layout.
+
+The current host checks do not claim a fresh Debian/Arch distribution or
+independent kernel boot. Historical distribution observations, where retained,
+apply only to their recorded versions. A platform matrix must identify the
+actual executed userspace/kernel and tool hashes before being called current.
+Use checks/README.ztext for the current verifier contract and limitations.

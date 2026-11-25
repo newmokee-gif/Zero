@@ -1,0 +1,7 @@
+down :: n [
+ n == 0 => when [
+  0 => return
+ ]
+ down(n - 1) => return
+]
+down(63) => show

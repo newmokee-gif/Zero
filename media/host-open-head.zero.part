@@ -1,0 +1,9 @@
+# The caller must close every previous handle before another open request.
+!store64[@mh+40|0]. !store64[@mh+112|0]. !store64[@mh+96|:host[]].
+!store64[@mh+48|"Invalid native media open request.\n"].
+? (:load64[@mh] != 1) * (:load64[@mh] != 2) [ !store64[@mh+40|64]. ]
+? (:load64[@mh+96] != 1) * (:load64[@mh+96] != 2) [ !store64[@mh+40|69]. ]
+? (:load64[@mh+8] == 0) + (:load64[@mh+16] != -1) [ !store64[@mh+40|64]. ]
+? :load64[@mh] == 2 [
+ ? (:load64[@mh+136] == 0) + (:load64[@mh+144] == 0) [ !store64[@mh+40|64]. ]
+]

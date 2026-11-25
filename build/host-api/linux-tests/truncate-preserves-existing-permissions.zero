@@ -1,0 +1,5 @@
+
+:fileopen["file" | 2] => @h.
+? @h == -1 [ !exit[1]. ] ? :filesize[@h] != 0 [ !exit[2]. ]
+? :filewrite[@h | "new" | 3] != 3 [ !exit[3]. ]
+? :fileclose[@h] != 0 [ !exit[4]. ] !exit[0].

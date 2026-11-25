@@ -1,0 +1,6 @@
+
+? :fileopen["existing" | 1] != -1 [ !exit[1]. ]
+? :fileopen["missing" | 0] != -1 [ !exit[2]. ]
+? :fileopen["missing" | 3] != -1 [ !exit[3]. ]
+? :fileopen["missing" | 5] != -1 [ !exit[4]. ]
+? :fileopen["existing" | -1] != -1 [ !exit[5]. ] !exit[0].

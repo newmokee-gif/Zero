@@ -1,0 +1,107 @@
+ZTEXT0010000166890768aa30000000
+ZERO WEB NATIVE VIEWER - EXPERIMENTAL PROFILE
+
+The viewer is original Zero code. It reuses and adapts our own Zero Studio
+X11 wire protocol and Win32 host-interface implementation. It does not link
+Xlib, bundle a GUI toolkit, launch another browser, or execute foreign browser
+engine code. Operating-system interfaces remain interoperability boundaries.
+
+Supported native surfaces
+
+Linux x86-64: a local X11 DISPLAY, screen zero, a 24-bit TrueColor root visual
+with 32-bit padded BGRX pixels. Xwayland can provide that interface; native
+Wayland protocol is not implemented. MIT-MAGIC-COOKIE-1 credentials are read
+from the process's XAUTHORITY file or HOME/.Xauthority. A display that already
+grants access to this user may accept an empty cookie. Remote DISPLAY names
+are rejected. The viewer never opens a TCP X11 connection.
+
+Windows x64: a native Win32 window and direct GDI presentation of our pixel
+buffer. Keyboard events use the native queue. Wheel input uses Raw Input;
+legacy wheel messages are not counted twice. Native synchronous close is
+recognized with IsWindow, including close handled inside PeekMessage.
+
+Both use a fixed 800x600 client canvas, a native pointer cursor, and the same
+original raster buffer. X11 publishes fixed minimum and maximum size hints.
+The document renderer is responsible for text, colors and all page pixels.
+
+Controls
+
+Up/Down and mouse wheel scroll by 40 pixels. PageUp/PageDown scroll by 520.
+Home goes to the start, End to the last full viewport. Scrolling clamps to
+0..max(content_height-600,0). Esc and the native close control close the
+viewer. It has no address bar, tab manager, link activation or editable page
+controls yet. It is a native page-preview frontend, not a complete modern
+browser UI.
+
+Integration contract
+
+Include gui-declarations.zero.part with the shared engine declarations, then
+append gui.zero.part after successful document processing and initial
+rasterization. The block uses @web, @v0..@v31 and 22 persistent @u variables.
+Worker frames have their own saved values. The caller owns a valid zeroed
+4 MiB arena and initializes the renderer worker before invoking the viewer.
+
+Descriptor fields are little-endian u64 values:
+  web+16: error; a nonzero renderer error is preserved.
+  web+40,48: viewport width800 and height600.
+  web+72: mode1 opens a native window; mode0 skips the entire GUI block.
+  web+80: current scroll offset in pixels.
+  web+88: content height in pixels.
+  web+1024: caller continuation context.
+  web+1664: initialized renderer continuation context.
+  web+2097152: 800*600*4 bytes of native BGRX raster data.
+
+A successful scroll resumes the existing renderer and presents its pixels.
+A renderer failure closes the window without presenting a new failed frame.
+Each invocation allocates its own 1 MiB GUI workspace and 256 KiB wire buffer;
+these are released when the window closes or startup fails. Native window
+and socket resources are closed as well. No web-page byte becomes a host
+window procedure, native function pointer, file path or command.
+
+Startup/presentation failures set descriptor error74 unless an earlier error
+is already present. Allocation failure exits71. Missing required Win32 DLL,
+API symbol or window creation exits20/21/22, respectively. The caller must
+supply the valid arena and fixed raster contract; this is not a general
+pointer validation or process-isolation boundary.
+
+Checks on 25 November 2026
+
+The original gui-check.zero fixture uses the same GUI block and an original
+cooperative test renderer. Its output reports scroll, render count and error.
+The own source composer regenerates it with its --gui-check option.
+  no argument: interactive navigation fixture.
+  no-gui: headless-path fixture; no display is opened.
+  fail-render: renderer returns65 on first positive scroll.
+
+Linux native and Windows x64 targets compile with our existing Zero compiler.
+10 interactive control scenarios pass on Linux/Xvfb and 10 on Windows/Wine:
+Esc, Down, Up-at-start, Down/Up, PageDown, PageDown/PageUp, End/Down-at-limit,
+End/Home, wheel-up-at-start/wheel-down, and native window close after scrolling.
+
+Final-target smoke checks on both platforms verify the actual displayed RGB
+pixels, wheel scrolling and native close. X11 minimum/maximum canvas hints
+are read back. A renderer-error case on each platform closes normally and
+preserves error65. Both headless paths pass. Four Linux rejection cases cover
+remote DISPLAY, nonzero screen, overlong display number and absent local
+server; they fail74 without opening a viewer.
+
+An external Xvfb 1920x1080x24 display, XTest input injection and pixel captures
+are validation instruments only. Windows execution was through Wine, not a
+native Windows installation. Physical displays, native Windows hardware and
+native Wayland have not been tested. These checks concern the frontend; they
+do not establish full HTML/CSS/JavaScript, network, security or Chromium
+compatibility for the document engine.
+
+Integrated final browser checks
+
+The complete build-final/zero-web and zero-web.exe were run, not only the
+frontend fixture. On Linux and Wine, the actual HTML/CSS/JavaScript demo
+opened and its entire 800x600 client screenshot matched the original CLI
+--render Zpix export pixel-for-pixel after decoding with zero-picture.
+The native close control ended each process successfully.
+
+A 40-paragraph original external HTML fixture was opened on each platform.
+PageDown changed the visible page; Home restored every pixel of the initial
+view; Esc closed the process. All four integrated GUI scenarios exited 0.
+The PNG captures are external validation/presentation artifacts, not project
+implementation or its internal image format. Native Windows remains untested.

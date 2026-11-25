@@ -1,0 +1,66 @@
+# Native network and modal WiFi commands. Filesystems are not modified.
+? (@operation == 22)+((@operation >= 27)*(@operation <= 30)) [
+ ? :load8[@arguments] [ "Use apps, system, storage, network or wifi without arguments.\r\n" -> @message. ] ~ [
+  ? (:load64[@console + 2408] != 0) * (:load64[@console + 2048] != 0) [
+   !store64[@console + 2416|1].
+   !store64[@console + 2424|:load64[@console + 2064]].
+   !store64[@console + 2448|0].
+   !store64[@console + 2088|:load64[@console + 2088] + 1].
+   0 -> @line_length. 0 -> @overflow. 10 -> @state.
+   # INCLUDE NET wifi-open.zero.part
+!store64[@console+2472|0]. !store64[@console+2480|1]. !store64[@console+2488|-1].
+? @operation >= 27 [ !store64[@console+2472|@operation-26]. !store64[@c0+16|8]. ]
+  ] ~ [ "WiFi interface unavailable: no safe session memory.\r\n" -> @message. ]
+ ]
+]
+? @operation == 23 [
+ ? :load8[@arguments] [ "Use net without arguments.\r\n" -> @message. ] ~ [
+  :load64[@console + 2400] -> @c0.
+  ? @c0 == 0 [ "Network unavailable: no safe DMA memory.\r\n" -> @message. ] ~ [
+   0 -> @i. 0 -> @j.
+   "Network: detecting adapters" -> @pointer.
+   :load64[@c0 + 32] -> @status.
+   ? @status == 1 [ "Network: no supported wired adapter" -> @pointer. ]
+   ? @status == 2 [ "Network: cable disconnected; automatic retry" -> @pointer. ]
+   ? @status == 3 [ "Network: requesting DHCP automatically" -> @pointer. ]
+   ? @status == 4 [ "Network: connected (DHCP)" -> @pointer. ]
+   ? @status == 5 [ "Network: adapter error; automatic retry" -> @pointer. ]
+   ?? :load8[@pointer + @j] [ !store8[@listing + @i|:load8[@pointer + @j]]. @i + 1 -> @i. @j + 1 -> @j. ]
+   !store8[@listing + @i|13]. !store8[@listing + @i + 1|10]. @i + 2 -> @i.
+   0 -> @k.
+   ?? @k < 4 [
+    "IP: " -> @pointer. ? @k == 1 [ "Mask: " -> @pointer. ]
+    ? @k == 2 [ "Gateway: " -> @pointer. ] ? @k == 3 [ "DNS: " -> @pointer. ]
+    0 -> @j.
+    ?? :load8[@pointer + @j] [ !store8[@listing + @i|:load8[@pointer + @j]]. @i + 1 -> @i. @j + 1 -> @j. ]
+    :load64[@c0 + 64 + @k * 8] -> @c1. 0 -> @j.
+    ?? @j < 4 [
+     :bitand[:shr[@c1|@j * 8]|255] -> @c2.
+     0 -> @c3. ?? @c2 >= 100 [ @c2 - 100 -> @c2. @c3 + 1 -> @c3. ]
+     ? @c3 [ !store8[@listing + @i|48 + @c3]. @i + 1 -> @i. ]
+     0 -> @c4. ?? @c2 >= 10 [ @c2 - 10 -> @c2. @c4 + 1 -> @c4. ]
+     ? @c3 + @c4 [ !store8[@listing + @i|48 + @c4]. @i + 1 -> @i. ]
+     !store8[@listing + @i|48 + @c2]. @i + 1 -> @i.
+     ? @j < 3 [ !store8[@listing + @i|46]. @i + 1 -> @i. ]
+     @j + 1 -> @j.
+    ]
+    !store8[@listing + @i|13]. !store8[@listing + @i + 1|10]. @i + 2 -> @i. @k + 1 -> @k.
+   ]
+   !store8[@listing + @i|0]. @listing -> @message.
+  ]
+ ]
+]
+? @operation == 24 [
+ :load64[@console + 2400] -> @c0. 0 -> @i.
+ ?? (:load8[@arguments + @i] != 0) * (@i < 256) [ @i + 1 -> @i. ]
+ ? (@i == 0) + (@i > 255) [ "Use fetch HOST[:PORT][/PATH], at most255 bytes.\r\n" -> @message. ] ~ [
+  ? @c0 == 0 [ "Network unavailable. Type net.\r\n" -> @message. ] ~ [
+   ? :load64[@c0 + 32] != 4 [ "Network is not connected yet. Automatic DHCP continues; type net.\r\n" -> @message. ] ~ [
+    0 -> @j. ?? @j <= @i [ !store8[@c0 + 16384 + @j|:load8[@arguments + @j]]. @j + 1 -> @j. ]
+    :load64[@c0 + 384] + 1 -> @c1. ? @c1 == 0 [ 1 -> @c1. ]
+    !store64[@console + 2464|@c1]. !store64[@c0 + 384|@c1].
+    "Fetching HTTP...\r\n" -> @message. 740 -> @state.
+   ]
+  ]
+ ]
+]

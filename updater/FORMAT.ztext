@@ -1,0 +1,48 @@
+ZTEXT001000009f8973d122d0000000
+Zero prepared updater format 1
+
+Store-owned names:
+  zero.updates                 append-only 256-byte records, max 4096 records
+  version-XXXXXXXX.iso         8 lowercase hexadecimal digits, u32 counter
+  .payload.part                exclusive current-operation temporary image
+  .update-lock                 exclusive cooperating-writer lock
+No release metadata field is interpreted as a pathname.
+
+Inbox-owned names:
+  system.iso                   exact independently SHA256-verified image
+  release.meta                 one record, seq1, previous0, highest=current
+No signature or authenticated origin is implied by these files.
+
+Record offsets (all integers u64 little-endian; digests raw SHA256 bytes):
+  0     magic 0x313030445055525a (ZRUPD001)
+  8     format 1
+  16    sequence 1..4096, increments exactly one
+  24    selected PREPARED release counter 1..0xffffffff
+  32    previous selected counter, or0 on first record
+  40    highest counter ever accepted; never decreases
+  48    selected ISO byte length
+  56    selected ISO SHA256, 32 bytes
+  88    previous ISO byte length, or0
+  96    previous ISO SHA256, 32 bytes; all zero when no previous
+  128   state 1 (PREPARED)
+  136   boot activation flags 0 (not activated)
+  144   reserved 96 bytes, all zero
+  240   FNV-1a64 of bytes0..239 (offset basis14695981039346656037,
+        multiply1099511628211 modulo2^64 after XOR of each byte)
+  248   commit marker 0x3154494d4d4f435a (ZCOMMIT1)
+
+A later entry's previous tuple must equal the preceding entry's selected
+tuple. A new higher selection sets highest to that new counter. A rollback
+must select the preceding previous tuple and retain highest. Format, chain,
+reserved bytes, marker and corruption checksum must all validate. Partial
+records are rejected by status/verify/mutations. Explicit inspect/recover may
+validate a nonempty complete prefix and report the 1..255 remaining tail bytes;
+recover writes that prefix only into a new exclusive directory. It never
+truncates the source, ignores a whole invalid record, or drops the high-water
+history. Current/previous images are copied; older images remain in source. Current and previous ISO digests
+are fully recomputed before status or a new mutation can succeed. Historical
+unselected payloads are retained but not all rehashed on every operation.
+
+Payload and journal file writes are flushed before success/publication. Parent
+directory synchronization and power-loss ordering are not guaranteed. Snapshot
+recovery introduces no new record format and does not change format 1.

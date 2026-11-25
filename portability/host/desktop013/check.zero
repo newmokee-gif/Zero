@@ -1,0 +1,92 @@
+# Native Zero compiler capacity/target checks, using only our own app ABI.
+# Argument1: the newly compiled --app64 compiler image.
+0 => @code.
+0 => @work.
+0 => @context.
+0 => @input.
+0 => @output.
+0 => @handle.
+0 => @size.
+0 => @count.
+0 => @n.
+0 => @i.
+0 => @phase.
+0 => @kind.
+0 => @target.
+0 => @source.
+0 => @wanted.
+0 => @status.
+0 => @total.
+? :argcount[] != 1 [ !exit[64]. ]
+:hostalloc[1048576] -> @code.
+:hostalloc[16777216] -> @work.
+? (@code == 0)+(@work == 0) [ !exit[70]. ]
+@work -> @context. @work+4096 -> @input. @work+1048576 -> @output.
+:fileopen[:argument[1]|0] -> @handle.
+? @handle == -1 [ !exit[66]. ]
+:filesize[@handle] -> @size.
+? (@size <= 64)+(@size > 1048576) [ !exit[65]. ]
+?? @count < @size [
+ :fileread[@handle|@code+@count|@size-@count] -> @n.
+ ? (@n == 0)+(@n > @size-@count) [ !exit[74]. ]
+ @count+@n -> @count.
+]
+? :fileclose[@handle] != 0 [ !exit[74]. ]
+? (:load64[@code] != 0x315050414f52455a)+(:load64[@code+24] != 64) [ !exit[65]. ]
+? :hostprotect[@code|1048576|1] != 0 [ !exit[70]. ]
+# Cases1..3: exact input capacity, byte overflow, token overflow.
+# Cases4..31: four host APIs rejected on each of seven guest targets.
+# Cases32..39: opposite-host stubs accepted for shared source branches.
+# Cases40..47: every wrong arity rejected in both host targets.
+?? @phase < 47 [
+ "--host" -> @target. 0 -> @wanted. 0 -> @size.
+ ? @phase < 3 [
+  524288 -> @size. ? @phase == 1 [ 524289 -> @size. 1 -> @wanted. ]
+  ? @phase == 2 [ 240001 -> @size. 1 -> @wanted. ]
+  0 -> @i.
+  ?? @i < @size [
+   32 -> @n. ? @phase == 2 [ 46 -> @n. ]
+   !store8[@input+@i|@n]. @i+1 -> @i.
+  ]
+ ] ~ [
+  @phase-3 -> @n. 0 -> @kind.
+  ?? @n >= 4 [ @n-4 -> @n. @kind+1 -> @kind. ]
+  ":hostsyscall[1|2|3|4|5|6|7] => @x." -> @source.
+  ? @n == 1 [ ":hostlibrary[0] => @x." -> @source. ]
+  ? @n == 2 [ ":hostsymbol[0|0] => @x." -> @source. ]
+  ? @n == 3 [ ":hostcall12[0|1|2|3|4|5|6|7|8|9|10|11|12] => @x." -> @source. ]
+  ? @kind < 7 [
+   1 -> @wanted.
+   ? @kind == 0 [ "--raw" -> @target. ]
+   ? @kind == 1 [ "--efi" -> @target. ]
+   ? @kind == 2 [ "--raw32" -> @target. ]
+   ? @kind == 3 [ "--efi32" -> @target. ]
+   ? @kind == 4 [ "--real" -> @target. ]
+   ? @kind == 5 [ "--app64" -> @target. ]
+   ? @kind == 6 [ "--app32" -> @target. ]
+  ]
+  ? (@kind == 8)+(@kind == 10) [ "--windows" -> @target. ]
+  ? @kind >= 9 [
+   1 -> @wanted.
+   ":hostsyscall[1|2|3|4|5|6] => @x." -> @source.
+   ? @n == 1 [ ":hostlibrary[0|0] => @x." -> @source. ]
+   ? @n == 2 [ ":hostsymbol[0] => @x." -> @source. ]
+   ? @n == 3 [ ":hostcall12[0|1|2|3|4|5|6|7|8|9|10|11] => @x." -> @source. ]
+  ]
+  ?? :load8[@source+@size] [ !store8[@input+@size|:load8[@source+@size]]. @size+1 -> @size. ]
+ ]
+ 0 -> @i. ?? @i < 192 [ !store64[@context+@i|0]. @i+8 -> @i. ]
+ !store64[@context|1]. !store64[@context+8|@work+12582912].
+ !store64[@context+16|@input]. !store64[@context+24|@size].
+ !store64[@context+40|@output]. !store64[@context+48|1048576].
+ !store64[@context+64|2]. !store64[@context+72|"capacity-check"]. !store64[@context+80|@target].
+ !store64[@context+168|@work+4194304]. !store64[@context+176|8388608].
+ :call[@code+64|@context|0|0|0|0] -> @status.
+ ? (@status != @wanted)+(:load64[@context+88] != @wanted) [ !exit[80+@phase]. ]
+ ? (:load64[@context+32] > @size)+(:load64[@context+56] > 524288) [ !exit[71]. ]
+ ? @wanted [ ? :load64[@context+56] != 0 [ !exit[72]. ] ]
+ ? @wanted == 0 [ ? :load64[@context+56] == 0 [ !exit[73]. ] ]
+ @phase+1 -> @phase. @total+1 -> @total.
+]
+"PASS 47 compiler capacity and host target checks\n" -> @source.
+0 -> @i. ?? :load8[@source+@i] [ !put[:load8[@source+@i]]. @i+1 -> @i. ]

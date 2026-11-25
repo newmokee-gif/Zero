@@ -1,0 +1,99 @@
+ZTEXT0010000153c7b4ce6ae0000000
+Current original Zero workflow (0.12)
+
+Use the native tools on Linux or their .exe versions on Windows:
+  zero-integrate PROJECT_DIRECTORY NEW_KERNEL.zero
+  zero-build PROJECT_DIRECTORY NEW_OUTPUT_DIRECTORY NEW_KERNEL.zero
+  zero-check PROJECT_DIRECTORY NEW_TEST_DIRECTORY
+All destination paths must be new. The integrator preserves authored sources;
+the builder checks its compiler fixed point and builds the original targets;
+the verifier checks language behavior and host file operations in process.
+See tools/integrate.ztext, tools/build.ztext and checks/README.ztext.
+Read these documents with zero-text read FILE.
+
+The notes below preserve earlier implementation and test history. Any old
+shell/Python runner names, generated artifacts, JSON reports or commands are
+historical references: they were removed from the active project and are not
+current runnable instructions or current-release validation. Native host
+checks do not replace BIOS/UEFI, persistence or physical-hardware testing.
+
+Historical implementation notes
+
+Reviewed compiler ABI migration:0.5.0 ->0.6
+Date:2026-11-15 UTC
+
+Pinned own compiler references
+0.5.0:419f29a1c509f3ede1b092ed9bc716cc62169e4b8ef1647028652a6403e64a91
+0.6:3f9da290f0afc54da61c02297ca9a385b70a49da45fc5094688f966904ad98c6
+
+Previous oracle:
+88fb43d5405d2d6d3b3b526ecaa003cd11350137fceb0cd24e76b57f98c57192
+New oracle:
+234e613cb5e7c2fb9df7d27fa899af81c1a075daa0f81eeca21decc65ab72ddb
+
+The reference0.5 executable was already built. The migration invokes only
+these own Zero compilers; no assembler, linker or foreign compiler is used.
+Historical0.4 compiler hashes remain in REFERENCE-SHA256.ztext and the0.5
+archive for provenance; those binaries are not needed by this migration.
+
+Exactly permitted machine-code changes
+1. x64 prologue appends4989e4 (copy SP into R12), increasing38 to41 bytes.
+   Hosted programs retain their existing1MiB arena. Raw/EFI retain64KiB.
+   Raw/EFI have their unchanged6-byte entry-argument capture BEFORE prologue.
+2. IA32 prologue appends89650c (record arenaBase at EBP+12),50 ->53 bytes.
+   Existing EBP+8 allocation cursor and64KiB arena remain.
+3. x64 foreign-call template preserves its newly persistent R12 arena base:
+   old30-byte template:
+   415a415941585a59584989e44883e4f04883ec304c89542420ffd04c89e4
+   new34-byte template:
+   415a415941585a595841544989e44883e4f04883ec304c89542420ffd04c89e4415c
+   This adds PUSH R12 and POP R12 around the existing temporary stack use.
+4. ELF file/memory sizes must equal each actual image length.
+5. PE virtual/raw sizes, next-section RVA, file offsets, image size and IA32
+   BaseOfData must equal independent calculations from .text size. All
+   remaining header bytes match. Alignment padding must be zero, and the
+   relocation block must remain the same12-byte ABS-only block.
+6. Real-mode binaries receive no normalization and match byte-for-byte.
+
+audit-abi-0.6.zero compares every other byte. It verifies complete prologues,
+requires each new call sequence to match its exact reviewed bytes, and checks
+the final code-size delta is exactly3 +4*foreignCallCount (or0 for real).
+It does not broadly mask headers, ignore instruction bodies, accept arbitrary
+relocations or execute any raw binary. The present accepted corpus's call
+fixtures have no layout-dependent branches crossing those call templates;
+the audit is exact for these fixtures, not a general equivalence proof.
+
+Seven corruption controls require specific auditor rejection statuses:
+altered prologue, body, ELF length, PE fixed header, PE computed size, PE
+padding, and x64 call preservation. See audit-negative-controls.sh.
+
+Output ceilings were adjusted from known instruction lengths, not by
+repeatedly compiling until they happened to fit:
+- raw64 exact/over: remove3 one-byte !disable instructions.
+- raw32 exact/over: remove3 one-byte !disable instructions.
+- EFI32 exact/over: remove3 one-byte !disable instructions.
+- EFI64 exact/over: remove one17-byte assignment and add14 one-byte
+  !disable instructions, for a net decrease of3 bytes.
+- hosted exact: reduce the first unary-negation count13 ->12.
+  A unary negation occupies3 bytes, balancing the3-byte prologue addition.
+- hosted over: from the new exact fixture, remove one17-byte assignment
+  and add six3-byte unary negations. Net change is+1 byte. The older over
+  fixture exceeded the limit by3; the new fixture tests precisely+1.
+- real exact/over fixtures are unchanged.
+
+For raw/ELF/host, the adjusted exact fixture compiles under0.5 to131069 bytes
+and under0.6 to131072. Its over fixture's old output is131070; adding the
+known3-byte prologue would require131073, which0.6 rejects with empty stdout.
+For EFI, exact .text changes130045 ->130048 and the final image is131072.
+The over fixture's old .text is130046; the new .text would be130049, forcing
+one more512-byte alignment block and rejection. Real exact is16384; its
+unchanged over fixture requires16385 and is rejected.
+
+Normal run.sh now explicitly checks exact file/text sizes even for hosted
+cases, whose ordinary manifest entries use acceptance rather than hashes.
+All1107 original target/fixture pairs remain:322 accepted,785 rejected.
+All322 accepted outputs pass the independent ABI audit, including79 hosted
+outputs. Normal checks cover243 exact non-host hashes (192 changed,
+51 unchanged real hashes),79 hosted acceptance checks and785 rejections.
+The five existing safe native executions also pass.
+

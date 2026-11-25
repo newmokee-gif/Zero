@@ -1,0 +1,94 @@
+# One bounded80x16 text canvas is painted by the owned window renderer.
+# Code starts at row4, column6; original line numbers and caret are one-based.
+? :load64[@c5+56] [
+ 0 -> @i. ?? @i < 1296 [ !store8[@c5+4096+@i|32]. @i+1 -> @i. ]
+ 0 -> @i. ?? @i < 15 [ !store8[@c5+4096+@i*81+80|10]. @i+1 -> @i. ]
+ !store8[@c5+4096+1295|0].
+ "ZERO STUDIO / ZERO" -> @text. ? :load64[@c5+48] [ "ZERO STUDIO / EZERO" -> @text. ]
+ 0 -> @i. ?? :load8[@text+@i] [ !store8[@c5+4096+@i|:load8[@text+@i]]. @i+1 -> @i. ]
+ @c5+128 -> @text. ? :load8[@text] == 0 [ "Untitled - F6 to choose a filename" -> @text. ]
+ 0 -> @i. ?? (:load8[@text+@i] != 0)*(@i < 70) [ !store8[@c5+4177+@i|:load8[@text+@i]]. @i+1 -> @i. ]
+ ? :load64[@c5+40] [ !store8[@c5+4177+74|42]. ]
+ "ASCII | 400 bytes | F6 Save F7 Open F8 Run F9 Language F10 New" -> @text.
+ 0 -> @i. ?? (:load8[@text+@i] != 0)*(@i < 80) [ !store8[@c5+4258+@i|:load8[@text+@i]]. @i+1 -> @i. ]
+ # Determine the wrapped visual row containing the insertion caret.
+ 0 -> @i. 0 -> @j. 0 -> @k.
+ ?? @i < :load64[@c5+24] [
+  :load8[@c5+512+@i] -> @character.
+  ? (@character == 10)+(@k == 74) [ @j+1 -> @j. 0 -> @k. ]
+  ? @character != 10 [ @k+1 -> @k. ] @i+1 -> @i.
+ ]
+ ? @k == 74 [ @j+1 -> @j. 0 -> @k. ]
+ :load64[@c5+32] -> @c1.
+ ? @j < @c1 [ @j -> @c1. ]
+ ? @j >= @c1+10 [ @j-9 -> @c1. ]
+ !store64[@c5+32|@c1]. !store64[@c5+120|(@j-@c1+4)*81+6+@k].
+ # Replay source into the visible rows without altering bytes or inserting text.
+ 0 -> @i. 0 -> @j. 0 -> @k. 1 -> @c2.
+ ?? @i <= :load64[@c5+16] [
+  :load8[@c5+512+@i] -> @character.
+  ? (@k == 74)*(@character != 10) [ @j+1 -> @j. 0 -> @k. ]
+  ? (@j >= @c1)*(@j < @c1+10) [
+   @c5+4096+(@j-@c1+4)*81 -> @pointer.
+   ? @k == 0 [
+    @c2 -> @c3. 0 -> @c4. ?? @c3 >= 100 [ @c3-100 -> @c3. @c4+1 -> @c4. ]
+    !store8[@pointer|48+@c4]. 0 -> @c4. ?? @c3 >= 10 [ @c3-10 -> @c3. @c4+1 -> @c4. ]
+    !store8[@pointer+1|48+@c4]. !store8[@pointer+2|48+@c3]. !store8[@pointer+4|124].
+   ]
+  ]
+  :load8[@c5+512+@i] -> @character.
+  ? @i < :load64[@c5+16] [
+   ? @character == 10 [ @j+1 -> @j. 0 -> @k. @c2+1 -> @c2. ] ~ [
+    ? (@j >= @c1)*(@j < @c1+10) [
+     ? (@character < 32)+(@character > 126) [ 32 -> @character. ]
+     !store8[@pointer+6+@k|@character].
+    ]
+    @k+1 -> @k.
+   ]
+  ]
+  @i+1 -> @i.
+ ]
+ ? :load64[@c5+8] == 0 [ !store8[@c5+4096+:load64[@c5+120]|95]. ]
+ "Ready. Insert text; arrows move. Esc closes. Lines start at1." -> @text.
+ :load64[@c5+64] -> @i.
+ ? @i == 1 [ "File opened. Original disk bytes are unchanged until Save." -> @text. ]
+ ? @i == 2 [ "Saved successfully to disk." -> @text. ]
+ ? @i == 3 [ "New file. It will be created on disk when you choose Save." -> @text. ]
+ ? @i == 4 [ "File operation failed. Buffer kept; check filename, volume and capacity." -> @text. ]
+ ? @i == 5 [ "400-byte source limit reached. Extra text was not inserted." -> @text. ]
+ ? @i == 6 [ "Compiler workspace unavailable. Boot the complete current ISO." -> @text. ]
+ ? @i == 7 [ "Build/run complete. Output below; F8 builds and runs again." -> @text. ]
+ ? @i == 8 [ "Build/run reported an error. See diagnostic output below." -> @text. ]
+ ? :load64[@c5+8] == 1 [ "OPEN OR CREATE: type a filename, Enter opens, Esc cancels." -> @text. ]
+ ? :load64[@c5+8] == 2 [ "SAVE AS: type a filename, Enter saves, Esc cancels." -> @text. ]
+ ? :load64[@c5+8] >= 3 [ "Unsaved changes. Y discards them; N or Esc keeps editing." -> @text. ]
+ 0 -> @i. ?? (:load8[@text+@i] != 0)*(@i < 80) [ !store8[@c5+4339+@i|:load8[@text+@i]]. @i+1 -> @i. ]
+ # Mirror status transitions once. Full canvases per key can saturate a UART.
+ :load64[@c5+64]+:load64[@c5+8]*16 -> @c3.
+ ? @c3 != :load64[@c5+112] [
+  !store64[@c5+112|@c3]. "Zero Studio: " -> @pointer. 0 -> @i.
+  ?? :load8[@pointer+@i] [ !store8[@c5+3072+@i|:load8[@pointer+@i]]. @i+1 -> @i. ]
+  0 -> @j. ?? (:load8[@text+@j] != 0)*(@i < 160) [ !store8[@c5+3072+@i|:load8[@text+@j]]. @i+1 -> @i. @j+1 -> @j. ]
+  !store8[@c5+3072+@i|13]. !store8[@c5+3073+@i|10]. @i+2 -> @i.
+  ? (:load64[@c5+64] == 7)+(:load64[@c5+64] == 8) [
+   0 -> @j. ?? (@j < :load64[@c5+104])*(@i < 480) [
+    !store8[@c5+3072+@i|:load8[@c5+1024+@j]]. @i+1 -> @i. @j+1 -> @j.
+   ]
+   !store8[@c5+3072+@i|13]. !store8[@c5+3073+@i|10]. @i+2 -> @i.
+  ]
+  !store8[@c5+3072+@i|0]. @c5+3072 -> @message.
+ ]
+ "F6 Save | F7 Open | F8 Build+Run | F9 Language | F10 New | Esc Close" -> @text.
+ 0 -> @i. ?? (:load8[@text+@i] != 0)*(@i < 80) [ !store8[@c5+5311+@i|:load8[@text+@i]]. @i+1 -> @i. ]
+ ? (:load64[@c5+8] == 1)+(:load64[@c5+8] == 2) [
+  0 -> @i. ?? @i < :load64[@c5+72] [ !store8[@c5+5230+@i|:load8[@c5+192+@i]]. @i+1 -> @i. ]
+  !store8[@c5+5230+@i|95].
+ ] ~ [
+  0 -> @i. ?? (@i < :load64[@c5+104])*(@i < 80) [
+   :load8[@c5+1024+@i] -> @character. ? (@character < 32)+(@character > 126) [ 32 -> @character. ]
+   !store8[@c5+5230+@i|@character]. @i+1 -> @i.
+  ]
+ ]
+ !store64[@c5+56|0].
+ :load64[@console+2112] -> @c0. !store64[@c0+64|:load64[@c0+64]+1].
+]

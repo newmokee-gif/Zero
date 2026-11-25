@@ -1,0 +1,2 @@
+join([Hello] | ignored) => show
+join([empty] | ignored) => show

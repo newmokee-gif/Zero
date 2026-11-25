@@ -1,0 +1,68 @@
+ZTEXT00100000febf23f23d10000000
+Current original Zero workflow (0.12)
+
+Use the native tools on Linux or their .exe versions on Windows:
+  zero-integrate PROJECT_DIRECTORY NEW_KERNEL.zero
+  zero-build PROJECT_DIRECTORY NEW_OUTPUT_DIRECTORY NEW_KERNEL.zero
+  zero-check PROJECT_DIRECTORY NEW_TEST_DIRECTORY
+All destination paths must be new. The integrator preserves authored sources;
+the builder checks its compiler fixed point and builds the original targets;
+the verifier checks language behavior and host file operations in process.
+See tools/integrate.ztext, tools/build.ztext and checks/README.ztext.
+Read these documents with zero-text read FILE.
+
+The notes below preserve earlier implementation and test history. Any old
+shell/Python runner names, generated artifacts, JSON reports or commands are
+historical references: they were removed from the active project and are not
+current runnable instructions or current-release validation. Native host
+checks do not replace BIOS/UEFI, persistence or physical-hardware testing.
+
+Historical implementation notes
+
+Zero WiFi work status - 2026-11-16
+
+Implemented in original Zero (no downloaded code): bounded modal state machine,
+automatic PCI-discovery handoff, one-based card/network navigation, bounded
+ASCII renderer, 8..63-character masked password entry, backspace, cancellation,
+secret erasure on close and every completed connection, and generation-tagged
+backend request/reply interface. Production PCI detection is integrated by the
+wired network worker. Kernel keyboard/modal integration is owned by the root
+agent. Four UI parts compile successfully with the own compiler for hosted,
+raw64 and raw32 targets. The isolated harness remains below23KiB raw32 and
+16KiB raw64, including test declarations and initialization.
+
+Normal UI wording now uses plain connection/setup/search language. Unsupported
+hardware and unverified Internet access remain explicit; every simulated
+backend screen retains the visible SIMULATION / NO RADIO / NO PACKETS label.
+
+26 executed behavioral fixtures pass: detection/no-adapter/unsupported,
+one-card automatic selection, both selection bounds, network choice,
+password masking/backspace/63-byte limit/short-password refusal, open-network
+connection path, pending/success/auth-failure states, and cancellation before
+and during connection, stale-generation replies, empty scans, failed scans
+and an invalid9-network result. Every fixture checks secret-tail zeroing, full
+secret erasure on completion/close and memory-boundary guards. Fifteen original Zero
+rendered1920x1080 screenshots cover all meaningful UI stages, plus production
+no-radio/unsupported outcomes, in net/wifi-fixtures/*.png. See results.txt
+there and reproduce with python3 net/wifi-test.py. Python only orchestrates
+and losslessly encodes the Zero-produced PPM as PNG.
+
+No native WiFi chipset driver, 802.11 management/data path, WPA2 supplicant or
+radio firmware loader currently exists. Detected class0280 controllers must
+remain unsupported. They do not produce invented SSIDs or connection success.
+USB/SDIO radio discovery is not implemented. Standard QEMU emulated Ethernet
+connected through a host's WiFi/NAT is not a native guest WiFi device.
+
+The hosted fixture backend is explicitly labeled SIMULATION / NO RADIO /
+NO PACKETS on every screen. It exists to execute and inspect the genuine UI
+state machine, including the stages that unsupported production hardware
+cannot enter. Its success screenshots are not radio/network evidence.
+
+Chipset feasibility: a real Intel/Atheros/Realtek PCI radio requires a device-
+specific control/DMA path, firmware where applicable, 802.11 scan and
+association, and WPA2 key establishment/encryption. None may be replaced by
+an Ethernet link-state check or by fixture replies. This work provides the
+honest discovery and application/driver boundary, not those absent layers.
+No radio hardware was made available to this subtask. Existing VM network
+devices are Ethernet; the root VM verifier is checking emulator capabilities
+and actual PCI detection. Unsupported cases remain usable and cancellable.

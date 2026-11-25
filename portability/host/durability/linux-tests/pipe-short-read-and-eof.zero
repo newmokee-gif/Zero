@@ -1,0 +1,5 @@
+
+    :reserve[4096] => @b.
+    ? :fileread[3 | @b | 4096] != 5 [ !exit[1]. ]
+    ? :fileread[3 | @b | 4096] != 0 [ !exit[2]. ] !exit[0].
+    

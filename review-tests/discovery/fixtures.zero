@@ -1,0 +1,105 @@
+# Original Zero test fixture generator. FD3 is an empty1MiB scratch disk.
+:reserve[65536] => @memory.
+0 => @mode.
+0 => @i.
+0 => @j.
+0 => @k.
+0 => @pointer.
+0 => @length.
+0 => @checksum.
+0 => @round.
+0 => @count.
+0 => @result.
+0 -> @i. ?? @i < 65536 [ !store8[@memory + @i| 0]. @i + 1 -> @i. ]
+? :read[@memory + 65500| 1] != 1 [ !exit[90]. ]
+:load8[@memory + 65500] -> @mode.
+? @mode == 1 [ !store64[@memory| 0x31303053464f525a]. ]
+? @mode == 2 [
+ !store64[@memory + 3| 0x202020205346544e]. !store16[@memory + 510| 0xaa55].
+ !store32[@memory + 450| 0xffffffff]. !store32[@memory + 454| 0xffffffff].
+]
+? (@mode >= 3) * (@mode <= 9) + (@mode == 29) + (@mode == 33) [
+ !store16[@memory + 510| 0xaa55].
+ ? @mode != 9 [
+  !store8[@memory + 450| 0x83]. !store32[@memory + 454| 64]. !store32[@memory + 458| 64].
+  !store8[@memory + 466| 7]. !store32[@memory + 470| 256]. !store32[@memory + 474| 64].
+ ]
+ ? @mode == 4 [ !store32[@memory + 470| 96]. ]
+ ? @mode == 5 [ !store32[@memory + 470| 2000]. ]
+ ? @mode == 6 [ !store8[@memory + 466| 15]. ]
+ ? @mode == 7 [ !store8[@memory + 466| 238]. !store32[@memory + 470| 1]. !store32[@memory + 474| 2047]. ]
+ ? @mode == 8 [ !store8[@memory + 462| 1]. ]
+ ? @mode == 29 [ !store32[@memory + 470| 0xfffffff0]. !store32[@memory + 474| 32]. ]
+ ? @mode == 33 [ !store16[@memory + 510| 0]. ]
+]
+? (@mode >= 10) * (@mode != 29) * (@mode != 33) [
+ !store16[@memory + 510| 0xaa55]. !store8[@memory + 450| 238].
+ !store32[@memory + 454| 1]. !store32[@memory + 458| 2047].
+ ? @mode == 19 [ !store32[@memory + 458| 2046]. ]
+ ? @mode == 20 [ !store16[@memory + 510| 0]. ]
+ 128 -> @count. ? @mode == 26 [ 1 -> @count. ]
+ 0 -> @i. ?? @i < 2 [
+  @memory + 512 + @i * 512 -> @pointer.
+  !store64[@pointer| 0x5452415020494645]. !store32[@pointer + 8| 0x10000].
+  !store32[@pointer + 12| 92]. !store64[@pointer + 24| 1]. !store64[@pointer + 32| 2047].
+  !store64[@pointer + 40| 34]. !store64[@pointer + 48| 2014].
+  !store64[@pointer + 56| 0x0123456789abcdef]. !store64[@pointer + 64| 0xfedcba9876543210].
+  !store64[@pointer + 72| 2]. !store32[@pointer + 80| @count]. !store32[@pointer + 84| 128].
+  ? @i [
+   !store64[@pointer + 24| 2047]. !store64[@pointer + 32| 1]. !store64[@pointer + 72| 2015].
+  ]
+  @i + 1 -> @i.
+ ]
+ 0 -> @i. 2 -> @length. ? @mode == 22 [ 27 -> @length. ] ? @mode == 26 [ 1 -> @length. ]
+ ?? @i < @length [
+  @memory + 4096 + @i * 128 -> @pointer.
+  ? (@mode == 23) * (@i == 1) [ @memory + 4096 + 127 * 128 -> @pointer. ]
+  !store64[@pointer| 0x44332211]. !store64[@pointer + 8| 0x88776655].
+  !store64[@pointer + 16| @i + 1]. !store64[@pointer + 24| 0x99999999].
+  !store64[@pointer + 32| 64 + @i * 192]. !store64[@pointer + 40| 127 + @i * 192].
+  ? @mode == 22 [ !store64[@pointer + 32| 64 + @i * 2]. !store64[@pointer + 40| 64 + @i * 2]. ]
+  @i + 1 -> @i.
+ ]
+ ? @mode == 15 [ !store64[@memory + 4096 + 128 + 32| 100]. ]
+ ? @mode == 16 [ !store64[@memory + 4096 + 128 + 40| 2046]. ]
+ ? @mode == 17 [ !store64[@memory + 4096 + 128 + 16| 1]. ]
+ ? @mode == 18 [ !store32[@memory + 512 + 84| 256]. ]
+ ? @mode == 21 [ !store64[@memory + 4096 + 48| 0x1000000000000000]. ]
+ ? @mode == 24 [ !store64[@memory + 512 + 72| 2047]. ]
+ ? @mode == 25 [ !store64[@memory + 1024 + 72| 512]. ]
+ ? @mode == 27 [
+  !store64[@memory + 4096 + 128| 0]. !store64[@memory + 4096 + 136| 0].
+  !store64[@memory + 4096 + 160| 0xffffffffffffffff].
+ ]
+ ? @mode == 28 [ !store64[@memory + 1024 + 48| 2013]. ]
+ ? @mode == 30 [ !store64[@memory + 4096 + 128 + 40| 0xffffffffffffffff]. ]
+ ? @mode == 32 [ !store32[@memory + 512 + 80| 129]. ]
+ 0 -> @round. ?? @round < 3 [
+  @memory + 4096 -> @pointer. @count * 128 -> @length.
+  ? @round [ @memory + @round * 512 -> @pointer. 92 -> @length. ]
+  0xffffffff -> @checksum. 0 -> @i.
+  ?? @i < @length [
+   :bitxor[@checksum| :load8[@pointer + @i]] -> @checksum.
+   0 -> @j. ?? @j < 8 [
+    :bitand[@checksum| 1] -> @k. :shr[@checksum| 1] -> @checksum.
+    ? @k [ :bitxor[@checksum| 0xedb88320] -> @checksum. ] @j + 1 -> @j.
+   ] @i + 1 -> @i.
+  ]
+  :bitxor[@checksum| 0xffffffff] -> @checksum.
+  ? @round == 0 [
+   !store32[@memory + 512 + 88| @checksum]. !store32[@memory + 1024 + 88| @checksum].
+  ] ~ [ !store32[@pointer + 16| @checksum]. ]
+  @round + 1 -> @round.
+ ]
+ ? @mode == 11 [ !store8[@memory + 512 + 16| :bitxor[:load8[@memory + 512 + 16]| 1]]. ]
+ ? @mode == 13 [ !store8[@memory + 1024 + 16| :bitxor[:load8[@memory + 1024 + 16]| 1]]. ]
+ ? :pwrite[3| @memory + 512| 512| 512] != 512 [ !exit[91]. ]
+ ? :pwrite[3| @memory + 1024| 512| 2047 * 512] != 512 [ !exit[91]. ]
+ ? @mode == 12 [ !store8[@memory + 4096| :bitxor[:load8[@memory + 4096]| 1]]. ]
+ ? :pwrite[3| @memory + 4096| 16384| 1024] != 16384 [ !exit[91]. ]
+ ? @mode == 12 [ !store8[@memory + 4096| :bitxor[:load8[@memory + 4096]| 1]]. ]
+ ? @mode == 14 [ !store8[@memory + 4096| :bitxor[:load8[@memory + 4096]| 1]]. ]
+ ? :pwrite[3| @memory + 4096| 16384| 2015 * 512] != 16384 [ !exit[91]. ]
+]
+? :pwrite[3| @memory| 512| 0] != 512 [ !exit[91]. ]
+? :fsync[3] != 0 [ !exit[92]. ]

@@ -1,0 +1,10 @@
+ZTEXT0010000028c9094971c0000000
+PASS actual BIOS optical32KiB read into0x20000
+PASS local invalid table/count arguments return0xffffffff
+PASS BIOS INT15/AH87 returns0 for all9 moves
+PASS all32768 payload bytes and both32-byte guards at4MiB,8MiB,32MiB
+PASS32MiB proves this tested SeaBIOS honors descriptor base bits above24; no arbitrary4GiB or other-firmware guarantee
+PASS original ISO unchanged; no writable disks attached; VM stopped
+Compiler SHA256:47836827da499205587b8356980b5126b19b22afc428ff013391e73ebc06a7e3
+Original ISO SHA256:8d494eca3adbf8998b1674d4d7c4cd03308f40ba87ee3213a806fefa6c9f7d31
+Private test directory:/workspace/zero-foundation/build/biosmove/probe-2fapsk8u

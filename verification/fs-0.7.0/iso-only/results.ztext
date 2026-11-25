@@ -1,0 +1,56 @@
+ZTEXT00100000bebc69ec38e0000000
+ISO-only delivery workflow verification, 2026-11-15 UTC
+
+The unchanged final optical ISO was used in every run:
+SHA256 6af39753816e30ab40e77cf56af4a8edce4de20abb30ef09d722884c217a5f3b
+QEMU pc/TCG, qemu64,128MiB, SeaBIOS and standard VGA. The ISO is read-only
+on IDE index2. No prebuilt user-data image is required or distributed by this
+workflow. The test-only blank-disk fixture is private and extensionless.
+
+1. Optical ISO alone, no ATA hard disk: PASS
+Boot reaches the visible graphical zero> prompt within40 seconds. disks
+reports No supported ATA volumes. Optical media are not writable volumes.
+create test and watch refuse unavailable volume access; format ZERO refuses
+because no real dedicated raw ZeroFS volume is selected. Every command
+returns to the prompt, and info/tasks show live graphics/compute workers.
+The only attached medium is the read-only optical ISO; there is no writable
+hard-disk target. nodisk/first.png was visually inspected. The VM was stopped.
+
+2. Newly created blank16MiB virtual hard disk: PASS
+The host created a fresh zero-filled file blank/blank-disk solely for this
+test and attached it as ATA IDE primary master. The ISO remains optical.
+disks initially reports A:| disk0 16MiB unknown. create before is refused;
+the entire disk checksum remains exactly its initial zero-filled value,
+recorded in before-format.sha256 and preformat-unchanged.txt. Discovery does
+not automatically format or initialize the new disk.
+
+The explicit commands then succeed:
+ format ZERO
+ disks
+ create hello
+ save hello Zero ISO disk persistence
+ read hello
+ watch
+disks now identifies A:| as ZeroFS; read returns the exact saved text and
+watch lists hello. All three mutations report Saved to disk. info/tasks
+remain available. After VM shutdown every byte beyond the first18 sectors
+still equals the original zero-filled disk. blank/first.png was inspected.
+
+3. Full new-process restart with that same disk: PASS
+The first VM process exited before a second QEMU process started. No disk
+fixture was copied, reset or reformatted. Startup mounts ZeroFS; disks lists
+the16MiB volume; read hello returns Zero ISO disk persistence and watch lists
+hello. A whole-disk checksum comparison with the post-write image passes,
+so this read-only restart leaves the persistent image unchanged. See
+blank/restart.serial, restart.png and restart-unchanged.txt. The second
+process was stopped after the screen was inspected.
+
+Reproduction and preservation
+run.sh records exact VM options, boot deadlines, keyboard injection and all
+assertions. Per-scenario command files, serial logs, QEMU logs and screenshots
+are retained. The default run deliberately refuses to overwrite a preexisting
+blank-disk fixture; the restart subcommand reuses only the test-created file.
+original-inputs.sha256 records unchanged build/data.img,build/data.vdi and
+both final ISO copies. No implementation source or existing user-data disk
+was modified. All three test VM processes have stopped.
+This is BIOS64 QEMU workflow evidence; native VirtualBox is not claimed.

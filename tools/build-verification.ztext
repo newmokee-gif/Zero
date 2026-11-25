@@ -1,0 +1,56 @@
+ZTEXT00100000c8fac098f560000000
+NATIVE BUILD AND SOURCE COMPOSITION VERIFICATION
+
+2026-11-17. The latest native Linux and Windows/Wine builders generated all
+43 artifacts from the canonical project and bootstrap/zero64.zapp. Every
+artifact was byte-identical between the two hosts, including the compiler
+fixed-point apps, BIOS/UEFI components, kernels, bundle, ISO and native tools.
+The Windows builder was itself rebuilt by the original Zero compiler and ran
+with no external tools in PATH. Wine is an execution check, not physical Windows.
+
+The resulting own binaries passed the canonical project checker (182/182),
+text decoder checks (51/51) and picture decoder checks (42/42).
+The final addition builds zero-archive and zero-archive.exe from the reviewed
+original source. Both match the independently built archive binaries; all
+previous artifacts except the extended builder binaries remain identical.
+The ISO hash is unchanged. Archive source SHA256:
+780d87646a41d5d9540c60dd86bb3641c6ba3b0fc07bc71d554c6a2acf79429d
+
+Final ISO SHA256:
+c7e5903efee4b773e3b527168c7a1606fa73be9c99417cf742e3996d58137305
+
+The native compositor reproduced kernel.zero, ezero/compiler.zero,
+tools/picture.zero and media/picture-check.zero byte-for-byte from their
+original Zero parts. Its Linux and Windows implementations were exercised.
+
+Nineteen build/composition error checks passed: bad arguments, existing
+output preservation, missing/invalid/oversized seeds, missing/duplicate/
+unterminated markers, unknown includes, NUL source bytes, source capacity,
+and injected write/fsync failures. Failed newly created artifacts were
+removed, while completed earlier artifacts and existing files were preserved.
+
+A prior self-rebuilt native builder reproduced all 37 then-existing artifacts;
+a process trace showed only its initial exec and final exit. The baseline
+0.11 layout was also reproduced with an external original Zero constant
+variant: all 35 Linux/Windows artifacts matched and the baseline ISO matched
+2c15dbc7e8f058c5ba07024c4c6c1ddd1ffcfcd86d15a2cc7c49ca7fbfd4a3df.
+
+This report verifies compilation, reproduction and native tool tests. Guest
+boot and filesystem continuation tests are documented separately. New source
+revisions require their own rebuild and appropriate guest checks.
+
+Original prior 0.11 compiler seed bootstrap/zero64.zapp SHA256:
+cad49cb2f5ee5a7bf09d8b221949ece97d23d07231d4c0e9e7a62a1eb30dec96
+
+Verified current source hashes:
+tools/build.zero 275de5b059b47aabcb454db864e11e08910fb6f34c409a70296bf482c52c4ab0
+tools/integrate.zero 50030038884dd7d8e958620b3a1ca776781ba89e3af628f8373aaca3a0a87cbf
+compiler.zero 58c293eb4aaa6aabbe9026b24059508d7e652f0b5510d91a913413f2ccdd38ad
+kernel.zero 9e98c43b4b47a6ba6c9ec2f7774e58f2ff7390447d08b7c902782d95edfe4f2c
+tools/picture.zero 7fdf0c50d206073478550366469f1c0c2311a2e28236150a48b917485b3c74d4
+media/zpix-decoder.zero.part 6b7626cd70a200e3d98f41a9967463cb196c45b60a91374f7ae3da2ef5122b88
+media/picture-check.zero fde50bf84d4ca86dc0d165e0db4849f0e49999c28103273369bfc779f7c71b50
+
+External orchestration/traces are outside the project under
+/tmp/zero-support/validation-0.12/build-native. Product implementations are
+Zero; the report container was encoded by our native zero-text program.

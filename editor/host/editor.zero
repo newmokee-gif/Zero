@@ -1,0 +1,717 @@
+# Original Zero Studio host editor. All implementation is Zero.
+# Fixed 1280x800 canvas; bytes outside ASCII are rejected without changing files.
+0 => @e.
+0 => @text.
+0 => @pixels.
+0 => @wire.
+0 => @font.
+0 => @platform.
+1 => @running.
+0 => @changed.
+1 => @dirty.
+0 => @length.
+0 => @caret.
+0 => @top.
+0 => @mode.
+0 => @path.
+0 => @prompt.
+0 => @plen.
+0 => @status.
+0 => @key.
+0 => @mod.
+0 => @mousex.
+0 => @mousey.
+0 => @event.
+0 => @render.
+0 => @i.
+0 => @j.
+0 => @k.
+0 => @n.
+0 => @c.
+0 => @a.
+0 => @b.
+0 => @d.
+0 => @x.
+0 => @y.
+0 => @col.
+0 => @row.
+0 => @bits.
+0 => @color.
+-1 => @fd.
+-1 => @sock.
+0 => @window.
+0 => @gc.
+0 => @base.
+0 => @mask.
+0 => @root.
+0 => @depth.
+1280 => @width.
+800 => @height.
+0 => @api.
+0 => @message.
+0 => @keys.
+0 => @keycols.
+0 => @code.
+0 => @work.
+0 => @phase.
+0 => @target.
+0 => @compilebytes.
+0 => @argc.
+0 => @quit.
+0 => @failed.
+:host[] -> @platform.
+:hostalloc[1048576] -> @e.
+:hostalloc[4194304] -> @pixels.
+:hostalloc[262144] -> @wire.
+? (@e == 0) + (@pixels == 0) + (@wire == 0) [ !exit[1]. ]
+@e + 4096 -> @text. @e + 512 -> @path. @e + 1024 -> @prompt.
+@e + 2048 -> @api. @e + 76800 -> @message. @e + 131072 -> @keys.
+"Ready. Ctrl+O open   Ctrl+S save   F5 build   Ctrl+Q quit" -> @status.
+"00000004444404:::0000:O::O:04?D>5N4IJ248;C<BD8EB=44800002488842842224804E>E40044O4400000448000O0000000004122488@>ACEIA>4<4444>>A1248ON11611N26:BO22O@@N11N68@NAA>O124888>AA>AA>>AA?12<04004000400448124842100O0O00@84248@>A12404>AGEG@>>AAOAAANAANAAN?@@@@@?NAAAAANO@@N@@OO@@N@@@?@@GAA?AAAOAAA>44444>72222B<ABDHDBA@@@@@@OAKEEAAAAIIECCA>AAAAA>NAAN@@@>AAAEB=NAANDBA?@@>11NO444444AAAAAA>AAAAA:4AAAEEKAAA:4:AAAA:4444O1248@O>88888>@884221>22222>4:A0000000000O842000000>1?A?@@NAAAN00?@@@?11?AAA?00>AO@?698N8880?AA?1>@@NAAAA40<444>20622B<@@BDHDB<44444>00JEEEE00NAAAA00>AAA>0NAAN@@0?AA?1100FI@@@00?@>1N88N889600AAAA?00AAA:400AAEE:00A:4:A0AAA?1>00O248O34484434444444H44244H009F000" -> @font.
+:argcount[] -> @argc.
+!store64[@e + 320 | :program[]].
+? @argc > 0 [
+ :argument[1] -> @a. 0 -> @i.
+ ?? (:load8[@a + @i] != 0) * (@i < 500) [ !store8[@prompt + @i | :load8[@a + @i]]. @i + 1 -> @i. ]
+ !store8[@prompt + @i | 0]. @i -> @plen.
+ ? :load8[@a + @i] != 0 [ "Startup path exceeds 500 bytes; no file was opened." -> @status. ] ~ [ 1 -> @phase. ]
+]
+# Original X11 wire protocol client. No Xlib, toolkit or external GUI process.
+# Local DISPLAY and MIT-MAGIC-COOKIE-1 are read from this process's environment.
+? @platform == 1 [
+ @e + 327680 -> @a. :fileopen["/proc/self/environ" | 0] -> @fd. 0 -> @n.
+ ? @fd != -1 [ :fileread[@fd | @a | 65535] -> @n. :fileclose[@fd] -> @c. -1 -> @fd. ]
+ ? @n > 65535 [ 0 -> @n. ] !store8[@a + @n | 0].
+ 0 -> @i. ?? @i < @n [
+  @i -> @j. ?? (@j < @n) * (:load8[@a + @j] != 0) [ @j + 1 -> @j. ]
+  ? @j - @i > 8 [ ? :load64[@a + @i] == 0x3d59414c50534944 [ !store64[@e + 32 | @a + @i + 8]. ] ]
+  ? @j - @i > 11 [
+   ? (:load64[@a + @i] == 0x49524f4854554158) * (:load16[@a + @i + 8] == 0x5954) * (:load8[@a + @i + 10] == 61) [ !store64[@e + 40 | @a + @i + 11]. ]
+  ]
+  ? @j - @i > 5 [ ? (:load32[@a + @i] == 0x454d4f48) * (:load8[@a + @i + 4] == 61) [ !store64[@e + 48 | @a + @i + 5]. ] ]
+  @j + 1 -> @i.
+ ]
+ :load64[@e + 32] -> @a. "0" -> @b. 1 -> @d.
+ ? @a != 0 [
+  ? :load32[@a] == 0x78696e75 [ @a + 4 -> @a. ]
+  ? :load8[@a] != 58 [ "Linux editor needs a local X11 DISPLAY (Xwayland is supported)." -> @status. 0 -> @running. 1 -> @failed. ] ~ [
+   @a + 1 -> @b. 0 -> @d. ?? (:load8[@b + @d] >= 48) * (:load8[@b + @d] <= 57) * (@d < 6) [ @d + 1 -> @d. ]
+   ? (@d == 0) + (@d > 5) [ 0 -> @running. 1 -> @failed. "Invalid DISPLAY number." -> @status. ]
+   ? :load8[@b + @d] != 0 [
+    ? (:load8[@b + @d] != 46) + (:load8[@b + @d + 1] != 48) + (:load8[@b + @d + 2] != 0) [ 0 -> @running. 1 -> @failed. "Only X11 screen zero is supported." -> @status. ]
+   ]
+  ]
+ ]
+ !store64[@e + 56 | @b]. !store64[@e + 64 | @d].
+ !store16[@e + 80 | 1]. "/tmp/.X11-unix/X" -> @a. 0 -> @i.
+ ?? :load8[@a + @i] [ !store8[@e + 82 + @i | :load8[@a + @i]]. @i + 1 -> @i. ]
+ 0 -> @j. ?? @j < @d [ !store8[@e + 82 + @i | :load8[@b + @j]]. @j + 1 -> @j. @i + 1 -> @i. ]
+ !store8[@e + 82 + @i | 0]. !store64[@e + 72 | @i + 3].
+ ? @running [
+  :hostsyscall[41 | 1 | 0x80001 | 0 | 0 | 0 | 0] -> @sock.
+  ? @sock > 2147483647 [ "Cannot create the X11 socket." -> @status. 0 -> @running. 1 -> @failed. ] ~ [
+   ? :hostsyscall[42 | @sock | @e + 80 | :load64[@e + 72] | 0 | 0 | 0] != 0 [ "Cannot connect to the local X11 display." -> @status. 0 -> @running. 1 -> @failed. ]
+  ]
+ ]
+ # Cookie source. An absent authority file also permits local access-controlled
+ # servers that explicitly grant this process's operating-system account access.
+ 0 -> @compilebytes. :load64[@e + 40] -> @a.
+ ? @a == 0 [
+  :load64[@e + 48] -> @b. ? @b != 0 [
+   @e + 300000 -> @a. 0 -> @i. ?? (:load8[@b + @i] != 0) * (@i < 4000) [ !store8[@a + @i | :load8[@b + @i]]. @i + 1 -> @i. ]
+   "/.Xauthority" -> @b. 0 -> @j. ?? :load8[@b + @j] [ !store8[@a + @i | :load8[@b + @j]]. @j + 1 -> @j. @i + 1 -> @i. ] !store8[@a + @i | 0].
+  ]
+ ]
+ ? @a != 0 [
+  :fileopen[@a | 0] -> @fd. ? @fd != -1 [
+   :fileread[@fd | @e + 393216 | 65536] -> @n. :fileclose[@fd] -> @c. -1 -> @fd.
+   ? @n > 65536 [ 0 -> @n. ] 0 -> @i. @e + 393216 -> @a.
+   ?? @i + 2 <= @n [
+    @i + 2 -> @i. 0 -> @k. 1 -> @mask. 0 -> @target.
+    ?? (@k < 4) * (@i + 2 <= @n) [
+     :load8[@a + @i] * 256 + :load8[@a + @i + 1] -> @c. @i + 2 -> @i.
+     ? @i + @c > @n [ @n + 1 -> @i. 0 -> @mask. ] ~ [
+      ? @k == 1 [
+       ? @c != :load64[@e + 64] [ 0 -> @mask. ] ~ [
+        0 -> @j. ?? @j < @c [ ? :load8[@a + @i + @j] != :load8[:load64[@e + 56] + @j] [ 0 -> @mask. ] @j + 1 -> @j. ]
+       ]
+      ]
+      ? @k == 2 [
+       ? @c != 18 [ 0 -> @mask. ] ~ [ "MIT-MAGIC-COOKIE-1" -> @b. 0 -> @j. ?? @j < 18 [ ? :load8[@a + @i + @j] != :load8[@b + @j] [ 0 -> @mask. ] @j + 1 -> @j. ] ]
+      ]
+      ? (@k == 3) * (@c == 16) * @mask [ @a + @i -> @target. ]
+      @i + @c -> @i.
+     ] @k + 1 -> @k.
+    ]
+    ? @target != 0 [ 0 -> @j. ?? @j < 16 [ !store8[@e + 256 + @j | :load8[@target + @j]]. @j + 1 -> @j. ] 16 -> @compilebytes. ]
+    ? @k < 4 [ @n + 1 -> @i. ]
+   ]
+  ]
+ ]
+ 0 -> @i. ?? @i < 64 [ !store8[@wire + @i | 0]. @i + 1 -> @i. ]
+ !store8[@wire | 108]. !store16[@wire + 2 | 11]. 12 -> @target.
+ ? @compilebytes == 16 [
+  !store16[@wire + 6 | 18]. !store16[@wire + 8 | 16]. "MIT-MAGIC-COOKIE-1" -> @a.
+  0 -> @i. ?? @i < 18 [ !store8[@wire + 12 + @i | :load8[@a + @i]]. @i + 1 -> @i. ]
+  0 -> @i. ?? @i < 16 [ !store8[@wire + 32 + @i | :load8[@e + 256 + @i]]. @i + 1 -> @i. ] 48 -> @target.
+ ]
+ # Startup transactions: connect handshake, setup body, keyboard mapping reply.
+ 0 -> @k. ?? (@k < 4) * @running [
+  ? (@k == 0) + (@k == 2) [
+   0 -> @n. ?? (@n < @target) * @running [
+    :hostsyscall[44 | @sock | @wire + @n | @target - @n | 16384 | 0 | 0] -> @c.
+    ? (@c == 0) + (@c > @target - @n) [ 0 -> @running. 1 -> @failed. "X11 request failed." -> @status. ] ~ [ @n + @c -> @n. ]
+   ]
+   8 -> @target. ? @k == 2 [ 32 -> @target. ]
+  ]
+  0 -> @n. ?? (@n < @target) * @running [
+   !store32[@e + 240 | @sock]. !store16[@e + 244 | 1]. !store16[@e + 246 | 0].
+   :hostsyscall[7 | @e + 240 | 1 | 3000 | 0 | 0 | 0] -> @c.
+   ? @c != 1 [ 0 -> @running. 1 -> @failed. "X11 server did not complete startup." -> @status. ] ~ [
+    :hostsyscall[0 | @sock | @wire + @n | @target - @n | 0 | 0 | 0] -> @c.
+    ? (@c == 0) + (@c > @target - @n) [ 0 -> @running. 1 -> @failed. "X11 connection ended during startup." -> @status. ] ~ [ @n + @c -> @n. ]
+   ]
+  ]
+  ? @k == 0 [
+   ? :load8[@wire] != 1 [ 0 -> @running. 1 -> @failed. "X11 authentication failed; check DISPLAY and XAUTHORITY." -> @status. ]
+   :load16[@wire + 6] * 4 -> @target. ? (@target < 32) + (@target > 262144) [ 0 -> @running. 1 -> @failed. ]
+  ]
+  ? @k == 1 [
+   :load32[@wire + 4] -> @base. :load32[@wire + 8] -> @mask.
+   ? (:bitand[@mask | 7] != 7) + (:load8[@wire + 22] != 0) + (:load8[@wire + 20] == 0) + (:load16[@wire + 18] < 61446) [ "Unsupported X11 pixel layout or request limit." -> @status. 0 -> @running. 1 -> @failed. ]
+   :load16[@wire + 16] -> @i. :bitand[@i + 3 | 0xfffffffffffffffc] + 32 -> @i.
+   0 -> @j. 0 -> @c.
+   ?? @j < :load8[@wire + 21] [
+    ? @i + @j * 8 + 8 <= @target [
+     ? (:load8[@wire + @i + @j * 8] == 24) * (:load8[@wire + @i + @j * 8 + 1] == 32) * (:load8[@wire + @i + @j * 8 + 2] == 32) [ 1 -> @c. ]
+    ] @j + 1 -> @j.
+   ]
+   ? @c == 0 [ 0 -> @running. 1 -> @failed. "X11 screen needs 32-bit padded TrueColor pixels." -> @status. ]
+   @i + :load8[@wire + 21] * 8 -> @i.
+   ? @i + 40 > @target [ 0 -> @running. 1 -> @failed. "Truncated X11 screen description." -> @status. ] ~ [
+    :load32[@wire + @i] -> @root. :load32[@wire + @i + 32] -> @d. :load8[@wire + @i + 38] -> @depth.
+    !store64[@e + 280 | @d].
+    ? @depth != 24 [ 0 -> @running. 1 -> @failed. "This editor requires a 24-bit X11 TrueColor screen." -> @status. ]
+   ]
+   :load8[@wire + 26] -> @i. :load8[@wire + 27] -> @j.
+   !store64[@e + 288 | @i]. !store64[@e + 296 | @j - @i + 1].
+   !store8[@wire | 101]. !store8[@wire + 1 | 0]. !store16[@wire + 2 | 2]. !store8[@wire + 4 | @i]. !store8[@wire + 5 | @j - @i + 1]. !store16[@wire + 6 | 0]. 8 -> @target.
+  ]
+  ? @k == 2 [
+   ? :load8[@wire] != 1 [ 0 -> @running. 1 -> @failed. ] :load8[@wire + 1] -> @keycols.
+   :load32[@wire + 4] * 4 -> @target.
+   ? (@keycols == 0) + (@target > 65536) + (@target != :load64[@e + 296] * @keycols * 4) [ 0 -> @running. 1 -> @failed. "Invalid X11 keyboard map." -> @status. ]
+  ]
+  ? @k == 3 [ 0 -> @i. ?? @i < @target [ !store8[@keys + @i | :load8[@wire + @i]]. @i + 1 -> @i. ] ]
+  @k + 1 -> @k.
+ ]
+ ? @running [
+  @base + 1 -> @window. @base + 2 -> @gc.
+  0 -> @i. ?? @i < 256 [ !store8[@wire + @i | 0]. @i + 1 -> @i. ]
+  !store8[@wire | 1]. !store8[@wire + 1 | @depth]. !store16[@wire + 2 | 10]. !store32[@wire + 4 | @window]. !store32[@wire + 8 | @root].
+  !store16[@wire + 12 | 30]. !store16[@wire + 14 | 30]. !store16[@wire + 16 | 1280]. !store16[@wire + 18 | 800]. !store16[@wire + 22 | 1].
+  !store32[@wire + 24 | :load64[@e + 280]]. !store32[@wire + 28 | 2050]. !store32[@wire + 32 | 0x141824]. !store32[@wire + 36 | 163845].
+  !store8[@wire + 40 | 55]. !store16[@wire + 42 | 4]. !store32[@wire + 44 | @gc]. !store32[@wire + 48 | @window].
+  !store8[@wire + 56 | 18]. !store16[@wire + 58 | 15]. !store32[@wire + 60 | @window]. !store32[@wire + 64 | 39]. !store32[@wire + 68 | 31]. !store8[@wire + 72 | 8]. !store32[@wire + 76 | 34].
+  "Zero Studio - original Zero editor" -> @a. 0 -> @i. ?? @i < 34 [ !store8[@wire + 80 + @i | :load8[@a + @i]]. @i + 1 -> @i. ]
+  :hostsyscall[44 | @sock | @wire | 116 | 16384 | 0 | 0] -> @c. ? @c != 116 [ 0 -> @running. 1 -> @failed. "X11 window creation failed." -> @status. ]
+  # Advertise WM_DELETE_WINDOW before mapping: close receives our normal unsaved
+  # guard instead of the window manager terminating the process.
+  0 -> @k. ?? (@k < 2) * @running [
+   "WM_PROTOCOLS" -> @a. 12 -> @b. ? @k == 1 [ "WM_DELETE_WINDOW" -> @a. 16 -> @b. ]
+   !store8[@wire | 16]. !store8[@wire + 1 | 0]. !store16[@wire + 2 | :shr[@b + 8 | 2]]. !store16[@wire + 4 | @b]. !store16[@wire + 6 | 0].
+   0 -> @i. ?? @i < @b [ !store8[@wire + 8 + @i | :load8[@a + @i]]. @i + 1 -> @i. ]
+   :hostsyscall[44 | @sock | @wire | @b + 8 | 16384 | 0 | 0] -> @c.
+   ? @c != @b + 8 [ 0 -> @running. 1 -> @failed. ]
+   0 -> @n. ?? (@n < 32) * @running [
+    !store32[@e + 240 | @sock]. !store16[@e + 244 | 1]. !store16[@e + 246 | 0].
+    :hostsyscall[7 | @e + 240 | 1 | 3000 | 0 | 0 | 0] -> @c.
+    ? @c != 1 [ 0 -> @running. 1 -> @failed. ] ~ [
+     :hostsyscall[0 | @sock | @wire + @n | 32 - @n | 0 | 0 | 0] -> @c.
+     ? (@c == 0) + (@c > 32 - @n) [ 0 -> @running. 1 -> @failed. ] ~ [ @n + @c -> @n. ]
+    ]
+   ]
+   ? :load8[@wire] != 1 [ 0 -> @running. 1 -> @failed. ]
+   !store64[@e + 304 + @k * 8 | :load32[@wire + 8]]. @k + 1 -> @k.
+  ]
+  ? @running [
+   !store8[@wire | 18]. !store8[@wire + 1 | 0]. !store16[@wire + 2 | 7]. !store32[@wire + 4 | @window]. !store32[@wire + 8 | :load64[@e + 304]].
+   !store32[@wire + 12 | 4]. !store8[@wire + 16 | 32]. !store8[@wire + 17 | 0]. !store16[@wire + 18 | 0]. !store32[@wire + 20 | 1]. !store32[@wire + 24 | :load64[@e + 312]].
+   !store8[@wire + 28 | 8]. !store8[@wire + 29 | 0]. !store16[@wire + 30 | 2]. !store32[@wire + 32 | @window].
+   :hostsyscall[44 | @sock | @wire | 36 | 16384 | 0 | 0] -> @c. ? @c != 36 [ 0 -> @running. 1 -> @failed. ]
+  ]
+  ? @running == 0 [ "Cannot register the X11 window-close protocol." -> @status. ]
+ ]
+ 0 -> @compilebytes.
+]
+# Win32 is a host interface, not a bundled GUI toolkit. STATIC supplies a native
+# top-level message queue; the editor paints its own original pixel canvas.
+? @platform == 2 [
+ :hostlibrary["user32.dll"] -> @a. :hostlibrary["gdi32.dll"] -> @b. :hostlibrary["kernel32.dll"] -> @d.
+ ? (@a == 0) + (@b == 0) + (@d == 0) [ !exit[20]. ]
+ !store64[@api | :hostsymbol[@a | "CreateWindowExA"]].
+ !store64[@api + 8 | :hostsymbol[@a | "PeekMessageA"]].
+ !store64[@api + 16 | :hostsymbol[@a | "TranslateMessage"]].
+ !store64[@api + 24 | :hostsymbol[@a | "DispatchMessageA"]].
+ !store64[@api + 32 | :hostsymbol[@a | "GetDC"]].
+ !store64[@api + 40 | :hostsymbol[@a | "ReleaseDC"]].
+ !store64[@api + 48 | :hostsymbol[@a | "ValidateRect"]].
+ !store64[@api + 56 | :hostsymbol[@a | "DestroyWindow"]].
+ !store64[@api + 64 | :hostsymbol[@a | "GetKeyState"]].
+ !store64[@api + 72 | :hostsymbol[@b | "SetDIBitsToDevice"]].
+ !store64[@api + 80 | :hostsymbol[@a | "LoadCursorA"]].
+ !store64[@api + 88 | :hostsymbol[@a | "SetCursor"]].
+ !store64[@api + 96 | :hostsymbol[@a | "SetForegroundWindow"]].
+ !store64[@api + 104 | :hostsymbol[@a | "SetFocus"]].
+ !store64[@api + 112 | :hostsymbol[@d | "MoveFileExA"]].
+ !store64[@api + 120 | :hostsymbol[@a | "AdjustWindowRectEx"]].
+ 0 -> @i. ?? @i < 128 [ ? :load64[@api + @i] == 0 [ !exit[21]. ] @i + 8 -> @i. ]
+ # Fixed client canvas fits a 1080p desktop. Caption + system menu + minimize.
+ !store32[@e + 3144 | 1280]. !store32[@e + 3148 | 800].
+ :hostcall12[:load64[@api + 120] | @e + 3136 | 0x10ca0000 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0] -> @c.
+ :bitand[:load32[@e + 3144] - :load32[@e + 3136] | 0xffffffff] -> @a.
+ :bitand[:load32[@e + 3148] - :load32[@e + 3140] | 0xffffffff] -> @b.
+ :hostcall12[:load64[@api] | 0 | "STATIC" | "Zero Studio - original Zero editor" | 0x10ca0000 | 30 | 30 | @a | @b | 0 | 0 | 0 | 0] -> @window.
+ ? @window == 0 [ !exit[22]. ]
+ :hostcall12[:load64[@api + 96] | @window | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0] -> @c.
+ :hostcall12[:load64[@api + 104] | @window | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0] -> @c.
+ :hostcall12[:load64[@api + 80] | 0 | 32512 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0] -> @gc.
+ # BITMAPINFOHEADER: 32-bit BGRX, negative height is top-down.
+ !store32[@e + 3072 | 40]. !store32[@e + 3076 | 1280]. !store32[@e + 3080 | -800].
+ !store16[@e + 3084 | 1]. !store16[@e + 3086 | 32].
+]
+?? @running [
+ 0 -> @key. 0 -> @event.
+? @platform == 1 [
+ :load64[@e + 16] -> @n.
+ :hostsyscall[45 | @sock | @message + @n | 32 - @n | 64 | 0 | 0] -> @c.
+ ? @c <= 32 - @n [
+  ? @c == 0 [ 0 -> @running. 1 -> @failed. "X11 display disconnected." -> @status. ] ~ [ @n + @c -> @n. ]
+ ] ~ [ ? (@c != -11) * (@c != -4) [ 0 -> @running. 1 -> @failed. "X11 event read failed." -> @status. ] ]
+ !store64[@e + 16 | @n].
+ ? @n == 32 [
+  !store64[@e + 16 | 0]. :bitand[:load8[@message] | 127] -> @b.
+  ? @b == 0 [ "X11 rejected a drawing request." -> @status. 0 -> @running. 1 -> @failed. ]
+  ? @b == 12 [ 1 -> @dirty. ]
+  ? @b == 17 [ 1004 -> @key. ]
+  ? @b == 33 [ ? :load32[@message + 12] == :load64[@e + 312] [ 1004 -> @key. ] ]
+  ? @b == 4 [
+   :load8[@message + 1] -> @c.
+   ? @c == 1 [ :load16[@message + 24] -> @mousex. :load16[@message + 26] -> @mousey. 2 -> @event. ]
+   ? @c == 4 [ 7 -> @key. ] ? @c == 5 [ 8 -> @key. ]
+  ]
+  ? @b == 2 [
+   :load8[@message + 1] -> @c. :load16[@message + 28] -> @mod.
+   ? (@c >= :load64[@e + 288]) * (@c < :load64[@e + 288] + :load64[@e + 296]) [
+    @keys + (@c - :load64[@e + 288]) * @keycols * 4 -> @a.
+    :load32[@a] -> @c.
+    ? :bitand[@mod | 1] [ ? @keycols > 1 [ :load32[@a + 4] -> @c. ? @c == 0 [ :load32[@a] -> @c. ] ] ]
+    ? :bitand[@mod | 2] [ ? (@c >= 97) * (@c <= 122) [ @c - 32 -> @c. ] ~ [ ? (@c >= 65) * (@c <= 90) [ @c + 32 -> @c. ] ] ]
+    ? (@c >= 32) * (@c <= 126) [ @c -> @key. ]
+    ? @c == 65361 [ 1 -> @key. ] ? @c == 65363 [ 2 -> @key. ] ? @c == 65362 [ 3 -> @key. ] ? @c == 65364 [ 4 -> @key. ]
+    ? @c == 65360 [ 5 -> @key. ] ? @c == 65367 [ 6 -> @key. ] ? @c == 65365 [ 7 -> @key. ] ? @c == 65366 [ 8 -> @key. ]
+    ? @c == 65535 [ 9 -> @key. ] ? @c == 65288 [ 10 -> @key. ] ? @c == 65293 [ 11 -> @key. ] ? @c == 65289 [ 12 -> @key. ]
+    ? @c == 65307 [ 1006 -> @key. ] ? @c == 65474 [ 1003 -> @key. ]
+    ? :bitand[@mod | 4] [
+     0 -> @key. ? (@c == 111) + (@c == 79) [ 1001 -> @key. ] ? (@c == 115) + (@c == 83) [ 1002 -> @key. ] ? (@c == 113) + (@c == 81) [ 1004 -> @key. ]
+    ]
+   ]
+  ]
+ ]
+]
+? @platform == 2 [
+ :hostcall12[:load64[@api + 8] | @message | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0] -> @a.
+ ? @a != 0 [
+  :load32[@message + 8] -> @b. :load64[@message + 16] -> @c.
+  ? @b == 256 [
+   :hostcall12[:load64[@api + 64] | 17 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0] -> @mod.
+   :bitand[@mod | 32768] -> @mod.
+   ? @c == 37 [ 1 -> @key. ] ? @c == 39 [ 2 -> @key. ] ? @c == 38 [ 3 -> @key. ] ? @c == 40 [ 4 -> @key. ]
+   ? @c == 36 [ 5 -> @key. ] ? @c == 35 [ 6 -> @key. ] ? @c == 33 [ 7 -> @key. ] ? @c == 34 [ 8 -> @key. ]
+   ? @c == 46 [ 9 -> @key. ] ? @c == 27 [ 1006 -> @key. ] ? @c == 116 [ 1003 -> @key. ]
+   ? @mod != 0 [
+    ? @c == 79 [ 1001 -> @key. ] ? @c == 83 [ 1002 -> @key. ] ? @c == 81 [ 1004 -> @key. ]
+   ]
+   :hostcall12[:load64[@api + 16] | @message | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0] -> @a.
+  ]
+  ? @b == 258 [
+   ? (@c >= 32) * (@c <= 126) [ @c -> @key. ]
+   ? @c == 8 [ 10 -> @key. ] ? @c == 13 [ 11 -> @key. ] ? @c == 9 [ 12 -> @key. ]
+  ]
+  ? @b == 513 [ :bitand[:load64[@message + 24] | 65535] -> @mousex. :bitand[:shr[:load64[@message + 24] | 16] | 65535] -> @mousey. 2 -> @event. ]
+  ? @b == 15 [ 1 -> @dirty. ]
+  ? @b == 32 [ :hostcall12[:load64[@api + 88] | @gc | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0] -> @a. ]
+  ? (@b == 16) + (@b == 18) [ 1004 -> @key. ]
+  ? (@b != 16) * (@b != 18) * (@b != 15) * (@b != 32) * (@b != 256) * (@b != 258) [
+   :hostcall12[:load64[@api + 24] | @message | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0] -> @a.
+  ]
+ ]
+]
+# Portable editor commands. Key values 1..12 are navigation; printable bytes insert.
+? @key != 0 [
+ 1 -> @dirty.
+ ? @key == 1004 [
+  ? @changed * (@quit == 0) [ "Unsaved changes. Ctrl+Q again discards them; Ctrl+S saves." -> @status. 1 -> @quit. ] ~ [ 0 -> @running. ]
+ ] ~ [ 0 -> @quit. ]
+ ? @key == 1006 [ 0 -> @mode. "Cancelled." -> @status. ]
+ ? @key == 1001 [
+  ? @changed [ "Save your changes before opening another file." -> @status. ] ~ [ 1 -> @mode. 0 -> @plen. !store8[@prompt | 0]. "Open path: type a file name, then Enter. Escape cancels." -> @status. ]
+ ]
+ ? @key == 1002 [
+  2 -> @mode. 0 -> @plen.
+  ?? :load8[@path + @plen] [ !store8[@prompt + @plen | :load8[@path + @plen]]. @plen + 1 -> @plen. ]
+  !store8[@prompt + @plen | 0]. "Save path: Enter writes atomically. Escape cancels." -> @status.
+ ]
+ ? @key == 1003 [ ? @mode == 0 [ 3 -> @phase. ] ]
+ ? @mode != 0 [
+  ? (@key >= 32) * (@key <= 126) * (@plen < 500) [ !store8[@prompt + @plen | @key]. @plen + 1 -> @plen. !store8[@prompt + @plen | 0]. ]
+  ? (@key == 10) * (@plen > 0) [ @plen - 1 -> @plen. !store8[@prompt + @plen | 0]. ]
+  ? (@key == 11) * (@plen > 0) [ @mode -> @phase. ]
+ ] ~ [
+  ? (@key == 1) * (@caret > 0) [ @caret - 1 -> @caret. ]
+  ? (@key == 2) * (@caret < @length) [ @caret + 1 -> @caret. ]
+  ? (@key == 5) + (@key == 6) + (@key == 3) + (@key == 4) [
+   @caret -> @a.
+   ?? (@a > 0) * (:load8[@text + @a - (@a > 0)] != 10) [ @a - 1 -> @a. ]
+   @caret - @a -> @col.
+   ? @key == 5 [ @a -> @caret. ]
+   ? @key == 6 [ ?? (@caret < @length) * (:load8[@text + @caret] != 10) [ @caret + 1 -> @caret. ] ]
+   ? (@key == 3) * (@a > 0) [
+    @a - 1 -> @b. @b -> @a.
+    ?? (@a > 0) * (:load8[@text + @a - (@a > 0)] != 10) [ @a - 1 -> @a. ]
+    @a + @col -> @caret. ? @caret > @b [ @b -> @caret. ]
+   ]
+   ? @key == 4 [
+    @caret -> @b. ?? (@b < @length) * (:load8[@text + @b] != 10) [ @b + 1 -> @b. ]
+    ? @b < @length [ @b + 1 -> @a. @a -> @b. ?? (@b < @length) * (:load8[@text + @b] != 10) [ @b + 1 -> @b. ] @a + @col -> @caret. ? @caret > @b [ @b -> @caret. ] ]
+   ]
+  ]
+  ? (@key == 7) + (@key == 8) [
+   ? @key == 7 [ ? @caret > 1024 [ @caret - 1024 -> @caret. ] ~ [ 0 -> @caret. ] ]
+   ? @key == 8 [ @caret + 1024 -> @caret. ? @caret > @length [ @length -> @caret. ] ]
+  ]
+  ? (@key == 10) * (@caret > 0) [ @caret - 1 -> @caret. 9 -> @key. ]
+  ? (@key == 9) * (@caret < @length) [
+   @caret -> @i. ?? @i < @length [ !store8[@text + @i | :load8[@text + @i + 1]]. @i + 1 -> @i. ]
+   @length - 1 -> @length. 1 -> @changed.
+  ]
+  0 -> @c.
+  ? (@key >= 32) * (@key <= 126) [ @key -> @c. ]
+  ? @key == 11 [ 10 -> @c. ]
+  ? @key == 12 [ 9 -> @c. ]
+  ? @c != 0 [
+   ? @length >= 65535 [ "Source limit: 65535 bytes. Save before continuing." -> @status. ] ~ [
+    @length -> @i. ?? @i > @caret [ !store8[@text + @i | :load8[@text + @i - 1]]. @i - 1 -> @i. ]
+    !store8[@text + @caret | @c]. @caret + 1 -> @caret. @length + 1 -> @length. !store8[@text + @length | 0]. 1 -> @changed.
+   ]
+  ]
+ ]
+]
+# Mouse coordinates refer to text cells. Scan the current visual page, respecting wraps.
+? @event == 2 [
+ ? (@mousex >= 72) * (@mousex < 1250) * (@mousey >= 102) * (@mousey < 714) * (@mode == 0) [
+  @top -> @i. 0 -> @row. 0 -> @col. 1 -> @a.
+  ?? (@i < @length) * @a [
+   ? ((102 + @row * 18 + 18) > @mousey) * ((72 + @col * 12 + 12) > @mousex) [ 0 -> @a. ] ~ [
+    :load8[@text + @i] -> @c.
+    ? @c == 10 [ ? 102 + @row * 18 + 18 > @mousey [ 0 -> @a. ] ~ [ @row + 1 -> @row. 0 -> @col. @i + 1 -> @i. ] ] ~ [
+     @col + 1 -> @col. ? @c == 9 [ @col + 3 -> @col. ]
+     ? @col >= 98 [ @row + 1 -> @row. 0 -> @col. ] @i + 1 -> @i.
+    ]
+   ]
+  ]
+  @i -> @caret. 1 -> @dirty.
+ ]
+]
+# Open validates before replacing the active document. Save uses a new sibling
+# temporary file, sync, then an atomic native replace. Existing temporary files stay.
+? @phase == 1 [
+ :fileopen[@prompt | 0] -> @fd. 0 -> @n. 0 -> @a.
+ ? @fd == -1 [ "Cannot open this file; the current document is unchanged." -> @status. 1 -> @a. ]
+ ? @a == 0 [
+  :filesize[@fd] -> @b. ? @b > 65535 [ "File exceeds the 65535-byte editor limit." -> @status. 1 -> @a. ]
+ ]
+ ?? (@n < @b) * (@a == 0) [
+  :fileread[@fd | @e + 196608 + @n | @b - @n] -> @c.
+  ? (@c == 0) + (@c > @b - @n) [ "Cannot finish reading; document unchanged." -> @status. 1 -> @a. ] ~ [ @n + @c -> @n. ]
+ ]
+ ? @fd != -1 [ :fileclose[@fd] -> @c. -1 -> @fd. ]
+ ? @a == 0 [
+  0 -> @i. ?? @i < @n [
+   :load8[@e + 196608 + @i] -> @c.
+   ? ((@c < 32) * (@c != 9) * (@c != 10) * (@c != 13)) + (@c > 126) [ 1 -> @a. "This version edits ASCII source only; file unchanged." -> @status. ]
+   @i + 1 -> @i.
+  ]
+ ]
+ ? @a == 0 [
+  0 -> @i. 0 -> @j. 0 -> @d.
+  ?? @i < @n [
+   :load8[@e + 196608 + @i] -> @c. @i + 1 -> @i.
+   ? @c == 13 [ 10 -> @c. 1 -> @d. ? (@i < @n) * (:load8[@e + 196608 + @i] == 10) [ @i + 1 -> @i. ] ]
+   !store8[@text + @j | @c]. @j + 1 -> @j.
+  ]
+  !store8[@text + @j | 0]. @j -> @length. 0 -> @caret. 0 -> @top. 0 -> @changed. 0 -> @mode.
+  0 -> @i. ?? @i <= @plen [ !store8[@path + @i | :load8[@prompt + @i]]. @i + 1 -> @i. ]
+  "Opened. F5 builds the buffer with the original Zero compiler." -> @status.
+  ? @d [ "Opened. CRLF/CR converted to LF in the buffer; disk is unchanged." -> @status. ]
+ ]
+ 0 -> @phase. 1 -> @dirty.
+]
+? @phase == 2 [
+ 0 -> @a. 0 -> @n. @e + 1536 -> @b.
+ 0 -> @i. ?? @i < @plen [ !store8[@b + @i | :load8[@prompt + @i]]. @i + 1 -> @i. ]
+ ".zero-save" -> @d. 0 -> @j. ?? :load8[@d + @j] [ !store8[@b + @i | :load8[@d + @j]]. @i + 1 -> @i. @j + 1 -> @j. ] !store8[@b + @i | 0].
+ :fileopen[@b | 1] -> @fd.
+ ? @fd == -1 [ "Cannot create save temporary; destination stays unchanged." -> @status. 1 -> @a. ]
+ ?? (@n < @length) * (@a == 0) [
+  :filewrite[@fd | @text + @n | @length - @n] -> @c.
+  ? (@c == 0) + (@c > @length - @n) [ 1 -> @a. ] ~ [ @n + @c -> @n. ]
+ ]
+ ? @fd != -1 [
+  ? :filesync[@fd] != 0 [ 1 -> @a. ]
+  ? :fileclose[@fd] != 0 [ 1 -> @a. ] -1 -> @fd.
+  ? @a == 0 [
+   ? @platform == 1 [ :hostsyscall[316 | -100 | @b | -100 | @prompt | 0 | 0] -> @c. ]
+   ? @platform == 2 [ :hostcall12[:load64[@api + 112] | @b | @prompt | 9 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0] -> @c. ? @c != 0 [ 0 -> @c. ] ~ [ 1 -> @c. ] ]
+   ? @c != 0 [ 1 -> @a. ]
+  ]
+  ? @a != 0 [ :filedelete[@b] -> @c. "Save failed; original destination is preserved." -> @status. ] ~ [
+   0 -> @changed. 0 -> @mode. 0 -> @quit. "Saved atomically." -> @status.
+   0 -> @i. ?? @i <= @plen [ !store8[@path + @i | :load8[@prompt + @i]]. @i + 1 -> @i. ]
+  ]
+ ]
+ 0 -> @phase. 1 -> @dirty.
+]
+# In-process Zero/Ezero compilation using original ZEROAPP1 companions.
+# Work offsets mirror the native compiler command; no process launch.
+? @phase == 3 [
+ 0 -> @a. 0 -> @compilebytes.
+ ? @code == 0 [ :hostalloc[1048576] -> @code. ]
+ ? @work == 0 [ :hostalloc[8388608] -> @work. ]
+ ? (@code == 0) + (@work == 0) [ 1 -> @a. "Cannot allocate compiler workspace." -> @status. ]
+ ? :load8[@path] == 0 [ 1 -> @a. "Save this source file before building." -> @status. ]
+ :load64[@e + 320] -> @b.
+ ? @b == 0 [ 1 -> @a. "Cannot locate the editor executable and compiler companions." -> @status. ]
+ ? @a == 0 [
+  0 -> @i. 0 -> @j.
+  ?? (:load8[@b + @i] != 0) * (@i < 4000) [
+   !store8[@e + 300000 + @i | :load8[@b + @i]].
+   ? (:load8[@b + @i] == 47) + (:load8[@b + @i] == 92) [ @i + 1 -> @j. ] @i + 1 -> @i.
+  ]
+  !store64[@e + 360 | @j].
+  0 -> @i. ?? :load8[@path + @i] [ @i + 1 -> @i. ]
+  !store64[@e + 352 | 0]. !store64[@e + 368 | 5].
+  ? @i >= 6 [
+   ".ezero" -> @b. 0 -> @j. 1 -> @c.
+   ?? @j < 6 [ ? :load8[@path + @i - 6 + @j] != :load8[@b + @j] [ 0 -> @c. ] @j + 1 -> @j. ]
+   ? @c [ !store64[@e + 352 | 1]. !store64[@e + 368 | 1]. ]
+  ]
+  0 -> @i. ?? @i < @length [ !store8[@work + 4096 + @i | :load8[@text + @i]]. @i + 1 -> @i. ]
+ ]
+ ?? (@a == 0) * (:load64[@e + 368] <= 5) [
+  :load64[@e + 368] -> @k. "lib/zero64.app" -> @b. @code -> @d. 1048576 -> @target.
+  ? @k == 1 [ "lib/frontend64.app" -> @b. ]
+  ? @k == 2 [ "lib/pack64.app" -> @b. ]
+  ? @k == 3 [ "lib/runtime-prefix.zero.part" -> @b. @work + 589824 -> @d. 4095 -> @target. ]
+  ? @k == 4 [ "lib/runtime.zero.part" -> @b. @work + 589824 + :load64[@e + 392] -> @d. 262144 - :load64[@e + 392] -> @target. ]
+  :load64[@e + 360] -> @j. 0 -> @i.
+  ?? :load8[@b + @i] [ !store8[@e + 300000 + @j + @i | :load8[@b + @i]]. @i + 1 -> @i. ] !store8[@e + 300000 + @j + @i | 0].
+  ? (@k < 3) + (@k == 5) [ ? :hostprotect[@code | 1048576 | 0] != 0 [ 1 -> @a. "Cannot prepare original compiler memory." -> @status. ] ]
+  ? @a == 0 [
+   :fileopen[@e + 300000 | 0] -> @fd.
+   ? @fd == -1 [ 1 -> @a. "Missing compiler companion in lib/ beside Zero Studio." -> @status. ]
+  ]
+  ? @a == 0 [
+   :filesize[@fd] -> @b. 0 -> @n.
+   ? @b > @target [ 1 -> @a. "Compiler companion exceeds its size limit." -> @status. ]
+   ?? (@n < @b) * (@a == 0) [
+    :fileread[@fd | @d + @n | @b - @n] -> @c. ? (@c == 0) + (@c > @b - @n) [ 1 -> @a. "Cannot read compiler companion." -> @status. ] ~ [ @n + @c -> @n. ]
+   ]
+  ]
+  ? @fd != -1 [ :fileclose[@fd] -> @c. -1 -> @fd. ]
+  ? (@a == 0) * ((@k < 3) + (@k == 5)) [
+   ? (@b <= 64) + (:load64[@code] != 0x315050414f52455a) + (:load64[@code + 8] != 64) + (:load64[@code + 16] != @b) + (:load64[@code + 24] != 64) + (:load64[@code + 32] != 4198400) + (:load64[@code + 40] != 1) + (:load64[@code + 48] != 0) + (:load64[@code + 56] != 0) [ 1 -> @a. "Invalid original compiler application header." -> @status. ]
+  ]
+  ? @a == 0 [
+   ? @k == 3 [
+    ? @n + :load64[@e + 384] > 262144 [ 1 -> @a. "Generated Ezero source exceeds its bound." -> @status. ] ~ [
+     0 -> @i. ?? @i < :load64[@e + 384] [ !store8[@work + 589824 + @n + @i | :load8[@work + 393216 + @i]]. @i + 1 -> @i. ]
+     !store64[@e + 392 | @n + :load64[@e + 384]].
+    ]
+   ] ~ [
+    ? @k == 4 [ !store64[@e + 392 | :load64[@e + 392] + @n]. ] ~ [
+     0 -> @i. ?? @i < 192 [ !store64[@work + @i | 0]. @i + 8 -> @i. ]
+     !store64[@work | 1]. !store64[@work + 8 | @work + 8388608]. !store64[@work + 16 | @work + 4096]. !store64[@work + 24 | @length].
+     !store64[@work + 40 | @work + 270336]. !store64[@work + 48 | 70000]. !store64[@work + 64 | 1]. !store64[@work + 72 | "zero-studio"].
+     ? @k == 2 [
+      !store64[@work + 16 | @work + 270336]. !store64[@work + 24 | :load64[@e + 376]]. !store64[@work + 40 | @work + 393216]. !store64[@work + 48 | 196608].
+     ]
+     ? @k == 5 [
+      !store64[@work + 40 | @work + 1048576]. !store64[@work + 48 | 524288]. !store64[@work + 64 | 2].
+      "--host" -> @target. ? @platform == 2 [ "--windows" -> @target. ] !store64[@work + 80 | @target].
+      ? :load64[@e + 352] [ !store64[@work + 16 | @work + 589824]. !store64[@work + 24 | :load64[@e + 392]]. ]
+     ]
+     !store64[@work + 168 | @work + 2097152]. !store64[@work + 176 | 6291456].
+     ? :hostprotect[@code | 1048576 | 1] != 0 [ 1 -> @a. "Cannot protect original compiler image." -> @status. ] ~ [
+      :call[@code + 64 | @work | 0 | 0 | 0 | 0] -> @c. :load64[@work + 56] -> @n.
+      ? (@n > :load64[@work + 48]) + (:load64[@work + 32] > :load64[@work + 24]) [ 1 -> @a. "Compiler exceeded its context boundary." -> @status. ]
+      ? (@c != 0) + (:load64[@work + 88] != 0) [
+       1 -> @a. "Zero syntax error. Source unchanged; no executable created." -> @status.
+       ? (@k == 1) * (@n <= 70000) [
+        0 -> @i. ?? (@i < @n) * (@i < 99) [ :load8[@work + 270336 + @i] -> @c. ? (@c < 32) + (@c > 126) [ 32 -> @c. ] !store8[@e + 500000 + @i | @c]. @i + 1 -> @i. ]
+        !store8[@e + 500000 + @i | 0]. @e + 500000 -> @status.
+       ]
+      ]
+      ? @a == 0 [
+       ? @k == 1 [ !store64[@e + 376 | @n]. ]
+       ? @k == 2 [ !store64[@e + 384 | @n]. ]
+       ? @k == 5 [ @n -> @compilebytes. ? @n == 0 [ 1 -> @a. "Compiler produced no executable." -> @status. ] ]
+      ]
+     ]
+    ]
+   ]
+  ]
+  !store64[@e + 368 | @k + 1].
+ ]
+ ? @a == 0 [
+  @e + 300000 -> @b. 0 -> @i. ?? :load8[@path + @i] [ !store8[@b + @i | :load8[@path + @i]]. @i + 1 -> @i. ]
+  ".zrun" -> @d. ? @platform == 2 [ ".zrun.exe" -> @d. ] 0 -> @j. ?? :load8[@d + @j] [ !store8[@b + @i | :load8[@d + @j]]. @i + 1 -> @i. @j + 1 -> @j. ] !store8[@b + @i | 0].
+  # Create an executable temporary sibling, then atomically publish a successful
+  # build. A failed compilation or write leaves the last executable untouched.
+  0 -> @i. ?? :load8[@b + @i] [ !store8[@e + 305000 + @i | :load8[@b + @i]]. @i + 1 -> @i. ]
+  ".zero-build" -> @d. 0 -> @j. ?? :load8[@d + @j] [ !store8[@e + 305000 + @i | :load8[@d + @j]]. @i + 1 -> @i. @j + 1 -> @j. ] !store8[@e + 305000 + @i | 0].
+  :fileopen[@e + 305000 | 4] -> @fd. ? @fd == -1 [ 1 -> @a. "Cannot create build temporary; existing files are preserved." -> @status. ] ~ [
+   0 -> @n. ?? (@n < @compilebytes) * (@a == 0) [
+    :filewrite[@fd | @work + 1048576 + @n | @compilebytes - @n] -> @c.
+    ? (@c == 0) + (@c > @compilebytes - @n) [ 1 -> @a. ] ~ [ @n + @c -> @n. ]
+   ]
+   ? :filesync[@fd] != 0 [ 1 -> @a. ] ? :fileclose[@fd] != 0 [ 1 -> @a. ] -1 -> @fd.
+   ? @a == 0 [
+    ? @platform == 1 [ :hostsyscall[316 | -100 | @e + 305000 | -100 | @b | 0 | 0] -> @c. ]
+    ? @platform == 2 [ :hostcall12[:load64[@api + 112] | @e + 305000 | @b | 9 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0] -> @c. ? @c [ 0 -> @c. ] ~ [ 1 -> @c. ] ]
+    ? @c != 0 [ 1 -> @a. ]
+   ]
+   ? @a != 0 [ :filedelete[@e + 305000] -> @c. "Cannot publish build; previous executable is preserved." -> @status. ] ~ [ "Built source.zrun beside the source; F5 rebuilds it atomically." -> @status. ]
+  ]
+ ]
+ 0 -> @phase. 1 -> @dirty.
+]
+? @dirty [
+# Character grid, original 5x7 glyphs, 2x scale. No imported font or assets.
+@e + 262144 -> @render.
+0 -> @i. ?? @i < 4664 [ !store8[@render + @i | 32]. @i + 1 -> @i. ]
+# Keep caret in the visible page. Long source lines wrap at 98 columns.
+? @caret < @top [ @caret -> @top. ]
+@top -> @i. 0 -> @row. 0 -> @col.
+?? @i < @caret [
+ :load8[@text + @i] -> @c.
+ ? @c == 10 [ @row + 1 -> @row. 0 -> @col. ] ~ [ @col + 1 -> @col. ? @c == 9 [ @col + 3 -> @col. ] ? @col >= 98 [ @row + 1 -> @row. 0 -> @col. ] ]
+ @i + 1 -> @i.
+]
+? @row >= 34 [
+ @caret -> @top. 0 -> @i.
+ ?? (@top > 0) * (:load8[@text + @top - (@top > 0)] != 10) * (@i < 97) [ @top - 1 -> @top. @i + 1 -> @i. ]
+]
+@top -> @i. 6 -> @row. 6 -> @col.
+!store64[@e + 200 | 0]. !store64[@e + 208 | 0].
+?? (@i <= @length) * (@row < 40) [
+ ? @i == @caret [ !store64[@e + 200 | @col]. !store64[@e + 208 | @row]. ]
+ ? @i < @length [
+  :load8[@text + @i] -> @c.
+  ? @c == 10 [ @row + 1 -> @row. 6 -> @col. ] ~ [
+   ? @c == 9 [ @col + 4 -> @col. ] ~ [
+    ? @c != 13 [ !store8[@render + @row * 106 + @col | @c]. @col + 1 -> @col. ]
+   ]
+   ? @col >= 104 [ @row + 1 -> @row. 6 -> @col. ]
+  ]
+ ]
+ @i + 1 -> @i.
+]
+# Labels share the same bounded glyph renderer.
+0 -> @k.
+?? @k < 5 [
+ "ZERO STUDIO    /    ZERO + EZERO" -> @a. 108 -> @b.
+ ? @k == 1 [ @path -> @a. ? :load8[@path] == 0 [ "Untitled.zero" -> @a. ] 320 -> @b. ]
+ ? @k == 2 [ @status -> @a. 4348 -> @b. ]
+ ? @k == 3 [ "Ctrl+O  OPEN    Ctrl+S  SAVE    F5  BUILD    Ctrl+Q  QUIT" -> @a. 4454 -> @b. ]
+ ? @k == 4 [
+  "SOURCE   |   1-based cursor   |   ASCII / 65535 bytes" -> @a. 426 -> @b.
+  ? @mode != 0 [ @prompt -> @a. 4454 -> @b. ]
+ ]
+ 0 -> @i. ?? (:load8[@a + @i] != 0) * (@i < 100) [ !store8[@render + @b + @i | :load8[@a + @i]]. @i + 1 -> @i. ]
+ @k + 1 -> @k.
+]
+? @changed [ !store8[@render + 318 | 42]. ]
+# One-based caret line and column rendered in the header without division.
+1 -> @a. 1 -> @b. 0 -> @i.
+?? @i < @caret [ ? :load8[@text + @i] == 10 [ @a + 1 -> @a. 1 -> @b. ] ~ [ @b + 1 -> @b. ] @i + 1 -> @i. ]
+"LINE " -> @d. 0 -> @i. ?? @i < 5 [ !store8[@render + 390 + @i | :load8[@d + @i]]. @i + 1 -> @i. ]
+0 -> @k. ?? @k < 2 [
+ 10000 -> @d. 395 -> @j. ? @k == 1 [ @b -> @a. 402 -> @j. ]
+ 0 -> @i. ?? @i < 5 [
+  0 -> @n. ?? @a >= @d [ @a - @d -> @a. @n + 1 -> @n. ] !store8[@render + @j + @i | @n + 48].
+  ? @i == 0 [ 1000 -> @d. ] ? @i == 1 [ 100 -> @d. ] ? @i == 2 [ 10 -> @d. ] ? @i == 3 [ 1 -> @d. ] @i + 1 -> @i.
+ ] @k + 1 -> @k.
+]
+!store8[@render + 401 | 58].
+# Dark canvas and header/footer bands. Pixel format is native little-endian BGRX.
+0 -> @y. ?? @y < 800 [
+ 0x141824 -> @color. ? @y < 90 [ 0x20283a -> @color. ] ? @y >= 726 [ 0x20283a -> @color. ]
+ @color + @color * 4294967296 -> @a. 0 -> @x.
+ ?? @x < 1280 [ !store64[@pixels + (@y * 1280 + @x) * 4 | @a]. @x + 2 -> @x. ] @y + 1 -> @y.
+]
+0 -> @row. ?? @row < 44 [
+ 0 -> @col. ?? @col < 106 [
+  :load8[@render + @row * 106 + @col] -> @c.
+  ? (@c >= 33) * (@c <= 126) [
+   0xd9e4f0 -> @color. ? @row < 5 [ 0x68dfc7 -> @color. ] ? @row >= 41 [ 0xa9bdd5 -> @color. ]
+   ? (@row >= 6) * (@row < 40) * (@c >= 48) * (@c <= 57) [ 0xf1bf73 -> @color. ]
+   0 -> @y. ?? @y < 7 [
+    :load8[@font + (@c - 32) * 7 + @y] - 48 -> @bits. 0 -> @x.
+    ?? @x < 5 [
+     ? :bitand[:shr[@bits | 4 - @x] | 1] [
+      @pixels + ((@row * 18 + @y * 2 + 2) * 1280 + @col * 12 + @x * 2 + 2) * 4 -> @a.
+      @color + @color * 4294967296 -> @b. !store64[@a | @b]. !store64[@a + 5120 | @b].
+     ] @x + 1 -> @x.
+    ] @y + 1 -> @y.
+   ]
+  ] @col + 1 -> @col.
+ ] @row + 1 -> @row.
+]
+# A visible insertion caret, separate from the native pointer cursor.
+:load64[@e + 200] -> @col. :load64[@e + 208] -> @row.
+? @mode != 0 [ 42 -> @row. @plen + 2 -> @col. ? @col > 103 [ 103 -> @col. ] ]
+? @row != 0 [
+ 0 -> @y. ?? @y < 16 [ !store64[@pixels + ((@row * 18 + @y + 1) * 1280 + @col * 12) * 4 | 0x0075e5cb0075e5cb]. @y + 1 -> @y. ]
+]
+? @platform == 1 [
+ 0 -> @y. ?? (@y < 800) * @running [
+  48 -> @row. ? @row > 800 - @y [ 800 - @y -> @row. ]
+  @row * 5120 -> @target.
+  !store8[@wire | 72]. !store8[@wire + 1 | 2]. !store16[@wire + 2 | :shr[@target + 24 | 2]].
+  !store32[@wire + 4 | @window]. !store32[@wire + 8 | @gc]. !store16[@wire + 12 | 1280]. !store16[@wire + 14 | @row].
+  !store16[@wire + 16 | 0]. !store16[@wire + 18 | @y]. !store8[@wire + 20 | 0]. !store8[@wire + 21 | @depth]. !store16[@wire + 22 | 0].
+  0 -> @i. ?? @i < @target [ !store64[@wire + 24 + @i | :load64[@pixels + @y * 5120 + @i]]. @i + 8 -> @i. ]
+  @target + 24 -> @target. 0 -> @n.
+  ?? (@n < @target) * @running [
+   :hostsyscall[44 | @sock | @wire + @n | @target - @n | 16384 | 0 | 0] -> @c.
+   ? (@c == 0) + (@c > @target - @n) [ 0 -> @running. 1 -> @failed. "X11 presentation failed." -> @status. ] ~ [ @n + @c -> @n. ]
+  ] @y + @row -> @y.
+ ]
+]
+? @platform == 2 [
+ :hostcall12[:load64[@api + 32] | @window | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0] -> @a.
+ ? @a != 0 [
+  :hostcall12[:load64[@api + 72] | @a | 0 | 0 | 1280 | 800 | 0 | 0 | 0 | 800 | @pixels | @e + 3072 | 0] -> @b.
+  :hostcall12[:load64[@api + 40] | @window | @a | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0] -> @b.
+ ]
+ :hostcall12[:load64[@api + 48] | @window | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0] -> @b.
+]
+ 0 -> @dirty.
+]
+:hostwait[10] -> @a.
+]
+? @platform == 1 [ ? @sock <= 2147483647 [ :hostsyscall[3 | @sock | 0 | 0 | 0 | 0 | 0] -> @a. ] ]
+? @platform == 2 [ :hostcall12[:load64[@api + 56] | @window | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0] -> @a. ]
+0 -> @i. ?? :load8[@status + @i] [ !put[:load8[@status + @i]]. @i + 1 -> @i. ] !put[10].
+!exit[@failed].

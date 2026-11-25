@@ -1,0 +1,75 @@
+ZTEXT00100001002a490240d0000000
+ZERO BOOTABLE DISK AND MENU VERIFICATION
+2026-11-20
+
+Final payload:18874368 bytes.
+SHA256:006703b31f8d9a3a3302066da43fce2c07551eba4f87f4bb935165453d75eec6
+Reference artifacts:/tmp/zero-support/validation-0.14/build-release/
+
+The source-authored Zero native builder produced a new MBR/ESP disk payload
+directly from original project artifacts. No ISO was read, renamed or attached
+during these boot tests. Linux and Windows native builds use media/disk.zero.
+Windows was executed under Wine; its full final output matches Linux byte
+for byte, including the menus, firmware writers and current compiler bundle.
+
+FINAL EXACT-PAYLOAD CHECKS:97 PASS
+
+ACTUAL USB BOOT CHECKS:58
+BIOS x64:15 checks. BIOS IA32:15 checks.
+UEFI x64:14 checks. UEFI IA32:14 checks.
+Each VM used QEMU xHCI plus USB mass storage, no CD or ISO drive. BIOS used
+SeaBIOS; EFI used architecture-matching OVMF. Tests reached an interactive
+terminal, ran info/help/write, formatted only a new private ATA data fixture,
+saved/read a file, ran both bundled Zero and Ezero compilers and outputs,
+then stopped and started a fresh VM and verified persistent fixture content.
+BIOS tests additionally checked the CPU-selected kernel architecture.
+The USB boot medium remained unchanged. All test VMs were stopped afterward.
+
+INTEGRATED UEFI MENU CHECKS:6
+Three named checks for x64 and three for IA32:
+1 The new menu appears from the USB removable-media startup path.
+2 Selecting2 starts the actual bundled Zero Flash firmware application;
+  absent source media produces its controlled missing-source result.
+3 Enter returns to our menu, then1 starts Zero OS and the terminal works.
+The firmware shell is not required. The writer's actual raw-disk write and
+source-selection checks are reported in its separate verification document.
+
+INDEPENDENT STRUCTURAL AND FAILURE CHECKS:33
+Twenty-nine checks validate the MBR, ESP, FAT16 chains, original kernel/tool
+slots, menu/writer aliases and their byte-for-byte source artifacts, and
+reject malformed, truncated, wrong-architecture or oversized inputs.
+Header-only truncation is tested for all six EFI artifacts. Existing output
+files are preserved. Four additional regressions verify the linked-bootstrap
+bound:946-byte input ends its jump at439 and is accepted;947 and952 bytes are
+rejected. A concurrent append after readback begins is detected with exit74.
+The failed new output is retained with an inspection diagnostic; no pathname
+unlink is attempted after closing a handle, avoiding replacement-file deletion.
+
+REVIEW FIXES INCLUDED IN THE FINAL CHECKED SOURCES
+The bootstrap size bound protects the MBR disk signature at440. Readback
+checks EOF and final size after comparing all expected bytes. Each EFI raw
+section must fit its actual input file before slot padding. Failed outputs
+are retained rather than unlinked by a potentially replaced pathname.
+The menu invokes StartImage on a separately allocated1MiB continuation stack.
+This fixed IA32 firmware corruption caused by nesting two64KiB Zero arenas
+on the small firmware-provided stack. Both application return and OS startup
+were rechecked after that fix on both UEFI architectures.
+
+Original user data remained unchanged:
+data/storage.zdrive:
+c730241fb30f5516867c751006951a2878f360319195ee975411a05f040f27e8
+Preserved user-data/data.vdi:
+7f58fb36c934405757da797ca65f2dddef3858e69107f43e2cae59d14c89bc5f
+
+Evidence directory outside delivered source:
+/tmp/zero-support/validation-0.14/media-boot/
+vm/{bios64,bios32,uefi64,uefi32}-usb-final/result.txt
+vm/{uefi64,uefi32}-usb-menu-final/menu-result.txt and corresponding transcripts
+review-final/result.txt and review-final/hardening-result.txt
+final-windows-disk.raw is the byte-identical Windows/Wine output.
+
+Limits:these checks use emulated USB controllers/devices and Windows Wine.
+They do not establish physical-flash endurance, hardware compatibility,
+VirtualBox behavior, native-Windows device writing, Secure Boot trust, or
+runtime USB storage support in the current Zero kernel. The flash utility
+runs in the Zero boot environment using firmware services before the OS.

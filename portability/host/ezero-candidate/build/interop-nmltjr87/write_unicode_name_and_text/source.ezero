@@ -1,0 +1,1 @@
+writefile(arguments()[1] | Привет 🌍) => show

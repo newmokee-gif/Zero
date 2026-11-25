@@ -1,0 +1,117 @@
+ZTEXT001000017acb70a27c10000000
+ZERO BROWSER READER 0.13
+
+This original Zero module is a bounded text reader for HTML and plain text. It
+does not include Chromium code or another browser engine. External HTML is input
+for interoperability; the reader produces our own ZBROW001 document format.
+
+Current operation
+
+The reader accepts at most 65536 input bytes. The complete input must be strict
+UTF-8: overlong sequences, surrogate encodings, values above U+10FFFF and truncated
+sequences fail before parsing. HTML tags are compared without ASCII case.
+The engine recognizes headings, paragraphs, divisions, line breaks, lists,
+preformatted text, block containers, simple table rows/cells, title and links.
+Comments and script/style contents are suppressed. The head is hidden except
+for its title. Script code, forms, styles and media are never executed.
+
+Normal text whitespace is collapsed. Preformatted text preserves spaces and
+line breaks; tabs become a single space. C0 and C1 control characters are
+sanitized. The text hard-wraps at the requested number of Unicode scalar values
+per line. This is not Unicode shaping, word wrapping, display-width calculation,
+or a guarantee that the operating-system font contains those glyphs.
+
+Entities supported are lt, gt, amp, quot, apos and nbsp with a semicolon, plus
+decimal and hexadecimal numeric references. Numeric zero and surrogates become
+U+FFFD. Unknown or invalid references are kept literally and flagged.
+
+Anchors accept quoted and unquoted href values and ASCII-insensitive attribute
+names. The first href attribute wins. Ampersand query separators written as
+amp entities are decoded. An empty, control-containing, whitespace-containing
+or overlong href is not added. The maximum is 32 links, numbered from 1.
+Labels and title are limited to 127 bytes without writing partial UTF-8 scalars;
+href is limited to 255 bytes. Active links receive a visible [N] marker.
+URL resolution and allowed schemes belong to the caller, not this parser.
+
+Command line
+
+zero-browser-reader reads HTML from standard input and writes one binary
+ZBROW001 document to standard output. --plain keeps literal angle brackets,
+ampersands and text line breaks, with the same UTF-8 and size checks. The default
+wrapper width is 78. No diagnostics are mixed into the binary output.
+Exit 64 means an unknown argument; 65 means invalid input; 28 means text output
+capacity exceeded; 74 means a read/write failure. Errors write no document.
+
+Memory API
+
+html-declarations.zero.part plus html.zero.part define the memory-only reader.
+Inputs: h_input, h_length, h_output, h_capacity, h_width, h_title, h_links,
+h_scratch and h_plain (0 for HTML, nonzero for plain text).
+Outputs: h_written, h_linkcount, h_error and h_flags.
+The caller owns valid, disjoint buffers and may invoke the module repeatedly.
+Input length is 0..65536; output capacity is 1..32768 including its final NUL;
+width is 20..160. Title is 128 bytes, links are 16384 bytes, scratch is 512 bytes.
+The input is never modified. On error counts are reset and text/title start
+with NUL. Any partial link or scratch content must be discarded on error.
+This is a memory-safe bounded parser within the caller's valid-buffer contract,
+not a general pointer-validation or sandbox mechanism.
+
+ZBROW001 document
+
+All integer fields are unsigned little-endian 64-bit values.
+0: eight ASCII bytes ZBROW001
+8: version 1
+16: text byte length, at most 32767
+24: link count, at most 32
+32: flags
+40: error, always 0 in a serialized successful document
+48: width, currently 78
+56: reserved zero
+64: title, 128 bytes, NUL terminated
+192: 32 link records, 512 bytes each
+16576: UTF-8 text bytes
+The serialized length is exactly 16576 plus text length. The final text NUL is
+private working memory and is not serialized. A caller using string APIs must
+provide one additional byte and append its own NUL after validation.
+Each link record has href at 0 for 256 bytes; label at 256 for 128 bytes;
+label byte length at 384; remaining bytes reserved zero. Unused records are zero.
+
+Flags
+
+1: script encountered
+2: style encountered
+4: form/control encountered
+8: more than 32 links encountered
+16: unsupported image/media/embed encountered
+32: a title, label or href exceeded its limit or a href was rejected
+64: an unknown or invalid entity was retained
+128: preformatted HTML encountered
+
+Limits and unsupported behavior
+
+This profile is not HTML5 error recovery or a DOM/CSS implementation. Incomplete
+tags and quoted attributes fail. An unterminated comment, script or style hides
+the remaining corresponding content. Malformed nesting receives bounded simple
+handling rather than the browser-standard tree-building algorithm.
+There is no JavaScript, CSS layout, forms submission, cookies, storage, fonts,
+image decoder, audio/video, worker API, accessibility tree, WebGL or WebAssembly.
+Network HTTPS/TLS capability is separate from this reader and must not be
+inferred from its ability to parse an external document.
+
+Composition and tests
+
+reader.zero is composed in this order: reader-head.zero.part,
+html-declarations.zero.part, reader-input.zero.part, html.zero.part,
+reader-output.zero.part. html-check.zero uses html-check-head.zero.part,
+html-declarations.zero.part, html-check-input.zero.part, html.zero.part and
+html-check-output.zero.part. Both are compiled by our existing Zero compiler.
+
+The original Zero regression suite executes 70 semantic/boundary cases and 100
+deterministic malformed ASCII probes. Every case checks guards before and after
+each buffer, unchanged input checksum, valid output length and NUL termination.
+The suite covers UTF-8 rejection/preservation, entities, raw script text, quoted
+tag delimiters, boolean attributes, field boundaries, exact output capacities,
+64 KiB input, 32/33 links, head/title, links, lists, pre and --plain behavior.
+Two sentinel-pointer cases verify address-span overflow cannot reach cleanup.
+Linux native execution passes. Linux native, Windows x64, guest x64 and guest
+x86 compilation succeeds. Windows compilation is not a Windows execution test.

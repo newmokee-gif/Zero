@@ -1,0 +1,28 @@
+ZTEXT00100000505bea693440000000
+ZERO OS 0.7.2 REMOVAL SMOKE VERIFICATION
+Date: 2026-11-16 UTC
+
+ISO SHA256:
+55d2c025c8684a979076abc5be06014e07ecb2b0eb96bc841bb3e2384ff33e7c
+Verified unchanged before and after all four VM runs.
+
+QEMU TCG, standard VGA, optical ISO only; no data disks attached:
+BIOS x86-64: PASS, 13 commands, VM stopped.
+BIOS x86-32, long mode and PAE disabled: PASS, 13 commands, VM stopped.
+UEFI x86-64: PASS, 13 commands, VM stopped.
+UEFI x86-32, long mode disabled: PASS, 13 commands, VM stopped.
+
+The actual PS/2 keyboard shell was checked in each mode:
+- Boot banner reports ZERO OS 0.7.2.
+- help contains neither anime nor portrait.
+- anime and portrait both return Unknown command. Type help.
+- tasks reports running graphics; pause 1 changes it to paused;
+  resume 1 returns it to running.
+- animate, theme, write, clear and help complete normally.
+
+All four final screenshots were visually inspected. They show the terminal
+and an empty SYSTEM STATUS sidebar, with no character illustration.
+Serial transcripts and per-command outputs are retained beside screenshots.
+All VM processes exited; no user data disks were attached or modified.
+Native VirtualBox and physical hardware were not tested in this smoke run.
+The cancelled illustration feature and its resource loaders were not tested.

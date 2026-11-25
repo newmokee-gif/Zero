@@ -1,0 +1,41 @@
+# Original real-mode code-generator regression. Output goes to test port E9.
+7 => @x.
+3 => @y.
+:reserve[64] => @memory.
+"AZ" => @text.
+0 => @i.
+:arg0[] => @drive.
+0 => @status.
+? @x+@y==10 [ !out8[0xe9|65]. ] ~ [ !out8[0xe9|33]. ]
+? @x-@y==4 [ !out8[0xe9|66]. ] ~ [ !out8[0xe9|33]. ]
+? @x*@y==21 [ !out8[0xe9|67]. ] ~ [ !out8[0xe9|33]. ]
+? -1==4294967295 [ !out8[0xe9|68]. ] ~ [ !out8[0xe9|33]. ]
+? -1>0 [ !out8[0xe9|69]. ] ~ [ !out8[0xe9|33]. ]
+? 0xffffffff+1==0 [ !out8[0xe9|70]. ] ~ [ !out8[0xe9|33]. ]
+? 0xffffffff*2==0xfffffffe [ !out8[0xe9|71]. ] ~ [ !out8[0xe9|33]. ]
+? 0xffffffff*0x02000000!=0xfe000000 [ !out8[0xe9|33]. ]
+? (0x41*0x02000000)<0x80000000 [ !out8[0xe9|33]. ]
+? (0x81*0x02000000)>=0x80000000 [ !out8[0xe9|33]. ]
+? @x+@y*2==13 [ !out8[0xe9|72]. ] ~ [ !out8[0xe9|33]. ]
+? (@x+@y)*2==20 [ !out8[0xe9|73]. ] ~ [ !out8[0xe9|33]. ]
+? (@x!=@y)*(@y<=@x)*(@x>=@y)*(@y<@x) [ !out8[0xe9|74]. ] ~ [ !out8[0xe9|33]. ]
+!store32[@memory|0xdeadbeef].
+? :load32[@memory]==0xdeadbeef [ !out8[0xe9|75]. ] ~ [ !out8[0xe9|33]. ]
+!store16[@memory+4|0xabcd].
+? :load16[@memory+4]==0xabcd [ !out8[0xe9|76]. ] ~ [ !out8[0xe9|33]. ]
+!store8[@memory+6|255].
+? :load8[@memory+6]==255 [ !out8[0xe9|77]. ] ~ [ !out8[0xe9|33]. ]
+!out8[0xe9|:load8[@text]].
+!out8[0xe9|:load8[@text+1]].
+?? @i<3 [ !out8[0xe9|48+@i]. @i+1 -> @i. ]
+? 0 [ !out8[0xe9|33]. ] ~ [ !out8[0xe9|85]. ]
+? :cpuid[0|0]>0 [ !out8[0xe9|80]. ] ~ [ !out8[0xe9|33]. ]
+? @drive>127 [ !out8[0xe9|68]. ] ~ [ !out8[0xe9|33]. ]
+:bioscheck[@drive] -> @status.
+? @status==0 [ !out8[0xe9|67]. ] ~ [ !out8[0xe9|33]. ]
+!biosmode[3].
+!biosput[88].
+? @x==7 [ !out8[0xe9|86]. ] ~ [ !out8[0xe9|33]. ]
+!out8[0xe9|10].
+!out8[0xf4|0].
+!halt.

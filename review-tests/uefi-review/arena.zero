@@ -1,0 +1,1 @@
+var p = reserve(65536); put(65); exit(0);

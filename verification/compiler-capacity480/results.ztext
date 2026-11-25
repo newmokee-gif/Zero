@@ -1,0 +1,39 @@
+ZTEXT0010000076f2bfed5e60000000
+PASS base default
+PASS construct exact boundary default
+PASS default exact491520 accepted (source200180B)
+PASS construct exact+1 boundary default
+PASS default exact491521 rejects without output
+PASS default previous458752 limit rejects new boundary
+PASS base --host
+PASS construct exact boundary --host
+PASS --host exact491520 accepted (source200180B)
+PASS construct exact+1 boundary --host
+PASS --host exact491521 rejects without output
+PASS --host previous458752 limit rejects new boundary
+PASS base --raw
+PASS construct exact boundary --raw
+PASS --raw exact491520 accepted (source200229B)
+PASS construct exact+1 boundary --raw
+PASS --raw exact491521 rejects without output
+PASS --raw previous458752 limit rejects new boundary
+PASS base --raw32
+PASS construct exact boundary --raw32
+PASS --raw32 exact491520 accepted (source102081B)
+PASS construct exact+1 boundary --raw32
+PASS --raw32 exact491521 rejects without output
+PASS --raw32 previous458752 limit rejects new boundary
+PASS --efi final headers/padding exact491520 accepted
+PASS --efi next instruction group exceeds limit with zero output
+PASS --efi previous limit rejects new boundary
+PASS --efi32 final headers/padding exact491520 accepted
+PASS --efi32 next instruction group exceeds limit with zero output
+PASS --efi32 previous limit rejects new boundary
+PASS unchanged old program bytes bootstrap/compiler-0.7.zero --host
+PASS unchanged old program bytes review-tests/network-ports/probe.zero --raw
+PASS unchanged old program bytes review-tests/network-ports/probe.zero --raw32
+PASS unchanged old program bytes review-tests/network-ports/probe.zero --efi
+PASS unchanged old program bytes review-tests/network-ports/probe.zero --efi32
+PASS unchanged old program bytes review-tests/network-ports/probe-real.zero --real
+Compiler SHA256:b2c158b3796a290ff3fe7800d89a197ac128eac5bb31d539f853a8eed78ffd39
+No generated boundary program is executed.

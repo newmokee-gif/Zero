@@ -1,0 +1,30 @@
+# Original Zero native file API boundary checks. Argument1 is a disposable file.
+:reserve[65538] => @buffer.
+:reserve[4097] => @path.
+:argument[1] => @file.
+0 => @index.
+? :create[0] != -1 [ !exit[1]. ]
+? :go[0] != -1 [ !exit[2]. ]
+? :disks[0|4] != -1 [ !exit[3]. ]
+? :watch[0|@buffer|65536] != -1 [ !exit[4]. ]
+? :readfile[@file|0|1] != -1 [ !exit[5]. ]
+? :save[@file|@buffer|65537] != -1 [ !exit[6]. ]
+?? @index < 65536 [ !store8[@buffer+@index|:bitand[@index|255]]. @index+1 -> @index. ]
+? :save[@file|@buffer|65536] != 65536 [ !exit[7]. ]
+? :readfile[@file|@buffer|65535] != -1 [ !exit[8]. ]
+0 -> @index.
+?? @index < 65536 [ !store8[@buffer+@index|0]. @index+1 -> @index. ]
+? :readfile[@file|@buffer|65536] != 65536 [ !exit[9]. ]
+0 -> @index.
+?? @index < 65536 [ ? :load8[@buffer+@index] != :bitand[@index|255] [ !exit[10]. ] @index+1 -> @index. ]
+? :writefile[@file|@buffer|0] != -1 [ !exit[11]. ]
+? :del[@file] != 0 [ !exit[12]. ]
+0 -> @index.
+?? @index < 4093 [ !store8[@path+@index|97]. @index+1 -> @index. ]
+!store8[@path+4093|92]. !store8[@path+4094|42]. !store8[@path+4095|0].
+? :search[@path|@buffer|65536] != -1 [ !exit[13]. ]
+? :watch[@path|@buffer|65536] != -1 [ !exit[14]. ]
+!store8[@path+4095|97]. !store8[@path+4096|0].
+? :search[@path|@buffer|65536] != -1 [ !exit[15]. ]
+? :disks[@buffer|65536] < 4 [ !exit[16]. ]
+!put[89]. !exit[0].

@@ -1,0 +1,4 @@
+greet :: person [
+ Hello person => return
+]
+greet(Mira) => show

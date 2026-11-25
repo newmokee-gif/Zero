@@ -1,0 +1,72 @@
+ZTEXT00100001192c7d27b0a0000000
+Native Zero verification
+
+tools/check.zero implements the verifier itself in original Zero. There is no
+shell script, subprocess compiler, foreign interpreter or test runtime in the
+project. Its authored fixture programs are Zero or Ezero. Expected text and the
+manifest are data in our ZTEXT001 container, not another programming language.
+
+Run the native tool on Linux or Windows:
+  zero-check PROJECT_ROOT NEW_TEST_DIRECTORY
+Windows uses zero-check.exe. The destination must not already exist. The tool
+creates it exclusively for its native file checks, removes only files it owns,
+and removes the empty directory afterward. An existing destination is refused
+without changing its contents. Unknown files are not recursively removed.
+
+The project must contain bootstrap/zero64.zapp, the original Zero compiler
+application seed, plus compiler.zero and the Ezero frontend, packer and runtime sources. The tool
+loads and validates that seed, compiles canonical compiler.zero in process,
+activates that compiler only after the seed returns, compiles the frontend/packer, then
+compiles and executes each fixture through the real original application ABI.
+It does not merely compare a second parser or emulate the implementations.
+Generated executable mappings are RW while written and RX while called; no
+RWX mapping is requested. Input/output capacities and application headers are
+checked around every call. Sources and expected files remain read-only.
+
+Fixture contract
+The payload of checks/cases.ztext has one LF-terminated record per case:
+  E|S|0|example_name
+  E|C|1|bad_source_name
+  E|R|65|runtime_error_name
+  Z|S|7|explicit_exit_name
+E means Ezero and Z means Zero. S requires exact output and the stated exit
+status. C requires a compile rejection and the expected diagnostic substring.
+R requires a runtime exit and the expected diagnostic substring. Zero compile
+rejections have no diagnostic text; an empty expected file checks their exit.
+The status is decimal0..255. Names are1..63 lowercase ASCII letters, digits or
+underscores; separators, path traversal and malformed records are refused.
+Source files are checks/cases/NAME.ezero or NAME.zero; expected data is in
+checks/expected/NAME.ztext. The decoded payload preserves exact bytes, including
+newlines, UTF-8 and intentional empty output. The verifier checks each header,
+exact byte count, FNV1a32 checksum and UTF-8 scalar before using any text data.
+Use zero-text read FILE to inspect a container or zero-text make INPUT NEW_FILE
+to encode authored UTF-8 data. Merely changing a suffix does not encode a file.
+
+Current authored fixture set:158 cases. Coverage includes unquoted values and
+phrases, UTF-8, arithmetic/overflow, one-based lists, functions/recursion,
+scope, GC aliases and hidden roots, source/string/variable/parameter limits,
+malformed UTF-8, lines/join boundaries, Zero memory-width/bit
+operations, structured control flow, explicit exits and rejected operations,
+file argument types/arity, unavailable guest operations and intact guest state.
+Twenty-four direct native cases additionally exercise exclusive file creation,
+write/flush/close, existing-file preservation, bytewise reads/size/EOF,
+rename without overwrite, content preservation, deletion, empty directories,
+non-file refusal, invalid flushes and bounded native waits, idempotent create,
+whole-file save/read bounds, exclusive write, filename listing and glob search,
+capacity refusal, drive roots, deletion, and relative reads after changing path.
+
+Reports print PASS or FAIL followed by each case name and a decimal total.
+Exit0 means every case passed. Exit1 means behavioral expectations failed.
+Usage64, malformed data65, missing input66, allocation70, destination73 and
+I/O74 identify infrastructure or fixture failures. Such failures never claim
+that the remaining cases ran. Native temporary contents are cleaned only by
+their known names; cleanup failure is reported instead of hidden.
+
+Limits and scope
+The manifest/expected-container capacities are64KiB each; source input is256KiB;
+each compiled app has a1MiB ceiling. Ezero itself retains its stricter limits.
+The verifier uses20MiB of native mapped memory and one reusable app stack.
+Zero is an unsafe language: fixture source must be trusted repository code.
+This is not process isolation, a timeout engine or a substitute for real
+32-bit/firmware/disk-restart tests. OS integration tests use the separate VM
+environment; no firmware or foreign VM code is shipped in this project.

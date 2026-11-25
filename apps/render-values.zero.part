@@ -1,0 +1,25 @@
+? :load64[@console+2472] [
+ ? (:load64[@console+2472] == 1)*(@i == :load64[@console+2480]+3) [ !store8[@c5|62]. ]
+ ? (:load64[@console+2472] == 3)*(@i >= 4)*(@i <= 7) [
+  @i-3 -> @c4. ? :load64[@console+2480] > 4 [ @c4+:load64[@console+2480]-4 -> @c4. ]
+  ? @c4 <= :load64[@memory+24704] [
+   !store8[@c5+2|64+@c4].
+   ? @c4 == :load64[@console+2480] [ !store8[@c5|62]. ]
+   ? @c4 == :load64[@memory+24688]+1 [ !store8[@c5+5|42]. ]
+  ]
+ ]
+ ? (:load64[@console+2472] == 4)*(@i >= 4)*(@i <= 7) [
+  :load64[:load64[@console+2400]+64+(@i-4)*8] -> @c4.
+  0 -> @k. 9 -> @j.
+  ?? @k < 4 [
+   :bitand[:shr[@c4|@k*8]|255] -> @temporary. 0 -> @character.
+   ?? @temporary >= 100 [ @temporary-100 -> @temporary. @character+1 -> @character. ]
+   ? @character [ !store8[@c5+@j|48+@character]. @j+1 -> @j. ]
+   0 -> @status. ?? @temporary >= 10 [ @temporary-10 -> @temporary. @status+1 -> @status. ]
+   ? @character+@status [ !store8[@c5+@j|48+@status]. @j+1 -> @j. ]
+   !store8[@c5+@j|48+@temporary]. @j+1 -> @j.
+   ? @k < 3 [ !store8[@c5+@j|46]. @j+1 -> @j. ]
+   @k+1 -> @k.
+  ]
+ ]
+]

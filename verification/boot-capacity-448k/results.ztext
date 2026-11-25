@@ -1,0 +1,59 @@
+ZTEXT00100000d176444aa8c0000000
+Zero boot capacity expansion to448KiB
+Verification date:2026-11-16
+
+Original Zero sources compiled with the own capacity candidate compiler:
+bios.zero, loader.zero, loader32.zero, image.zero, iso.zero.
+BIOS14149 bytes, EFI64 14848 bytes, EFI32 21504 bytes. Existing fixed boot
+component bounds remain16KiB/64KiB/64KiB. No full project build was performed
+by this task; root owns integration of the new network/window code.
+
+Capacity contract
+Each padded kernel is458752 bytes (112 EFI pages,896 FAT clusters).
+BIOS loads14 separate32KiB requests to20000..8ffff, with conventional RAM
+at least576KiB and a nonzero EBDA boundary no lower than90000. The BIOS
+handoff reports112 pages. Its E820-validated pool and framebuffer policy
+remain unchanged. IA32 EFI validates code base no higher thanfff8f000,
+retaining the same top4KiB address guard. Both EFI loaders reject files
+outside1..458752 and retain bounded short-read handling.
+
+FAT input length is1048576 bytes; output remains16777216 bytes. Kernel chains
+are260..1155 and1156..2051. Data ends at sector2338; free area starts2339.
+ISO input length is17711104 bytes; output8680*2048=17776640 bytes. Optical
+extents are BIOS32..39, kernel64 40..263, kernel32 264..487, EFI488..8679.
+Directory sizes, paired-endian quantities and EFI catalog LBA all agree.
+
+Executed checks
+2115 assertions passed, including individual bounded FAT-chain traversal.
+All four FAT payloads and all four ISO payloads extract byte-identically.
+Both FAT copies match; unused FAT/data areas remain free/zero. ISO directory
+and volume sizes have correct endian pairs. El Torito validation checksum,
+BIOS LBA32/load32 and EFI LBA488/load32768 are exact.
+Both writers passed exact input, one-byte short/excess input, invalid header,
+unreadable input descriptor and /dev/full output status checks.
+
+Four private whole-slot VM probes passed and exited:
+BIOS64; BIOS32 with long mode and PAE disabled; AMD64 OVMF; IA32 OVMF.
+All used QEMU pc/TCG,128MiB RAM and no writable data disk. Each probe verified
+markers at offsets131071,131072,262143,262144,393215,393216 and458751, code
+pages112, the full64KiB arena and its loader-owned stack pool. The same probe
+ISO SHA256 isae07d14ca94379ba248be55dc887c69067a18d994c8430d7e15f410c59358daa.
+This is complete-capacity evidence, not a final network-kernel boot claim.
+
+External read-only inspectors
+fsck.fat -n exited0:7 files,2050/32479 clusters.
+xorriso exited0:8680 data blocks, El Torito BIOS at32 and UEFI at488,
+and the four expected root files. Inspectors did not construct the image.
+
+Preservation and limits
+Original build/zero.iso remained8d494eca3adbf8998b1674d4d7c4cd03308f40ba87ee3213a806fefa6c9f7d31.
+build/data.img remainedc730241fb30f5516867c751006951a2878f360319195ee975411a05f040f27e8.
+build/data.vdi remained7f58fb36c934405757da797ca65f2dddef3858e69107f43e2cae59d14c89bc5f.
+These original disks were never attached. No native VirtualBox or physical
+hardware result is claimed. The new memory-bound predicates were reviewed;
+the current run did not inject firmware BDA/EBDA failure values. Historical
+low-RAM refusal evidence remains separate under boot-growth-0.7.0.
+
+Reproduce:python3 review-tests/boot-capacity/run.py.
+Exact source inputs are in inputs.sha256; per-mode command lines/serial logs,
+results.json and concise structural checks are alongside this report.

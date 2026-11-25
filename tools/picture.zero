@@ -1,0 +1,246 @@
+# Original Zero RGB image codec. ZPIX0001 uses bounded RGB run records.
+# No external codec, process launcher or programming runtime is used.
+0 => @work.
+0 => @input.
+0 => @output.
+0 => @scratch.
+0 => @source.
+0 => @destination.
+0 => @option.
+0 => @literal.
+0 => @mode.
+0 => @phase.
+0 => @same.
+0 => @size.
+0 => @length.
+0 => @count.
+0 => @n.
+0 => @i.
+0 => @j.
+0 => @k.
+0 => @c.
+0 => @value.
+0 => @digits.
+0 => @width.
+0 => @height.
+0 => @pixels.
+0 => @raster.
+0 => @payload.
+0 => @bytes.
+0 => @position.
+0 => @run.
+0 => @red.
+0 => @green.
+0 => @blue.
+0 => @hash.
+0 => @wanted.
+0 => @divisor.
+0 => @started.
+0 => @separator.
+0 => @created.
+0 => @status.
+0 => @error.
+0 => @message.
+-1 => @handle.
+"Usage: zero-picture make INPUT.ppm NEW.zpix | verify FILE.zpix\n       zero-picture read FILE.zpix NEW.ppm | raw FILE.zpix NEW.rgb\nRGB images: width 1..3840, height 1..2160; P6 input must use maxval 255.\n" -> @message.
+? (:argcount[] < 2)+(:argcount[] > 3) [ 64 -> @error. ]
+? (:host[] != 1)*(:host[] != 2) [ 64 -> @error. ]
+? @error == 0 [
+ :argument[1] -> @option. 1 -> @phase.
+ ?? @phase <= 4 [
+  "make" -> @literal. ? @phase == 2 [ "read" -> @literal. ] ? @phase == 3 [ "verify" -> @literal. ] ? @phase == 4 [ "raw" -> @literal. ]
+  0 -> @i. 1 -> @same.
+  ?? :load8[@literal+@i]*@same [
+   ? :load8[@option+@i] != :load8[@literal+@i] [ 0 -> @same. ] ~ [ @i+1 -> @i. ]
+  ]
+  ? @same [ ? :load8[@option+@i] == 0 [ @phase -> @mode. ] ]
+  @phase+1 -> @phase.
+ ]
+ ? (@mode == 0)+((@mode == 3)*(:argcount[] != 2))+((@mode != 3)*(:argcount[] != 3)) [ 64 -> @error. ]
+ :argument[2] -> @source. ? @mode != 3 [ :argument[3] -> @destination. ]
+]
+? @error == 0 [
+ :hostalloc[67112960] -> @work.
+ ? @work == 0 [ "Cannot allocate picture workspace.\n" -> @message. 71 -> @error. ]
+ @work -> @input. @work+33554432 -> @output. @work+67108864 -> @scratch.
+]
+? @error == 0 [
+ :fileopen[@source|0] -> @handle.
+ ? @handle == -1 [ "Cannot open picture input.\n" -> @message. 66 -> @error. ]
+]
+? @error == 0 [
+ :filesize[@handle] -> @size.
+ ? (@size == 0)+(@size > 33554432) [ "Picture input is empty or exceeds 32 MiB.\n" -> @message. 65 -> @error. ]
+ ?? (@count < @size)*(@error == 0) [
+  :fileread[@handle|@input+@count|@size-@count] -> @n.
+  ? (@n == 0)+(@n > @size-@count) [ "Cannot read complete picture input.\n" -> @message. 74 -> @error. ] ~ [ @count+@n -> @count. ]
+ ]
+ ? @error == 0 [
+  ? (:fileread[@handle|@scratch|1] != 0)+(:filesize[@handle] != @size) [ "Picture input changed while reading.\n" -> @message. 74 -> @error. ]
+ ]
+]
+? @handle != -1 [
+ :fileclose[@handle] -> @status. -1 -> @handle.
+ ? (@status != 0)*(@error == 0) [ "Cannot close picture input.\n" -> @message. 74 -> @error. ]
+]
+
+# P6 is accepted only as an external RGB interchange source. The final raster
+# starts after one required whitespace separator (CRLF counts as one).
+? (@mode == 1)*(@error == 0) [
+ "Invalid P6 header, dimensions or exact RGB raster length.\n" -> @message.
+ ? @size < 11 [ 65 -> @error. ]
+ ? @error == 0 [
+  ? (:load8[@input] != 80)+(:load8[@input+1] != 54) [ 65 -> @error. ]
+  2 -> @position. 0 -> @phase.
+  ?? (@phase < 3)*(@error == 0) [
+   0 -> @separator. 1 -> @same.
+   ?? (@position < @size)*@same*(@error == 0) [
+    :load8[@input+@position] -> @c.
+    ? (@c == 32)+(@c == 9)+(@c == 10)+(@c == 11)+(@c == 12)+(@c == 13) [
+     1 -> @separator. @position+1 -> @position.
+    ] ~ [
+     ? @c == 35 [
+      1 -> @separator. @position+1 -> @position.
+      ?? (@position < @size)*(:load8[@input+@position] != 10)*(:load8[@input+@position] != 13) [ @position+1 -> @position. ]
+     ] ~ [ 0 -> @same. ]
+    ]
+   ]
+   ? (@separator == 0)+(@position >= @size) [ 65 -> @error. ]
+   0 -> @digits. 0 -> @value. 1 -> @same.
+   ?? (@position < @size)*@same*(@error == 0) [
+    :load8[@input+@position] -> @c.
+    ? (@c >= 48)*(@c <= 57) [
+     @digits+1 -> @digits. @value*10+@c-48 -> @value. @position+1 -> @position.
+     ? (@digits > 6)+(@value > 999999) [ 65 -> @error. ]
+    ] ~ [ 0 -> @same. ]
+   ]
+   ? @digits == 0 [ 65 -> @error. ]
+   ? @phase == 0 [ @value -> @width. ]
+   ? @phase == 1 [ @value -> @height. ]
+   ? (@phase == 2)*(@value != 255) [ 65 -> @error. ]
+   @phase+1 -> @phase.
+  ]
+ ]
+ ? @error == 0 [
+  ? (@width == 0)+(@height == 0)+(@width > 3840)+(@height > 2160)+(@position >= @size) [ 65 -> @error. ]
+ ]
+ ? @error == 0 [
+  :load8[@input+@position] -> @c.
+  ? (@c != 32)*(@c != 9)*(@c != 10)*(@c != 11)*(@c != 12)*(@c != 13) [ 65 -> @error. ]
+  @position+1 -> @position.
+  @width*@height -> @pixels.
+  ? (@c == 13)*(@position < @size)*(@size-@position == @pixels*3+1) [ ? :load8[@input+@position] == 10 [ @position+1 -> @position. ] ]
+  ? @size-@position != @pixels*3 [ 65 -> @error. ]
+  @input+@position -> @raster.
+ ]
+ ? @error == 0 [
+  2166136261 -> @hash. 0 -> @i.
+  ?? @i < @pixels*3 [ :bitand[:bitxor[@hash|:load8[@raster+@i]]*16777619|4294967295] -> @hash. @i+1 -> @i. ]
+  0 -> @i. 64 -> @bytes.
+  ?? @i < @pixels [
+   :load8[@raster+@i*3] -> @red. :load8[@raster+@i*3+1] -> @green. :load8[@raster+@i*3+2] -> @blue.
+   1 -> @run. 1 -> @same.
+   ?? (@run < 255)*(@i+@run < @pixels)*@same [
+    @raster+(@i+@run)*3 -> @position.
+    ? (:load8[@position] == @red)*(:load8[@position+1] == @green)*(:load8[@position+2] == @blue) [ @run+1 -> @run. ] ~ [ 0 -> @same. ]
+   ]
+   !store8[@output+@bytes|@run]. !store8[@output+@bytes+1|@red]. !store8[@output+@bytes+2|@green]. !store8[@output+@bytes+3|@blue].
+   @bytes+4 -> @bytes. @i+@run -> @i.
+  ]
+  "ZPIX0001" -> @literal. 0 -> @i. ?? @i < 8 [ !store8[@output+@i|:load8[@literal+@i]]. @i+1 -> @i. ]
+  !store32[@output+8|@width]. !store32[@output+12|@height]. !store32[@output+16|3]. !store32[@output+20|1].
+  !store64[@output+24|@pixels]. !store64[@output+32|@bytes-64]. !store32[@output+40|@hash]. !store32[@output+44|0].
+  !store64[@output+48|@bytes]. !store64[@output+56|0].
+ ]
+]
+
+# BEGIN ZERO PICTURE DECODER
+# Memory-only ZPIX0001 decoder, shared by the native picture command.
+# Caller supplies @mode != 1, @error = 0, @input and @size <= 33554432,
+# and @output with at least 24883264 writable bytes. No host/file API is used.
+# Input and output memory ranges must be disjoint; the caller owns both ranges.
+# Success: @error = 0; @width/@height/@pixels are valid, RGB at @output+64.
+# Failure: @error = 65; no decoded bytes may be consumed.
+# Verify every field and every record before any destination is opened.
+? (@mode != 1)*(@error == 0) [
+ "Invalid ZPIX0001 header, dimensions, reserved fields or exact length.\n" -> @message.
+ ? (@size < 68)+(@size > 33554432) [ 65 -> @error. ]
+ ? @error == 0 [
+  "ZPIX0001" -> @literal. 0 -> @i. ?? @i < 8 [ ? :load8[@input+@i] != :load8[@literal+@i] [ 65 -> @error. ] @i+1 -> @i. ]
+  :load32[@input+8] -> @width. :load32[@input+12] -> @height.
+  ? (@width == 0)+(@height == 0)+(@width > 3840)+(@height > 2160) [ 65 -> @error. ]
+  ? (:load32[@input+16] != 3)+(:load32[@input+20] != 1)+(:load32[@input+44] != 0)+(:load64[@input+56] != 0) [ 65 -> @error. ]
+  # Explicit upper words keep bounded header semantics on 32-bit Zero targets.
+  ? (:load32[@input+28] != 0)+(:load32[@input+36] != 0)+(:load32[@input+52] != 0)+(:load32[@input+60] != 0) [ 65 -> @error. ]
+  @width*@height -> @pixels. :load64[@input+32] -> @payload. :load32[@input+40] -> @wanted.
+  ? (:load64[@input+24] != @pixels)+(:load64[@input+48] != @size)+(@payload != @size-64)+(:bitand[@payload|3] != 0) [ 65 -> @error. ]
+ ]
+ ? @error == 0 [
+  "Invalid ZPIX0001 run length, decoded length or RGB checksum.\n" -> @message.
+  64 -> @position. 0 -> @count. 2166136261 -> @hash.
+  ?? (@position < @size)*(@error == 0) [
+   :load8[@input+@position] -> @run.
+   ? (@run == 0)+(@run > @pixels-@count) [ 65 -> @error. ]
+   ? @error == 0 [
+    :load8[@input+@position+1] -> @red. :load8[@input+@position+2] -> @green. :load8[@input+@position+3] -> @blue.
+    0 -> @i.
+    ?? @i < @run [
+     @output+64+(@count+@i)*3 -> @raster.
+     !store8[@raster|@red]. !store8[@raster+1|@green]. !store8[@raster+2|@blue].
+     :bitand[:bitxor[@hash|@red]*16777619|4294967295] -> @hash.
+     :bitand[:bitxor[@hash|@green]*16777619|4294967295] -> @hash.
+     :bitand[:bitxor[@hash|@blue]*16777619|4294967295] -> @hash.
+     @i+1 -> @i.
+    ]
+    @count+@run -> @count. @position+4 -> @position.
+   ]
+  ]
+  ? (@count != @pixels)+(@hash != @wanted) [ 65 -> @error. ]
+ ]
+]
+# END ZERO PICTURE DECODER
+? (@mode != 1)*(@error == 0) [
+ ? @error == 0 [
+  @output+64 -> @output. @pixels*3 -> @bytes.
+  ? @mode == 2 [
+   !store8[@scratch|80]. !store8[@scratch+1|54]. !store8[@scratch+2|10]. 3 -> @length. 0 -> @phase.
+   ?? @phase < 2 [
+    @width -> @value. ? @phase == 1 [ @height -> @value. ]
+    0 -> @started. 0 -> @j.
+    ?? @j < 4 [
+     1000 -> @divisor. ? @j == 1 [ 100 -> @divisor. ] ? @j == 2 [ 10 -> @divisor. ] ? @j == 3 [ 1 -> @divisor. ]
+     0 -> @digits. ?? @value >= @divisor [ @value-@divisor -> @value. @digits+1 -> @digits. ]
+     ? @digits+@started+(@j == 3) [ !store8[@scratch+@length|48+@digits]. @length+1 -> @length. 1 -> @started. ]
+     @j+1 -> @j.
+    ]
+    32 -> @c. ? @phase == 1 [ 10 -> @c. ] !store8[@scratch+@length|@c]. @length+1 -> @length.
+    @phase+1 -> @phase.
+   ]
+   "255\n" -> @literal. 0 -> @i. ?? @i < 4 [ !store8[@scratch+@length|:load8[@literal+@i]]. @length+1 -> @length. @i+1 -> @i. ]
+   @output-@length -> @output. @bytes+@length -> @bytes. 0 -> @i.
+   ?? @i < @length [ !store8[@output+@i|:load8[@scratch+@i]]. @i+1 -> @i. ]
+  ]
+ ]
+]
+? (@error == 0)*(@mode != 3) [
+ :fileopen[@destination|1] -> @handle.
+ ? @handle == -1 [ "Cannot create output; existing files are preserved.\n" -> @message. 73 -> @error. ] ~ [ 1 -> @created. ]
+ 0 -> @count.
+ ?? (@count < @bytes)*(@error == 0) [
+  :filewrite[@handle|@output+@count|@bytes-@count] -> @n.
+  ? (@n == 0)+(@n > @bytes-@count) [ "Cannot write complete picture output.\n" -> @message. 74 -> @error. ] ~ [ @count+@n -> @count. ]
+ ]
+ ? (@handle != -1)*(@error == 0) [ ? :filesync[@handle] != 0 [ "Cannot flush picture output.\n" -> @message. 74 -> @error. ] ]
+ ? @handle != -1 [
+  :fileclose[@handle] -> @status. -1 -> @handle.
+  ? (@status != 0)*(@error == 0) [ "Cannot close picture output.\n" -> @message. 74 -> @error. ]
+ ]
+]
+? @created*@error [
+ :filedelete[@destination] -> @status.
+ ? @status != 0 [ "Partial picture output could not be removed.\n" -> @message. ]
+]
+? @error == 0 [ "ZPIX0001 operation completed.\n" -> @message. ]
+0 -> @i. ?? :load8[@message+@i] [ !put[:load8[@message+@i]]. @i+1 -> @i. ]
+? @work [ :hostfree[@work|67112960] -> @status. ]
+!exit[@error].

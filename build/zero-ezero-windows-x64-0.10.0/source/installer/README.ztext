@@ -1,0 +1,80 @@
+ZTEXT001000011fafd2cf52e0000000
+Zero native host-directory preparation tool
+
+setup.zero is original Zero application code. It calls the original Zero
+native host-file ABI directly on Linux or Windows. It has no shell, Python,
+CMD, PowerShell, C runtime or third-party installer dependency.
+
+Commands:
+  zero-setup prepare SOURCE.iso NEW_DIRECTORY
+  zero-setup status DIRECTORY
+  zero-setup remove DIRECTORY
+
+prepare accepts the current Zero9224-sector BIOS/UEFI ISO format. It validates
+the ISO identity, paired-endian size/block fields and El Torito BIOS/UEFI
+catalog before creating a new exclusive destination directory. Existing
+directories are never reused. UTF-8 paths containing spaces are supported by
+the host ABI; directory paths must be below4000 bytes and cannot end in a
+separator, drive colon, '.' or '..' basename.
+
+Artifacts are system.iso (unchanged copy), storage.data (16MiB original empty
+ZeroFS disk with both checked banks), and zero.install (256-byte ownership
+manifest). The data file is prepared storage, not a mounted host-backed disk.
+Each payload is written exclusively to a staging name, closed, reopened and
+verified before atomic non-overwriting publication. The manifest is published
+last and is byte-verified after writing. Failed preparation cleans up only
+files exclusively created by that invocation. It reports incomplete cleanup.
+
+The format uses streaming64-bit FNV-1a checksums implemented directly in Zero.
+These detect accidental corruption; they are not cryptographic signatures or
+proof of publisher identity. The supplied source ISO is not authenticated.
+No successful power-loss durability claim is made without a host flush API.
+
+Manifest u64 little-endian fields:
+0 magic0x315055544553525a (ZRSETUP1);8 version1;16 state1 PREPARED;
+24 ISO bytes18890752;32 ISO FNV-1a64;
+40 data bytes16777216;48 data FNV-1a64;
+56 preparation host1 Linux/2 Windows;64 boot integration flags0;
+72 data profile1 ZeroFS;80..239 zero;
+240 FNV-1a64 of bytes0..239;248 reserved0.
+
+status validates the manifest and both complete payloads. remove first
+performs the same checks, then deletes only the three named owned files.
+Unknown directory contents are preserved; directory removal is nonrecursive
+and succeeds only when empty. A changed data disk fails verification rather
+than being silently deleted. Removal I/O failure can leave a partially
+removed set; the error says so. There is no unattended recursive cleanup.
+The file ABI cannot distinguish missing files from access denial; all such
+ambiguous verification failures stop the operation.
+
+Boot integration remains unimplemented. Current BIOS boot reads fixed optical
+sectors, and the UEFI loader opens root-level kernel.bin/tools.bin through
+firmware Simple File System. Neither can boot an ISO located inside an
+arbitrary Windows NTFS or Linux ext4/Btrfs host file. A Wubi-style installation
+still needs an original early filesystem/loop-image loader, host-file-backed
+kernel block device, boot-menu registration and rollback. This tool therefore
+reports PREPARED and explicitly NOT INSTALLED for boot integration. It does
+not modify a boot sector, partition table, firmware boot entry, BCD or GRUB.
+
+Installer source is independent of boot-image creation. Tests and package
+build orchestration may use host infrastructure; that infrastructure is not
+part of the delivered runtime implementation.
+
+Verification of this implementation
+Linux native ELF:21 checks, including UTF-8/space paths, exact copied ISO,
+independent manifest checksum, corrupt-manifest/payload refusal, final symlink
+refusal, failed partial-write cleanup, and preservation of unrelated files.
+Windows native PE under Wine:18 corresponding checks. Wine's Z drive exposes
+host POSIX symlinks as ordinary files without Windows reparse attributes;
+those tests are explicitly skipped for Wine. The native Windows reparse-point
+policy exists in the API backend but is not verified on actual Windows here.
+Linux process file-size fault injection is also not a Windows/Wine test.
+
+The data file was explicitly attached as a private virtual ATA disk in QEMU.
+Zero OS mounted it without formatting, saved/read a file, then read the same
+file after a complete virtual-machine restart. The ISO remained unchanged.
+This validates the original ZeroFS disk content, not Wubi host-file booting.
+After that intentional write, preparation status correctly refuses the changed
+initial data checksum. Active-installation lifecycle support is still absent.
+Exact evidence is in installer/verification/native-linux.json, native-wine.json
+and zerofs-vm.json; all fixtures used private folders/disks.

@@ -1,0 +1,168 @@
+ZTEXT0010000260e22ae1e9f0000000
+Current original Zero workflow (0.12)
+
+Use the native tools on Linux or their .exe versions on Windows:
+  zero-integrate PROJECT_DIRECTORY NEW_KERNEL.zero
+  zero-build PROJECT_DIRECTORY NEW_OUTPUT_DIRECTORY NEW_KERNEL.zero
+  zero-check PROJECT_DIRECTORY NEW_TEST_DIRECTORY
+All destination paths must be new. The integrator preserves authored sources;
+the builder checks its compiler fixed point and builds the original targets;
+the verifier checks language behavior and host file operations in process.
+See tools/integrate.ztext, tools/build.ztext and checks/README.ztext.
+Read these documents with zero-text read FILE.
+
+The notes below preserve earlier implementation and test history. Any old
+shell/Python runner names, generated artifacts, JSON reports or commands are
+historical references: they were removed from the active project and are not
+current runnable instructions or current-release validation. Native host
+checks do not replace BIOS/UEFI, persistence or physical-hardware testing.
+
+Historical implementation notes
+
+ZERO WINDOW RENDERER
+
+worker.zero.part is original Zero code integrated into the graphics worker.
+It declares no additional language variables. It uses private thread-frame
+locals and only the shared ABI and scratch ranges documented below.
+No borrowed compositor, UI toolkit, font library or artwork is used.
+
+Root-owned ABI at console offsets (u64)
+2048 slot pool base;2056 capacity;2064 focused slot index;2072 open count;
+2080 layout (0 tiles,1 scrolling);2088 layout generation.
+Each slot is8192 bytes. Fields:0 alive,8 displayed ID,16 output-ring write
+head,24 ring count,32 input length,40 overflow,48 reserved,
+56 selected root,64 dirty generation,72 last rendered dirty generation.
+Input storage starts256, output ring starts1024 and holds7168 bytes.
+The renderer never changes input, ring contents or selected roots.
+Only the captured value of dirty generation is committed to slot+72.
+CR/LF input suppression is global device-stream state, not per-window state.
+
+Graphics-owned shared scratch
+console+2304..2315: formatted open-window count.
+console+2336..2348: formatted terminal title.
+console+2368: current caret phase;2376 phase changed;2384 committed phase.
+console+2392: graphics UI scale (2 at exact1920x1080, otherwise1).
+console+3072..7679: at most96 columns by48 rows of ASCII cells.
+All layout, geometry, replay and glyph temporaries otherwise live in private
+thread variables. No memory at console+8192 or above is touched by this code.
+
+Display ownership and scheduling
+With an active slot pool, the worker owns all framebuffer/VGA drawing. Root
+appends output to its active ring and handles serial output independently.
+Root must reset ring count/head on clear rather than append ANSI clear bytes
+to the graphical log. Root does not schedule graphics while paused.
+Each framebuffer row is bounded; the worker yields after rows or short text
+pieces. The layout generation is checked before subsequent painting and
+again before committing the rendered generation after the final yield.
+Closing/reusing slots or changing focus/layout aborts the old frame; the next
+iteration clears and paints the new layout. Ring replay itself never yields,
+so it reads one stable snapshot of root-written head/count/content.
+Root may append during drawing. The renderer commits the old dirty snapshot,
+leaving that window dirty for the next iteration instead of losing updates.
+
+Layouts
+Tiles show up to3 live windows on the page containing the focused window.
+Holes from closed slots are skipped. One window fills the workspace; two get
+equal columns; three use a master window left and two stacked windows right.
+Focus on another group automatically selects that page.
+Scrolling shows the focused column centered, with the previous and next
+live columns clipped at screen edges. It never wraps clipped text into a
+neighbor. More open windows remain available through focus navigation.
+
+At800x600 with3 windows:
+  tile1 x16,y104,w440,h436
+  tile2 x472,y104,w312,h210
+  tile3 x472,y330,w312,h210
+With2 windows: x16 and408, eachw376,h436,y104.
+Scroll: column width368; focusedx216; previous virtualx-168; nextx600;
+all y104,h436. Negative origins are represented as a nonnegative screen
+origin plus an explicit source crop, avoiding unsigned pointer underflow.
+
+At other supported sizes, topY is104 for height>=600, otherwise80. Full
+window height is screenHeight-topY-60. Visible text begins atwindowX+16,
+windowY+50. Columns=floor((windowWidth-32)/8), clamped96; rows=floor(
+(windowHeight-76)/16), clamped48. Small stacked windows have fewer rows.
+Header is34pixels plus divider, footer24pixels, border1pixel.
+Body cells are8x16 using the kernel's original5x7 ASCII glyph rows doubled
+vertically. Every pixel is clipped to its logical window and physical screen;
+framebuffer stride and RGB/BGR ordering are honored.
+
+Full HD rendering (0.8.1)
+An actual1920x1080 framebuffer uses a960x540 logical layout with UI scale2.
+The renderer keeps the physical framebuffer address and stride unchanged.
+Every logical pixel is written directly as a2x2 group of physical pixels;
+headers, title bars, body glyphs, clipping, borders and padding all use the
+same scale. This is native framebuffer drawing, not screenshot enlargement.
+Other resolutions, including800x600 and640x480/400, retain the1x layout.
+No additional allocation or language variable is needed; the existing
+private command_status local holds the scale. The text grid still fits the
+same96x48 bound. The framebuffer size is owned/validated by the boot loader.
+
+Exact physical geometry at1920x1080 with3 live tile windows:
+  master x32,y160,w1040,h800
+  second x1104,y160,w784,h384
+  third x1104,y576,w784,h384
+With2 windows: x32 and976, eachw912,h800,y160.
+Scroll focused column: x512,y160,w896,h800. Previous virtualx-416 and next
+x1440 are clipped at physical screen edges. Each body starts32 pixels from
+its window's logical-left edge and100pixels below the top. Cells are16x32.
+The master has61columns20rows; stacked windows45columns7rows; two equal
+tiles53columns20rows. Header/footer placement derives from logical540height.
+The per-yield layout checks, captured dirty-generation commits, shared caret
+phase and serial/VGA fallbacks remain the same as before.
+
+Output replay
+Each byte-ring snapshot reflows to that window's current width. CR returns
+to column0; LF starts a new line; backspace moves left or to the preceding
+row; printable ASCII wraps at the right edge. A circular row index performs
+vertical scrolling without copying the whole grid per line. Oldest bytes
+beyond the7168-byte ring are discarded by root. No interactive scrollback
+navigation or Unicode shaping is implemented here.
+A focused window shows an underscore caret. animate off leaves it visible;
+animate on follows the existing polled decisecond clock, alternating every
+4 ticks. A phase change redraws only the focused window, not the background
+or its neighbors. Phase commits also require a stable layout generation.
+
+Theme and fallback
+The default uses the preview's navy/lavender palette. Theme1 shifts the
+background/panel colors to teal and uses cyan focus borders.
+VGA text mode displays only the focused window: a title row plus24 rows of
+80-column body text. Other sessions remain open and can receive focus.
+Serial-only mode marks the renderer ready and yields without visual writes.
+With no allocated pool, the renderer also marks ready and yields so root's
+legacy fallback remains usable. The initial ready flag is set after a stable
+complete render, not merely after entering the worker.
+
+Isolated validation completed
+- Embedded fragment compiled as full raw64 and raw32 kernel source.
+- Hosted renderer checked800x600,640x480,640x400 with16 extra stride pixels
+  per row,128-byte guards before and after the framebuffer. Every guard and
+  row-padding byte retained its sentinel in tile and scroll cases.
+- RGB and BGR renderings decode to byte-identical RGB output at all3 sizes.
+- An independent terminal replay oracle passed9 cases: empty ring, CR/LF,
+  backspace/erase sequence, exact-width wrapping, wrap to next row, CR
+  overwrite, backspace at start, many-line scrolling and a wrapped full ring.
+- Native800x600 tile and scrolling outputs were visually inspected.
+These hosted checks isolate the renderer; integrated boot, keyboard routing,
+window lifecycle and disk isolation are validated by the VM task separately.
+
+Reproducible hosted check sources and orchestration are under
+review-tests/wm-renderer/. Run bash review-tests/wm-renderer/run.sh.
+Committed results, exact worker hash, decoded grids and six fixture PNGs
+are under verification/wm-renderer-0.8.0/. Full generated binaries and PPMs
+remain internal build artifacts. This suite deliberately removes yields;
+no commit-generation abort/interleaving test is claimed for it.
+
+Full HD hosted validation (0.8.1)
+review-tests/wm-renderer-hd/run.sh tests the production worker at1920x1080,
+960x540,800x600,640x480 and640x400. Every case checks128-byte framebuffer
+guards,16physical stride-padding pixels per row and the text-grid end
+sentinel. RGB/BGR decode identically. Both FullHD layouts match every pixel
+of an independently rendered960x540 view expanded as native2x2 groups.
+All1x compact outputs match the frozen0.8.0 worker byte for byte.
+The own Zero test helper expands only hosted fixture arenas from4MiB to16MiB
+and validates their ELF/prologue before changing the known size immediate.
+The host fixture stack allowance is increased for this framebuffer test;
+production compiler/kernel allocation limits are not changed by the helper.
+Reports and fixture images: verification/wm-renderer-hd-0.8.1/.
+Actual firmware mode selection and input tests are separate VM evidence.

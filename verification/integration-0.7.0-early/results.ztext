@@ -1,0 +1,25 @@
+ZTEXT001000005fefd34cd920000000
+Development combined-kernel boot smoke, 2026-11-15 UTC
+ISO SHA256 f3d084a185f8771316b4ea7a6b24f16804407ed3214a8481b5e8a606e9c724d1
+This is an early integration checkpoint, not the final release hash.
+
+PASS: BIOS32 (qemu64,-lm,-pae), IA32 UEFI (qemu64,-lm), AMD64 UEFI (qemu64).
+All use QEMU pc/TCG,128MiB, standard VGA, copied ZeroFS data and private OVMF
+variables. The optical ISO is read-only. BIOS32 genuinely lacks both LM/PAE.
+Each reached the new A:|> prompt within40 seconds, mounted ZeroFS and completed
+discovery. PS/2 injection ran disks, go a:|, watch, info, tasks. Only the
+writable ATA ZeroFS volume was listed; the ATAPI optical boot medium was not.
+The explicit root was accepted, watch showed the expected empty data disk,
+and both graphics/compute workers remained runnable with nonzero counters.
+All three800x600 screenshots were inspected: original portrait, desktop,
+terminal and worker status are visible. All three VMs were stopped.
+
+Finding sent to parent: disks ends its listing with LF alone. The console
+retains its previous column, so the following prompt is visibly indented.
+Serial confirms `ZeroFS\nA:|>` rather than CRLF. Fix belongs to the kernel's
+formatter/console, outside this agent's owned boot sources. No boot capacity,
+stack-pool or architecture transition failure was found.
+
+Evidence: MODE.serial, MODE.status, MODE.png and MODE.qemu in this directory.
+run-smoke.sh records exact VM arguments and keyboard automation.
+inputs.sha256 records the copied ISO and unchanged original data images.

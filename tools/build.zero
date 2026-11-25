@@ -1,0 +1,342 @@
+# Native original Zero project builder. No shell, process launcher or foreign tool.
+# Arguments: PROJECT_DIRECTORY NEW_OUTPUT_DIRECTORY [KERNEL_SOURCE].
+0 => @work.
+0 => @root.
+0 => @directory.
+0 => @rootlen.
+0 => @dirlen.
+0 => @path.
+0 => @target.
+0 => @source.
+0 => @code.
+0 => @context.
+0 => @step.
+0 => @stage.
+0 => @file.
+0 => @name.
+0 => @buffer.
+0 => @capacity.
+0 => @size.
+-1 => @handle.
+0 => @count.
+0 => @n.
+0 => @i.
+0 => @j.
+0 => @c.
+0 => @error.
+0 => @message.
+0 => @status.
+0 => @output.
+0 => @outputbytes.
+0 => @input.
+0 => @inputbytes.
+0 => @limit.
+0 => @minimum.
+0 => @publish.
+0 => @executable.
+0 => @created.
+0 => @dircreated.
+0 => @temporary.
+0 => @quoted.
+0 => @escaped.
+0 => @comment.
+0 => @pending.
+0 => @sourcebytes.
+0 => @stagebytes.
+0 => @copyfrom.
+0 => @copyto.
+0 => @copybytes.
+0 => @kind.
+0 => @seedbytes.
+0 => @compact.
+0 => @checksum.
+0 => @complete.
+0 => @detail.
+0 => @kernelpath.
+
+"Usage: zero-build PROJECT_DIRECTORY NEW_OUTPUT_DIRECTORY [KERNEL_SOURCE]\nThe destination must not exist. The builder runs only original Zero code.\n" -> @message.
+? (:argcount[] != 2)*(:argcount[] != 3) [ 64 -> @error. ]
+? (:host[] != 1)*(:host[] != 2) [ 64 -> @error. ]
+? @error == 0 [
+ :argument[1] -> @root. :argument[2] -> @directory.
+ ? :argcount[] == 3 [
+  :argument[3] -> @kernelpath. 0 -> @i.
+  ?? (:load8[@kernelpath+@i] != 0)*(@i < 4095) [ @i+1 -> @i. ]
+  ? (@i == 0)+(@i >= 4095) [ 64 -> @error. ]
+ ]
+ ?? (:load8[@root+@rootlen] != 0)*(@rootlen < 3800) [ @rootlen+1 -> @rootlen. ]
+ ?? (:load8[@directory+@dirlen] != 0)*(@dirlen < 3800) [ @dirlen+1 -> @dirlen. ]
+ ? (@rootlen == 0)+(@rootlen >= 3800)+(@dirlen == 0)+(@dirlen >= 3800) [ 64 -> @error. ]
+]
+? @error == 0 [
+ :hostalloc[67108864] -> @work.
+ ? @work == 0 [ "Cannot allocate the native build workspace.\n" -> @message. 71 -> @error. ]
+ @work -> @context. @work+4096 -> @path. @work+65536 -> @source.
+]
+? @error == 0 [
+ :makedir[@directory] -> @status.
+ ? @status != 0 [ "Output directory already exists or cannot be created. Nothing was replaced.\n" -> @message. 73 -> @error. ] ~ [ 1 -> @dircreated. ]
+]
+
+# Stage0 reads the owned compiler seed. Stages1/2 establish its app fixed point.
+# Each subsequent compile runs that own compiler inside this native process.
+?? (@stage < 76)*(@error == 0) [
+ @stage -> @step.
+ ? @stage >= 24 [ @stage-2 -> @step. ]
+ ? @stage == 22 [ 47 -> @step. ]
+ ? @stage == 23 [ 48 -> @step. ]
+ ? @stage >= 49 [ @stage -> @step. ]
+ 0 -> @file. 0 -> @name. "--host" -> @target.
+ @source -> @buffer. 524288 -> @capacity.
+ @work+9437184 -> @code. @work+19922944 -> @output.
+ 524288 -> @limit. 1 -> @minimum. 1 -> @publish. 0 -> @executable.
+ 0 -> @compact. 0 -> @created.
+ ? @step == 0 [ "bootstrap/zero64.zapp" -> @file. @work+7340032 -> @buffer. 1048576 -> @capacity. 0 -> @publish. ]
+ ? @step == 1 [ "compiler.zero" -> @file. "--app64" -> @target. @work+7340032 -> @code. @work+8388608 -> @output. "zero-stage1.app" -> @name. 65 -> @minimum. ]
+ ? @step == 2 [ "compiler.zero" -> @file. "--app64" -> @target. @work+8388608 -> @code. @work+9437184 -> @output. "zero-stage2.app" -> @name. 65 -> @minimum. ]
+ ? @step >= 3 [ @work+9437184 -> @code. ]
+ ? @step == 3 [ "compiler.zero" -> @file. "zero" -> @name. 1 -> @executable. ]
+ ? @step == 4 [ "compiler.zero" -> @file. "--windows" -> @target. "zero.exe" -> @name. ]
+ ? @step == 5 [ "bios.zero" -> @file. "--real" -> @target. "bios.bin" -> @name. @work+13631488 -> @output. 16384 -> @limit. ]
+ ? @step == 6 [ "loader.zero" -> @file. "--efi" -> @target. "BOOTX64.EFI" -> @name. @work+14680064 -> @output. 65536 -> @limit. ]
+ ? @step == 7 [ "loader32.zero" -> @file. "--efi32" -> @target. "BOOTIA32.EFI" -> @name. @work+14745600 -> @output. 65536 -> @limit. ]
+ ? @step == 8 [ "installer/boot/loader.zero" -> @file. "--efi" -> @target. "ZEROX64.EFI" -> @name. 65536 -> @limit. ]
+ ? @step == 9 [ "kernel.zero" -> @file. "--raw" -> @target. "kernel.bin" -> @name. @work+14811136 -> @output. 475136 -> @limit. 1 -> @compact. ]
+ ? @step == 10 [ "kernel.zero" -> @file. "--raw32" -> @target. "kernel32.bin" -> @name. @work+15286272 -> @output. 507904 -> @limit. 1 -> @compact. ]
+ ? @step == 11 [ "image.zero" -> @file. "--app64" -> @target. "image64.app" -> @name. @work+10485760 -> @output. ]
+ ? @step == 12 [ "iso.zero" -> @file. "--app64" -> @target. "iso64.app" -> @name. @work+11534336 -> @output. ]
+ ? @step == 13 [ "bundle.zero" -> @file. "--app64" -> @target. "bundle64.app" -> @name. @work+12582912 -> @output. ]
+ ? (@step >= 14)*(@step <= 19) [
+  "--app64" -> @target. ? @step >= 17 [ "--app32" -> @target. ]
+  "compiler.zero" -> @file. "zero64.app" -> @name.
+  ? @step == 15 [ "ezero/compiler.zero" -> @file. "frontend64.app" -> @name. ]
+  ? @step == 16 [ "ezero/pack.zero" -> @file. "pack64.app" -> @name. ]
+  ? @step == 17 [ "zero32.app" -> @name. ]
+  ? @step == 18 [ "ezero/compiler.zero" -> @file. "frontend32.app" -> @name. ]
+  ? @step == 19 [ "ezero/pack.zero" -> @file. "pack32.app" -> @name. ]
+  @work+18874368+(@step-14)*159744 -> @output. 159744 -> @limit. 65 -> @minimum.
+  ? (@step == 16)+(@step == 19) [ 16384 -> @limit. ]
+ ]
+ ? @step == 20 [ "ezero/runtime-prefix.zero.part" -> @file. @work+19832832 -> @buffer. 4095 -> @capacity. 0 -> @publish. ]
+ ? @step == 21 [ "ezero/runtime.zero.part" -> @file. @work+19836928 -> @buffer. 65535 -> @capacity. 0 -> @publish. ]
+ ? @step == 25 [ "tools/build.zero" -> @file. "zero-build" -> @name. 1 -> @executable. ]
+ ? @step == 26 [ "tools/build.zero" -> @file. "--windows" -> @target. "zero-build.exe" -> @name. ]
+ ? @step == 27 [ "tools/integrate.zero" -> @file. "zero-integrate" -> @name. 1 -> @executable. ]
+ ? @step == 28 [ "tools/integrate.zero" -> @file. "--windows" -> @target. "zero-integrate.exe" -> @name. ]
+ ? @step == 29 [ "tools/check.zero" -> @file. "zero-check" -> @name. 1 -> @executable. ]
+ ? @step == 30 [ "tools/check.zero" -> @file. "--windows" -> @target. "zero-check.exe" -> @name. ]
+ ? @step == 31 [ "tools/compiler-cli.zero" -> @file. "zero-cli" -> @name. 1 -> @executable. ]
+ ? @step == 32 [ "tools/compiler-cli.zero" -> @file. "--windows" -> @target. "zero-cli.exe" -> @name. ]
+ ? @step == 33 [ "installer/setup.zero" -> @file. "zero-setup" -> @name. 1 -> @executable. ]
+ ? @step == 34 [ "installer/setup.zero" -> @file. "--windows" -> @target. "zero-setup.exe" -> @name. ]
+ ? @step == 35 [ "updater/update.zero" -> @file. "zero-update" -> @name. 1 -> @executable. ]
+ ? @step == 36 [ "updater/update.zero" -> @file. "--windows" -> @target. "zero-update.exe" -> @name. ]
+ ? @step == 37 [ "updater/sha256.zero" -> @file. "zero-sha256" -> @name. 1 -> @executable. ]
+ ? @step == 38 [ "updater/sha256.zero" -> @file. "--windows" -> @target. "zero-sha256.exe" -> @name. ]
+ ? @step == 39 [ "tools/text.zero" -> @file. "zero-text" -> @name. 1 -> @executable. ]
+ ? @step == 40 [ "tools/text.zero" -> @file. "--windows" -> @target. "zero-text.exe" -> @name. ]
+ ? @step == 41 [ "tools/picture.zero" -> @file. "zero-picture" -> @name. 1 -> @executable. ]
+ ? @step == 42 [ "tools/picture.zero" -> @file. "--windows" -> @target. "zero-picture.exe" -> @name. ]
+ ? @step == 43 [ "media/picture-check.zero" -> @file. "zero-picture-check" -> @name. 1 -> @executable. ]
+ ? @step == 44 [ "media/picture-check.zero" -> @file. "--windows" -> @target. "zero-picture-check.exe" -> @name. ]
+ ? @step == 45 [ "tools/archive.zero" -> @file. "zero-archive" -> @name. 1 -> @executable. ]
+ ? @step == 46 [ "tools/archive.zero" -> @file. "--windows" -> @target. "zero-archive.exe" -> @name. ]
+ ? @step == 47 [ "browser/reader.zero" -> @file. "--app64" -> @target. "browser64.app" -> @name. @work+19210240 -> @output. 143360 -> @limit. 65 -> @minimum. ]
+ ? @step == 48 [ "browser/reader.zero" -> @file. "--app32" -> @target. "browser32.app" -> @name. @work+19689472 -> @output. 143360 -> @limit. 65 -> @minimum. ]
+ ? @step == 49 [ "editor/host/editor.zero" -> @file. "zero-studio" -> @name. 1 -> @executable. ]
+ ? @step == 50 [ "editor/host/editor.zero" -> @file. "--windows" -> @target. "zero-studio.exe" -> @name. ]
+ ? @step == 51 [ "browser/reader.zero" -> @file. "zero-web-reader" -> @name. 1 -> @executable. ]
+ ? @step == 52 [ "browser/reader.zero" -> @file. "--windows" -> @target. "zero-web-reader.exe" -> @name. ]
+ ? @step == 53 [ "media/codec.zero" -> @file. "zero-media" -> @name. 1 -> @executable. ]
+ ? @step == 54 [ "media/codec.zero" -> @file. "--windows" -> @target. "zero-media.exe" -> @name. ]
+ ? @step == 55 [ "media/flash.zero" -> @file. "zero-flash" -> @name. 1 -> @executable. ]
+ ? @step == 56 [ "media/flash.zero" -> @file. "--windows" -> @target. "zero-flash.exe" -> @name. ]
+ ? @step == 57 [ "media/drives.zero" -> @file. "zero-drives" -> @name. 1 -> @executable. ]
+ ? @step == 58 [ "media/drives.zero" -> @file. "--windows" -> @target. "zero-drives.exe" -> @name. ]
+ ? @step == 59 [ "media/disk.zero" -> @file. "zero-disk" -> @name. 1 -> @executable. ]
+ ? @step == 60 [ "media/disk.zero" -> @file. "--windows" -> @target. "zero-disk.exe" -> @name. ]
+ ? @step == 61 [ "media/check.zero" -> @file. "zero-media-check" -> @name. 1 -> @executable. ]
+ ? @step == 62 [ "media/check.zero" -> @file. "--windows" -> @target. "zero-media-check.exe" -> @name. ]
+ ? @step == 63 [ "media/disk-bootstrap.zero" -> @file. "--real" -> @target. "disk-bootstrap.bin" -> @name. 946 -> @limit. ]
+ ? @step == 64 [ "media/disk-bios.zero" -> @file. "--real" -> @target. "disk-bios.bin" -> @name. 16384 -> @limit. ]
+ ? @step == 65 [ "media/firmware.zero" -> @file. "--efi" -> @target. "FLASHX64.EFI" -> @name. ]
+ ? @step == 66 [ "media/firmware32.zero" -> @file. "--efi32" -> @target. "FLASHIA32.EFI" -> @name. ]
+ ? @step == 67 [ "media/menu64.zero" -> @file. "--efi" -> @target. "MENU64.EFI" -> @name. 65536 -> @limit. ]
+ ? @step == 68 [ "media/menu32.zero" -> @file. "--efi32" -> @target. "MENU32.EFI" -> @name. 65536 -> @limit. ]
+ ? @step == 69 [ "media/disk-fat.zero" -> @file. "--app64" -> @target. "media-fat64.app" -> @name. ]
+ ? @step == 70 [ "browser/engine/web.zero" -> @file. "zero-web" -> @name. 1 -> @executable. ]
+ ? @step == 71 [ "browser/engine/web.zero" -> @file. "--windows" -> @target. "zero-web.exe" -> @name. ]
+ ? @step == 72 [ "browser/engine/compose.zero" -> @file. "zero-web-compose" -> @name. 1 -> @executable. ]
+ ? @step == 73 [ "browser/engine/compose.zero" -> @file. "--windows" -> @target. "zero-web-compose.exe" -> @name. ]
+ ? @step == 74 [ "browser/engine/engine-check.zero" -> @file. "zero-web-check" -> @name. 1 -> @executable. ]
+ ? @step == 75 [ "browser/engine/engine-check.zero" -> @file. "--windows" -> @target. "zero-web-check.exe" -> @name. ]
+ ? ((@step == 9)+(@step == 10))*(@kernelpath != 0) [ @kernelpath -> @file. ]
+
+ # Bounded exact file read. A source must not grow or shrink during the read.
+ ? @file [
+  0 -> @i.
+  ? ((@step == 9)+(@step == 10))*(@kernelpath != 0) [ ] ~ [
+   ?? @i < @rootlen [ !store8[@path+@i|:load8[@root+@i]]. @i+1 -> @i. ]
+   !store8[@path+@i|47]. @i+1 -> @i.
+  ]
+  0 -> @j.
+  ?? :load8[@file+@j] [ !store8[@path+@i|:load8[@file+@j]]. @i+1 -> @i. @j+1 -> @j. ]
+  !store8[@path+@i|0]. @path -> @detail.
+  :fileopen[@path|0] -> @handle.
+  ? @handle == -1 [ "Cannot open build input: " -> @message. 66 -> @error. ]
+  ? @error == 0 [
+   :filesize[@handle] -> @size.
+   ? (@size == 0)+(@size > @capacity) [ "Build input is empty or exceeds its capacity: " -> @message. 65 -> @error. ]
+  ]
+  0 -> @count.
+  ?? (@count < @size)*(@error == 0) [
+   :fileread[@handle|@buffer+@count|@size-@count] -> @n.
+   ? (@n == 0)+(@n > @size-@count) [ "Incomplete build input read: " -> @message. 74 -> @error. ] ~ [ @count+@n -> @count. ]
+  ]
+  ? @error == 0 [
+   :fileread[@handle|@work+256|1] -> @n.
+   ? (@n != 0)+(:filesize[@handle] != @size) [ "Build input changed during reading: " -> @message. 74 -> @error. ]
+  ]
+  ? @handle != -1 [
+   :fileclose[@handle] -> @status. -1 -> @handle.
+   ? (@status != 0)*(@error == 0) [ "Cannot close build input: " -> @message. 74 -> @error. ]
+  ]
+  @count -> @sourcebytes.
+  ? (@step != 0)*(@error == 0) [
+   0 -> @i. ?? (@i < @count)*(@error == 0) [
+    ? :load8[@buffer+@i] == 0 [ "NUL byte in Zero build input: " -> @message. 65 -> @error. ]
+    @i+1 -> @i.
+   ]
+  ]
+ ]
+
+ # Only source whitespace and comments are compacted; quoted bytes are exact.
+ # This leaves token separators intact and does not translate program logic.
+ ? @compact*(@error == 0) [
+  0 -> @i. 0 -> @j. 0 -> @quoted. 0 -> @escaped. 0 -> @comment. 0 -> @pending.
+  ?? @i < @sourcebytes [
+   :load8[@source+@i] -> @c.
+   ? @quoted [
+    !store8[@source+@j|@c]. @j+1 -> @j.
+    ? @escaped [ 0 -> @escaped. ] ~ [ ? @c == 92 [ 1 -> @escaped. ] ? @c == 34 [ 0 -> @quoted. ] ]
+   ] ~ [
+    ? @comment [ ? (@c == 10)+(@c == 13) [ 0 -> @comment. 1 -> @pending. ] ] ~ [
+     ? @c == 35 [ 1 -> @comment. 1 -> @pending. ] ~ [
+      ? (@c == 32)+(@c == 9)+(@c == 10)+(@c == 13) [ 1 -> @pending. ] ~ [
+       ? @pending*(@j != 0) [ !store8[@source+@j|32]. @j+1 -> @j. ] 0 -> @pending.
+       !store8[@source+@j|@c]. @j+1 -> @j. ? @c == 34 [ 1 -> @quoted. ]
+      ]
+     ]
+    ]
+   ]
+   @i+1 -> @i.
+  ]
+  @j -> @sourcebytes.
+ ]
+ ? (((@step > 0)*(@step < 20))+(@step >= 25))*(@error == 0) [
+  ? @sourcebytes > 524288 [ "Compacted source still exceeds the compiler source capacity: " -> @message. 65 -> @error. ]
+ ]
+
+ # Validate seed and generated app headers before any execution is allowed.
+ ? (@step == 0)*(@error == 0) [
+  @buffer -> @output. @count -> @outputbytes. @count -> @seedbytes.
+ ]
+ ? (((@step > 0)*(@step < 20))+(@step >= 25))*(@error == 0) [
+  @source -> @input. @sourcebytes -> @inputbytes.
+ ]
+ ? (@step >= 22)*(@step <= 24) [
+  0 -> @detail.
+  ? @step == 22 [
+   @work+12582912 -> @code. @work+18874368 -> @input. 1028096 -> @inputbytes.
+   @work+15794176 -> @output. 1048576 -> @minimum. 1048576 -> @limit. "tools.bin" -> @name.
+  ]
+  ? @step == 23 [
+   @work+10485760 -> @code. @work+14680064 -> @input. 2162688 -> @inputbytes.
+   @work+21970944 -> @output. 16777216 -> @minimum. 16777216 -> @limit. 0 -> @publish.
+  ]
+  ? @step == 24 [
+   # Assemble padded optical payloads in memory; the FAT image is already here.
+   0 -> @kind.
+   ?? @kind < 4 [
+    @work+13631488 -> @copyfrom. @work+20971520 -> @copyto. 16384 -> @copybytes.
+    ? @kind == 1 [ @work+14811136 -> @copyfrom. @work+20987904 -> @copyto. 475136 -> @copybytes. ]
+    ? @kind == 2 [ @work+15286272 -> @copyfrom. @work+21463040 -> @copyto. 507904 -> @copybytes. ]
+    ? @kind == 3 [ @work+15794176 -> @copyfrom. @work+38748160 -> @copyto. 1048576 -> @copybytes. ]
+    0 -> @i. ?? @i < @copybytes [ !store64[@copyto+@i|:load64[@copyfrom+@i]]. @i+8 -> @i. ] @kind+1 -> @kind.
+   ]
+   @work+11534336 -> @code. @work+20971520 -> @input. 18825216 -> @inputbytes.
+   @work+41943040 -> @output. 18890752 -> @minimum. 18890752 -> @limit. "zero.iso" -> @name.
+  ]
+  @name -> @detail.
+ ]
+ ? (((@step > 0)*(@step < 20))+(@step >= 22))*(@error == 0) [
+  0 -> @i. ?? @i < 192 [ !store64[@context+@i|0]. @i+8 -> @i. ]
+  !store64[@context|1]. !store64[@context+8|@work+7340032].
+  !store64[@context+168|@work+1048576]. !store64[@context+176|6291456].
+  !store64[@context+16|@input]. !store64[@context+24|@inputbytes].
+  !store64[@context+40|@output]. !store64[@context+48|@limit].
+  !store64[@context+64|1]. !store64[@context+72|"zero-build"].
+  ? (@step < 20)+(@step >= 25) [ !store64[@context+64|2]. !store64[@context+80|@target]. ]
+  :call[@code+64|@context|0|0|0|0] -> @status.
+  :load64[@context+56] -> @outputbytes.
+  ? (@status != 0)+(:load64[@context+88] != 0)+(:load64[@context+32] > @inputbytes)+(@outputbytes < @minimum)+(@outputbytes > @limit) [
+   "Own compiler or image builder rejected input, or exceeded its bound: " -> @message. 65 -> @error.
+  ]
+ ]
+ ? ((@step <= 2)+((@step >= 11)*(@step <= 13)))*(@error == 0) [
+  ? (@outputbytes <= 64)+(:load64[@output] != 0x315050414f52455a)+(:load64[@output+8] != 64)+(:load64[@output+16] != @outputbytes)+(:load64[@output+24] != 64)+(:load64[@output+32] != 4198400)+(:load64[@output+40] != 1)+(:load64[@output+48] != 0)+(:load64[@output+56] != 0) [
+   "Invalid own application image; execution refused.\n" -> @message. 0 -> @detail. 65 -> @error.
+  ]
+  ? @error == 0 [
+   ? :hostprotect[@output|1048576|1] != 0 [ "Cannot protect own application code.\n" -> @message. 0 -> @detail. 71 -> @error. ]
+  ]
+ ]
+ ? (@step == 1)*(@error == 0) [ @outputbytes -> @stagebytes. ]
+ ? (@step == 2)*(@error == 0) [
+  ? @stagebytes != @outputbytes [ 65 -> @error. ]
+  0 -> @i. ?? (@i < @stagebytes)*(@error == 0) [
+   ? :load8[@work+8388608+@i] != :load8[@work+9437184+@i] [ 65 -> @error. ] @i+1 -> @i.
+  ]
+  ? @error [ "Own compiler app stages differ; build refused.\n" -> @message. 0 -> @detail. ]
+ ]
+
+ # Publish each completed artifact exclusively. Failed writes remove only their
+ # own partial file; earlier artifacts stay in the new directory for inspection.
+ ? @publish*(@error == 0) [
+  0 -> @i. ?? @i < @dirlen [ !store8[@path+@i|:load8[@directory+@i]]. @i+1 -> @i. ]
+  !store8[@path+@i|47]. @i+1 -> @i. 0 -> @j.
+  ?? :load8[@name+@j] [ !store8[@path+@i|:load8[@name+@j]]. @i+1 -> @i. @j+1 -> @j. ]
+  !store8[@path+@i|0]. @path -> @detail.
+  1 -> @temporary. ? @executable [ 4 -> @temporary. ]
+  :fileopen[@path|@temporary] -> @handle.
+  ? @handle == -1 [ "Cannot exclusively create build artifact: " -> @message. 73 -> @error. ] ~ [ 1 -> @created. ]
+  0 -> @count.
+  ?? (@count < @outputbytes)*(@error == 0) [
+   :filewrite[@handle|@output+@count|@outputbytes-@count] -> @n.
+   ? (@n == 0)+(@n > @outputbytes-@count) [ "Cannot write build artifact: " -> @message. 74 -> @error. ] ~ [ @count+@n -> @count. ]
+  ]
+  ? (@handle != -1)*(@error == 0) [ ? :filesync[@handle] != 0 [ "Cannot flush build artifact: " -> @message. 74 -> @error. ] ]
+  ? @handle != -1 [
+   :fileclose[@handle] -> @status. -1 -> @handle.
+   ? (@status != 0)*(@error == 0) [ "Cannot close build artifact: " -> @message. 74 -> @error. ]
+  ]
+  ? @created*@error [
+   :filedelete[@path] -> @status.
+   ? @status != 0 [ "Failed build artifact could not be removed: " -> @message. ]
+  ]
+  ? @error == 0 [
+   "Built " -> @message. 0 -> @i. ?? :load8[@message+@i] [ !put[:load8[@message+@i]]. @i+1 -> @i. ]
+   0 -> @i. ?? :load8[@name+@i] [ !put[:load8[@name+@i]]. @i+1 -> @i. ] !put[10].
+  ]
+ ]
+ @stage+1 -> @stage.
+]
+? @error == 0 [ "Build complete: own compiler fixed point, BIOS/UEFI ISO, Zmedia and Zero Web preview tools.\n" -> @message. 0 -> @detail. ]
+? @error [
+ "Build incomplete. Completed artifacts in the new directory are preserved.\n" -> @file.
+ 0 -> @i. ?? :load8[@file+@i] [ !put[:load8[@file+@i]]. @i+1 -> @i. ]
+]
+0 -> @i. ?? :load8[@message+@i] [ !put[:load8[@message+@i]]. @i+1 -> @i. ]
+? @detail [ 0 -> @i. ?? :load8[@detail+@i] [ !put[:load8[@detail+@i]]. @i+1 -> @i. ] !put[10]. ]
+? @work [ :hostfree[@work|67108864] -> @status. ]
+!exit[@error].

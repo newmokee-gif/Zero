@@ -1,0 +1,12 @@
+0 => @count.
+0 => @position.
+"Hello\n" => @message.
+
+?? @count < 3 [
+    0 -> @position.
+    ?? :load8[@message + @position] != 0 [
+        !put[:load8[@message + @position]].
+        @position + 1 -> @position.
+    ]
+    @count + 1 -> @count.
+]

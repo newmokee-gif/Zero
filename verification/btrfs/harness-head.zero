@@ -1,0 +1,66 @@
+:reserve[65536] => @memory.
+0 => @state.
+0 => @current.
+0 => @pointer.
+0 => @character.
+0 => @i.
+0 => @j.
+0 => @k.
+0 => @temporary.
+0 => @status.
+0 => @timeout.
+0 => @ready.
+0 => @valid.
+0 => @done.
+0 => @checksum.
+0 => @c0.
+0 => @c1.
+0 => @c2.
+0 => @c3.
+0 => @c4.
+0 => @c5.
+0 => @io_lba.
+0 => @io_buffer.
+0 => @io_count.
+0 => @io_write.
+0 => @io_return.
+0 => @io_ok.
+0 -> @i. ?? @i < 65536 [ !store8[@memory + @i| 0]. @i + 1 -> @i. ]
+:read[@memory| 512] -> @i.
+? @i != 512 [ !exit[70]. ]
+!store64[@memory + 24576| :load8[@memory]].
+!store64[@memory + 24584| @memory + 16].
+!store64[@memory + 24592| :load8[@memory + 1]].
+!store64[@memory + 24600| @memory + 64].
+!store64[@memory + 24608| :load16[@memory + 2]].
+!store64[@memory + 24616| @memory + 14336].
+!store64[@memory + 24624| 2044].
+? :load16[@memory + 4] [ !store64[@memory + 24624| :load16[@memory + 4]]. ]
+!store64[@memory + 24648| 999].
+!store64[@memory + 24656| :load64[@memory + 8]].
+!store64[@memory + 24664| 524288].
+400 -> @state.
+?? @state != 999 [
+ @state -> @current.
+ ? @current == 90 [
+  1 -> @io_ok.
+  ? @io_write [
+   !store64[@memory + 1024| :load64[@memory + 1024] + 1].
+   ? :load64[@memory + 1024] == :load8[@memory + 6] [ 0 -> @io_ok. ]
+  ]
+  ? @io_ok [
+  ? @io_write == 0 [
+   :pread[3| @io_buffer| @io_count * 512| @io_lba * 512] -> @temporary.
+   ? @temporary != @io_count * 512 [ 0 -> @io_ok. ]
+  ]
+  ? @io_write == 1 [
+   :pwrite[3| @io_buffer| @io_count * 512| @io_lba * 512] -> @temporary.
+   ? @temporary != @io_count * 512 [ 0 -> @io_ok. ]
+  ]
+  ? @io_write == 2 [
+   :fsync[3] -> @temporary.
+   ? @temporary != 0 [ 0 -> @io_ok. ]
+  ]
+  ]
+  @io_return -> @state.
+ ]

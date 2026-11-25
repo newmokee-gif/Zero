@@ -1,0 +1,59 @@
+# Open validates before replacing the active document. Save uses a new sibling
+# temporary file, sync, then an atomic native replace. Existing temporary files stay.
+? @phase == 1 [
+ :fileopen[@prompt | 0] -> @fd. 0 -> @n. 0 -> @a.
+ ? @fd == -1 [ "Cannot open this file; the current document is unchanged." -> @status. 1 -> @a. ]
+ ? @a == 0 [
+  :filesize[@fd] -> @b. ? @b > 65535 [ "File exceeds the 65535-byte editor limit." -> @status. 1 -> @a. ]
+ ]
+ ?? (@n < @b) * (@a == 0) [
+  :fileread[@fd | @e + 196608 + @n | @b - @n] -> @c.
+  ? (@c == 0) + (@c > @b - @n) [ "Cannot finish reading; document unchanged." -> @status. 1 -> @a. ] ~ [ @n + @c -> @n. ]
+ ]
+ ? @fd != -1 [ :fileclose[@fd] -> @c. -1 -> @fd. ]
+ ? @a == 0 [
+  0 -> @i. ?? @i < @n [
+   :load8[@e + 196608 + @i] -> @c.
+   ? ((@c < 32) * (@c != 9) * (@c != 10) * (@c != 13)) + (@c > 126) [ 1 -> @a. "This version edits ASCII source only; file unchanged." -> @status. ]
+   @i + 1 -> @i.
+  ]
+ ]
+ ? @a == 0 [
+  0 -> @i. 0 -> @j. 0 -> @d.
+  ?? @i < @n [
+   :load8[@e + 196608 + @i] -> @c. @i + 1 -> @i.
+   ? @c == 13 [ 10 -> @c. 1 -> @d. ? (@i < @n) * (:load8[@e + 196608 + @i] == 10) [ @i + 1 -> @i. ] ]
+   !store8[@text + @j | @c]. @j + 1 -> @j.
+  ]
+  !store8[@text + @j | 0]. @j -> @length. 0 -> @caret. 0 -> @top. 0 -> @changed. 0 -> @mode.
+  0 -> @i. ?? @i <= @plen [ !store8[@path + @i | :load8[@prompt + @i]]. @i + 1 -> @i. ]
+  "Opened. F5 builds the buffer with the original Zero compiler." -> @status.
+  ? @d [ "Opened. CRLF/CR converted to LF in the buffer; disk is unchanged." -> @status. ]
+ ]
+ 0 -> @phase. 1 -> @dirty.
+]
+? @phase == 2 [
+ 0 -> @a. 0 -> @n. @e + 1536 -> @b.
+ 0 -> @i. ?? @i < @plen [ !store8[@b + @i | :load8[@prompt + @i]]. @i + 1 -> @i. ]
+ ".zero-save" -> @d. 0 -> @j. ?? :load8[@d + @j] [ !store8[@b + @i | :load8[@d + @j]]. @i + 1 -> @i. @j + 1 -> @j. ] !store8[@b + @i | 0].
+ :fileopen[@b | 1] -> @fd.
+ ? @fd == -1 [ "Cannot create save temporary; destination stays unchanged." -> @status. 1 -> @a. ]
+ ?? (@n < @length) * (@a == 0) [
+  :filewrite[@fd | @text + @n | @length - @n] -> @c.
+  ? (@c == 0) + (@c > @length - @n) [ 1 -> @a. ] ~ [ @n + @c -> @n. ]
+ ]
+ ? @fd != -1 [
+  ? :filesync[@fd] != 0 [ 1 -> @a. ]
+  ? :fileclose[@fd] != 0 [ 1 -> @a. ] -1 -> @fd.
+  ? @a == 0 [
+   ? @platform == 1 [ :hostsyscall[316 | -100 | @b | -100 | @prompt | 0 | 0] -> @c. ]
+   ? @platform == 2 [ :hostcall12[:load64[@api + 112] | @b | @prompt | 9 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0] -> @c. ? @c != 0 [ 0 -> @c. ] ~ [ 1 -> @c. ] ]
+   ? @c != 0 [ 1 -> @a. ]
+  ]
+  ? @a != 0 [ :filedelete[@b] -> @c. "Save failed; original destination is preserved." -> @status. ] ~ [
+   0 -> @changed. 0 -> @mode. 0 -> @quit. "Saved atomically." -> @status.
+   0 -> @i. ?? @i <= @plen [ !store8[@path + @i | :load8[@prompt + @i]]. @i + 1 -> @i. ]
+  ]
+ ]
+ 0 -> @phase. 1 -> @dirty.
+]

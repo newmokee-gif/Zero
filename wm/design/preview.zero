@@ -1,0 +1,1031 @@
+# Original Zero design renderer. Static preview, not a running window manager.
+:reserve[1920000] => @frame.
+:reserve[2400] => @row.
+:reserve[30000] => @draws.
+:reserve[16] => @input.
+"00000004444404:::0000:O::O:04?D>5N4IJ248;C<BD8EB=44800002488842842224804E>E40044O4400000448000O0000000004122488@>ACEIA>4<4444>>A1248ON11611N26:BO22O@@N11N68@NAA>O124888>AA>AA>>AA?12<04004000400448124842100O0O00@84248@>A12404>AGEG@>>AAOAAANAANAAN?@@@@@?NAAAAANO@@N@@OO@@N@@@?@@GAA?AAAOAAA>44444>72222B<ABDHDBA@@@@@@OAKEEAAAAIIECCA>AAAAA>NAAN@@@>AAAEB=NAANDBA?@@>11NO444444AAAAAA>AAAAA:4AAAEEKAAA:4:AAAA:4444O1248@O>88888>@884221>22222>4:A0000000000O842000000>1?A?@@NAAAN00?@@@?11?AAA?00>AO@?698N8880?AA?1>@@NAAAA40<444>20622B<@@BDHDB<44444>00JEEEE00NAAAA00>AAA>0NAAN@@0?AA?1100FI@@@00?@>1N88N889600AAAA?00AAA:400AAEE:00A:4:A0AAA?1>00O248O34484434444444H44244H009F000" => @font.
+0 => @mode.
+0 => @n.
+0 => @count.
+0 => @kind.
+0 => @x.
+0 => @y.
+0 => @w.
+0 => @h.
+0 => @color.
+0 => @ptr.
+0 => @scale.
+0 => @i.
+0 => @j.
+0 => @a.
+0 => @b.
+0 => @ch.
+0 => @mask.
+0 => @bit.
+0 => @gx.
+0 => @gy.
+0 => @dx.
+0 => @dy.
+0 => @pixel.
+0 => @sent.
+0 => @amount.
+0 => @offset.
+:read[@input | 1] -> @n.
+? @n == 1 [ ? :load8[@input] == 115 [ 1 -> @mode. ] ]
+? @mode == 0 [
+61 -> @count.
+!store64[@draws + 0 | 1].
+!store64[@draws + 8 | 0].
+!store64[@draws + 16 | 0].
+!store64[@draws + 24 | 800].
+!store64[@draws + 32 | 600].
+!store64[@draws + 40 | 725019].
+!store64[@draws + 48 | ""].
+!store64[@draws + 56 | 1].
+!store64[@draws + 64 | 1].
+!store64[@draws + 72 | 0].
+!store64[@draws + 80 | 0].
+!store64[@draws + 88 | 800].
+!store64[@draws + 96 | 58].
+!store64[@draws + 104 | 1120810].
+!store64[@draws + 112 | ""].
+!store64[@draws + 120 | 1].
+!store64[@draws + 128 | 1].
+!store64[@draws + 136 | 0].
+!store64[@draws + 144 | 57].
+!store64[@draws + 152 | 800].
+!store64[@draws + 160 | 1].
+!store64[@draws + 168 | 2766669].
+!store64[@draws + 176 | ""].
+!store64[@draws + 184 | 1].
+!store64[@draws + 192 | 2].
+!store64[@draws + 200 | 18].
+!store64[@draws + 208 | 15].
+!store64[@draws + 216 | 0].
+!store64[@draws + 224 | 0].
+!store64[@draws + 232 | 14476271].
+!store64[@draws + 240 | "ZERO"].
+!store64[@draws + 248 | 2].
+!store64[@draws + 256 | 2].
+!store64[@draws + 264 | 110].
+!store64[@draws + 272 | 25].
+!store64[@draws + 280 | 0].
+!store64[@draws + 288 | 0].
+!store64[@draws + 296 | 11311848].
+!store64[@draws + 304 | "/  TILES"].
+!store64[@draws + 312 | 1].
+!store64[@draws + 320 | 1].
+!store64[@draws + 328 | 650].
+!store64[@draws + 336 | 17].
+!store64[@draws + 344 | 132].
+!store64[@draws + 352 | 26].
+!store64[@draws + 360 | 1845051].
+!store64[@draws + 368 | ""].
+!store64[@draws + 376 | 1].
+!store64[@draws + 384 | 2].
+!store64[@draws + 392 | 662].
+!store64[@draws + 400 | 23].
+!store64[@draws + 408 | 0].
+!store64[@draws + 416 | 0].
+!store64[@draws + 424 | 14476271].
+!store64[@draws + 432 | "03 WINDOWS"].
+!store64[@draws + 440 | 1].
+!store64[@draws + 448 | 2].
+!store64[@draws + 456 | 18].
+!store64[@draws + 464 | 73].
+!store64[@draws + 472 | 0].
+!store64[@draws + 480 | 0].
+!store64[@draws + 488 | 8754863].
+!store64[@draws + 496 | "WORKSPACE 01"].
+!store64[@draws + 504 | 1].
+!store64[@draws + 512 | 2].
+!store64[@draws + 520 | 570].
+!store64[@draws + 528 | 73].
+!store64[@draws + 536 | 0].
+!store64[@draws + 544 | 0].
+!store64[@draws + 552 | 9033933].
+!store64[@draws + 560 | "AUTO TILE"].
+!store64[@draws + 568 | 1].
+!store64[@draws + 576 | 1].
+!store64[@draws + 584 | 16].
+!store64[@draws + 592 | 104].
+!store64[@draws + 600 | 440].
+!store64[@draws + 608 | 436].
+!store64[@draws + 616 | 11311848].
+!store64[@draws + 624 | ""].
+!store64[@draws + 632 | 1].
+!store64[@draws + 640 | 1].
+!store64[@draws + 648 | 17].
+!store64[@draws + 656 | 105].
+!store64[@draws + 664 | 438].
+!store64[@draws + 672 | 434].
+!store64[@draws + 680 | 1055015].
+!store64[@draws + 688 | ""].
+!store64[@draws + 696 | 1].
+!store64[@draws + 704 | 1].
+!store64[@draws + 712 | 17].
+!store64[@draws + 720 | 105].
+!store64[@draws + 728 | 438].
+!store64[@draws + 736 | 34].
+!store64[@draws + 744 | 2106939].
+!store64[@draws + 752 | ""].
+!store64[@draws + 760 | 1].
+!store64[@draws + 768 | 1].
+!store64[@draws + 776 | 17].
+!store64[@draws + 784 | 138].
+!store64[@draws + 792 | 438].
+!store64[@draws + 800 | 1].
+!store64[@draws + 808 | 11311848].
+!store64[@draws + 816 | ""].
+!store64[@draws + 824 | 1].
+!store64[@draws + 832 | 1].
+!store64[@draws + 840 | 28].
+!store64[@draws + 848 | 116].
+!store64[@draws + 856 | 9].
+!store64[@draws + 864 | 9].
+!store64[@draws + 872 | 11311848].
+!store64[@draws + 880 | ""].
+!store64[@draws + 888 | 1].
+!store64[@draws + 896 | 2].
+!store64[@draws + 904 | 46].
+!store64[@draws + 912 | 114].
+!store64[@draws + 920 | 0].
+!store64[@draws + 928 | 0].
+!store64[@draws + 936 | 14476271].
+!store64[@draws + 944 | "TERMINAL 01"].
+!store64[@draws + 952 | 1].
+!store64[@draws + 960 | 2].
+!store64[@draws + 968 | 392].
+!store64[@draws + 976 | 114].
+!store64[@draws + 984 | 0].
+!store64[@draws + 992 | 0].
+!store64[@draws + 1000 | 11311848].
+!store64[@draws + 1008 | "A:|"].
+!store64[@draws + 1016 | 1].
+!store64[@draws + 1024 | 2].
+!store64[@draws + 1032 | 32].
+!store64[@draws + 1040 | 154].
+!store64[@draws + 1048 | 0].
+!store64[@draws + 1056 | 0].
+!store64[@draws + 1064 | 9033933].
+!store64[@draws + 1072 | "A:|> help"].
+!store64[@draws + 1080 | 1].
+!store64[@draws + 1088 | 2].
+!store64[@draws + 1096 | 32].
+!store64[@draws + 1104 | 194].
+!store64[@draws + 1112 | 0].
+!store64[@draws + 1120 | 0].
+!store64[@draws + 1128 | 14476271].
+!store64[@draws + 1136 | "ZERO / COMMANDS"].
+!store64[@draws + 1144 | 1].
+!store64[@draws + 1152 | 2].
+!store64[@draws + 1160 | 32].
+!store64[@draws + 1168 | 214].
+!store64[@draws + 1176 | 0].
+!store64[@draws + 1184 | 0].
+!store64[@draws + 1192 | 8754863].
+!store64[@draws + 1200 | "watch  read  write  create"].
+!store64[@draws + 1208 | 1].
+!store64[@draws + 1216 | 2].
+!store64[@draws + 1224 | 32].
+!store64[@draws + 1232 | 234].
+!store64[@draws + 1240 | 0].
+!store64[@draws + 1248 | 0].
+!store64[@draws + 1256 | 8754863].
+!store64[@draws + 1264 | "save   rm    GO     disks"].
+!store64[@draws + 1272 | 1].
+!store64[@draws + 1280 | 2].
+!store64[@draws + 1288 | 32].
+!store64[@draws + 1296 | 274].
+!store64[@draws + 1304 | 0].
+!store64[@draws + 1312 | 0].
+!store64[@draws + 1320 | 9033933].
+!store64[@draws + 1328 | "A:|> watch"].
+!store64[@draws + 1336 | 1].
+!store64[@draws + 1344 | 2].
+!store64[@draws + 1352 | 32].
+!store64[@draws + 1360 | 294].
+!store64[@draws + 1368 | 0].
+!store64[@draws + 1376 | 0].
+!store64[@draws + 1384 | 14476271].
+!store64[@draws + 1392 | "notes"].
+!store64[@draws + 1400 | 1].
+!store64[@draws + 1408 | 2].
+!store64[@draws + 1416 | 32].
+!store64[@draws + 1424 | 314].
+!store64[@draws + 1432 | 0].
+!store64[@draws + 1440 | 0].
+!store64[@draws + 1448 | 14476271].
+!store64[@draws + 1456 | "projects"].
+!store64[@draws + 1464 | 1].
+!store64[@draws + 1472 | 2].
+!store64[@draws + 1480 | 32].
+!store64[@draws + 1488 | 354].
+!store64[@draws + 1496 | 0].
+!store64[@draws + 1504 | 0].
+!store64[@draws + 1512 | 9033933].
+!store64[@draws + 1520 | "A:|> read notes"].
+!store64[@draws + 1528 | 1].
+!store64[@draws + 1536 | 2].
+!store64[@draws + 1544 | 32].
+!store64[@draws + 1552 | 374].
+!store64[@draws + 1560 | 0].
+!store64[@draws + 1568 | 0].
+!store64[@draws + 1576 | 14476271].
+!store64[@draws + 1584 | "Two terminals. One workspace."].
+!store64[@draws + 1592 | 1].
+!store64[@draws + 1600 | 2].
+!store64[@draws + 1608 | 32].
+!store64[@draws + 1616 | 414].
+!store64[@draws + 1624 | 0].
+!store64[@draws + 1632 | 0].
+!store64[@draws + 1640 | 9033933].
+!store64[@draws + 1648 | "A:|> _"].
+!store64[@draws + 1656 | 1].
+!store64[@draws + 1664 | 1].
+!store64[@draws + 1672 | 17].
+!store64[@draws + 1680 | 515].
+!store64[@draws + 1688 | 438].
+!store64[@draws + 1696 | 24].
+!store64[@draws + 1704 | 922914].
+!store64[@draws + 1712 | ""].
+!store64[@draws + 1720 | 1].
+!store64[@draws + 1728 | 2].
+!store64[@draws + 1736 | 29].
+!store64[@draws + 1744 | 521].
+!store64[@draws + 1752 | 0].
+!store64[@draws + 1760 | 0].
+!store64[@draws + 1768 | 9033933].
+!store64[@draws + 1776 | "FOCUSED"].
+!store64[@draws + 1784 | 1].
+!store64[@draws + 1792 | 2].
+!store64[@draws + 1800 | 371].
+!store64[@draws + 1808 | 521].
+!store64[@draws + 1816 | 0].
+!store64[@draws + 1824 | 0].
+!store64[@draws + 1832 | 8754863].
+!store64[@draws + 1840 | "TERMINAL"].
+!store64[@draws + 1848 | 1].
+!store64[@draws + 1856 | 1].
+!store64[@draws + 1864 | 472].
+!store64[@draws + 1872 | 104].
+!store64[@draws + 1880 | 312].
+!store64[@draws + 1888 | 210].
+!store64[@draws + 1896 | 2766669].
+!store64[@draws + 1904 | ""].
+!store64[@draws + 1912 | 1].
+!store64[@draws + 1920 | 1].
+!store64[@draws + 1928 | 473].
+!store64[@draws + 1936 | 105].
+!store64[@draws + 1944 | 310].
+!store64[@draws + 1952 | 208].
+!store64[@draws + 1960 | 1055015].
+!store64[@draws + 1968 | ""].
+!store64[@draws + 1976 | 1].
+!store64[@draws + 1984 | 1].
+!store64[@draws + 1992 | 473].
+!store64[@draws + 2000 | 105].
+!store64[@draws + 2008 | 310].
+!store64[@draws + 2016 | 34].
+!store64[@draws + 2024 | 1120810].
+!store64[@draws + 2032 | ""].
+!store64[@draws + 2040 | 1].
+!store64[@draws + 2048 | 1].
+!store64[@draws + 2056 | 473].
+!store64[@draws + 2064 | 138].
+!store64[@draws + 2072 | 310].
+!store64[@draws + 2080 | 1].
+!store64[@draws + 2088 | 2766669].
+!store64[@draws + 2096 | ""].
+!store64[@draws + 2104 | 1].
+!store64[@draws + 2112 | 1].
+!store64[@draws + 2120 | 484].
+!store64[@draws + 2128 | 116].
+!store64[@draws + 2136 | 9].
+!store64[@draws + 2144 | 9].
+!store64[@draws + 2152 | 8754863].
+!store64[@draws + 2160 | ""].
+!store64[@draws + 2168 | 1].
+!store64[@draws + 2176 | 2].
+!store64[@draws + 2184 | 502].
+!store64[@draws + 2192 | 114].
+!store64[@draws + 2200 | 0].
+!store64[@draws + 2208 | 0].
+!store64[@draws + 2216 | 8754863].
+!store64[@draws + 2224 | "TERMINAL 02"].
+!store64[@draws + 2232 | 1].
+!store64[@draws + 2240 | 2].
+!store64[@draws + 2248 | 720].
+!store64[@draws + 2256 | 114].
+!store64[@draws + 2264 | 0].
+!store64[@draws + 2272 | 0].
+!store64[@draws + 2280 | 8754863].
+!store64[@draws + 2288 | "B:|"].
+!store64[@draws + 2296 | 1].
+!store64[@draws + 2304 | 2].
+!store64[@draws + 2312 | 488].
+!store64[@draws + 2320 | 154].
+!store64[@draws + 2328 | 0].
+!store64[@draws + 2336 | 0].
+!store64[@draws + 2344 | 9033933].
+!store64[@draws + 2352 | "B:|> read build"].
+!store64[@draws + 2360 | 1].
+!store64[@draws + 2368 | 2].
+!store64[@draws + 2376 | 488].
+!store64[@draws + 2384 | 174].
+!store64[@draws + 2392 | 0].
+!store64[@draws + 2400 | 0].
+!store64[@draws + 2408 | 14476271].
+!store64[@draws + 2416 | "Compiler ready."].
+!store64[@draws + 2424 | 1].
+!store64[@draws + 2432 | 2].
+!store64[@draws + 2440 | 488].
+!store64[@draws + 2448 | 194].
+!store64[@draws + 2456 | 0].
+!store64[@draws + 2464 | 0].
+!store64[@draws + 2472 | 8754863].
+!store64[@draws + 2480 | "Files saved to disk."].
+!store64[@draws + 2488 | 1].
+!store64[@draws + 2496 | 2].
+!store64[@draws + 2504 | 488].
+!store64[@draws + 2512 | 234].
+!store64[@draws + 2520 | 0].
+!store64[@draws + 2528 | 0].
+!store64[@draws + 2536 | 9033933].
+!store64[@draws + 2544 | "B:|> _"].
+!store64[@draws + 2552 | 1].
+!store64[@draws + 2560 | 1].
+!store64[@draws + 2568 | 473].
+!store64[@draws + 2576 | 289].
+!store64[@draws + 2584 | 310].
+!store64[@draws + 2592 | 24].
+!store64[@draws + 2600 | 922914].
+!store64[@draws + 2608 | ""].
+!store64[@draws + 2616 | 1].
+!store64[@draws + 2624 | 2].
+!store64[@draws + 2632 | 485].
+!store64[@draws + 2640 | 295].
+!store64[@draws + 2648 | 0].
+!store64[@draws + 2656 | 0].
+!store64[@draws + 2664 | 8754863].
+!store64[@draws + 2672 | "READY"].
+!store64[@draws + 2680 | 1].
+!store64[@draws + 2688 | 2].
+!store64[@draws + 2696 | 699].
+!store64[@draws + 2704 | 295].
+!store64[@draws + 2712 | 0].
+!store64[@draws + 2720 | 0].
+!store64[@draws + 2728 | 8754863].
+!store64[@draws + 2736 | "TERMINAL"].
+!store64[@draws + 2744 | 1].
+!store64[@draws + 2752 | 1].
+!store64[@draws + 2760 | 472].
+!store64[@draws + 2768 | 330].
+!store64[@draws + 2776 | 312].
+!store64[@draws + 2784 | 210].
+!store64[@draws + 2792 | 2766669].
+!store64[@draws + 2800 | ""].
+!store64[@draws + 2808 | 1].
+!store64[@draws + 2816 | 1].
+!store64[@draws + 2824 | 473].
+!store64[@draws + 2832 | 331].
+!store64[@draws + 2840 | 310].
+!store64[@draws + 2848 | 208].
+!store64[@draws + 2856 | 1055015].
+!store64[@draws + 2864 | ""].
+!store64[@draws + 2872 | 1].
+!store64[@draws + 2880 | 1].
+!store64[@draws + 2888 | 473].
+!store64[@draws + 2896 | 331].
+!store64[@draws + 2904 | 310].
+!store64[@draws + 2912 | 34].
+!store64[@draws + 2920 | 1120810].
+!store64[@draws + 2928 | ""].
+!store64[@draws + 2936 | 1].
+!store64[@draws + 2944 | 1].
+!store64[@draws + 2952 | 473].
+!store64[@draws + 2960 | 364].
+!store64[@draws + 2968 | 310].
+!store64[@draws + 2976 | 1].
+!store64[@draws + 2984 | 2766669].
+!store64[@draws + 2992 | ""].
+!store64[@draws + 3000 | 1].
+!store64[@draws + 3008 | 1].
+!store64[@draws + 3016 | 484].
+!store64[@draws + 3024 | 342].
+!store64[@draws + 3032 | 9].
+!store64[@draws + 3040 | 9].
+!store64[@draws + 3048 | 8754863].
+!store64[@draws + 3056 | ""].
+!store64[@draws + 3064 | 1].
+!store64[@draws + 3072 | 2].
+!store64[@draws + 3080 | 502].
+!store64[@draws + 3088 | 340].
+!store64[@draws + 3096 | 0].
+!store64[@draws + 3104 | 0].
+!store64[@draws + 3112 | 8754863].
+!store64[@draws + 3120 | "TERMINAL 03"].
+!store64[@draws + 3128 | 1].
+!store64[@draws + 3136 | 2].
+!store64[@draws + 3144 | 720].
+!store64[@draws + 3152 | 340].
+!store64[@draws + 3160 | 0].
+!store64[@draws + 3168 | 0].
+!store64[@draws + 3176 | 8754863].
+!store64[@draws + 3184 | "A:|"].
+!store64[@draws + 3192 | 1].
+!store64[@draws + 3200 | 2].
+!store64[@draws + 3208 | 488].
+!store64[@draws + 3216 | 380].
+!store64[@draws + 3224 | 0].
+!store64[@draws + 3232 | 0].
+!store64[@draws + 3240 | 9033933].
+!store64[@draws + 3248 | "A:|> tasks"].
+!store64[@draws + 3256 | 1].
+!store64[@draws + 3264 | 2].
+!store64[@draws + 3272 | 488].
+!store64[@draws + 3280 | 400].
+!store64[@draws + 3288 | 0].
+!store64[@draws + 3296 | 0].
+!store64[@draws + 3304 | 14476271].
+!store64[@draws + 3312 | "terminal   RUN"].
+!store64[@draws + 3320 | 1].
+!store64[@draws + 3328 | 2].
+!store64[@draws + 3336 | 488].
+!store64[@draws + 3344 | 420].
+!store64[@draws + 3352 | 0].
+!store64[@draws + 3360 | 0].
+!store64[@draws + 3368 | 14476271].
+!store64[@draws + 3376 | "graphics   RUN"].
+!store64[@draws + 3384 | 1].
+!store64[@draws + 3392 | 2].
+!store64[@draws + 3400 | 488].
+!store64[@draws + 3408 | 440].
+!store64[@draws + 3416 | 0].
+!store64[@draws + 3424 | 0].
+!store64[@draws + 3432 | 14476271].
+!store64[@draws + 3440 | "compute    RUN"].
+!store64[@draws + 3448 | 1].
+!store64[@draws + 3456 | 2].
+!store64[@draws + 3464 | 488].
+!store64[@draws + 3472 | 460].
+!store64[@draws + 3480 | 0].
+!store64[@draws + 3488 | 0].
+!store64[@draws + 3496 | 9033933].
+!store64[@draws + 3504 | "A:|> _"].
+!store64[@draws + 3512 | 1].
+!store64[@draws + 3520 | 1].
+!store64[@draws + 3528 | 473].
+!store64[@draws + 3536 | 515].
+!store64[@draws + 3544 | 310].
+!store64[@draws + 3552 | 24].
+!store64[@draws + 3560 | 922914].
+!store64[@draws + 3568 | ""].
+!store64[@draws + 3576 | 1].
+!store64[@draws + 3584 | 2].
+!store64[@draws + 3592 | 485].
+!store64[@draws + 3600 | 521].
+!store64[@draws + 3608 | 0].
+!store64[@draws + 3616 | 0].
+!store64[@draws + 3624 | 8754863].
+!store64[@draws + 3632 | "READY"].
+!store64[@draws + 3640 | 1].
+!store64[@draws + 3648 | 2].
+!store64[@draws + 3656 | 699].
+!store64[@draws + 3664 | 521].
+!store64[@draws + 3672 | 0].
+!store64[@draws + 3680 | 0].
+!store64[@draws + 3688 | 8754863].
+!store64[@draws + 3696 | "TERMINAL"].
+!store64[@draws + 3704 | 1].
+!store64[@draws + 3712 | 1].
+!store64[@draws + 3720 | 0].
+!store64[@draws + 3728 | 574].
+!store64[@draws + 3736 | 800].
+!store64[@draws + 3744 | 26].
+!store64[@draws + 3752 | 1120810].
+!store64[@draws + 3760 | ""].
+!store64[@draws + 3768 | 1].
+!store64[@draws + 3776 | 1].
+!store64[@draws + 3784 | 0].
+!store64[@draws + 3792 | 574].
+!store64[@draws + 3800 | 800].
+!store64[@draws + 3808 | 1].
+!store64[@draws + 3816 | 2766669].
+!store64[@draws + 3824 | ""].
+!store64[@draws + 3832 | 1].
+!store64[@draws + 3840 | 2].
+!store64[@draws + 3848 | 18].
+!store64[@draws + 3856 | 581].
+!store64[@draws + 3864 | 0].
+!store64[@draws + 3872 | 0].
+!store64[@draws + 3880 | 8754863].
+!store64[@draws + 3888 | "F1 NEW   F2 CLOSE   F3 NEXT   F4 PREV   F5 LAYOUT"].
+!store64[@draws + 3896 | 1].
+]
+? @mode == 1 [
+54 -> @count.
+!store64[@draws + 0 | 1].
+!store64[@draws + 8 | 0].
+!store64[@draws + 16 | 0].
+!store64[@draws + 24 | 800].
+!store64[@draws + 32 | 600].
+!store64[@draws + 40 | 725019].
+!store64[@draws + 48 | ""].
+!store64[@draws + 56 | 1].
+!store64[@draws + 64 | 1].
+!store64[@draws + 72 | 0].
+!store64[@draws + 80 | 0].
+!store64[@draws + 88 | 800].
+!store64[@draws + 96 | 58].
+!store64[@draws + 104 | 1120810].
+!store64[@draws + 112 | ""].
+!store64[@draws + 120 | 1].
+!store64[@draws + 128 | 1].
+!store64[@draws + 136 | 0].
+!store64[@draws + 144 | 57].
+!store64[@draws + 152 | 800].
+!store64[@draws + 160 | 1].
+!store64[@draws + 168 | 2766669].
+!store64[@draws + 176 | ""].
+!store64[@draws + 184 | 1].
+!store64[@draws + 192 | 2].
+!store64[@draws + 200 | 18].
+!store64[@draws + 208 | 15].
+!store64[@draws + 216 | 0].
+!store64[@draws + 224 | 0].
+!store64[@draws + 232 | 14476271].
+!store64[@draws + 240 | "ZERO"].
+!store64[@draws + 248 | 2].
+!store64[@draws + 256 | 2].
+!store64[@draws + 264 | 110].
+!store64[@draws + 272 | 25].
+!store64[@draws + 280 | 0].
+!store64[@draws + 288 | 0].
+!store64[@draws + 296 | 11311848].
+!store64[@draws + 304 | "/  SCROLL"].
+!store64[@draws + 312 | 1].
+!store64[@draws + 320 | 1].
+!store64[@draws + 328 | 650].
+!store64[@draws + 336 | 17].
+!store64[@draws + 344 | 132].
+!store64[@draws + 352 | 26].
+!store64[@draws + 360 | 1845051].
+!store64[@draws + 368 | ""].
+!store64[@draws + 376 | 1].
+!store64[@draws + 384 | 2].
+!store64[@draws + 392 | 662].
+!store64[@draws + 400 | 23].
+!store64[@draws + 408 | 0].
+!store64[@draws + 416 | 0].
+!store64[@draws + 424 | 14476271].
+!store64[@draws + 432 | "03 WINDOWS"].
+!store64[@draws + 440 | 1].
+!store64[@draws + 448 | 2].
+!store64[@draws + 456 | 18].
+!store64[@draws + 464 | 73].
+!store64[@draws + 472 | 0].
+!store64[@draws + 480 | 0].
+!store64[@draws + 488 | 8754863].
+!store64[@draws + 496 | "WORKSPACE 01"].
+!store64[@draws + 504 | 1].
+!store64[@draws + 512 | 2].
+!store64[@draws + 520 | 570].
+!store64[@draws + 528 | 73].
+!store64[@draws + 536 | 0].
+!store64[@draws + 544 | 0].
+!store64[@draws + 552 | 9033933].
+!store64[@draws + 560 | "HORIZONTAL STRIP"].
+!store64[@draws + 568 | 1].
+!store64[@draws + 576 | 1].
+!store64[@draws + 584 | 0].
+!store64[@draws + 592 | 104].
+!store64[@draws + 600 | 192].
+!store64[@draws + 608 | 436].
+!store64[@draws + 616 | 2766669].
+!store64[@draws + 624 | ""].
+!store64[@draws + 632 | 1].
+!store64[@draws + 640 | 1].
+!store64[@draws + 648 | 0].
+!store64[@draws + 656 | 105].
+!store64[@draws + 664 | 191].
+!store64[@draws + 672 | 434].
+!store64[@draws + 680 | 1055015].
+!store64[@draws + 688 | ""].
+!store64[@draws + 696 | 1].
+!store64[@draws + 704 | 1].
+!store64[@draws + 712 | 0].
+!store64[@draws + 720 | 105].
+!store64[@draws + 728 | 191].
+!store64[@draws + 736 | 34].
+!store64[@draws + 744 | 1120810].
+!store64[@draws + 752 | ""].
+!store64[@draws + 760 | 1].
+!store64[@draws + 768 | 1].
+!store64[@draws + 776 | 0].
+!store64[@draws + 784 | 138].
+!store64[@draws + 792 | 191].
+!store64[@draws + 800 | 1].
+!store64[@draws + 808 | 2766669].
+!store64[@draws + 816 | ""].
+!store64[@draws + 824 | 1].
+!store64[@draws + 832 | 2].
+!store64[@draws + 840 | 128].
+!store64[@draws + 848 | 114].
+!store64[@draws + 856 | 0].
+!store64[@draws + 864 | 0].
+!store64[@draws + 872 | 8754863].
+!store64[@draws + 880 | "A:|"].
+!store64[@draws + 888 | 1].
+!store64[@draws + 896 | 2].
+!store64[@draws + 904 | 0].
+!store64[@draws + 912 | 254].
+!store64[@draws + 920 | 0].
+!store64[@draws + 928 | 0].
+!store64[@draws + 936 | 14476271].
+!store64[@draws + 944 | "."].
+!store64[@draws + 952 | 1].
+!store64[@draws + 960 | 1].
+!store64[@draws + 968 | 0].
+!store64[@draws + 976 | 515].
+!store64[@draws + 984 | 191].
+!store64[@draws + 992 | 24].
+!store64[@draws + 1000 | 922914].
+!store64[@draws + 1008 | ""].
+!store64[@draws + 1016 | 1].
+!store64[@draws + 1024 | 2].
+!store64[@draws + 1032 | 107].
+!store64[@draws + 1040 | 521].
+!store64[@draws + 1048 | 0].
+!store64[@draws + 1056 | 0].
+!store64[@draws + 1064 | 8754863].
+!store64[@draws + 1072 | "TERMINAL"].
+!store64[@draws + 1080 | 1].
+!store64[@draws + 1088 | 1].
+!store64[@draws + 1096 | 208].
+!store64[@draws + 1104 | 104].
+!store64[@draws + 1112 | 368].
+!store64[@draws + 1120 | 436].
+!store64[@draws + 1128 | 11311848].
+!store64[@draws + 1136 | ""].
+!store64[@draws + 1144 | 1].
+!store64[@draws + 1152 | 1].
+!store64[@draws + 1160 | 209].
+!store64[@draws + 1168 | 105].
+!store64[@draws + 1176 | 366].
+!store64[@draws + 1184 | 434].
+!store64[@draws + 1192 | 1055015].
+!store64[@draws + 1200 | ""].
+!store64[@draws + 1208 | 1].
+!store64[@draws + 1216 | 1].
+!store64[@draws + 1224 | 209].
+!store64[@draws + 1232 | 105].
+!store64[@draws + 1240 | 366].
+!store64[@draws + 1248 | 34].
+!store64[@draws + 1256 | 2106939].
+!store64[@draws + 1264 | ""].
+!store64[@draws + 1272 | 1].
+!store64[@draws + 1280 | 1].
+!store64[@draws + 1288 | 209].
+!store64[@draws + 1296 | 138].
+!store64[@draws + 1304 | 366].
+!store64[@draws + 1312 | 1].
+!store64[@draws + 1320 | 11311848].
+!store64[@draws + 1328 | ""].
+!store64[@draws + 1336 | 1].
+!store64[@draws + 1344 | 1].
+!store64[@draws + 1352 | 220].
+!store64[@draws + 1360 | 116].
+!store64[@draws + 1368 | 9].
+!store64[@draws + 1376 | 9].
+!store64[@draws + 1384 | 11311848].
+!store64[@draws + 1392 | ""].
+!store64[@draws + 1400 | 1].
+!store64[@draws + 1408 | 2].
+!store64[@draws + 1416 | 238].
+!store64[@draws + 1424 | 114].
+!store64[@draws + 1432 | 0].
+!store64[@draws + 1440 | 0].
+!store64[@draws + 1448 | 14476271].
+!store64[@draws + 1456 | "TERMINAL 02"].
+!store64[@draws + 1464 | 1].
+!store64[@draws + 1472 | 2].
+!store64[@draws + 1480 | 512].
+!store64[@draws + 1488 | 114].
+!store64[@draws + 1496 | 0].
+!store64[@draws + 1504 | 0].
+!store64[@draws + 1512 | 11311848].
+!store64[@draws + 1520 | "B:|"].
+!store64[@draws + 1528 | 1].
+!store64[@draws + 1536 | 2].
+!store64[@draws + 1544 | 224].
+!store64[@draws + 1552 | 154].
+!store64[@draws + 1560 | 0].
+!store64[@draws + 1568 | 0].
+!store64[@draws + 1576 | 9033933].
+!store64[@draws + 1584 | "B:|> read plan"].
+!store64[@draws + 1592 | 1].
+!store64[@draws + 1600 | 2].
+!store64[@draws + 1608 | 224].
+!store64[@draws + 1616 | 194].
+!store64[@draws + 1624 | 0].
+!store64[@draws + 1632 | 0].
+!store64[@draws + 1640 | 14476271].
+!store64[@draws + 1648 | "ONE CONTINUOUS WORKSPACE"].
+!store64[@draws + 1656 | 1].
+!store64[@draws + 1664 | 2].
+!store64[@draws + 1672 | 224].
+!store64[@draws + 1680 | 234].
+!store64[@draws + 1688 | 0].
+!store64[@draws + 1696 | 0].
+!store64[@draws + 1704 | 8754863].
+!store64[@draws + 1712 | "Focus the next terminal."].
+!store64[@draws + 1720 | 1].
+!store64[@draws + 1728 | 2].
+!store64[@draws + 1736 | 224].
+!store64[@draws + 1744 | 254].
+!store64[@draws + 1752 | 0].
+!store64[@draws + 1760 | 0].
+!store64[@draws + 1768 | 8754863].
+!store64[@draws + 1776 | "The strip follows you."].
+!store64[@draws + 1784 | 1].
+!store64[@draws + 1792 | 2].
+!store64[@draws + 1800 | 224].
+!store64[@draws + 1808 | 294].
+!store64[@draws + 1816 | 0].
+!store64[@draws + 1824 | 0].
+!store64[@draws + 1832 | 8754863].
+!store64[@draws + 1840 | "Keep each session open."].
+!store64[@draws + 1848 | 1].
+!store64[@draws + 1856 | 2].
+!store64[@draws + 1864 | 224].
+!store64[@draws + 1872 | 314].
+!store64[@draws + 1880 | 0].
+!store64[@draws + 1888 | 0].
+!store64[@draws + 1896 | 8754863].
+!store64[@draws + 1904 | "Keep each prompt separate."].
+!store64[@draws + 1912 | 1].
+!store64[@draws + 1920 | 2].
+!store64[@draws + 1928 | 224].
+!store64[@draws + 1936 | 354].
+!store64[@draws + 1944 | 0].
+!store64[@draws + 1952 | 0].
+!store64[@draws + 1960 | 9033933].
+!store64[@draws + 1968 | "B:|> _"].
+!store64[@draws + 1976 | 1].
+!store64[@draws + 1984 | 1].
+!store64[@draws + 1992 | 209].
+!store64[@draws + 2000 | 515].
+!store64[@draws + 2008 | 366].
+!store64[@draws + 2016 | 24].
+!store64[@draws + 2024 | 922914].
+!store64[@draws + 2032 | ""].
+!store64[@draws + 2040 | 1].
+!store64[@draws + 2048 | 2].
+!store64[@draws + 2056 | 221].
+!store64[@draws + 2064 | 521].
+!store64[@draws + 2072 | 0].
+!store64[@draws + 2080 | 0].
+!store64[@draws + 2088 | 9033933].
+!store64[@draws + 2096 | "FOCUSED"].
+!store64[@draws + 2104 | 1].
+!store64[@draws + 2112 | 2].
+!store64[@draws + 2120 | 491].
+!store64[@draws + 2128 | 521].
+!store64[@draws + 2136 | 0].
+!store64[@draws + 2144 | 0].
+!store64[@draws + 2152 | 8754863].
+!store64[@draws + 2160 | "TERMINAL"].
+!store64[@draws + 2168 | 1].
+!store64[@draws + 2176 | 1].
+!store64[@draws + 2184 | 592].
+!store64[@draws + 2192 | 104].
+!store64[@draws + 2200 | 208].
+!store64[@draws + 2208 | 436].
+!store64[@draws + 2216 | 2766669].
+!store64[@draws + 2224 | ""].
+!store64[@draws + 2232 | 1].
+!store64[@draws + 2240 | 1].
+!store64[@draws + 2248 | 593].
+!store64[@draws + 2256 | 105].
+!store64[@draws + 2264 | 207].
+!store64[@draws + 2272 | 434].
+!store64[@draws + 2280 | 1055015].
+!store64[@draws + 2288 | ""].
+!store64[@draws + 2296 | 1].
+!store64[@draws + 2304 | 1].
+!store64[@draws + 2312 | 593].
+!store64[@draws + 2320 | 105].
+!store64[@draws + 2328 | 207].
+!store64[@draws + 2336 | 34].
+!store64[@draws + 2344 | 1120810].
+!store64[@draws + 2352 | ""].
+!store64[@draws + 2360 | 1].
+!store64[@draws + 2368 | 1].
+!store64[@draws + 2376 | 593].
+!store64[@draws + 2384 | 138].
+!store64[@draws + 2392 | 207].
+!store64[@draws + 2400 | 1].
+!store64[@draws + 2408 | 2766669].
+!store64[@draws + 2416 | ""].
+!store64[@draws + 2424 | 1].
+!store64[@draws + 2432 | 1].
+!store64[@draws + 2440 | 604].
+!store64[@draws + 2448 | 116].
+!store64[@draws + 2456 | 9].
+!store64[@draws + 2464 | 9].
+!store64[@draws + 2472 | 8754863].
+!store64[@draws + 2480 | ""].
+!store64[@draws + 2488 | 1].
+!store64[@draws + 2496 | 2].
+!store64[@draws + 2504 | 622].
+!store64[@draws + 2512 | 114].
+!store64[@draws + 2520 | 0].
+!store64[@draws + 2528 | 0].
+!store64[@draws + 2536 | 8754863].
+!store64[@draws + 2544 | "TERMINAL 03"].
+!store64[@draws + 2552 | 1].
+!store64[@draws + 2560 | 2].
+!store64[@draws + 2568 | 608].
+!store64[@draws + 2576 | 154].
+!store64[@draws + 2584 | 0].
+!store64[@draws + 2592 | 0].
+!store64[@draws + 2600 | 9033933].
+!store64[@draws + 2608 | "A:|> tasks"].
+!store64[@draws + 2616 | 1].
+!store64[@draws + 2624 | 2].
+!store64[@draws + 2632 | 608].
+!store64[@draws + 2640 | 194].
+!store64[@draws + 2648 | 0].
+!store64[@draws + 2656 | 0].
+!store64[@draws + 2664 | 14476271].
+!store64[@draws + 2672 | "terminal   RUN"].
+!store64[@draws + 2680 | 1].
+!store64[@draws + 2688 | 2].
+!store64[@draws + 2696 | 608].
+!store64[@draws + 2704 | 214].
+!store64[@draws + 2712 | 0].
+!store64[@draws + 2720 | 0].
+!store64[@draws + 2728 | 14476271].
+!store64[@draws + 2736 | "graphics   RUN"].
+!store64[@draws + 2744 | 1].
+!store64[@draws + 2752 | 2].
+!store64[@draws + 2760 | 608].
+!store64[@draws + 2768 | 234].
+!store64[@draws + 2776 | 0].
+!store64[@draws + 2784 | 0].
+!store64[@draws + 2792 | 14476271].
+!store64[@draws + 2800 | "compute    RUN"].
+!store64[@draws + 2808 | 1].
+!store64[@draws + 2816 | 2].
+!store64[@draws + 2824 | 608].
+!store64[@draws + 2832 | 274].
+!store64[@draws + 2840 | 0].
+!store64[@draws + 2848 | 0].
+!store64[@draws + 2856 | 9033933].
+!store64[@draws + 2864 | "A:|> _"].
+!store64[@draws + 2872 | 1].
+!store64[@draws + 2880 | 1].
+!store64[@draws + 2888 | 593].
+!store64[@draws + 2896 | 515].
+!store64[@draws + 2904 | 207].
+!store64[@draws + 2912 | 24].
+!store64[@draws + 2920 | 922914].
+!store64[@draws + 2928 | ""].
+!store64[@draws + 2936 | 1].
+!store64[@draws + 2944 | 2].
+!store64[@draws + 2952 | 605].
+!store64[@draws + 2960 | 521].
+!store64[@draws + 2968 | 0].
+!store64[@draws + 2976 | 0].
+!store64[@draws + 2984 | 8754863].
+!store64[@draws + 2992 | "READY"].
+!store64[@draws + 3000 | 1].
+!store64[@draws + 3008 | 1].
+!store64[@draws + 3016 | 0].
+!store64[@draws + 3024 | 104].
+!store64[@draws + 3032 | 3].
+!store64[@draws + 3040 | 436].
+!store64[@draws + 3048 | 8754863].
+!store64[@draws + 3056 | ""].
+!store64[@draws + 3064 | 1].
+!store64[@draws + 3072 | 1].
+!store64[@draws + 3080 | 797].
+!store64[@draws + 3088 | 104].
+!store64[@draws + 3096 | 3].
+!store64[@draws + 3104 | 436].
+!store64[@draws + 3112 | 8754863].
+!store64[@draws + 3120 | ""].
+!store64[@draws + 3128 | 1].
+!store64[@draws + 3136 | 2].
+!store64[@draws + 3144 | 18].
+!store64[@draws + 3152 | 550].
+!store64[@draws + 3160 | 0].
+!store64[@draws + 3168 | 0].
+!store64[@draws + 3176 | 8754863].
+!store64[@draws + 3184 | "<  PREVIOUS"].
+!store64[@draws + 3192 | 1].
+!store64[@draws + 3200 | 2].
+!store64[@draws + 3208 | 676].
+!store64[@draws + 3216 | 550].
+!store64[@draws + 3224 | 0].
+!store64[@draws + 3232 | 0].
+!store64[@draws + 3240 | 8754863].
+!store64[@draws + 3248 | "NEXT  >"].
+!store64[@draws + 3256 | 1].
+!store64[@draws + 3264 | 1].
+!store64[@draws + 3272 | 0].
+!store64[@draws + 3280 | 574].
+!store64[@draws + 3288 | 800].
+!store64[@draws + 3296 | 26].
+!store64[@draws + 3304 | 1120810].
+!store64[@draws + 3312 | ""].
+!store64[@draws + 3320 | 1].
+!store64[@draws + 3328 | 1].
+!store64[@draws + 3336 | 0].
+!store64[@draws + 3344 | 574].
+!store64[@draws + 3352 | 800].
+!store64[@draws + 3360 | 1].
+!store64[@draws + 3368 | 2766669].
+!store64[@draws + 3376 | ""].
+!store64[@draws + 3384 | 1].
+!store64[@draws + 3392 | 2].
+!store64[@draws + 3400 | 18].
+!store64[@draws + 3408 | 581].
+!store64[@draws + 3416 | 0].
+!store64[@draws + 3424 | 0].
+!store64[@draws + 3432 | 8754863].
+!store64[@draws + 3440 | "F1 NEW   F2 CLOSE   F3 NEXT   F4 PREV   F5 LAYOUT"].
+!store64[@draws + 3448 | 1].
+]
+0 -> @n.
+?? @n < @count [
+ @draws + @n * 64 -> @ptr.
+ :load64[@ptr] -> @kind. :load64[@ptr + 8] -> @x. :load64[@ptr + 16] -> @y.
+ :load64[@ptr + 24] -> @w. :load64[@ptr + 32] -> @h. :load64[@ptr + 40] -> @color.
+ :load64[@ptr + 56] -> @scale. :load64[@ptr + 48] -> @ptr.
+ ? @kind == 1 [
+  0 -> @j.
+  ?? @j < @h [
+   0 -> @i.
+   ?? @i < @w [ !store32[@frame + ((@y + @j) * 800 + @x + @i) * 4 | @color]. @i + 1 -> @i. ]
+   @j + 1 -> @j.
+  ]
+ ] ~ [
+  0 -> @i.
+  ?? :load8[@ptr + @i] [
+   :load8[@ptr + @i] -> @ch. 0 -> @j.
+   ?? @j < 7 [
+    :load8[@font + (@ch - 32) * 7 + @j] - 48 -> @mask. 16 -> @bit. 0 -> @a.
+    ?? @a < 5 [
+     ? :bitand[@mask | @bit] [
+      0 -> @dy.
+      ?? @dy < @scale * 2 [
+       0 -> @dx.
+       ?? @dx < @scale [
+        @x + @i * 8 * @scale + @a * @scale + @dx -> @gx.
+        @y + @j * 2 * @scale + @dy -> @gy.
+        ? (@gx < 800) * (@gy < 600) [ !store32[@frame + (@gy * 800 + @gx) * 4 | @color]. ]
+        @dx + 1 -> @dx.
+       ]
+       @dy + 1 -> @dy.
+      ]
+     ]
+     :shr[@bit | 1] -> @bit. @a + 1 -> @a.
+    ]
+    @j + 1 -> @j.
+   ]
+   @i + 1 -> @i.
+  ]
+ ]
+ @n + 1 -> @n.
+]
+"P6\n800 600\n255\n" -> @ptr. 0 -> @sent.
+?? @sent < 15 [
+ :write[@ptr + @sent | 15 - @sent] -> @amount.
+ ? @amount == 18446744073709551612 [ ] ~ [
+  ? (@amount == 0) + (@amount > 15 - @sent) [ !exit[1]. ]
+  @sent + @amount -> @sent.
+ ]
+]
+0 -> @y.
+?? @y < 600 [
+ 0 -> @x.
+ ?? @x < 800 [
+  :load32[@frame + (@y * 800 + @x) * 4] -> @pixel.
+  !store8[@row + @x * 3 | :shr[@pixel | 16]].
+  !store8[@row + @x * 3 + 1 | :shr[@pixel | 8]].
+  !store8[@row + @x * 3 + 2 | @pixel].
+  @x + 1 -> @x.
+ ]
+ 0 -> @sent.
+ ?? @sent < 2400 [
+  :write[@row + @sent | 2400 - @sent] -> @amount.
+  ? @amount == 18446744073709551612 [ ] ~ [
+   ? (@amount == 0) + (@amount > 2400 - @sent) [ !exit[1]. ]
+   @sent + @amount -> @sent.
+  ]
+ ]
+ @y + 1 -> @y.
+]
+!exit[0].

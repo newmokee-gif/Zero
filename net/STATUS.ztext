@@ -1,0 +1,44 @@
+ZTEXT0010000098b03f688a90000000
+Current original Zero workflow (0.12)
+
+Use the native tools on Linux or their .exe versions on Windows:
+  zero-integrate PROJECT_DIRECTORY NEW_KERNEL.zero
+  zero-build PROJECT_DIRECTORY NEW_OUTPUT_DIRECTORY NEW_KERNEL.zero
+  zero-check PROJECT_DIRECTORY NEW_TEST_DIRECTORY
+All destination paths must be new. The integrator preserves authored sources;
+the builder checks its compiler fixed point and builds the original targets;
+the verifier checks language behavior and host file operations in process.
+See tools/integrate.ztext, tools/build.ztext and checks/README.ztext.
+Read these documents with zero-text read FILE.
+
+The notes below preserve earlier implementation and test history. Any old
+shell/Python runner names, generated artifacts, JSON reports or commands are
+historical references: they were removed from the active project and are not
+current runnable instructions or current-release validation. Native host
+checks do not replace BIOS/UEFI, persistence or physical-hardware testing.
+
+Historical implementation notes
+
+2026-11-16 network component implementation complete, awaiting final OS matrix.
+
+Own Zero code implements automatic PCI PCnet detection, DMA RX/TX rings, link
+polling, DHCP discovery/request/ACK/renewal/retry/lease expiry, ARP, bounded DNS
+and TCP/HTTP client. PCI enumeration also publishes real wireless-class IDs to
+the separate WiFi interface. Code does not implement a native WiFi radio driver.
+
+Private BIOS64 network probes PASS with no data disk attached:
+- automatic DHCP:10.0.2.15/255.255.255.0,router10.0.2.2,DNS10.0.2.3;
+- numeric-address HTTP from our own host fixture;
+- public DNS resolution of10.0.2.2.nip.io followed by HTTP to that own fixture;
+- full own TCP/HTTP response:HTTP/1.0 200 and exact fixture marker.
+Current code also rejects incomplete Content-Length, oversized/nontext replies,
+unsupported transfer encodings and malformed URLs; dedicated failure probes
+are recorded separately. Final ISO BIOS32/64 and UEFI32/64 integration tests
+belong to verification/network-0.9.0, not to these private component probes.
+
+A direct connection from the execution host to example.com:80 and
+neverssl.com:80 fails with ENETUNREACH; therefore no public external HTTP
+success is claimed. Actual guest public DNS works. No source code was fetched.
+
+Production sources frozen for root integration. net/integrate.sh --check
+verifies client parts match poll.zero.part. All implementation remains Zero.

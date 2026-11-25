@@ -1,0 +1,14 @@
+walk :: depth | value [
+lines(value) => saved
+depth == 0 => when [
+empty => temporary
+5000 => repeat [
+join(lines("First\nSecond\nThird") | /) => temporary
+]
+join(saved | /) => return
+]
+walk(depth - 1 | value) => child
+saved[2] => show
+child => return
+]
+walk(4 | "Top\nКот") => show

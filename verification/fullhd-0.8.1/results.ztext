@@ -1,0 +1,71 @@
+ZTEXT00100000f4e915a1fe80000000
+ZERO OS 0.8.1 NATIVE FULLHD VERIFICATION
+Date: 2026-11-16 UTC
+
+FINAL TESTED ISO
+SHA256:8d494eca3adbf8998b1674d4d7c4cd03308f40ba87ee3213a806fefa6c9f7d31
+Bytes:17645568. This exact ISO remained unchanged throughout all final runs.
+
+FOUR FULLHD BOOT MODES
+BIOS x86-64: PASS,1920x1080,41 recorded actions.
+BIOS x86-32 (-lm,-pae): PASS,1920x1080,41 recorded actions.
+UEFI x86-64: PASS,1920x1080,41 recorded actions.
+UEFI x86-32 (-lm): PASS,1920x1080,41 recorded actions.
+All use QEMU TCG and standard VGA with32MiB video memory and1920x1080 EDID.
+The BIOS handoff independently reports kind2,width1920,height1080,
+stride1920,BGR format1. Every native QEMU screendump has1920x1080 pixels.
+PNG conversion preserves dimensions; no host image resizing is performed.
+
+The underlying framebuffer addresses individual native pixels: in each
+mode, pixel1919,1079 becomes RGB(1,2,3) while its neighboring pixel does not.
+Coordinatex1920 is rejected, and a subsequent layout redraw restores the
+corner. This verifies a real1920-wide framebuffer rather than an enlarged
+800/960-wide screenshot. The UI itself deliberately draws its original font,
+frames and spacing at2x scale, with16x32 terminal cells. Every2x2 UI pixel
+block was checked for consistency before the native single-pixel probe.
+
+WINDOW INTERACTION
+Actual emulated PS/2 F1..F5 keystrokes create/close/reuse a third window,
+change focus and toggle tile/scroll layouts. Two incomplete write commands
+survive F3/F4 switches and execute correctly on explicit Enter. Per-window
+rootsA/B remain usable. Basic relative and absolute-path reads return the
+known ext4 welcome file from a private32MiB copied fixture.
+Clearing window2 preserves window1's complete976x640 text region exactly;
+the cleared window's720x224 body changes as expected. No disk writes are
+issued, and full hashes of all private ZeroFS/ext4 copies remain unchanged.
+
+PIXEL GEOMETRY AND VISUAL REVIEW
+check-screens.py independently verifies all four modes' complete2-pixel
+window borders, tile gaps, focused scroll-frame borders, visible neighboring
+borders and empty inter-window gaps. No text or drawing spills into gaps.
+Native three-tile rectangles are(32,160,1040,800),
+(1104,160,784,384),(1104,576,784,384).
+The scroll focus is(512,160,896,800), with neighbors clipped at screen edges.
+Actual images were visually inspected; an independent renderer review also
+confirmed legible text, correct spacing and clean clipping in BIOS64's
+initial two-window, three-tile and scrolling screenshots.
+Animation was disabled to make caret/image equality checks deterministic.
+
+LOW-VIDEO-MEMORY FALLBACK
+BIOS x86-64: PASS,800x600,8 recorded actions.
+UEFI x86-64: PASS,800x600,8 recorded actions.
+Both use2MiB VGA memory,800x600 EDID and xmax800/ymax600, preventing FullHD.
+Each boots the same final ISO, creates a third window and successfully
+switches between tile and scroll layouts. No data disks are attached.
+Fallback screenshots retain native800x600 dimensions.
+
+EVIDENCE AND LIMITS
+All six final VM processes exited; original user disks were never attached.
+Native VirtualBox and physical hardware were not tested. QEMU and Python
+scripts are external verification infrastructure, not guest implementation.
+Best actual FullHD image:bios64/desktop-tiles.png.
+Each boot mode retains desktop-tiles.png,desktop-scroll.png,initial view,
+clear/pixel checks,serial output,actions.jsonl and a passing result.json.
+screen-geometry.json records the independent border/gap oracle results.
+
+Earlier fixture-* directories and probe-fixtures.py used the immutable old
+0.8.0 ISO solely to inspect emulated VGA/firmware availability; they are not
+0.8.1 feature evidence and are excluded from the delivery package.
+Private disks,PPM snapshots,memory dumps,vars.fd and sockets are test-only
+artifacts. Distribute scripts,JSON/text/serial logs and native PNGs; the
+only delivered disk image remains the genuine bootable ISO.

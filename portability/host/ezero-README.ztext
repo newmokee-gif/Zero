@@ -1,0 +1,17 @@
+ZTEXT0010000037d6535aebd0000000
+Original native Ezero integration
+
+Ezero compiles through the original frontend, package initializer and runtime
+into original Zero, then through the same Zero compiler. The native CLI runs
+these stages in process and uses no subprocess compiler or foreign runtime.
+
+Compose a frontend snapshot from authored parts:
+  zero-integrate PROJECT_DIRECTORY NEW_FRONTEND.zero --ezero
+The canonical source is ezero/compiler.zero. Composition preserves inputs and
+refuses an existing destination. Build current host/guest artifacts with
+zero-build PROJECT_DIRECTORY NEW_OUTPUT_DIRECTORY and verify language/file
+behavior with zero-check PROJECT_DIRECTORY NEW_TEST_DIRECTORY.
+
+See tools/compiler-cli.ztext for CLI layout, checks/README.ztext for native
+verification, and ezero/README.ztext for the language. Earlier candidate
+copies, overlay scripts and their build commands are no longer the workflow.

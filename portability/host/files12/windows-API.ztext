@@ -1,0 +1,42 @@
+ZTEXT00100000a49c43243fd0000000
+Windows x64 native whole-file operations
+
+windows-files-author.zero contains original instruction data and resolves its
+own relative branches in Zero. Its output is windows-files.zero.part.
+The compiler incorporates that table and windows-imports.zero.part directly.
+No assembler, C runtime, shell or child process is used by these operations.
+They call Windows KERNEL32 APIs through the generated PE import table.
+
+create preserves an existing regular file, or creates an empty regular file.
+del removes an existing regular file. Both return 0 on success and -1 on error.
+readfile reads the complete file, with a capacity check and an end-of-file check.
+save creates or replaces a file; writefile requires a previously absent file.
+The three whole-file operations return a byte count, or -1 on error. Writes are
+flushed before success. Replacement is not transactional; an I/O error can leave
+a partial replacement. A failed exclusive write attempts to remove its new file.
+
+watch returns regular-file names in a literal directory. search splits its
+path at the last separator and matches the last component with an original
+case-sensitive glob: * matches a sequence, ? matches one UTF-8 scalar.
+Search without wildcards is an exact basename match. Empty watch/search paths
+use the current directory. An empty trailing search component means all files.
+Results are UTF-8 basenames, each followed by NUL; the result is the complete
+byte count. Empty results return 0. Enumeration order is native and unsorted.
+
+go changes the current process directory. disks returns NUL-separated native
+drive roots such as C:\. It uses GetLogicalDrives; if that API returns zero,
+it probes roots A:\ through Z:\ with GetFileAttributesW. A completely missing
+drive set returns -1. Public indices remain a language-level concern.
+
+Paths have a limit of 4095 UTF-8 bytes. Buffers have a limit of 65536 bytes.
+Any overflow or short read fails the whole operation; callers must ignore the
+buffer on failure. A zero capacity succeeds only for empty data/results.
+Whole-file operations and directory selection reject a final reparse point.
+These checks do not provide a sandbox against changing ancestor directories.
+
+The tests exercise generated PE files under Wine on Linux. This establishes
+Windows API/ABI compatibility in Wine; it does not claim a native Windows run.
+windows-probe.zero is the operation probe. windows-bounds.zero tests null
+arguments, the 65536-byte boundary, exact binary round trips, exclusive-create
+preservation, and the 4095/4096-byte path boundary. External fixture orchestration
+and Wine itself reside outside the workspace.

@@ -1,0 +1,21 @@
+:reserve[115520] -> @b_work.
+@b_work+64 -> @h_input. @b_work+65600 -> @b_doc.
+@b_doc+64 -> @h_title. @b_doc+192 -> @h_links.
+@b_doc+16576 -> @h_output. 32768 -> @h_capacity. 78 -> @h_width.
+@b_work+114944 -> @h_scratch. 0 -> @h_length. 1 -> @b_n.
+:argument[1] -> @b_result.
+? @b_result [
+ ? :load8[@b_result] [
+  "--plain" -> @b_limit. 0 -> @b_i. 1 -> @b_size.
+  ?? (@b_i < 8)*@b_size [ ? :load8[@b_result+@b_i] != :load8[@b_limit+@b_i] [ 0 -> @b_size. ] @b_i+1 -> @b_i. ]
+  ? @b_size == 0 [ !exit[64]. ] 1 -> @h_plain.
+ ]
+]
+?? (@h_length < 65536)*(@b_n != 0) [
+ :read[@h_input+@h_length|65536-@h_length] -> @b_n.
+ ? @b_n > 65536-@h_length [ !exit[74]. ]
+ @h_length+@b_n -> @h_length.
+]
+? @h_length == 65536 [
+ :read[@h_scratch|1] -> @b_n. ? @b_n != 0 [ !exit[65]. ]
+]

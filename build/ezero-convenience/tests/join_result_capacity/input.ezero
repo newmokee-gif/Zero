@@ -1,0 +1,9 @@
+x => part
+12 => repeat [
+part + part => part
+]
+[part] => values
+6 => repeat [
+values + values => values
+]
+join(values | /) => show

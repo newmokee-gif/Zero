@@ -1,0 +1,15 @@
+# The browser owns one modal session. Its private region never aliases windows.
+? @operation == 33 [
+ :load64[@console+2400] -> @c0.
+ ? (@c0 == 0)+(:load64[@console+2048] == 0) [ "Browser unavailable: no safe session memory.\r\n" -> @message. ] ~ [
+  @c0+163840 -> @c5. 0 -> @i.
+  ?? @i < 65536 [ !store64[@c5+@i|0]. @i+8 -> @i. ]
+  !store64[@c5+8|1]. !store64[@c5+56|1]. !store64[@c5+32|1].
+  !store64[@console+2416|2]. !store64[@console+2424|:load64[@console+2064]].
+  !store64[@console+2448|0]. !store64[@console+2088|:load64[@console+2088]+1].
+  0 -> @i. ?? (:load8[@arguments+@i] != 0)*(@i < 255) [ !store8[@c5+384+@i|:load8[@arguments+@i]]. @i+1 -> @i. ]
+  !store8[@c5+384+@i|0]. !store64[@c5+24|@i].
+  ? @i [ !store64[@c5+120|1]. ]
+  0 -> @line_length. 0 -> @overflow. 10 -> @state. 0 -> @message.
+ ]
+]

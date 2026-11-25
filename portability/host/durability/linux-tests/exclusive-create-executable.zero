@@ -1,0 +1,4 @@
+
+:fileopen["program" | 4] => @h.
+? @h == -1 [ !exit[1]. ] ? :fileclose[@h] != 0 [ !exit[2]. ]
+? :fileopen["program" | 4] != -1 [ !exit[3]. ] !exit[0].

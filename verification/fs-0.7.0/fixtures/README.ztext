@@ -1,0 +1,72 @@
+ZTEXT0010000111a361a242b0000000
+Zero OS0.7 integration fixtures (private disposable images)
+
+Files
+multi-mbr.img:371195904 bytes,724992 sectors,354MiB.
+  MBR partition1: start2048, count65536,32MiB ext4.
+  MBR partition2: start67584, count131072,64MiB NTFS.
+  MBR partition3: start198656, count524288,256MiB Btrfs.
+  A1MiB gap precedes the first partition;1MiB remains after the last.
+readonly-gpt.img:37748736 bytes,73728 sectors,36MiB.
+  GPT partition1: start2048,last67583,count65536,32MiB ext4.
+  Attribute bit60 marks this partition read-only. Both GPT headers and entry
+  arrays are valid and agree. Disk GUID and partition GUID are fixed test IDs.
+compatible-demo.img: an untouched copy of multi-mbr.img for user
+  delivery/conversion after integrated VM validation. It contains only the
+  three writable-compatible filesystem partitions, not the readonly test.
+compatible-demo.vdi: dynamic VDI container,15728640 bytes,354MiB guest capacity.
+  VBoxManage converted the clean raw image after the parent completed its
+  initial integrated VM/offline checks. showmediuminfo accepts the container;
+  conversion back to RAW is byte-identical to compatible-demo.img. This is
+  container validation, not a claim of native VirtualBox guest execution.
+
+Expected VM inventory with the original ZeroFS disk on primary master,
+multi-mbr on primary slave, boot ISO on secondary master, and readonly-gpt
+on secondary slave:
+  A:| ZeroFS; B:| ext4; C:| NTFS; D:| Btrfs; E:| ext4 read-only.
+The optical drive is not exposed as an ATA data volume.
+
+Data and format profiles
+Both ext4 images use4096-byte blocks,256-byte inodes,one block group and only
+filetype+extent features. No journal,metadata checksums or64-bit descriptors.
+B:|welcome contains: Zero OS ext4 volume. Files live on disk.
+E:|welcome contains: This GPT volume is read-only.
+The NTFS image is3.1,512-byte sectors/4096-byte clusters. Its welcome file was
+added by the external fixture writer ntfscp, which expands initialized MFT
+through record64, leaving free slots27..63 for Zero's bounded allocator.
+C:|welcome contains: Zero OS NTFS volume. Files live on disk.
+The Btrfs image is empty, single device, SINGLE metadata/data, no free-space
+ tree. Exact command: mkfs.btrfs -f -m single -d single -R ^free-space-tree.
+These deliberately compatible profiles exercise the documented bounded
+backends; they do not establish general-purpose filesystem compatibility.
+
+Reproduction
+  bash verification/fs-0.7.0/fixtures/build-fixtures.sh
+  bash verification/fs-0.7.0/fixtures/verify-zero.sh
+  bash verification/fs-0.7.0/fixtures/convert-demo.sh
+The build script recreates only this directory's named disposable fixtures.
+It never opens build/data.img,build/data.vdi or a physical device for writing.
+External e2fsprogs,ntfs-3g andbtrfs-progs only generate/validate test filesystem
+contents. Their paths can be overridden with ZERO_EXT4_E2FSPROGS,
+ZERO_NTFS_TOOLS,ZERO_BTRFS_TOOLS. They are not part of the guest implementation.
+partition-tables.zero is the original Zero metadata author for MBR and both
+GPT copies, including IEEE CRC32. No external partition creator is invoked.
+Host truncate/dd/cmp/cp perform image assembly and byte comparisons only.
+
+Verification
+Independent partx confirms partition starts/lengths. e2fsck -fn reports clean
+ext4 images. ntfscat verifies NTFS welcome and ntfsinfo records the expanded
+MFT; ntfsfix -n is a limited NTFS consistency check, not Windows chkdsk.
+btrfs check --readonly reports no errors. Extracted partition contents compare
+byte-for-byte with their checked source filesystem images.
+The exact Zero discovery FSM, under a hosted read-only adapter, discovers A-E
+with correct physical indices, offsets and E's retained read-only bit. The
+exact three filesystem FSMs accept their nonzero partition offsets and read
+ext4/NTFS welcome or probe the empty Btrfs volume successfully.
+IMAGES.sha256 records original fixture bytes; READONLY.sha256 is the immutable
+GPT baseline to compare after attempted guest mutations. Use private copies
+for writable VM tests, so these baselines remain available.
+VDI.sha256 records the delivered VDI bytes. convert-demo.sh refuses existing
+VDI/roundtrip targets; it uses an isolated VirtualBox configuration directory.
+Attach the demo VDI as primary IDE slave (port0,device1), keeping the existing
+ZeroFS data disk as primary master. Then its partitions appear as B:|,C:|,D:|.

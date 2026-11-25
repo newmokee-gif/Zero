@@ -1,0 +1,271 @@
+# Original bounded HTTP/1 response framing; all offsets are network-workspace relative.
+# Raw bytes: pointer688, length416, capacity65536. Decoded body: pointer696, capacity65536.
+# Preserves work, text, line_length, current, console, memory, font, boot_information.
+:load64[@work + 688] -> @pointer. :load64[@work + 416] -> @wanted.
+!store64[@work + 672|0]. !store64[@work + 680|0]. !store64[@work + 704|0].
+!store64[@work + 712|0]. !store64[@work + 720|0].
+!store8[@work + 23040|0]. !store8[@work + 23296|0].
+1 -> @valid. 0 -> @name_length. 0 -> @equal. 0 -> @good_a. 0 -> @good_b.
+0 -> @disk_select. 0 -> @disk_ready. 0 -> @active_bank. 0 -> @free_file. 0 -> @status.
+? (@wanted < 16) + (@wanted > 65535) [ 0 -> @valid. ]
+? @valid [
+ ? (:load32[@pointer] != 0x50545448) + (:load8[@pointer + 4] != 47) + (:load8[@pointer + 5] != 49) + (:load8[@pointer + 6] != 46) + ((:load8[@pointer + 7] != 48) * (:load8[@pointer + 7] != 49)) + (:load8[@pointer + 8] != 32) + (:load8[@pointer + 12] != 32) [ 0 -> @valid. ]
+ 0 -> @status. 9 -> @i.
+ ?? @i < 12 [
+  :load8[@pointer + @i] -> @c0.
+  ? (@c0 < 48) + (@c0 > 57) [ 0 -> @valid. ]
+  @status * 10 + @c0 - 48 -> @status. @i + 1 -> @i.
+ ]
+ ? (@status < 100) + (@status > 599) [ 0 -> @valid. ]
+ ? (@status >= 100) * (@status < 200) [ 0 -> @valid. !store64[@work + 408|15]. ]
+ 13 -> @i. 0 -> @done.
+ ?? (@i + 1 < @wanted) * (@i < 8192) * (@done == 0) * @valid [
+  :load8[@pointer + @i] -> @c0.
+  ? @c0 == 13 [
+   ? :load8[@pointer + @i + 1] == 10 [ 1 -> @done. @i + 2 -> @i. ] ~ [ 0 -> @valid. ]
+  ] ~ [
+   ? (@c0 < 32) + (@c0 > 126) [ 0 -> @valid. ]
+   @i + 1 -> @i.
+  ]
+ ]
+ ? @done == 0 [ 0 -> @valid. ]
+]
+# Each header line is ASCII, has a token name, and is bounded before any interpretation.
+?? @valid * (@name_length == 0) [
+ ? (@i + 1 >= @wanted) + (@i + 2 > 8192) [ 0 -> @valid. ] ~ [
+  ? :load16[@pointer + @i] == 0x0a0d [ @i + 2 -> @name_length. ] ~ [
+   @active_bank + 1 -> @active_bank. ? @active_bank > 128 [ 0 -> @valid. ]
+   @i -> @j. 0 -> @arguments. 0 -> @done.
+   ?? (@j + 1 < @wanted) * (@j < 8192) * (@done == 0) * @valid [
+    :load8[@pointer + @j] -> @c0.
+    ? @c0 == 13 [
+     ? :load8[@pointer + @j + 1] == 10 [ 1 -> @done. ] ~ [ 0 -> @valid. ]
+    ] ~ [
+     ? (@c0 < 32) * (@c0 != 9) + (@c0 > 126) [ 0 -> @valid. ]
+     ? @arguments == 0 [
+      ? @c0 == 58 [ @j -> @arguments. ] ~ [
+       ? ((@c0 >= 48) * (@c0 <= 57) + (@c0 >= 65) * (@c0 <= 90) + (@c0 >= 97) * (@c0 <= 122) + (@c0 == 33) + (@c0 == 35) + (@c0 == 36) + (@c0 == 37) + (@c0 == 38) + (@c0 == 39) + (@c0 == 42) + (@c0 == 43) + (@c0 == 45) + (@c0 == 46) + (@c0 == 94) + (@c0 == 95) + (@c0 == 96) + (@c0 == 124) + (@c0 == 126)) == 0 [ 0 -> @valid. ]
+      ]
+     ]
+     @j + 1 -> @j.
+    ]
+   ]
+   ? (@done == 0) + (@arguments == 0) + (@arguments == @i) + (@j + 2 > 8192) [ 0 -> @valid. ]
+   ? @valid [
+    @arguments + 1 -> @slot. @j -> @text_length.
+    ?? (@slot < @text_length) * ((:load8[@pointer + @slot] == 32) + (:load8[@pointer + @slot] == 9)) [ @slot + 1 -> @slot. ]
+    ?? (@text_length > @slot) * ((:load8[@pointer + @text_length - 1] == 32) + (:load8[@pointer + @text_length - 1] == 9)) [ @text_length - 1 -> @text_length. ]
+    0 -> @operation. 1 -> @command.
+    ?? @command <= 5 [
+     "content-length" -> @name. 14 -> @c5.
+     ? @command == 2 [ "transfer-encoding" -> @name. 17 -> @c5. ]
+     ? @command == 3 [ "content-encoding" -> @name. 16 -> @c5. ]
+     ? @command == 4 [ "content-type" -> @name. 12 -> @c5. ]
+     ? @command == 5 [ "location" -> @name. 8 -> @c5. ]
+     @arguments - @i == @c5 -> @done. 0 -> @k.
+     ?? (@k < @c5) * @done [
+      :load8[@pointer + @i + @k] -> @c0. ? (@c0 >= 65) * (@c0 <= 90) [ @c0 + 32 -> @c0. ]
+      ? @c0 != :load8[@name + @k] [ 0 -> @done. ] @k + 1 -> @k.
+     ]
+     ? @done [ @command -> @operation. ] @command + 1 -> @command.
+    ]
+    ? @operation == 1 [
+     0 -> @c0. @slot -> @k.
+     ? (@slot == @text_length) + (@text_length - @slot > 10) [ 0 -> @valid. ]
+     ?? (@k < @text_length) * @valid [
+      :load8[@pointer + @k] -> @c1.
+      ? (@c1 < 48) + (@c1 > 57) [ 0 -> @valid. ] ~ [ @c0 * 10 + @c1 - 48 -> @c0. ]
+      ? @c0 > 65535 [ 0 -> @valid. !store64[@work + 408|9]. ] @k + 1 -> @k.
+     ]
+     ? @equal * (@equal != @c0 + 1) [ 0 -> @valid. ] @c0 + 1 -> @equal.
+    ]
+    ? (@operation == 2) + (@operation == 3) [
+     "chunked" -> @name. 7 -> @c5.
+     ? @operation == 3 [ "identity" -> @name. 8 -> @c5. ]
+     @text_length - @slot == @c5 -> @done. 0 -> @k.
+     ?? (@k < @c5) * @done [
+      :load8[@pointer + @slot + @k] -> @c0. ? (@c0 >= 65) * (@c0 <= 90) [ @c0 + 32 -> @c0. ]
+      ? @c0 != :load8[@name + @k] [ 0 -> @done. ] @k + 1 -> @k.
+     ]
+     ? @operation == 2 [
+      ? (@done == 0) + @good_a [ 0 -> @valid. !store64[@work + 408|12]. ] 1 -> @good_a.
+     ] ~ [
+      ? (@done == 0) + @good_b [ 0 -> @valid. !store64[@work + 408|13]. ] 1 -> @good_b.
+     ]
+    ]
+    ? (@operation == 4) + (@operation == 5) [
+     ? (@text_length == @slot) + (@text_length - @slot > 255) [ 0 -> @valid. ] ~ [
+      @work + 23040 -> @c2.
+      ? @operation == 4 [ ? @disk_select [ 0 -> @valid. ] 1 -> @disk_select. ] ~ [
+       @work + 23296 -> @c2. ? @disk_ready [ 0 -> @valid. ] 1 -> @disk_ready.
+       !store64[@work + 720|@text_length - @slot].
+      ]
+      0 -> @k. ?? @k < @text_length - @slot [ !store8[@c2 + @k|:load8[@pointer + @slot + @k]]. @k + 1 -> @k. ]
+      !store8[@c2 + @k|0].
+      ? @operation == 4 [
+       !store64[@work + 704|3]. @slot -> @c3.
+       ?? (@c3 < @text_length) * (:load8[@pointer + @c3] != 59) * (:load8[@pointer + @c3] != 32) * (:load8[@pointer + @c3] != 9) [ @c3 + 1 -> @c3. ]
+       1 -> @command. ?? @command <= 3 [
+        "text/html" -> @name. 9 -> @c5.
+        ? @command == 2 [ "text/plain" -> @name. 10 -> @c5. ]
+        ? @command == 3 [ "application/xhtml+xml" -> @name. 21 -> @c5. ]
+        @c3 - @slot == @c5 -> @done. 0 -> @k.
+        ?? (@k < @c5) * @done [
+         :load8[@pointer + @slot + @k] -> @c0. ? (@c0 >= 65) * (@c0 <= 90) [ @c0 + 32 -> @c0. ]
+         ? @c0 != :load8[@name + @k] [ 0 -> @done. ] @k + 1 -> @k.
+        ]
+        ? @done [ 1 -> @c0. ? @command == 2 [ 2 -> @c0. ] !store64[@work + 704|@c0]. ]
+        @command + 1 -> @command.
+       ]
+      ]
+     ]
+    ]
+   ]
+   @j + 2 -> @i.
+  ]
+ ]
+]
+? @good_a * @equal [ 0 -> @valid. ]
+? (@status == 204) * (@equal + @good_a) [ 0 -> @valid. ]
+? @status == 304 [
+ ? @wanted != @name_length [ 0 -> @valid. ]
+ 0 -> @good_a.
+]
+? @valid [
+ @name_length -> @file.
+ ? @good_a == 0 [
+  @wanted - @name_length -> @free_file.
+  ? @equal * (@status != 304) * (@free_file != @equal - 1) [ 0 -> @valid. ]
+  ? @valid [
+   :load64[@work + 696] -> @c2. 0 -> @i.
+   ?? @i < @free_file [ !store8[@c2 + @i|:load8[@pointer + @file + @i]]. @i + 1 -> @i. ]
+  ]
+ ] ~ [
+  0 -> @ignore_lf.
+  ?? @valid * (@ignore_lf == 0) [
+   @file -> @j. 0 -> @c2. 0 -> @c3. 0 -> @c4. 0 -> @done.
+   ?? (@j + 1 < @wanted) * (@j - @file < 1024) * @valid * (@done == 0) [
+    :load8[@pointer + @j] -> @c0.
+    ? @c0 == 13 [
+     ? :load8[@pointer + @j + 1] == 10 [ 1 -> @done. ] ~ [ 0 -> @valid. ]
+    ] ~ [
+     ? @c4 == 0 [
+      ? @c0 == 59 [ 1 -> @c4. ] ~ [
+       256 -> @c1.
+       ? (@c0 >= 48) * (@c0 <= 57) [ @c0 - 48 -> @c1. ]
+       ? (@c0 >= 65) * (@c0 <= 70) [ @c0 - 55 -> @c1. ]
+       ? (@c0 >= 97) * (@c0 <= 102) [ @c0 - 87 -> @c1. ]
+       ? @c1 > 15 [ 0 -> @valid. ] ~ [ @c2 * 16 + @c1 -> @c2. @c3 + 1 -> @c3. ]
+       ? (@c3 > 8) + (@c2 > 65535) [ 0 -> @valid. !store64[@work + 408|9]. ]
+      ]
+     ] ~ [
+      # Parse extension names and token/quoted values without interpreting them.
+      (@c0 >= 48) * (@c0 <= 57) + (@c0 >= 65) * (@c0 <= 90) + (@c0 >= 97) * (@c0 <= 122) -> @operation.
+      "!#$%&'*+-.^_`|~" -> @name. 0 -> @k.
+      ?? @k < 15 [ ? @c0 == :load8[@name + @k] [ 1 -> @operation. ] @k + 1 -> @k. ]
+      @c4 -> @temporary.
+      ? @temporary == 1 [
+       ? @operation [ 2 -> @c4. ] ~ [ ? (@c0 != 32) * (@c0 != 9) [ 0 -> @valid. ] ]
+      ]
+      ? @temporary == 2 [
+       ? @operation == 0 [
+        ? @c0 == 61 [ 3 -> @c4. ] ~ [
+         ? @c0 == 59 [ 1 -> @c4. ] ~ [ ? (@c0 == 32) + (@c0 == 9) [ 8 -> @c4. ] ~ [ 0 -> @valid. ] ]
+        ]
+       ]
+      ]
+      ? @temporary == 3 [
+       ? @c0 == 34 [ 5 -> @c4. ] ~ [
+        ? @operation [ 4 -> @c4. ] ~ [ ? (@c0 != 32) * (@c0 != 9) [ 0 -> @valid. ] ]
+       ]
+      ]
+      ? @temporary == 4 [
+       ? @operation == 0 [
+        ? @c0 == 59 [ 1 -> @c4. ] ~ [ ? (@c0 == 32) + (@c0 == 9) [ 9 -> @c4. ] ~ [ 0 -> @valid. ] ]
+       ]
+      ]
+      ? @temporary == 5 [
+       ? @c0 == 34 [ 7 -> @c4. ] ~ [
+        ? @c0 == 92 [ 6 -> @c4. ] ~ [ ? (@c0 < 32) * (@c0 != 9) + (@c0 > 126) [ 0 -> @valid. ] ]
+       ]
+      ]
+      ? @temporary == 6 [
+       ? (@c0 < 32) * (@c0 != 9) + (@c0 > 126) [ 0 -> @valid. ] 5 -> @c4.
+      ]
+      ? (@temporary == 7) + (@temporary == 9) [
+       ? @c0 == 59 [ 1 -> @c4. ] ~ [ ? (@c0 == 32) + (@c0 == 9) [ 9 -> @c4. ] ~ [ 0 -> @valid. ] ]
+      ]
+      ? @temporary == 8 [
+       ? @c0 == 61 [ 3 -> @c4. ] ~ [
+        ? @c0 == 59 [ 1 -> @c4. ] ~ [ ? (@c0 != 32) * (@c0 != 9) [ 0 -> @valid. ] ]
+       ]
+      ]
+     ]
+     @j + 1 -> @j.
+    ]
+   ]
+   ? (@done == 0) + (@c3 == 0) + (@c4 == 1) + (@c4 == 3) + (@c4 == 5) + (@c4 == 6) [ 0 -> @valid. ]
+   ? @valid [
+    @j + 2 -> @file.
+    ? @c2 == 0 [ 1 -> @ignore_lf. ] ~ [
+     ? (@file + @c2 + 2 > @wanted) + (@free_file + @c2 > 65535) [ 0 -> @valid. ] ~ [
+      ? :load16[@pointer + @file + @c2] != 0x0a0d [ 0 -> @valid. ] ~ [
+       :load64[@work + 696] -> @c4. 0 -> @i.
+       ?? @i < @c2 [ !store8[@c4 + @free_file + @i|:load8[@pointer + @file + @i]]. @i + 1 -> @i. ]
+       @free_file + @c2 -> @free_file. @file + @c2 + 2 -> @file.
+      ]
+     ]
+    ]
+   ]
+  ]
+  # Trailers cannot override framing or response metadata. Validate and ignore other fields.
+  @file -> @slot. 0 -> @active_bank. 0 -> @done.
+  ?? @valid * (@done == 0) [
+   ? (@file + 1 >= @wanted) + (@file - @slot > 8190) [ 0 -> @valid. ] ~ [
+    ? :load16[@pointer + @file] == 0x0a0d [ @file + 2 -> @file. 1 -> @done. ] ~ [
+     @active_bank + 1 -> @active_bank. ? @active_bank > 128 [ 0 -> @valid. ]
+     @file -> @j. 0 -> @arguments. 0 -> @ready.
+     ?? (@j + 1 < @wanted) * (@j - @slot < 8190) * @valid * (@ready == 0) [
+      :load8[@pointer + @j] -> @c0.
+      ? @c0 == 13 [
+       ? :load8[@pointer + @j + 1] == 10 [ 1 -> @ready. ] ~ [ 0 -> @valid. ]
+      ] ~ [
+       ? (@c0 < 32) * (@c0 != 9) + (@c0 > 126) [ 0 -> @valid. ]
+       ? @arguments == 0 [
+        ? @c0 == 58 [ @j -> @arguments. ] ~ [
+         ? ((@c0 >= 48) * (@c0 <= 57) + (@c0 >= 65) * (@c0 <= 90) + (@c0 >= 97) * (@c0 <= 122) + (@c0 == 33) + (@c0 == 35) + (@c0 == 36) + (@c0 == 37) + (@c0 == 38) + (@c0 == 39) + (@c0 == 42) + (@c0 == 43) + (@c0 == 45) + (@c0 == 46) + (@c0 == 94) + (@c0 == 95) + (@c0 == 96) + (@c0 == 124) + (@c0 == 126)) == 0 [ 0 -> @valid. ]
+        ]
+       ]
+       @j + 1 -> @j.
+      ]
+     ]
+     ? (@ready == 0) + (@arguments == 0) + (@arguments == @file) [ 0 -> @valid. ]
+     1 -> @command. ?? @command <= 5 [
+      "content-length" -> @name. 14 -> @c5.
+      ? @command == 2 [ "transfer-encoding" -> @name. 17 -> @c5. ]
+      ? @command == 3 [ "content-encoding" -> @name. 16 -> @c5. ]
+      ? @command == 4 [ "content-type" -> @name. 12 -> @c5. ]
+      ? @command == 5 [ "location" -> @name. 8 -> @c5. ]
+      @arguments - @file == @c5 -> @ready. 0 -> @k.
+      ?? (@k < @c5) * @ready [
+       :load8[@pointer + @file + @k] -> @c0. ? (@c0 >= 65) * (@c0 <= 90) [ @c0 + 32 -> @c0. ]
+       ? @c0 != :load8[@name + @k] [ 0 -> @ready. ] @k + 1 -> @k.
+      ]
+      ? @ready [ 0 -> @valid. ] @command + 1 -> @command.
+     ]
+     @j + 2 -> @file.
+    ]
+   ]
+  ]
+  ? @file != @wanted [ 0 -> @valid. ]
+ ]
+]
+? ((@status == 204) + (@status == 304)) * (@free_file != 0) [ 0 -> @valid. ]
+? @valid [
+ !store8[:load64[@work + 696] + @free_file|0].
+ !store64[@work + 672|@status]. !store64[@work + 680|@free_file].
+ !store64[@work + 712|@name_length]. !store64[@work + 400|2]. !store64[@work + 464|0].
+] ~ [
+ !store64[@work + 680|0]. !store64[@work + 400|3]. !store64[@work + 464|0].
+ ? :load64[@work + 408] == 0 [ !store64[@work + 408|10]. ]
+]

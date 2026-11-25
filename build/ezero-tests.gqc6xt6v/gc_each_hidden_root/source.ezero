@@ -1,0 +1,16 @@
+produce :: [
+ Called => show
+ [1 | 2 | 3] => return
+]
+consume :: n [
+ 0 => counter
+ empty => temporary
+ 4000 => repeat [
+  Temporary counter => temporary
+  counter + 1 => counter
+ ]
+ n => return
+]
+produce() => each item [
+ consume(item) => show
+]

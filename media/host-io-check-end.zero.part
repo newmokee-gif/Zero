@@ -1,0 +1,4 @@
+? (:load64[@mh+16] != -1)+(:load64[@mh+40] != 87)+(:load64[@mh+112] != 0) [ !exit[1]. ]
+"PASS 18 host transfer checks and error-preserving close.\n" -> @rr. 0 -> @ri.
+?? :load8[@rr+@ri] [ !put[:load8[@rr+@ri]]. @ri+1 -> @ri. ]
+!exit[0].

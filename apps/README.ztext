@@ -1,0 +1,67 @@
+ZTEXT00100000f95fb0a91290000000
+Current original Zero workflow (0.12)
+
+Use the native tools on Linux or their .exe versions on Windows:
+  zero-integrate PROJECT_DIRECTORY NEW_KERNEL.zero
+  zero-build PROJECT_DIRECTORY NEW_OUTPUT_DIRECTORY NEW_KERNEL.zero
+  zero-check PROJECT_DIRECTORY NEW_TEST_DIRECTORY
+All destination paths must be new. The integrator preserves authored sources;
+the builder checks its compiler fixed point and builds the original targets;
+the verifier checks language behavior and host file operations in process.
+See tools/integrate.ztext, tools/build.ztext and checks/README.ztext.
+Read these documents with zero-text read FILE.
+
+The notes below preserve earlier implementation and test history. Any old
+shell/Python runner names, generated artifacts, JSON reports or commands are
+historical references: they were removed from the active project and are not
+current runnable instructions or current-release validation. Native host
+checks do not replace BIOS/UEFI, persistence or physical-hardware testing.
+
+Historical implementation notes
+
+Original Zero keyboard applications (canonical0.10)
+
+apps opens the one-based keyboard menu; system, storage and network open
+individual applications. Arrow keys select; Enter opens/applies. Backspace
+returns to the application menu, and Escape restores the terminal. The
+network application can enter the existing honest hardware WiFi interface.
+
+System reports the existing terminal/graphics/computation worker states and
+can pause/resume computation. Network polling remains scheduled independently.
+Storage lists actual discovered volumes and selects a separate volume root;
+it does not create, resize, format, mount or modify filesystems. Network
+shows the actual driver/DHCP state and its address, mask, gateway and DNS.
+These are bounded keyboard applications, not a new process isolation model.
+
+Implementation is in the three original .zero.part files. The NET integrator
+expands only approved APP names, after expanding approved NET parts once.
+apps/integrate.py checks this canonical integration or exports a source snapshot.
+Product behavior and rendering are Zero; integration scripts are host tooling.
+All state lives in existing owned console fields2472/2480/2488, and rendering
+reuses the bounded45-column by12-row modal frame. The candidate header fix
+keeps its APPLICATION glyph length11, preventing an over-read of the label.
+
+Functionally tested source261936 bytes (208 below limit262144); its exact
+source/binaries are retained in verification/apps-next/tested-*.
+Native kernel sizes330853 bytes x64 and478309 bytes IA32; both fit491520.
+All4 actual QEMU BIOS64/BIOS32/UEFI64/UEFI32 paths passed10 checks each with
+PS/2 input, native1080p screenshots, private ZeroFS/ext4 volumes, automatic
+DHCP and link recovery while computation paused, modal handoff and return.
+Live source/ISO/data images and private data disks remained unchanged. All
+VMs stopped. Native VirtualBox and physical hardware were not tested here.
+
+Evidence: verification/apps-next/results.json and per-mode directories.
+Reproduce: build a private ISO with current original image/iso tools, then
+python3 apps/test-vm.py. The script attaches private copies of disk fixtures.
+Screenshots are actual framebuffer captures, not generated design mockups.
+After the full functional matrix, the workspace label was corrected to
+KEYBOARD APPS only for applications; WiFi retains CONNECTION SETUP. The
+cosmetic-only final candidate compiles both targets; current sizes/hashes are
+in verification/apps-next/post-test-cosmetic.json. Root owns the final
+integrated image matrix. The previously tested private ISO is preserved.
+
+Canonical integration now includes version0.10 and the current guest runtime
+slot bound; kernel source261995 bytes, raw64=330921 and raw32=478405 bytes.
+All part preflights and full build passed; ISO SHA256:
+8f31413952cbac47c16074ef6fb6534ada173246f822916e54d79b35d9ffb129
+Final integrated VM verification is owned separately by the release coordinator.

@@ -1,0 +1,265 @@
+ZTEXT00100002c860fa159610000000
+HISTORICAL INITIAL TEMPLATE/LAYOUT REFERENCE
+This document preserves the original development table and its pinned hashes.
+Its old hosted arena/output sizes are not the current compiler contract.
+Use compiler.zero, LANGUAGE.ztext and selfhost/CORE.ztext for current capacities,
+Windows/guest targets and later native-template overrides.
+
+Zero IA32 and real-mode code-generation layout
+
+Contract
+--------
+All source assets are Zero statements. The caller declares @templates pointing
+to 128 zeroed entries of 16 bytes. Each template entry stores an ASCII lowercase
+hexadecimal string pointer at +0 and its decoded byte count at +8. Decode two
+characters per byte. Empty or absent entries must not be treated as supported
+operations. The entry_arguments template for IA32 is intentionally empty.
+The largest string is 1024 characters (512 decoded bytes); every string stays
+below Zero's 4095-character limit.
+
+These tables describe our existing instruction encodings, not a copied compiler
+executable. The existing built compiler is only the bootstrap provenance. Table
+extraction and verification did not invoke an assembler or linker.
+
+Shared template IDs
+-------------------
+ 0  prologue
+ 1  entry_arguments
+ 2  immediate
+ 3  load_local
+ 4  store_local
+ 5  push_rax
+ 6  pop_rcx
+ 7  add_code
+ 8  sub_code
+ 9  mul_code
+10  neg_code
+11  compare_code
+12  set_eq
+13  set_ne
+14  set_lt
+15  set_gt
+16  set_le
+17  set_ge
+18  normalize
+19  test_jump
+20  jump_code
+21  string_address
+22  load8_code
+23  load16_code
+24  load32_code
+25  load64_code
+26  store8_code
+27  store16_code
+28  store32_code
+29  store64_code
+30  in8_code
+31  in16_code
+32  out8_code
+33  out16_code
+34  reserve_code
+35  argument0_code
+36  argument1_code
+37  foreign_call
+38  enter_code
+39  disable_code
+40  halt_code
+41  host_read_code
+42  host_write_code
+43  put_code
+44  exit_code
+45  default_exit
+46  elf_header
+47  pe_header
+48  immediate_high
+49  load_local_value
+50  store_local_value
+51  foreign_call7
+52  real_header
+53  enable_code
+54  bios_code
+55  biosreset_code
+56  bioscheck_code
+57  biosmode_code
+58  biosput_code
+59  cpuid_code
+60  lgdt_code
+61  cr0_code
+62  cr3_code
+63  cr4_code
+64  rdmsr_code
+65  wrmsr_code
+66  longjump_setup
+67  longjump_branch
+68  longjump_abi
+69  protectedjump_abi
+70  host_prologue (x64 hosted target only)
+
+IA32 target
+-----------
+Target values are unsigned u64. The current value is EDX:EAX and the saved left
+operand is EBX:ECX. Arithmetic wraps to 64 bits and comparison is unsigned.
+All generated control-flow immediates and addresses below are little-endian.
+
+raw32 output = entry_arguments + prologue + statements + halt_code.
+efi32 output = pe_header + entry_arguments + prologue + statements + halt_code,
+then PE finalization. raw32 has no header. Both output limits are 131072 bytes.
+
+A literal emits immediate (B8), low 32 bits, immediate_high (BA), high 32 bits.
+A variable load emits load_local, disp32, load_local_value.
+A variable store emits store_local, disp32, store_local_value.
+For variable index i starting at 0, disp32 = -8 * (i + 1).
+load_local/store_local prefix is LEA EDI,[EBP+disp32]; suffixes transfer two words.
+push_rax pushes high then low; pop_rcx pops low then high.
+
+A string emits jump_code + u32 string_length + bytes_including_NUL +
+string_address + u32(-(string_length + 7)).
+string_address zeroes EDX and computes EAX relative to its call/pop return EIP.
+The string_address prefix is 9 bytes; its internal return EIP is 7 bytes after
+the literal end. Do not use the template's full length in the displacement.
+
+test_jump emits a combined zero test of EDX:EAX and a JZ prefix, then a rel32.
+jump_code emits E9 then a rel32.
+For either displacement immediate beginning at offset p and destination d,
+patch u32(d - p - 4). This applies to loops and all forward branches.
+
+Entry convention is cdecl with a return address, arg0, arg1 on incoming stack.
+The prologue saves arg0/arg1 in the new frame at EBP+0 / EBP+4, reserves 512 bytes
+for zeroed locals and 65536 bytes for arena, and stores arena cursor at EBP+8.
+arg0/arg1 produce zero-extended pointers. Every load/store checks its pointer
+high word is zero; a nonzero high word triggers UD2.
+reserve rounds up to 16 bytes and rejects a high size word, integer wrap, or
+crossing EBP-512. It preserves the high result word as zero.
+
+call accepts function pointer plus five arguments. call7 accepts pointer plus
+seven arguments. Each expression is pushed with push_rax. The call templates
+reject a nonzero function-pointer high word, copy each argument's low word to
+cdecl stack slots, align ESP, call the function, restore the expression stack,
+and return EAX with EDX zero. The ABI functions must preserve EBX/ESI/EDI/EBP.
+call template stack cleanup is 48 bytes; call7 cleanup is 64 bytes.
+Argument high words are intentionally truncated for this 32-bit firmware ABI.
+
+enter accepts entry, argument, stack; each is pushed as u64. The template checks
+all high words are zero, disables interrupts, switches/aligns ESP, provides
+cdecl arg0 and arg1=0, then jumps to entry with a generated halt return address.
+host_read, host_write, put, exit, default_exit are UD2 placeholders in this
+backend. They must be rejected before emission. The historical ELF header
+template is also unused by IA32 and does not imply hosted IA32 support.
+
+PE32 header and finalization
+---------------------------
+Header size: 512. MZ magic: offset0. PE offset field:60, value64.
+COFF machine:0x014c. Optional header magic:0x010b, size224.
+ImageBase:0x100000. SectionAlignment:4096. FileAlignment:512.
+EntryPoint RVA:4096. Subsystem:10 (EFI application).
+Two sections: .text (execute/read), .reloc (read/discardable).
+
+All mutable fields below are u32 offsets relative to file/header start:
+ 92  pe_code_size        rounded raw size of .text
+112  pe_data_rva         relocation section RVA
+144  pe_image_size       relocation section RVA + 4096
+224  pe_reloc_directory  relocation directory RVA
+320  pe_virtual_size     exact code byte count after 512-byte header
+328  pe_raw_size         rounded raw size of .text
+364  pe_reloc_rva        relocation section RVA
+372  pe_reloc_offset     relocation section file offset
+
+Let C = current output size - 512.
+Let R = align_up(C,512).
+Let F = R + 512.
+Let V = align_up(C,4096) + 4096.
+Patch exact code size C at320; R at92,328; F at372;
+V at112,224,364; V+4096 at144.
+Zero every padding byte between code end and F+512.
+At F store u32(4096); at F+4 store u32(12).
+The following two u16 relocation entries are ABSOLUTE zero/no-ops.
+Final size is F+512 and must fit 131072 bytes.
+Headers already provide directory size12, .reloc virtual size12/raw size512,
+.text RVA4096 and .text raw file offset512.
+
+Real-mode target
+----------------
+Only a real-mode boot image is supported. Output limit: 16384 bytes.
+Target values and literals are u32. Reject literals larger than 0xffffffff.
+Value register is EAX; saved left operand is ECX. Arithmetic wraps to 32 bits.
+There is no 8-bit CPU backend: these code16 encodings require an x86 processor
+supporting 32-bit registers and operand/address-size prefixes.
+
+Output = real_header (512 bytes) + prologue + statements + halt_code.
+The image is loaded at physical 0x7c00. Header bytes0..4 are EA 00 7E 00 00,
+which normalize CS to zero and branch to 0x7e00. Signature at510 is55 AA.
+This header does not load later sectors; disk loading policy is in bios.zero.
+
+A literal emits immediate (66 B8) + u32 value.
+A load emits load_local (67 66 8B 85) + disp32.
+A store emits store_local (67 66 89 85) + disp32.
+Variable index i uses disp32 = -4 * (i + 1).
+push/pop templates operate on EAX/ECX with 32-bit operand prefixes.
+
+A string emits jump_code + u32 string_length + bytes_including_NUL +
+immediate + u32 absolute_literal_start.
+If p is the output offset just after emitting immediate, the address is
+0x7c00 + p - 2 - string_length. This is absolute, unlike the other backends.
+test_jump and jump_code take rel32 with the same d-p-4 patch formula as IA32.
+test_jump includes 66 0F84; jump_code is66 E9.
+
+The prologue disables interrupts, clears DS/ES/SS, sets ESP=0x7c00, EBP=0x7000,
+preserves incoming DL as a zero-extended drive number at0x6e00, initializes arena
+cursor0x6e04 to0x4000, and clears64 locals at0x6f00..0x6fff.
+:arg0[] returns the saved BIOS drive number.
+reserve uses the physical arena0x4000..0x6000 with16-byte rounding and checks.
+The ABI scratch area is0x6e00..0x6eff; temporary stack grows down from0x7c00.
+
+Unsupported real-mode operations include load64/store64, arg1, call/call7,
+enter, hosted read/write/put/exit, and a hosted ELF or EFI output mode.
+Supported target-specific operations: bios, biosreset, bioscheck, biosmode,
+biosput, cpuid, lgdt, cr0/cr3/cr4, rdmsr/wrmsr, longjump, protectedjump, enable.
+
+BIOS disk templates preserve incoming flags, DS/ES and all32-bit general
+registers across INT13, enable interrupts for BIOS, clear direction afterward,
+and preserve return status through CS:0x6e08. bios uses drive(left) and DAP(right)
+for AH42. biosreset uses drive and AX0. bios/biosreset return0 on success,
+otherwise AH or256 for CF set with AH zero. bioscheck validates extensions
+through AH41, BX55aa -> aa55 and CXbit0; result0 success or1 failure.
+Video templates use INT10, AH0 for mode, AH0e/BX7 for character.
+cpuid takes leaf and selected output index0..3 (EAX/EBX/ECX/EDX); subleaf is0;
+other indexes return0. rdmsr returns only the low32-bit EAX value.
+wrmsr evaluates and pushes index, low, high, then pops EDX,EAX,ECX.
+lgdt explicitly uses a32-bit base operand.
+
+Far transitions
+---------------
+longjump and protectedjump each evaluate and push four expressions in this
+order: selector, entry, argument, stack.
+Emit longjump_setup (32 bytes). Let p be output offset immediately afterward.
+Emit u32(0x7c00 + p + 4 + 5), then longjump_branch (5 bytes),
+then longjump_abi (35 bytes) or protectedjump_abi (52 bytes).
+The patched immediate points exactly at the first byte of the ABI shim.
+longjump_setup writes entry at0x6e20, argument at0x6e24, stack at0x6e28,
+selector at0x6e30, and ends with the prefix for a dword store to0x6e2c.
+The far branch is66 FF 2E 2C 6E (m16:32 far indirect pointer at0x6e2c).
+No further relocation patching inside either ABI shim is required.
+
+The64-bit shim clears DS/ES/SS, loads entry into EAX, argument into ECX,
+stack into ESP, aligns RSP to16, and jumps to RAX.
+The32-bit shim loads selector0x10 into DS/ES/SS/FS/GS, clears direction,
+sets stack, aligns it, passes cdecl arg0 plus zero arg1, and dispatches entry.
+A returned32-bit kernel reaches its local CLI/HLT loop.
+
+Validation and provenance
+-------------------------
+Both Zero table assets compiled with the existing own build/zero --host.
+A decoder written in Zero emitted every table in ID order. Comparison with
+the corresponding instruction symbol ranges in our existing binaries was exact:
+  ia32: 1139 decoded bytes, 52 present entries (includes unused ELF header).
+  real: 1150 decoded bytes, 52 present entries.
+Existing source/binary SHA256 at extraction:
+  compiler-x86.S:
+   0bbb1476a9606c81521d93fbe4b7de6df6d5dd403ed43a05e8d27dfb66c6cf2a
+  build/zero-x86:
+   51340958840264ba0606722a9f56262dd7d2b989d655cce9867d5bcd07450a72
+  compiler-real.S:
+   a4a3a4bb942b5c069d2e8eaffa924f8939b2759b9888fb7f1a14f1533749c186
+  build/zero-real:
+   499f00d4e1a58c1eb33157560eb96b134e442de365d7752dddb60349a2567fea
+

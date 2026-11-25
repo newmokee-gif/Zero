@@ -1,0 +1,1 @@
+:reserve[4194304] => @arena. !store64[@arena | 0x123456789abcdef0]. !store64[@arena + 4194296 | 0xfedcba9876543210]. ? :load64[@arena] != 0x123456789abcdef0 [ !exit[1]. ] ? :load64[@arena + 4194296] != 0xfedcba9876543210 [ !exit[2]. ] !exit[0].

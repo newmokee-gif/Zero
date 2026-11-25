@@ -1,0 +1,70 @@
+ZTEXT00100000e7fe79b77e40000000
+PASS host rejects default :in32[0xcf8] => @x.
+PASS host rejects default !out32[0xcf8|0x80000000].
+PASS host rejects --host :in32[0xcf8] => @x.
+PASS host rejects --host !out32[0xcf8|0x80000000].
+PASS compile --raw dword port probe
+PASS --raw rejects reserved/malformed 0 => @in32.
+PASS --raw rejects reserved/malformed 0 => @out32.
+PASS --raw rejects reserved/malformed !in32[3].
+PASS --raw rejects reserved/malformed :out32[3|4] => @x.
+PASS --raw rejects reserved/malformed :in32[] => @x.
+PASS --raw rejects reserved/malformed !out32[3].
+PASS --raw rejects reserved/malformed :in32[3|4] => @x.
+PASS --raw rejects reserved/malformed !out32[3|4|5].
+PASS compile --raw32 dword port probe
+PASS --raw32 rejects reserved/malformed 0 => @in32.
+PASS --raw32 rejects reserved/malformed 0 => @out32.
+PASS --raw32 rejects reserved/malformed !in32[3].
+PASS --raw32 rejects reserved/malformed :out32[3|4] => @x.
+PASS --raw32 rejects reserved/malformed :in32[] => @x.
+PASS --raw32 rejects reserved/malformed !out32[3].
+PASS --raw32 rejects reserved/malformed :in32[3|4] => @x.
+PASS --raw32 rejects reserved/malformed !out32[3|4|5].
+PASS compile --efi dword port probe
+PASS --efi rejects reserved/malformed 0 => @in32.
+PASS --efi rejects reserved/malformed 0 => @out32.
+PASS --efi rejects reserved/malformed !in32[3].
+PASS --efi rejects reserved/malformed :out32[3|4] => @x.
+PASS --efi rejects reserved/malformed :in32[] => @x.
+PASS --efi rejects reserved/malformed !out32[3].
+PASS --efi rejects reserved/malformed :in32[3|4] => @x.
+PASS --efi rejects reserved/malformed !out32[3|4|5].
+PASS compile --efi32 dword port probe
+PASS --efi32 rejects reserved/malformed 0 => @in32.
+PASS --efi32 rejects reserved/malformed 0 => @out32.
+PASS --efi32 rejects reserved/malformed !in32[3].
+PASS --efi32 rejects reserved/malformed :out32[3|4] => @x.
+PASS --efi32 rejects reserved/malformed :in32[] => @x.
+PASS --efi32 rejects reserved/malformed !out32[3].
+PASS --efi32 rejects reserved/malformed :in32[3|4] => @x.
+PASS --efi32 rejects reserved/malformed !out32[3|4|5].
+PASS compile --real dword port probe
+PASS --real rejects reserved/malformed 0 => @in32.
+PASS --real rejects reserved/malformed 0 => @out32.
+PASS --real rejects reserved/malformed !in32[3].
+PASS --real rejects reserved/malformed :out32[3|4] => @x.
+PASS --real rejects reserved/malformed :in32[] => @x.
+PASS --real rejects reserved/malformed !out32[3].
+PASS --real rejects reserved/malformed :in32[3|4] => @x.
+PASS --real rejects reserved/malformed !out32[3|4|5].
+PASS old-source exact output parity bios.zero --real
+PASS old-source exact output parity loader.zero --efi
+PASS old-source exact output parity loader32.zero --efi32
+PASS old-source exact output parity kernel.zero --raw
+PASS old-source exact output parity kernel.zero --raw32
+PASS old-source exact output parity image.zero --host
+PASS old-source exact output parity iso.zero --host
+PASS old-source exact output parity build/network-ports/compiler-before.zero --host
+PASS raw probe fits existing slot
+PASS native QEMU raw: PCI config roundtrip, full32 input, zero extension, low16 port
+PASS raw32 probe fits existing slot
+PASS native QEMU raw32: PCI config roundtrip, full32 input, zero extension, low16 port
+PASS real probe fits existing slot
+PASS native QEMU real: PCI config roundtrip, full32 input, zero extension, low16 port
+PASS original ISO unchanged; no data disks attached
+
+Compiler SHA256: 6920190de948804096ccd8e2b47b1423060631dd5c2a2904b08d1f47f99a3733
+Original ISO SHA256: 8d494eca3adbf8998b1674d4d7c4cd03308f40ba87ee3213a806fefa6c9f7d31
+Generated private probe artifacts: /workspace/zero-foundation/build/network-ports/ports-zpl8tg5f
+No native VirtualBox or physical hardware execution claimed.

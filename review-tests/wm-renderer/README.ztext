@@ -1,0 +1,42 @@
+ZTEXT001000008795126278c0000000
+Current original Zero workflow (0.12)
+
+Use the native tools on Linux or their .exe versions on Windows:
+  zero-integrate PROJECT_DIRECTORY NEW_KERNEL.zero
+  zero-build PROJECT_DIRECTORY NEW_OUTPUT_DIRECTORY NEW_KERNEL.zero
+  zero-check PROJECT_DIRECTORY NEW_TEST_DIRECTORY
+All destination paths must be new. The integrator preserves authored sources;
+the builder checks its compiler fixed point and builds the original targets;
+the verifier checks language behavior and host file operations in process.
+See tools/integrate.ztext, tools/build.ztext and checks/README.ztext.
+Read these documents with zero-text read FILE.
+
+The notes below preserve earlier implementation and test history. Any old
+shell/Python runner names, generated artifacts, JSON reports or commands are
+historical references: they were removed from the active project and are not
+current runnable instructions or current-release validation. Native host
+checks do not replace BIOS/UEFI, persistence or physical-hardware testing.
+
+Historical implementation notes
+
+ISOLATED ZERO WM RENDERER CHECKS
+
+Run from any directory:
+  bash /path/to/zero-foundation/review-tests/wm-renderer/run.sh
+
+Requires the built own compiler at build/zero, host Python3 and ImageMagick
+convert. Python is external test orchestration and the independent reference
+oracle; it is never compiled into the OS. All actual drawing is the production
+wm/worker.zero.part compiled to native machine code by Zero.
+
+The .zero.part fixtures provide a hosted guarded framebuffer and test rings.
+The script substitutes a bounded outer loop and removes context switches to
+isolate drawing. It writes complete generated Zero test sources, executables
+and PPM intermediates to a fresh build/wm-renderer.* directory. Evidence and
+PNG fixture previews go to verification/wm-renderer-0.8.0.
+
+The suite verifies framebuffer guards, nontrivial stride padding, RGB/BGR
+agreement, compact layouts and9 terminal-replay cases. It does not claim to
+exercise generation changes across a real yield, guest input, page allocation,
+BIOS/UEFI handoff, filesystem behavior or lifecycle scheduling.
+No user data disk is opened. No VM is started by this suite.

@@ -1,0 +1,65 @@
+ZTEXT00100000eeb9f56098a0000000
+Current original Zero workflow (0.12)
+
+Use the native tools on Linux or their .exe versions on Windows:
+  zero-integrate PROJECT_DIRECTORY NEW_KERNEL.zero
+  zero-build PROJECT_DIRECTORY NEW_OUTPUT_DIRECTORY NEW_KERNEL.zero
+  zero-check PROJECT_DIRECTORY NEW_TEST_DIRECTORY
+All destination paths must be new. The integrator preserves authored sources;
+the builder checks its compiler fixed point and builds the original targets;
+the verifier checks language behavior and host file operations in process.
+See tools/integrate.ztext, tools/build.ztext and checks/README.ztext.
+Read these documents with zero-text read FILE.
+
+The notes below preserve earlier implementation and test history. Any old
+shell/Python runner names, generated artifacts, JSON reports or commands are
+historical references: they were removed from the active project and are not
+current runnable instructions or current-release validation. Native host
+checks do not replace BIOS/UEFI, persistence or physical-hardware testing.
+
+Historical implementation notes
+
+FROZEN: 480 KiB kernel slots plus default native Zero/Ezero compiler bundle.
+Boot/container sources: bios.zero, loader.zero, loader32.zero, image.zero,
+iso.zero, bundle.zero and build.sh. Documentation contracts updated.
+
+4334 structural/failure assertions and four complete-copy BIOS/UEFI32/64
+QEMU probes PASS. BIOS low-RAM refusal also PASS. The guest checks weighted
+checksum across all 1 MiB tool bytes, each 8 MiB workspace page, all prior
+kernel boundary markers and final byte491519, 64 KiB arena and kernel pool.
+Independent fsck.fat -n and xorriso validation PASS. Probe VMs all stopped.
+Evidence: verification/guest-bundle-480k/.
+Runner: review-tests/guest-bundle/run.py.
+Native Zero/Ezero compile-and-execute chain separately passed all four paths:
+verification/guest-app/bundle/ (guest compiler agent).
+
+BIOS15822 B, EFI64 17920 B, EFI32 26112 B; BIOS remains below16 KiB.
+Kernel slots491520 B, EFI FAT16 image16777216 B, tools1048576 B.
+ISO32/40/280/520/8712 extents,9224 sectors=18890752 B.
+FAT kernel chains260..1219 /1220..2179; tools2180..4227.
+BIOS validates conventional RAM608 KiB, EBDA>=98000, usable E8201..16MiB;
+bundle4..5MiB and workspace8..16MiB remain separate from kernel pool1..4MiB.
+UEFI allocates kernel120pages, tools256pages and workspace2048pages as
+LoaderCode so both native tools and generated programs can execute.
+Handoff256bytes with new u64 fields128/136/144/152.
+
+No full project build was run by this agent. Normal build now requires the
+parent-merged --app64/--app32/:biosmove compiler and480KiB output capacity.
+Private component binaries: build/guest-boot/ (480KiB layout).
+Read-only probe output: build/guest-bundle.s136xh0l/.
+Probe ISO SHA256:1a6840dcce5b0b8c655aa4a511948d090b71721875358d303757ae20f5f98651.
+User data.img/data.vdi and live build/zero.iso hashes unchanged during tests.
+Native VirtualBox and physical hardware are not claimed.
+Historical capacity-only448KiB evidence remains in verification/boot-capacity-448k/.
+
+0.10 runtime storage followup (2026-11-16): FROZEN for root integration.
+Ezero runtime-body slot65536 B, allowed source1..65535 B at unchanged794624.
+Bundle writer input856064 B; trailing zeros860160..1048575; output1MiB.
+build.sh and guest controller part enforce the larger cap; combined source
+limit262144 remains guarded. test-vm.py/test-terminal.py padding updated.
+90 component assertions pass with the newly published host compiler/runtime,
+including actual33358-byte runtime, maxbody/maxprefix, malformedpadding,
+input/output failures and97-byte fragmented reads. No fullbuild or VM run.
+Evidence verification/guest-bundle-runtime64k/results.json.
+The final integrated kernel, updated guest apps and ISO belong to root's0.10
+build/matrix. The published0.9 release and user disks were not changed here.

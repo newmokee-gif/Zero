@@ -1,0 +1,508 @@
+# Private PREPARED-image store. It never changes a boot loader or user data.
+# Journal records are append-only; a short/torn tail fails closed.
+:host[] -> @platform. :argcount[] -> @argc.
+"Usage: zero-update init SOURCE.iso VERSION NEW_DIRECTORY\n       zero-update stage SOURCE.iso VERSION DIRECTORY\n       zero-update publish SOURCE.iso VERSION NEW_INBOX\n       zero-update check INBOX DIRECTORY\n       zero-update status DIRECTORY\n       zero-update verify DIRECTORY\n       zero-update rollback DIRECTORY\n       zero-update inspect DIRECTORY\n       zero-update recover SOURCE_DIRECTORY NEW_DIRECTORY\n       zero-update watch INBOX DIRECTORY INTERVAL_SECONDS [CHECK_COUNT]\nAll selections are PREPARED, not boot-activated.\n" -> @path.
+0 -> @code. 0 -> @owned. 0 -> @action. 0 -> @lock.
+512 -> @i. ?? @i < 4096 [ !store64[@m+@i|0]. @i+8 -> @i. ]
+? (@platform != 1)*(@platform != 2) [ 64 -> @code. ]
+? (@argc < 2)+(@argc > 5) [ 64 -> @code. ]
+? @code == 0 [
+ :argument[1] -> @p. 0 -> @n.
+ ?? @n < 10 [
+  "init" -> @q. ? @n == 1 [ "stage" -> @q. ] ? @n == 2 [ "status" -> @q. ]
+  ? @n == 3 [ "verify" -> @q. ] ? @n == 4 [ "rollback" -> @q. ]
+  ? @n == 5 [ "check" -> @q. ] ? @n == 6 [ "publish" -> @q. ]
+  ? @n == 7 [ "inspect" -> @q. ] ? @n == 8 [ "recover" -> @q. ]
+  ? @n == 9 [ "watch" -> @q. ]
+  0 -> @i. 1 -> @j.
+  ?? :load8[@q+@i] [ ? :load8[@p+@i] != :load8[@q+@i] [ 0 -> @j. ] @i+1 -> @i. ]
+  ? :load8[@p+@i] != 0 [ 0 -> @j. ]
+  ? @j [ @n+1 -> @action. ? @n >= 7 [ @n+2 -> @action. ] ] @n+1 -> @n.
+ ]
+ ? @action == 0 [ 64 -> @code. ]
+ ? (@action == 1)+(@action == 2)+(@action == 7) [
+  ? @argc != 4 [ 64 -> @code. ] ~ [
+   :argument[2] -> @source. :argument[3] -> @p. :argument[4] -> @root.
+   0 -> @i. 0 -> @version.
+   ?? (:load8[@p+@i] != 0)*(@code == 0) [
+    :load8[@p+@i] -> @j.
+    ? (@j < 48)+(@j > 57)+(@i >= 10) [ 64 -> @code. ] ~ [
+     @version*10+@j-48 -> @version. ? @version > 4294967295 [ 64 -> @code. ]
+    ] @i+1 -> @i.
+   ]
+   ? @version == 0 [ 64 -> @code. ]
+  ]
+ ] ~ [
+  ? @action == 6 [
+   ? @argc != 3 [ 64 -> @code. ] ~ [ :argument[3] -> @root. :argument[2] -> @source. ]
+  ] ~ [
+   ? @action == 10 [
+    ? @argc != 3 [ 64 -> @code. ] ~ [ :argument[2] -> @root. :argument[3] -> @destination. ]
+   ] ~ [
+    ? @action == 11 [
+     ? (@argc != 4)*(@argc != 5) [ 64 -> @code. ] ~ [
+      :argument[2] -> @watchsource. :argument[3] -> @root. 1 -> @watchactive.
+      0 -> @n.
+      ?? (@n < 2)*(@code == 0) [
+       ? (@n == 0)+(@argc == 5) [
+        :argument[4+@n] -> @p. 0 -> @i. 0 -> @count.
+        ?? (:load8[@p+@i] != 0)*(@code == 0) [
+         :load8[@p+@i] -> @j.
+         ? (@j < 48)+(@j > 57)+(@i >= 6) [ 64 -> @code. ] ~ [ @count*10+@j-48 -> @count. ]
+         @i+1 -> @i.
+        ]
+        ? (@count == 0)+(@count > 100000) [ 64 -> @code. ]
+        ? @n == 0 [ @count -> @watchinterval. ? @count > 86400 [ 64 -> @code. ] ] ~ [ @count -> @watchleft. 2 -> @watchactive. ]
+       ]
+       @n+1 -> @n.
+      ]
+      6 -> @action. @watchsource -> @source.
+     ]
+    ] ~ [ ? @argc != 2 [ 64 -> @code. ] ~ [ :argument[2] -> @root. ] ]
+   ]
+  ]
+ ]
+]
+# Each watch cycle executes the same verified check transaction, then waits
+# in the native host API. It owns no lock while sleeping and fails on errors.
+1 -> @cycleactive.
+?? @cycleactive [
+0 -> @owned. 0 -> @step. 0 -> @lock. 0 -> @recoverowned.
+? @watchactive [ 6 -> @action. @watchsource -> @source. ]
+512 -> @i. ?? @i < 4096 [ !store64[@m+@i|0]. @i+8 -> @i. ]
+# Fixed owned basenames only; never use a path from a release manifest.
+? @code == 0 [
+ 0 -> @length.
+ ?? (:load8[@root+@length] != 0)*(@length < 3900) [ @length+1 -> @length. ]
+ ? (@length == 0)+(@length >= 3900) [ 64 -> @code. ]
+ ? @length [
+  :load8[@root+@length-1] -> @j.
+  ? (@j == 47)+(@j == 92)+(@j == 58) [ 64 -> @code. ]
+  0 -> @k. 0 -> @i.
+  ?? @i < @length [ :load8[@root+@i] -> @j. ? (@j == 47)+(@j == 92) [ @i+1 -> @k. ] @i+1 -> @i. ]
+  ? (@length-@k == 1)*(:load8[@root+@k] == 46) [ 64 -> @code. ]
+  ? (@length-@k == 2)*(:load16[@root+@k] == 0x2e2e) [ 64 -> @code. ]
+ ]
+ 0 -> @n.
+ ?? (@n < 4)*(@code == 0) [
+  @m+4096+@n*4096 -> @p. 0 -> @i.
+  ?? @i < @length [ !store8[@p+@i|:load8[@root+@i]]. @i+1 -> @i. ]
+  !store8[@p+@i|47]. @i+1 -> @i.
+  "zero.updates" -> @q. ? @action == 7 [ "release.meta" -> @q. ]
+  ? @n == 1 [ ".update-lock" -> @q. ] ? @n == 2 [ ".payload.part" -> @q. ]
+  ? @n == 3 [ "version-00000000.iso" -> @q. ? @action == 7 [ "system.iso" -> @q. ] ]
+  0 -> @j. ?? :load8[@q+@j] [ !store8[@p+@i|:load8[@q+@j]]. @i+1 -> @i. @j+1 -> @j. ] !store8[@p+@i|0].
+  @n+1 -> @n.
+ ]
+ ? @action == 6 [
+  0 -> @count. ?? (:load8[@source+@count] != 0)*(@count < 3900) [ @count+1 -> @count. ]
+  ? (@count == 0)+(@count >= 3900) [ 64 -> @code. ]
+  0 -> @n. ?? (@n < 2)*(@code == 0) [
+   @m+24576+@n*4096 -> @p. 0 -> @i.
+   ?? @i < @count [ !store8[@p+@i|:load8[@source+@i]]. @i+1 -> @i. ]
+   !store8[@p+@i|47]. @i+1 -> @i.
+   "system.iso" -> @q. ? @n [ "release.meta" -> @q. ]
+   0 -> @j. ?? :load8[@q+@j] [ !store8[@p+@i|:load8[@q+@j]]. @i+1 -> @i. @j+1 -> @j. ] !store8[@p+@i|0]. @n+1 -> @n.
+  ]
+  @m+24576 -> @source.
+ ]
+]
+? @code == 0 [
+ "Cannot create an exclusive update directory or lock. No existing file was replaced.\n" -> @path.
+ ? (@action == 1)+(@action == 7) [
+  :makedir[@root] -> @result. ? @result != 0 [ 73 -> @code. ] ~ [ 1 -> @owned. ]
+ ]
+ ? (@code == 0)*(@action != 3)*(@action != 4)*(@action != 9)*(@action != 10) [
+  :fileopen[@m+8192|1] -> @lock.
+  ? @lock == -1 [ 73 -> @code. 0 -> @lock. ] ~ [ @owned+2 -> @owned. ]
+ ]
+]
+# Verify every journal entry and its transition. Inbox metadata is one entry.
+0 -> @mode.
+?? (@mode < 2)*(@code == 0) [
+ ? ((@action != 1)*(@action != 7)*(@mode == 0))+((@action == 6)*(@mode == 1)) [
+  "Invalid or incomplete update journal/release metadata. State was not selected.\n" -> @path.
+  @m+4096 -> @p. ? @mode [ @m+28672 -> @p. ]
+  :fileopen[@p|0] -> @fd.
+  ? @fd == -1 [ 65 -> @code. ]
+  ? @code == 0 [
+   :filesize[@fd] -> @expected.
+   ? (@expected == 0)+(@expected > 1048576) [ 65 -> @code. ]
+   ? (@action == 9)+(@action == 10) [
+    @expected -> @journalbytes. :bitand[@expected|255] -> @tail.
+    @expected-@tail -> @prefix. @prefix -> @expected.
+    ? @prefix == 0 [ 65 -> @code. ]
+   ] ~ [ ? :bitand[@expected|255] != 0 [ 65 -> @code. ] ]
+   ? @mode*(@expected != 256) [ 65 -> @code. ]
+  ]
+  0 -> @total. 0 -> @seq.
+  0 -> @i. ?? @i < 256 [ !store64[@m+1792+@i|0]. @i+8 -> @i. ]
+  ?? (@total < @expected)*(@code == 0) [
+   @m+1024 -> @record. 0 -> @got.
+   ?? (@got < 256)*(@code == 0) [
+    :fileread[@fd|@record+@got|256-@got] -> @result.
+    ? (@result == 0)+(@result > 256-@got) [ 65 -> @code. ] ~ [ @got+@result -> @got. ]
+   ]
+   ? @code == 0 [
+    ? (:load64[@record] != 0x313030445055525a)+(:load64[@record+8] != 1)+(:load64[@record+16] != @seq+1) [ 65 -> @code. ]
+    ? (:load64[@record+128] != 1)+(:load64[@record+136] != 0)+(:load64[@record+248] != 0x3154494d4d4f435a) [ 65 -> @code. ]
+    :load64[@record+24] -> @a. :load64[@record+32] -> @b. :load64[@record+40] -> @c.
+    ? (@a == 0)+(@a > 4294967295)+(@c < @a)+(@c < @b)+(@c > 4294967295) [ 65 -> @code. ]
+    ? (:load64[@record+48] < 65536)+(:load64[@record+48] > 1073741824) [ 65 -> @code. ]
+    ? @seq == 0 [
+     ? (@b != 0)+(@c != @a)+(:load64[@record+88] != 0) [ 65 -> @code. ]
+     96 -> @i. ?? @i < 128 [ ? :load64[@record+@i] != 0 [ 65 -> @code. ] @i+8 -> @i. ]
+    ] ~ [
+     ? (@b != :load64[@m+1792+24])+(@c < :load64[@m+1792+40]) [ 65 -> @code. ]
+     ? @a > :load64[@m+1792+40] [ ? @c != @a [ 65 -> @code. ] ] ~ [
+      ? (@a != :load64[@m+1792+32])+(@c != :load64[@m+1792+40]) [ 65 -> @code. ]
+      ? :load64[@record+48] != :load64[@m+1792+88] [ 65 -> @code. ]
+      0 -> @i. ?? @i < 32 [ ? :load8[@record+56+@i] != :load8[@m+1792+96+@i] [ 65 -> @code. ] @i+1 -> @i. ]
+     ]
+     ? :load64[@record+88] != :load64[@m+1792+48] [ 65 -> @code. ]
+     0 -> @i. ?? @i < 32 [ ? :load8[@record+96+@i] != :load8[@m+1792+56+@i] [ 65 -> @code. ] @i+1 -> @i. ]
+    ]
+    144 -> @i. ?? @i < 240 [ ? :load64[@record+@i] != 0 [ 65 -> @code. ] @i+8 -> @i. ]
+    14695981039346656037 -> @hash. 0 -> @i.
+    ?? @i < 240 [ :bitxor[@hash|:load8[@record+@i]]*1099511628211 -> @hash. @i+1 -> @i. ]
+    ? :load64[@record+240] != @hash [ 65 -> @code. ]
+    0 -> @i. ?? @i < 256 [ !store64[@m+1792+@i|:load64[@record+@i]]. @i+8 -> @i. ]
+    ? (@action == 9)+(@action == 10) [
+     0 -> @i. ?? @i < 256 [ !store64[@m+262144+@total+@i|:load64[@record+@i]]. @i+8 -> @i. ]
+    ]
+    @seq+1 -> @seq. @total+256 -> @total.
+   ]
+  ]
+  ? (@code == 0)*((@action == 9)+(@action == 10)) [
+   0 -> @got.
+   ?? (@got < @tail)*(@code == 0) [
+    :fileread[@fd|@m+262144+@prefix+@got|@tail-@got] -> @result.
+    ? (@result == 0)+(@result > @tail-@got) [ 65 -> @code. ] ~ [ @got+@result -> @got. ]
+   ]
+   ? :filesize[@fd] != @journalbytes [ 65 -> @code. ]
+  ]
+  ? @fd != -1 [
+   ? @code == 0 [ :fileread[@fd|@m+2048|1] -> @result. ? @result != 0 [ 65 -> @code. ] ]
+   :fileclose[@fd] -> @result. ? @result != 0 [ 74 -> @code. ] -1 -> @fd.
+  ]
+  ? @code == 0 [
+   @m+1280+@mode*256 -> @p.
+   0 -> @i. ?? @i < 256 [ !store64[@p+@i|:load64[@record+@i]]. @i+8 -> @i. ]
+  ]
+ ]
+ @mode+1 -> @mode.
+]
+# Verify current and rollback payloads without touching the payload files.
+0 -> @n.
+?? (@n < 2)*(@code == 0)*(@action != 1)*(@action != 7) [
+ :load64[@m+1280+24+@n*8] -> @current.
+ ? @current [
+  "Prepared payload is missing, changed or unreadable. Nothing was selected.\n" -> @path.
+  "0123456789abcdef" -> @q. 0 -> @i.
+  ?? @i < 8 [ !store8[@m+16384+@length+9+@i|:load8[@q+:bitand[:shr[@current|(7-@i)*4]|15]]]. @i+1 -> @i. ]
+  :fileopen[@m+16384|0] -> @fd. ? @fd == -1 [ 75 -> @code. ]
+  ? @code == 0 [
+   !store64[@m|@fd]. !store64[@m+8|-1]. !store64[@m+16|1073741824]. !store64[@m+80|1].
+   !switch[@m+128|@m+224]. :load64[@m+24] -> @code.
+   @m+1280+48 -> @p. ? @n [ @m+1280+88 -> @p. ]
+   ? :load64[@m+32] != :load64[@p] [ 75 -> @code. ]
+   0 -> @i. ?? @i < 32 [ ? :load8[@m+40+@i] != :load8[@p+8+@i] [ 75 -> @code. ] @i+1 -> @i. ]
+  ]
+ ]
+ @n+1 -> @n.
+]
+# RECOVERY-BEGIN
+# Explicit recovery exports a checked snapshot into an exclusive NEW directory.
+# Source locks, incomplete tails, historical files and source bytes are untouched.
+? (@code == 0)*(@action == 10) [
+ "Recovery requires a new destination with a valid bounded path.\n" -> @path.
+ 0 -> @targetlength.
+ ?? (:load8[@destination+@targetlength] != 0)*(@targetlength < 3900) [ @targetlength+1 -> @targetlength. ]
+ ? (@targetlength == 0)+(@targetlength >= 3900) [ 64 -> @code. ]
+ ? @targetlength [
+  :load8[@destination+@targetlength-1] -> @j.
+  ? (@j == 47)+(@j == 92)+(@j == 58) [ 64 -> @code. ]
+  0 -> @k. 0 -> @i.
+  ?? @i < @targetlength [ :load8[@destination+@i] -> @j. ? (@j == 47)+(@j == 92) [ @i+1 -> @k. ] @i+1 -> @i. ]
+  ? (@targetlength-@k == 1)*(:load8[@destination+@k] == 46) [ 64 -> @code. ]
+  ? (@targetlength-@k == 2)*(:load16[@destination+@k] == 0x2e2e) [ 64 -> @code. ]
+ ]
+ 0 -> @n.
+ ?? (@n < 4)*(@code == 0) [
+  @m+36864+@n*4096 -> @p. 0 -> @i.
+  ?? @i < @targetlength [ !store8[@p+@i|:load8[@destination+@i]]. @i+1 -> @i. ]
+  !store8[@p+@i|47]. @i+1 -> @i.
+  "zero.updates" -> @q. ? @n == 1 [ ".update-lock" -> @q. ]
+  ? @n == 2 [ ".payload.part" -> @q. ] ? @n == 3 [ "version-00000000.iso" -> @q. ]
+  0 -> @j. ?? :load8[@q+@j] [ !store8[@p+@i|:load8[@q+@j]]. @i+1 -> @i. @j+1 -> @j. ] !store8[@p+@i|0].
+  @n+1 -> @n.
+ ]
+ ? @code == 0 [
+  "Cannot create exclusive recovery directory/lock. Existing files were not replaced.\n" -> @path.
+  :makedir[@destination] -> @result.
+  ? @result != 0 [ 73 -> @code. ] ~ [
+   1 -> @recoverowned. :fileopen[@m+40960|1] -> @recoverlock.
+   ? @recoverlock == -1 [ 73 -> @code. ] ~ [ 2 -> @recoverowned. ]
+  ]
+ ]
+ # Only current/previous payloads are needed for a usable recovered store.
+ # All complete selection records, including the highest counter, are copied.
+ 0 -> @n.
+ ?? (@n < 2)*(@code == 0) [
+  :load64[@m+1280+24+@n*8] -> @current.
+  ? @current [
+   "Recovery payload copy/verification failed. Source remains unchanged.\n" -> @path.
+   "0123456789abcdef" -> @q. 0 -> @i.
+   ?? @i < 8 [
+    :load8[@q+:bitand[:shr[@current|(7-@i)*4]|15]] -> @j.
+    !store8[@m+16384+@length+9+@i|@j].
+    !store8[@m+49152+@targetlength+9+@i|@j]. @i+1 -> @i.
+   ]
+   :fileopen[@m+16384|0] -> @fd. ? @fd == -1 [ 75 -> @code. ]
+   ? @code == 0 [
+    :fileopen[@m+45056|1] -> @outfd.
+    ? @outfd == -1 [ 73 -> @code. :fileclose[@fd] -> @result. ] ~ [
+     !store64[@m|@fd]. !store64[@m+8|@outfd]. !store64[@m+16|1073741824]. !store64[@m+80|1].
+     !switch[@m+128|@m+224]. :load64[@m+24] -> @code.
+     ? @code == 0 [
+      @m+1280+48 -> @p. ? @n [ @m+1280+88 -> @p. ]
+      ? :load64[@m+32] != :load64[@p] [ 75 -> @code. ]
+      0 -> @i. ?? @i < 32 [ ? :load8[@m+40+@i] != :load8[@p+8+@i] [ 75 -> @code. ] @i+1 -> @i. ]
+     ]
+    ]
+   ]
+   ? @code == 0 [
+    :fileopen[@m+45056|0] -> @fd. ? @fd == -1 [ 75 -> @code. ]
+    ? @code == 0 [
+     !store64[@m|@fd]. !store64[@m+8|-1]. !store64[@m+16|1073741824]. !store64[@m+80|1].
+     !switch[@m+128|@m+224]. :load64[@m+24] -> @code.
+     ? @code == 0 [
+      @m+1280+48 -> @p. ? @n [ @m+1280+88 -> @p. ]
+      ? :load64[@m+32] != :load64[@p] [ 75 -> @code. ]
+      0 -> @i. ?? @i < 32 [ ? :load8[@m+40+@i] != :load8[@p+8+@i] [ 75 -> @code. ] @i+1 -> @i. ]
+     ]
+    ]
+   ]
+   ? @code == 0 [ :filemove[@m+45056|@m+49152] -> @result. ? @result != 0 [ 73 -> @code. ] ]
+  ]
+  @n+1 -> @n.
+ ]
+]
+# Re-read the complete original snapshot (including partial bytes) after all
+# payload verification/copy. Concurrent source changes fail before publication.
+? (@code == 0)*((@action == 9)+(@action == 10)) [
+ "Source journal changed during inspection/recovery. No recovered selection was published.\n" -> @path.
+ :fileopen[@m+4096|0] -> @fd. ? @fd == -1 [ 75 -> @code. ]
+ ? @code == 0 [
+  ? :filesize[@fd] != @journalbytes [ 75 -> @code. ]
+  0 -> @total.
+  ?? (@total < @journalbytes)*(@code == 0) [
+   65536 -> @chunk. ? @journalbytes-@total < @chunk [ @journalbytes-@total -> @chunk. ]
+   :fileread[@fd|@m+65536|@chunk] -> @got.
+   ? (@got == 0)+(@got > @chunk) [ 75 -> @code. ] ~ [
+    0 -> @i. ?? @i < @got [ ? :load8[@m+65536+@i] != :load8[@m+262144+@total+@i] [ 75 -> @code. ] @i+1 -> @i. ]
+    @total+@got -> @total.
+   ]
+  ]
+  ? @code == 0 [
+   ? :filesize[@fd] != @journalbytes [ 75 -> @code. ]
+   :fileread[@fd|@m+2048|1] -> @result. ? @result != 0 [ 75 -> @code. ]
+  ]
+  :fileclose[@fd] -> @result. ? @result != 0 [ 75 -> @code. ]
+ ]
+]
+? (@code == 0)*(@action == 10) [
+ "Recovery journal publication failed. Source and recovery evidence were preserved.\n" -> @path.
+ :fileopen[@m+45056|1] -> @fd. ? @fd == -1 [ 73 -> @code. ]
+ ? @code == 0 [
+  0 -> @sent.
+  ?? (@sent < @prefix)*(@code == 0) [
+   @prefix-@sent -> @chunk. ? @chunk > 65536 [ 65536 -> @chunk. ]
+   :filewrite[@fd|@m+262144+@sent|@chunk] -> @result.
+   ? (@result == 0)+(@result > @chunk) [ 74 -> @code. ] ~ [ @sent+@result -> @sent. ]
+  ]
+  ? @code == 0 [ :filesync[@fd] -> @result. ? @result != 0 [ 74 -> @code. ] ]
+  :fileclose[@fd] -> @result. ? @result != 0 [ 74 -> @code. ]
+ ]
+ ? @code == 0 [
+  :fileopen[@m+45056|0] -> @fd. ? @fd == -1 [ 75 -> @code. ]
+  ? @code == 0 [
+   ? :filesize[@fd] != @prefix [ 75 -> @code. ]
+   0 -> @total.
+   ?? (@total < @prefix)*(@code == 0) [
+    @prefix-@total -> @chunk. ? @chunk > 65536 [ 65536 -> @chunk. ]
+    :fileread[@fd|@m+65536|@chunk] -> @got.
+    ? (@got == 0)+(@got > @chunk) [ 75 -> @code. ] ~ [
+     0 -> @i. ?? @i < @got [ ? :load8[@m+65536+@i] != :load8[@m+262144+@total+@i] [ 75 -> @code. ] @i+1 -> @i. ]
+     @total+@got -> @total.
+    ]
+   ]
+   ? @code == 0 [ :fileread[@fd|@m+2048|1] -> @result. ? @result != 0 [ 75 -> @code. ] ]
+   :fileclose[@fd] -> @result. ? @result != 0 [ 75 -> @code. ]
+  ]
+ ]
+ ? @code == 0 [ :filemove[@m+45056|@m+36864] -> @result. ? @result != 0 [ 73 -> @code. ] ]
+]
+? @recoverowned == 2 [
+ :fileclose[@recoverlock] -> @result. ? @result != 0 [ 74 -> @code. ]
+ ? @code == 0 [ :filedelete[@m+40960] -> @result. ? @result != 0 [ 74 -> @code. ] ]
+]
+# RECOVERY-END
+? (@code == 0)*(@action == 6) [ :load64[@m+1536+24] -> @version. ]
+? (@code == 0)*((@action == 2)+(@action == 6)) [
+ ? @version <= :load64[@m+1280+40] [
+  ? @action == 6 [ 8 -> @action. ] ~ [ "Version must exceed the persistent highest version, including after rollback.\n" -> @path. 65 -> @code. ]
+ ]
+]
+? (@code == 0)*(@action == 5) [
+ :load64[@m+1280+32] -> @version.
+ ? @version == 0 [ "No previous PREPARED version exists.\n" -> @path. 65 -> @code. ]
+]
+? (@code == 0)*(@action != 3)*(@action != 4)*(@action != 8)*(@action != 9)*(@action != 10) [
+ ? :load64[@m+1280+16] >= 4096 [ "Update journal capacity reached; existing selections remain valid.\n" -> @path. 65 -> @code. ]
+]
+# Stage a new full image, then independently re-open and hash its copy.
+? (@code == 0)*((@action == 1)+(@action == 2)+(@action == 6)+(@action == 7)) [
+ "Image staging failed. The previous PREPARED version was preserved.\n" -> @path.
+ :fileopen[@source|0] -> @fd. ? @fd == -1 [ 66 -> @code. ]
+ ? @code == 0 [
+  :fileopen[@m+12288|1] -> @outfd.
+  ? @outfd == -1 [ 73 -> @code. :fileclose[@fd] -> @result. ] ~ [
+   @owned+4 -> @owned.
+   !store64[@m|@fd]. !store64[@m+8|@outfd]. !store64[@m+16|1073741824]. !store64[@m+80|1].
+   !switch[@m+128|@m+224]. :load64[@m+24] -> @code.
+   !store64[@m+2112|:load64[@m+32]]. 0 -> @i.
+   ?? @i < 32 [ !store8[@m+2120+@i|:load8[@m+40+@i]]. @i+1 -> @i. ]
+  ]
+ ]
+ ? (@code == 0)*(@action == 6) [
+  ? :load64[@m+2112] != :load64[@m+1536+48] [ 75 -> @code. ]
+  0 -> @i. ?? @i < 32 [ ? :load8[@m+2120+@i] != :load8[@m+1536+56+@i] [ 75 -> @code. ] @i+1 -> @i. ]
+ ]
+ ? @code == 0 [
+  :fileopen[@m+12288|0] -> @fd. ? @fd == -1 [ 75 -> @code. ]
+  ? @code == 0 [
+   !store64[@m|@fd]. !store64[@m+8|-1]. !store64[@m+16|1073741824]. !store64[@m+80|1].
+   !switch[@m+128|@m+224]. :load64[@m+24] -> @code.
+   ? :load64[@m+32] != :load64[@m+2112] [ 75 -> @code. ]
+   0 -> @i. ?? @i < 32 [ ? :load8[@m+40+@i] != :load8[@m+2120+@i] [ 75 -> @code. ] @i+1 -> @i. ]
+  ]
+ ]
+ ? @code == 0 [
+  ? @action != 7 [
+   "0123456789abcdef" -> @q. 0 -> @i.
+   ?? @i < 8 [ !store8[@m+16384+@length+9+@i|:load8[@q+:bitand[:shr[@version|(7-@i)*4]|15]]]. @i+1 -> @i. ]
+  ]
+  :filemove[@m+12288|@m+16384] -> @result.
+  ? @result != 0 [ 73 -> @code. ] ~ [ @owned-4 -> @owned. ]
+ ]
+]
+# Construct the next PREPARED selection; never erase historical payloads.
+? (@code == 0)*(@action != 3)*(@action != 4)*(@action != 8)*(@action != 9)*(@action != 10) [
+ @m+1024 -> @record. 0 -> @i. ?? @i < 256 [ !store64[@record+@i|0]. @i+8 -> @i. ]
+ !store64[@record|0x313030445055525a]. !store64[@record+8|1].
+ !store64[@record+16|:load64[@m+1280+16]+1]. !store64[@record+24|@version].
+ !store64[@record+32|:load64[@m+1280+24]]. !store64[@record+40|@version].
+ !store64[@record+48|:load64[@m+2112]].
+ 0 -> @i. ?? @i < 32 [ !store8[@record+56+@i|:load8[@m+2120+@i]]. @i+1 -> @i. ]
+ ? @action == 5 [
+  !store64[@record+40|:load64[@m+1280+40]]. !store64[@record+48|:load64[@m+1280+88]].
+  0 -> @i. ?? @i < 32 [ !store8[@record+56+@i|:load8[@m+1280+96+@i]]. @i+1 -> @i. ]
+ ]
+ !store64[@record+88|:load64[@m+1280+48]].
+ 0 -> @i. ?? @i < 32 [ !store8[@record+96+@i|:load8[@m+1280+56+@i]]. @i+1 -> @i. ]
+ !store64[@record+128|1]. !store64[@record+248|0x3154494d4d4f435a].
+ 14695981039346656037 -> @hash. 0 -> @i.
+ ?? @i < 240 [ :bitxor[@hash|:load8[@record+@i]]*1099511628211 -> @hash. @i+1 -> @i. ]
+ !store64[@record+240|@hash].
+ "Journal commit failed. Prepared payloads remain; boot selection was never changed.\n" -> @path.
+ 3 -> @mode. ? (@action == 1)+(@action == 7) [ 1 -> @mode. ]
+ :fileopen[@m+4096|@mode] -> @fd. ? @fd == -1 [ 73 -> @code. ]
+ ? (@code == 0)*(@mode == 3) [
+  :load64[@m+1280+16]*256 -> @expected.
+  ? @expected >= 1048576 [ 65 -> @code. ]
+  ? :filesize[@fd] != @expected [ 65 -> @code. ]
+  0 -> @total.
+  ?? (@total < @expected)*(@code == 0) [
+   65536 -> @chunk. ? @expected-@total < @chunk [ @expected-@total -> @chunk. ]
+   :fileread[@fd|@m+65536|@chunk] -> @got.
+   ? (@got == 0)+(@got > @chunk) [ 74 -> @code. ] ~ [ @total+@got -> @total. ]
+  ]
+ ]
+ ? @code == 0 [
+  1 -> @step. 0 -> @sent.
+  ?? (@sent < 256)*(@code == 0) [
+   :filewrite[@fd|@record+@sent|256-@sent] -> @result.
+   ? (@result == 0)+(@result > 256-@sent) [ 74 -> @code. ] ~ [ @sent+@result -> @sent. ]
+  ]
+  ? @code == 0 [ :filesync[@fd] -> @result. ? @result != 0 [ 74 -> @code. ] ]
+  ? @code != 0 [ 1 -> @step. ] ~ [
+   0 -> @i. ?? @i < 256 [ !store64[@m+1280+@i|:load64[@record+@i]]. @i+8 -> @i. ]
+  ]
+ ]
+ ? @fd != -1 [ :fileclose[@fd] -> @result. ? @result != 0 [ 74 -> @code. 1 -> @step. ] ]
+ # Re-open after close and verify the exact newly committed tail and size.
+ ? @code == 0 [
+  :fileopen[@m+4096|0] -> @fd. ? @fd == -1 [ 75 -> @code. ]
+  ? @code == 0 [
+   :load64[@record+16]*256 -> @expected.
+   ? :filesize[@fd] != @expected [ 75 -> @code. ]
+   0 -> @total.
+   ?? (@total < @expected)*(@code == 0) [
+    0 -> @got.
+    ?? (@got < 256)*(@code == 0) [
+     :fileread[@fd|@m+65536+@got|256-@got] -> @result.
+     ? (@result == 0)+(@result > 256-@got) [ 75 -> @code. ] ~ [ @got+@result -> @got. ]
+    ]
+    @total+256 -> @total.
+   ]
+   0 -> @i. ?? @i < 256 [ ? :load8[@m+65536+@i] != :load8[@record+@i] [ 75 -> @code. ] @i+1 -> @i. ]
+   :fileclose[@fd] -> @result. ? @result != 0 [ 75 -> @code. ]
+  ]
+  ? @code == 0 [ 0 -> @step. ]
+ ]
+]
+# Delete only this invocation's exclusive temporary file and lock. A failed
+# partial journal append deliberately retains the lock for manual inspection.
+? :bitand[@owned|4] [ :filedelete[@m+12288] -> @result. ? @result != 0 [ 74 -> @code. ] ]
+? :bitand[@owned|2] [
+ :fileclose[@lock] -> @result. ? @result != 0 [ 74 -> @code. ]
+ ? @step == 0 [ :filedelete[@m+8192] -> @result. ? @result != 0 [ 74 -> @code. ] ]
+]
+? (@code != 0)*(:bitand[@owned|1] != 0)*(@step == 0) [ :dirempty[@root] -> @result. ]
+? @code == 0 [
+ "PREPARED verified. Boot activation: NOT IMPLEMENTED.\n" -> @path.
+ ? @action == 7 [ "Local release inbox published and SHA256 verified. Publisher authentication: NOT PROVIDED.\n" -> @path. ]
+ ? @action == 8 [ "No newer local release. PREPARED selection unchanged.\n" -> @path. ]
+ ? @action == 9 [ "Journal complete prefix and selected payloads verified. Inspection made no changes.\n" -> @path. ]
+ ? @action == 10 [ "Recovered verified PREPARED snapshot into a new directory. Original source is untouched.\n" -> @path. ]
+ 0 -> @i. ?? :load8[@path+@i] [ !put[:load8[@path+@i]]. @i+1 -> @i. ]
+ ? (@action == 9)+(@action == 10) [
+  "Incomplete tail bytes excluded from recovered journal: 0x" -> @path.
+  ? @action == 9 [ "Incomplete tail bytes present: 0x" -> @path. ]
+  0 -> @i. ?? :load8[@path+@i] [ !put[:load8[@path+@i]]. @i+1 -> @i. ]
+  "0123456789abcdef" -> @p.
+  !put[:load8[@p+:shr[@tail|4]]]. !put[:load8[@p+:bitand[@tail|15]]]. !put[10].
+ ]
+ "Prepared version: 0x" -> @path. 0 -> @i. ?? :load8[@path+@i] [ !put[:load8[@path+@i]]. @i+1 -> @i. ]
+ :load64[@m+1280+24] -> @current. "0123456789abcdef" -> @p.
+ 0 -> @i. ?? @i < 8 [ !put[:load8[@p+:bitand[:shr[@current|(7-@i)*4]|15]]]. @i+1 -> @i. ] !put[10].
+ "SHA256: " -> @path. 0 -> @i. ?? :load8[@path+@i] [ !put[:load8[@path+@i]]. @i+1 -> @i. ]
+ 0 -> @i. ?? @i < 32 [ :load8[@m+1280+56+@i] -> @j. !put[:load8[@p+:shr[@j|4]]]. !put[:load8[@p+:bitand[@j|15]]]. @i+1 -> @i. ] !put[10].
+] ~ [
+ 0 -> @i. ?? :load8[@path+@i] [ !put[:load8[@path+@i]]. @i+1 -> @i. ]
+ ? @step [ "Incomplete or unconfirmed journal commit: lock retained. Use inspect, then recover to a new directory.\n" -> @path. 0 -> @i. ?? :load8[@path+@i] [ !put[:load8[@path+@i]]. @i+1 -> @i. ] ]
+]
+0 -> @cycleactive.
+? (@code == 0)*(@watchactive != 0) [
+ ? @watchactive == 2 [ @watchleft-1 -> @watchleft. ]
+ ? (@watchactive == 1)+(@watchleft != 0) [
+  :hostwait[@watchinterval*1000] -> @result.
+  ? @result != 0 [
+   74 -> @code. "Native update wait failed; no further checks were made.\n" -> @path.
+   0 -> @i. ?? :load8[@path+@i] [ !put[:load8[@path+@i]]. @i+1 -> @i. ]
+  ] ~ [ 1 -> @cycleactive. ]
+ ]
+]
+]
+!exit[@code].

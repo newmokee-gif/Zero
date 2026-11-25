@@ -1,0 +1,6 @@
+Привет 🌍 => greeting
+greeting => show
+size(greeting) => show
+size(кот) => show
+size(😀) => show
+size(é) => show

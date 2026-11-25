@@ -1,0 +1,7 @@
+empty => show
+size(empty) => show
+[] => show
+size([]) => show
+[] => each item [
+ item => show
+]

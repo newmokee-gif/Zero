@@ -1,0 +1,8 @@
+ZTEXT001000001c70a740f5b0000000
+Ezero file extension complete: Linux 58/58, Windows/Wine 46/46 checks passed.
+The guest service agent verified the compact Ezero file sequence in all four
+BIOS/UEFI 32/64-bit OS modes, including recovery after a runtime error.
+See files-verification.ztext for exact scope, limits and source hashes.
+
+Historical Ezero 0.1 acceptance had 85/85 checks; it predates this extension.
+The current broader own Zero verifier and its case manifest live in checks/.

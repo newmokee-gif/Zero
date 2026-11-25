@@ -1,0 +1,135 @@
+ZTEXT00100001ff86e2d81410000000
+ZERO 0.11 HOST INTEROPERABILITY CONTRACT
+
+The current canonical compiler implements this contract. The frozen 0.9 release
+and its preserved seed remain separate provenance. All new primitives are value operations introduced by ':'.
+
+Name        Builtin Token Template Arity
+host        57      557   86       0
+argcount    58      558   87       0
+argument    59      559   88       1
+fileopen    60      560   89       2
+fileread    61      561   90       3
+filewrite   62      562   91       3
+filesize    63      563   92       1
+fileclose   64      564   93       1
+filedelete  65      565   94       1
+makedir     66      566   95       1
+dirempty    67      567   96       1
+filemove    68      568   97       2
+hostalloc   69      569   98       1
+hostprotect 70      570   99       3
+hostfree    71      571   100      2
+program     72      572   101      0
+filesync    73      573   102      1
+hostwait    74      574   103      1
+
+:host[] returns 1 on Linux x64 ELF, 2 on Windows x64 PE, and 0 on all
+other targets. :argcount[] counts user arguments (excluding executable name).
+:argument[index] uses one-based user indexing and returns a persistent pointer
+to a NUL-terminated argument, or 0 when the index is invalid. Windows arguments
+are converted from its native wide command line to UTF-8. Linux preserves
+argument bytes supplied by the operating system. Pointers have process lifetime
+and must not be overwritten. No new source string grammar is introduced.
+
+:fileopen[path | mode] returns an opaque handle or u64(-1) on any failure:
+  0 read existing
+  1 exclusive create, write only
+  2 create or truncate, write only
+  3 read/write existing
+  4 exclusive create, write only, executable output
+Linux create modes 1/2 use 0600 and executable mode 4 uses 0700, reduced by
+umask; Windows applies its normal file ACL. Existing mode 2 file permissions
+remain unchanged. No automatic parent-directory creation is implied.
+Paths are NUL-terminated, nonzero, at most 4095 bytes. Linux passes filesystem
+bytes directly; Windows validates UTF-8 and converts to its wide OS API.
+Both backends require a regular file and reject a final symlink/reparse point.
+Linux uses O_NONBLOCK so a FIFO probe does not wait for a peer; it validates
+fstat type before any mode 2 truncation. Windows validates the opened handle
+before truncation. These checks do not prevent ancestor-directory links. No sandbox or race-free path ownership is claimed.
+
+:fileread[handle | buffer | count] returns bytes copied, 0 at EOF, or u64(-1).
+:filewrite[handle | buffer | count] returns bytes written or u64(-1).
+Partial transfers are visible; callers loop as appropriate. Linux read/write
+retry EINTR. Valid owned buffers and arithmetic bounds remain caller duties.
+:filesize[handle] returns the file size without changing the current position,
+or u64(-1). :fileclose[handle] returns 0 or u64(-1). A failed Linux close is not
+retried because the descriptor may already have been released.
+
+:filesync[handle] requests synchronization of the opened file through native
+Linux fsync or Windows FlushFileBuffers, returning 0 or u64(-1). Linux retries
+EINTR and rejects descriptor values above INT_MAX instead of truncating them.
+Use an owned writable regular-file handle for portable success. The operation
+does not close or reposition the handle. A successful request does not prove
+physical power-loss safety and does not flush parent directories, publish
+renames durably, authenticate contents or turn multiple writes into a
+transaction. Failed sync must be reported before claiming a completed update.
+
+:hostwait[milliseconds] suspends the calling native process thread for a
+bounded interval0..86400000 inclusive and returns0; larger unsigned values
+return u64(-1) without sleeping. Linux uses nanosleep and retries EINTR using
+the kernel-provided remaining timespec; other errors return u64(-1). Windows
+uses Sleep. Scheduling can lengthen the delay; this is not a clock or deadline
+guarantee. Zero is permitted and may yield to the native scheduler. The call
+does not switch Zero cooperative tasks, register a timer or create a daemon.
+
+:filedelete[path] removes a file; :makedir[path] creates one new directory;
+:dirempty[path] removes only an empty directory. Existing mkdir destinations,
+missing removal targets, wrong target types and access failures return u64(-1).
+:filemove[source | destination] atomically renames on the same filesystem
+without replacing any existing destination. Cross-filesystem moves fail; no
+copy/delete fallback is performed. These operations return 0 on success and
+u64(-1) on error. Errors are deliberately normalized; callers cannot infer
+"missing" from -1 alone, since access and other failures share that result.
+
+Native compiler-launcher memory operations:
+:hostalloc[bytes] returns an OS-owned, page-aligned RW allocation or 0.
+:hostprotect[address | bytes | execute] changes owned allocation pages to RX
+when execute is 1, RW when 0; other values are rejected. Returns 0 or u64(-1).
+It never requests RWX.
+:hostfree[address | bytes] releases the owned mapping, returning 0 or u64(-1).
+The caller must track allocation size, protect only owned complete pages, and
+never free an allocation still used by code/data/stack. Protection and release
+are explicit; ordinary Zero pointers do not imply ownership. Backend limits
+and platform rounding are documented separately.
+:program[] returns a persistent NUL-terminated absolute executable path, or 0.
+Linux consumes a fresh 4096-byte arena allocation per successful invocation;
+Windows uses a stable startup buffer. Call once and cache the result. Linux reads its own process executable link; Windows obtains
+its module path via the OS wide API and converts it to UTF-8. Failure is not
+silently replaced by argv0, which can be relative or untrusted.
+The existing :call[fn | a1 | a2 | a3 | a4 | a5] primitive is enabled only for
+--host and --windows, in addition to its existing firmware/kernel targets.
+It uses the Microsoft x64 ABI, including five arguments and shadow space, to
+call owned loaded ZEROAPP1 code. Linux native OS/library functions do not
+implicitly use this ABI. This is an unsafe explicit call, not process isolation.
+
+Guest --app64/--app32 builds accept the new source forms. host, argcount and
+argument, hostalloc and program return 0; file operations, hostprotect,
+hostfree and hostwait return u64(-1), after evaluating operands.
+They perform no filesystem access or foreign calls. This permits a shared
+Ezero runtime to compile for guests while reporting unavailable capabilities.
+Raw/EFI/real targets accept only host[] from this extension; other host APIs
+are rejected. All names remain reserved in every target.
+
+EMISSION ABI
+All expressions evaluate left to right. x64 unary argument is RAX; binary
+arguments are first RCX, second RAX (common parser consumes the saved first
+operand). Ternary arguments are all pushed: stack top count, then buffer, then
+handle. Each x64 argument occupies 8 bytes; the template consumes all 24 bytes
+and returns in RAX. Preserve RBP, RSP after operand consumption, and R12..R15.
+IA32 guest fallbacks obey the existing full-u64 paired-register ABI: binary
+first ECX/EBX, second EAX/EDX; each pushed u64 consumes 8 bytes. Return EDX:EAX.
+The real-mode host[] constant uses the existing EAX u32 value contract.
+
+The original hosted frame stores argc at [RBP], argv0 at [RBP+8], and first
+user argument at [RBP+16]. New host prologues retain its address in R14; argument
+operations use that stable original frame rather than a fork child RBP. Existing
+fork/switch templates preserve R14. Windows keeps R15 for its PE image base.
+Backend templates reject index 0, index>=argc, and arithmetic overflow before
+dereferencing argv. The original main frame remains live for process lifetime.
+
+Compiler decoded-template storage grows from 8192 to 32768 bytes.
+Only following scratch/metadata positions and reservation move by 24576:
+scratch 3973184, metadata 3977880, reservation 4022880 inside the unchanged 4 MiB
+arena. Output limit 491520, source limit 262144, and all original code prologues
+remain unchanged unless a host backend explicitly needs a startup change.

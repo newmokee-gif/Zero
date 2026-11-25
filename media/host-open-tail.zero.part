@@ -1,0 +1,7 @@
+# Identity is checked again on the open, pinned device after confirmation.
+? (:load64[@mh+40] == 0) * (:load64[@mh] == 2) [
+ ? (:load64[@mh+128] != :load64[@mh+136]) + (:load64[@mh+24] != :load64[@mh+144]) + (:load64[@mh+104] != :load64[@mh+152]) [
+  !store64[@mh+40|73]. !store64[@mh+48|"The USB device identity or capacity changed after confirmation. Nothing was written.\n"].
+ ] ~ [ !store64[@mh+112|1]. ]
+]
+? :load64[@mh+40] == 0 [ !store64[@mh+48|"USB device validated.\n"]. ]

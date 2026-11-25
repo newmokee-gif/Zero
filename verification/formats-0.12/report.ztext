@@ -1,0 +1,54 @@
+ZTEXT00100000b5e100893400000000
+Zero project format migration, 2026-11-17
+
+The product source tree now contains authored Zero/Ezero code and owned data
+containers. This cleanup removed historical generated executables, foreign
+image files, raw test logs and temporary test devices. It did not rename PNG
+or PPM bytes to a new suffix.
+
+Image migration
+572 P6 image files were encoded by tools/picture.zero into ZPIX0001 containers.
+Every output passed the same native tool's verify command. The native raw
+decoder reconstructed RGB bytes that were compared exactly with each original
+P6 raster. All 572 pixel comparisons passed. The project now retains those
+572 images as .zpix, including desktop views, 1080p tiled/scrolling views and
+historical UI checks. Existing PNG duplicates and obsolete PNG-only fixture
+screenshots were removed. No PNG/JPG/JPEG/PPM/GIF/BMP/WebP remain in the tree.
+No audio or video assets were found; this report does not claim audio/video
+codecs or playback support.
+
+Historical reports
+118 results, summary, status and review reports from old generated trees were
+encoded into ZTEXT001 with the original Zero text utility. Every encoded report
+was decoded and compared byte for byte with its original input before cleanup.
+Other authored documentation is migrated by the documentation/checker tasks.
+
+Removal scope
+11,496 obsolete generated regular files were removed from the known build,
+verification, candidate and test-output trees. This count includes old image
+and text originals already converted above. An additional 19 media files
+outside those trees, 19 obsolete UEFI test artifacts, 15 generated executable
+files, 18 test symlinks and 7 test FIFOs were removed. Authored .zero, .ezero
+and .zero.part files were retained, including regression test sources.
+Three existing Zero source fixtures with a .zero.in suffix were given their
+correct .zero suffix without changing their source bytes.
+
+Protected data
+Original own-format ZeroFS disk bytes moved from build/data.img to
+data/storage.zdrive, SHA256:
+c730241fb30f5516867c751006951a2878f360319195ee975411a05f040f27e8
+The standard VirtualBox compatibility container moved outside the product to
+/tmp/zero-support/user-data/data.vdi, SHA256:
+7f58fb36c934405757da797ca65f2dddef3858e69107f43e2cae59d14c89bc5f
+Both hashes match the protected originals. Neither disk was reformatted.
+
+Bootstrap
+bootstrap/zero64.zapp remains the original ZEROAPP1 compiler seed.
+Old ELF bootstrap copies were removed from the source tree after confirming
+the owned seed and current native compiler were available. Host ELF/PE and
+firmware/optical compatibility exports belong outside this source tree.
+
+At this checkpoint the only remaining non-owned suffixes were four top-level
+documents assigned to the parent task: README.txt, WORKSTATE.txt, SHA256.txt
+and verification.txt. No foreign source language files, shell shebangs,
+symlinks or FIFOs remain in the product tree.

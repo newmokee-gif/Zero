@@ -1,0 +1,38 @@
+ZTEXT0010000092da048026a0000000
+Zero0.12 final ISO verification and current desktop gallery
+Date:2026-11-17
+Final ISO SHA256: c7e5903efee4b773e3b527168c7a1606fa73be9c99417cf742e3996d58137305
+
+Result: PASS. BIOS64, BIOS32 without long mode/PAE, UEFI64 and UEFI32
+again completed40 commands and a cold restart each on the final ISO.
+This final160-command run verifies the same Zero/Ezero whole-file APIs,
+failure recovery, persistent files/deletion and Ztext decode/rejection cases
+as the earlier report.ztext. Earlier280-command filesystem/profile evidence
+remains separately identified by its own candidate ISO SHA256.
+
+Current gallery: actual1920x1080 BIOS64 framebuffer, captured from the final
+ISO above. The VM used only a new private data disk outside the project.
+No kernel changes, mockups, generated artwork or edited screenshot pixels.
+- desktop.zpix: initial two-terminal desktop with actual info command output.
+- tile.zpix: three live terminals in the native tile layout; Ezero output and
+  real create/save/watch/read operations are visible.
+- scroll.zpix: the same three terminals in the horizontal strip layout,
+  with terminal2 focused and adjacent windows partially visible.
+
+Original zero-picture encoded each external P6 framebuffer capture directly
+to ZPIX0001 and verified it. Decoding each image with that same original tool
+reproduced the exact P6 file byte-for-byte. Product images use only.zpix;
+intermediate PPM files remain outside the project. Native terminal focus can
+emit a second serial prompt; the capture harness waits for the command echo
+before accepting completion. This required no product change.
+
+All VM processes are stopped. Source kernel is unchanged from the verified
+candidate. Tests use QEMU TCG; they do not claim native VirtualBox or PS/2 input
+coverage. The screenshots show current output, including current font/layout.
+
+Image SHA256 values:
+desktop.zpix eb2a1f6dc6d47ac0e65c8a4fbce36859910a01a5350ab8acc51c6ae03974d65f
+tile.zpix 64265ef0b58b8c4db3ddeab373f875b4d41785f64fde10ecd7d33d73a5e5f5b6
+scroll.zpix 165ecd3f521939f270301193e7484f3bc85d1da7e9b3e457cebaca967d7165d4
+Protected disk /workspace/zero-foundation/data/storage.zdrive SHA256 c730241fb30f5516867c751006951a2878f360319195ee975411a05f040f27e8
+Protected disk /tmp/zero-support/user-data/data.vdi SHA256 7f58fb36c934405757da797ca65f2dddef3858e69107f43e2cae59d14c89bc5f

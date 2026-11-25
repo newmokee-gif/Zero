@@ -1,0 +1,4 @@
+announce :: [
+ Ready => show
+]
+announce() => show

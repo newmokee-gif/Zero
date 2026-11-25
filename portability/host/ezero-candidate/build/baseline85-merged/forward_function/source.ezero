@@ -1,0 +1,4 @@
+later() => show
+later :: [
+ 1 => return
+]

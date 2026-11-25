@@ -1,0 +1,8 @@
+[First | Second | Third] => names
+join(names | /) => show
+lines("First\nSecond\r\nThird") => items
+items[1] => show
+items[2] => show
+items[3] => show
+size(items) => show
+join(items | /) => show

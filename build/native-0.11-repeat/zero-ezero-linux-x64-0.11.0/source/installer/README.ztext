@@ -1,0 +1,128 @@
+ZTEXT00100001d17d8cefc290000000
+Zero native preparation and UEFI file deployment
+
+setup.zero is original Zero application code. It calls the original Zero
+native host ABI directly on Linux or Windows. The delivered executable does
+not launch a shell, Python, CMD, PowerShell or a foreign language runtime.
+Build and test scripts are external development infrastructure only.
+
+Commands:
+  zero-setup prepare SOURCE.iso NEW_DIRECTORY
+  zero-setup deploy SOURCE.iso LOADER.efi NEW_DIRECTORY
+  zero-setup status DIRECTORY
+  zero-setup remove DIRECTORY
+Windows uses zero-setup.exe with the same arguments.
+
+prepare preserves the version-1 preparation format: exact system.iso copy,
+16 MiB original empty ZeroFS storage.data, and the ownership manifest
+zero.install. This is preparation only, with no boot loader installed.
+
+deploy adds the original Zero UEFI x64 loader as ZEROX64.EFI and writes a
+version-2 manifest. Supply the matching loader from installer/boot/ or the
+native toolkit. Both source files are checked before creating the destination.
+The loader finds system.iso in its own directory through firmware Simple File
+System and loads the existing kernel/tools directly from that ISO. No optical
+medium or extracted root-level kernel.bin/tools.bin is needed for this path.
+
+To launch the deployed files, put the complete directory on a filesystem that
+UEFI firmware can read, normally FAT, and select ZEROX64.EFI using the firmware
+file-launch menu. The loader is unsigned, so Secure Boot must not reject it.
+Directory names may contain spaces and Unicode, within the loader's documented
+UTF-16 path bound. The installer does not determine whether an arbitrary host
+path is firmware-readable. It does not create firmware boot entries, register
+Windows BCD or Linux GRUB entries, mount an EFI partition, modify partition
+tables, overwrite another boot loader or change Secure Boot settings.
+
+This is a usable UEFI file-launch path, not a complete Wubi installation.
+Firmware normally cannot read a file inside arbitrary Windows NTFS or Linux
+ext4/Btrfs volumes. BIOS and IA32 deployment are not provided by this command.
+The original hybrid ISO still contains its existing BIOS/UEFI 32/64 boot paths.
+See installer/boot/ for the loader implementation and actual no-CD VM evidence.
+
+storage.data remains a prepared data file. The UEFI deployment loader does not
+mount that host file as a kernel block device after ExitBootServices. A test
+may explicitly attach it as a separate virtual ATA disk, but that is not
+persistent host-file-backed Wubi storage. Actual host-file persistence and
+automatic boot-menu integration remain unfinished.
+
+Input validation and publication
+
+The ISO must be the current 9,224-sector ZERO_SYSTEM BIOS/UEFI optical format.
+The checker validates identity, paired-endian volume/block sizes and the
+supported El Torito catalog. The loader must be a 1,024..65,536-byte PE32+ x64
+EFI application. Checks include bounded DOS/PE/optional/section headers,
+architecture, EFI subsystem, alignments, file and virtual section extents,
+nonoverlapping ordered sections and an entry point in an executable section.
+This validates the supported envelope; it does not prove arbitrary machine
+code correct, safe, authored by Zero, or authenticated. Use the provided own
+loader and a trusted ISO. Full file checksums detect accidental corruption.
+
+Every destination must be a new exclusive directory. Paths must be below
+4,000 bytes and cannot end with a separator, drive colon, '.' or '..' basename.
+Each payload is written exclusively to a staging name, flushed through
+filesync (Linux fsync / Windows FlushFileBuffers), closed, reopened and hashed,
+then atomically published without replacing any existing path. The ownership
+manifest is flushed, closed and byte-verified before being published last.
+Any write/flush/close/readback failure prevents success. Failure cleanup only
+removes paths exclusively created by that invocation and reports cleanup
+failures. It never recursively removes unknown contents.
+
+File flush is not a complete power-loss durability guarantee. There is no
+parent-directory flush primitive, and a filesystem may lose directory entries
+or rename publication after power failure. The manifest uses streaming FNV-1a64
+implemented in Zero; it is not a signature or proof of publisher identity.
+Neither the source ISO nor supplied loader is authenticated by this tool.
+The host file ABI rejects final symlinks/reparse points, but ancestor links and
+concurrent hostile directory replacement are not a sandboxed threat model.
+Use a private directory and do not run simultaneous lifecycle operations.
+
+Ownership manifest (256 bytes, u64 little-endian)
+
+0 magic 0x315055544553525a (ZRSETUP1); 8 format version 1 or 2;
+16 state 1; 24 ISO bytes 18890752; 32 ISO FNV-1a64;
+40 data bytes 16777216; 48 initial data FNV-1a64;
+56 preparation host 1 Linux / 2 Windows; 64 deployment flags;
+72 data profile 1 ZeroFS; 240 FNV-1a64 of bytes 0..239; 248 reserved zero.
+Version 1: flags 0 and bytes 80..239 zero.
+Version 2: flags 1 means EFI file deployed, not a registered boot entry;
+80 loader bytes; 88 loader FNV-1a64; bytes 96..239 zero.
+
+Status and conservative removal
+
+status verifies all immutable ISO/loader bytes and the manifest. Version 1
+also requires the initial data checksum to match, preserving compatibility.
+Version 2 accepts modified storage.data when its size is unchanged and at
+least one ZeroFS snapshot is structurally valid. The checker matches kernel
+magic/generation/header and record checksums, allowed unique names, record
+lengths and text constraints. It reports modified data as preserved. One valid
+snapshot is explicitly reported as degraded; two invalid snapshots fail.
+This does not automatically attach the file to the running OS.
+
+remove verifies every owned payload before its first deletion. It requires
+storage.data to match the initial preparation checksum for both versions.
+Any changed user data therefore blocks all removal, including ISO and loader
+removal. No force/data-wipe option is provided. Unknown directory contents are
+preserved; the directory is removed only if empty. A deletion I/O failure can
+leave a partially removed set and is explicitly reported. Missing files and
+access denial are not conflated with successful removal.
+
+Exit codes: 0 success; 64 usage/path; 65 unsupported source/manifest;
+73 exclusive create/publication; 74 read/write/flush/close I/O;
+75 integrity verification; 76 removal I/O failure.
+
+Verification
+
+The 0.11 fixture suite currently passes 65 native Linux checks and 53 Windows
+PE checks under Wine. It covers v1 compatibility, v2 deployment and independent
+manifest checks, UTF-8 paths, malformed/truncated/oversized PE files, source
+and deployed corruption, valid modified ZeroFS data, degraded snapshots,
+refusal to remove used data, unknown-file preservation and partial-write
+cleanup. Linux syscall injection forces EIO at all three prepare flushes and
+all four deploy flushes; each fails closed and cleans up only owned files.
+A manifest fsync EINTR is retried and verified before success.
+
+Wine does not reproduce native Windows reparse behavior or Windows flush-error
+injection. Actual Microsoft Windows execution remains unverified. Earlier
+separate-disk ZeroFS persistence evidence is historical and is not host-file
+persistence. Current machine-readable installer evidence is in
+installer/verification/0.11/; loader boot evidence lives under installer/boot/.

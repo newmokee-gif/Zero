@@ -1,0 +1,88 @@
+# Firmware SimpleFS source discovery. Zero or one source does not require guessing.
+? @status == 0 [
+ !store64[@s+192|2].
+ !store64[@s+1024|0x11d26459964e5b22]. !store64[@s+1032|0x3b7269c9a000398e].
+ :call[:load64[@services+312]|2|@s+1024|0|@s+224|@s+232] -> @status.
+ ? :load64[@s+224] > 1024 [ 1 -> @status. ]
+]
+0 -> @i.
+?? (@status == 0)*(@i < :load64[@s+224]) [
+ :load64[:load64[@s+232]+@i*8] -> @handle. 1 -> @done.
+ !store64[@s+1024|0x11d26459964e5b22]. !store64[@s+1032|0x3b7269c9a000398e].
+ :call[:load64[@services+152]|@handle|@s+1024|@s+1056|0|0] -> @code.
+ ? @code [ 0 -> @done. ] ~ [
+  :load64[@s+1056] -> @p.
+  :call[:load64[@p+8]|@p|@s+56|0|0|0] -> @code.
+  ? @code [ 0 -> @done. ]
+ ]
+ ? @done [
+  "\\system.zmedia" -> @p. 0 -> @j.
+  ?? :load8[@p+@j] [ !store16[@s+2048+@j*2|:load8[@p+@j]]. @j+1 -> @j. ]
+  !store16[@s+2048+@j*2|0]. :load64[@s+56] -> @p.
+  :call[:load64[@p+8]|@p|@s+64|@s+2048|1|0] -> @code.
+  ? @code [ 0 -> @done. ]
+ ]
+ ? @done [
+  :load64[@s+64] -> @p.
+  !store64[@s+1024|0x11d26d3f09576e92]. !store64[@s+1032|0x3b7269c9a000398e].
+  !store64[@s+1064|512].
+  :call[:load64[@p+64]|@p|@s+1024|@s+1064|@s+2048|0] -> @code.
+  ? @code [ 0 -> @done. ] ~ [
+   ? (:load64[@s+1064] < 80)+(:load64[@s+1064] > 512)+(:bitand[:load64[@s+2120]|16] != 0) [ 0 -> @done. ]
+   :load64[@s+2056] -> @bytes.
+   ? (@bytes < 4608)+(@bytes > 268439552) [ 0 -> @done. ]
+  ]
+ ]
+ ? :load64[@s+64] [
+  :load64[@s+64] -> @p. :call[:load64[@p+16]|@p|0|0|0|0] -> @code.
+  ? @code [ 0 -> @done. ] !store64[@s+64|0].
+ ]
+ ? :load64[@s+56] [
+  :load64[@s+56] -> @p. :call[:load64[@p+16]|@p|0|0|0|0] -> @code.
+  ? @code [ 0 -> @done. ] !store64[@s+56|0].
+ ]
+ ? @done [
+  !store64[@s+1024|0x11d26d3f09576e91]. !store64[@s+1032|0x3b7269c9a000398e].
+  :call[:load64[@services+152]|@handle|@s+1024|@s+1056|0|0] -> @code.
+  ? @code [ 0 -> @done. ] ~ [
+   :load64[@s+1056] -> @p.
+   !store64[@u|4]. !store64[@u+8|@p]. !switch[@u+128|@u+224].
+   :load64[@u+24] -> @n. ? (@n == -1)+(@n == 0) [ 0 -> @done. ]
+  ]
+ ]
+ ? @done [
+  :load64[@s+240] -> @selected.
+  ? @selected >= 32 [ 1 -> @status. ] ~ [
+   @s+16384+@selected*32 -> @q.
+   !store64[@q|@handle]. !store64[@q+8|@p]. !store64[@q+16|@bytes]. !store64[@q+24|@n].
+   !store64[@s+240|@selected+1].
+   !store64[@u|1]. !store64[@u+8|"Source "]. !switch[@u+128|@u+224].
+   !store64[@u|2]. !store64[@u+16|@selected+1]. !switch[@u+128|@u+224].
+   !store64[@u|1]. !store64[@u+8|": system.zmedia, bytes="]. !switch[@u+128|@u+224].
+   !store64[@u|2]. !store64[@u+16|@bytes]. !switch[@u+128|@u+224].
+   !store64[@u|1]. !store64[@u+8|", path="]. !switch[@u+128|@u+224].
+   !store64[@u|5]. !store64[@u+8|@p]. !store64[@u+16|@n]. !switch[@u+128|@u+224].
+   !store64[@u|1]. !store64[@u+8|"\r\n"]. !switch[@u+128|@u+224].
+  ]
+ ]
+ @i+1 -> @i.
+]
+? (@status == 0)*(:load64[@s+240] == 0) [
+ !store64[@u|1]. !store64[@u+8|"No system.zmedia found. Put it at the root of a firmware-readable volume.\r\n"]. !switch[@u+128|@u+224]. 1 -> @status.
+]
+1 -> @selected.
+? (@status == 0)*(:load64[@s+240] > 1) [
+ !store64[@u|1]. !store64[@u+8|"Select source number (Escape cancels): "]. !switch[@u+128|@u+224].
+ !store64[@u|3]. !switch[@u+128|@u+224].
+ :load64[@u+24] -> @n. 0 -> @selected. 0 -> @i.
+ ? (@n == 0)+(@n > 2) [ 1 -> @status. ]
+ ?? (@status == 0)*(@i < @n) [
+  :load8[@u+4096+@i] -> @x.
+  ? (@x < 48)+(@x > 57) [ 1 -> @status. ] ~ [ @selected*10+@x-48 -> @selected. ] @i+1 -> @i.
+ ]
+ ? (@selected == 0)+(@selected > :load64[@s+240]) [ 1 -> @status. ]
+]
+? @status == 0 [
+ @s+16384+(@selected-1)*32 -> @q. :load64[@q] -> @source.
+ !store64[@s+40|@source]. !store64[@s+48|:load64[@q+8]]. !store64[@s+144|:load64[@q+24]].
+]

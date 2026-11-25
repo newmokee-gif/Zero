@@ -1,0 +1,90 @@
+0 => @status.
+0 => @root.
+0 => @step.
+0 => @done.
+0 => @index.
+0 => @pathUnits.
+0 => @nodeBytes.
+0 => @nodeIndex.
+0 => @ch.
+0 => @separator.
+0 => @text.
+0 => @received.
+0 => @need.
+:reserve[8] => @rootOut. :reserve[8] => @fileOut. !store64[@rootOut|0].
+:reserve[4096] => @devicePath. :reserve[4128] => @guard. @guard+16 => @path.
+0 -> @index. ?? @index < 4128 [ !store8[@guard+@index|165]. @index+1 -> @index. ]
+@devicePath => @input. 4096 -> @need.
+0 -> @received.
+?? @received < @need [
+ :read[@input+@received|@need-@received] -> @ch.
+ ? @ch == 0 [ !exit[70]. ]
+ ? @ch > @need-@received [ !exit[71]. ]
+ @received+@ch -> @received.
+]
+# Resolve this application's directory from its loaded-image FILEPATH nodes.
+# The firmware device is reused; no partition table or host file is changed.
+? @status == 0 [
+    :load64[@rootOut] -> @root.
+    4 -> @step. 0 -> @done. 0 -> @index. 0 -> @pathUnits.
+    ? @devicePath == 0 [ 0x8000000000000001 -> @status. ]
+    ?? (@done == 0) * (@status == 0) [
+        ? @index > 4092 [ 0x8000000000000001 -> @status. ] ~ [
+            :load16[@devicePath+@index+2] -> @nodeBytes.
+            ? @nodeBytes < 4 [ 0x8000000000000001 -> @status. ]
+            ? @nodeBytes > 4096-@index [ 0x8000000000000001 -> @status. ]
+            ? @status == 0 [
+                ? (:load8[@devicePath+@index] == 127) * (:load8[@devicePath+@index+1] == 255) [
+                    ? @nodeBytes != 4 [ 0x8000000000000001 -> @status. ]
+                    1 -> @done.
+                ] ~ [
+                    ? :load8[@devicePath+@index] != 4 [ 0x8000000000000001 -> @status. ]
+                    ? :load8[@devicePath+@index+1] != 4 [ 0x8000000000000001 -> @status. ]
+                    ? @nodeBytes < 6 [ 0x8000000000000001 -> @status. ]
+                    ? :bitand[@nodeBytes|1] [ 0x8000000000000001 -> @status. ]
+                    4 -> @nodeIndex.
+                    ?? (@nodeIndex < @nodeBytes) * (@status == 0) [
+                        :load16[@devicePath+@index+@nodeIndex] -> @ch.
+                        ? @nodeIndex+2 == @nodeBytes [
+                            ? @ch != 0 [ 0x8000000000000001 -> @status. ]
+                        ] ~ [
+                            ? @ch == 0 [ 0x8000000000000001 -> @status. ]
+                            ? @pathUnits >= 2036 [ 0x8000000000000001 -> @status. ]
+                            ? @status == 0 [
+                                !store16[@path+@pathUnits*2|@ch].
+                                @pathUnits+1 -> @pathUnits.
+                                ? @ch == 92 [ @pathUnits -> @separator. ]
+                            ]
+                        ]
+                        @nodeIndex+2 -> @nodeIndex.
+                    ]
+                ]
+                @index+@nodeBytes -> @index.
+            ]
+        ]
+    ]
+    ? @separator == 0 [ 0x8000000000000001 -> @status. ]
+    ? @separator >= @pathUnits [ 0x8000000000000001 -> @status. ]
+    ? :load16[@path] != 92 [ 0x8000000000000001 -> @status. ]
+    ? @status == 0 [
+        "system.iso" -> @text. 0 -> @index.
+        ?? :load8[@text+@index] != 0 [
+            !store16[@path+(@separator+@index)*2|:load8[@text+@index]].
+            @index+1 -> @index.
+        ]
+        !store16[@path+(@separator+@index)*2|0].
+        !store64[@fileOut|0].
+        0 -> @status.
+    ]
+]
+? :load64[@guard] != 0xa5a5a5a5a5a5a5a5 [ !exit[72]. ]
+? :load64[@guard+8] != 0xa5a5a5a5a5a5a5a5 [ !exit[73]. ]
+? :load64[@guard+4112] != 0xa5a5a5a5a5a5a5a5 [ !exit[74]. ]
+? :load64[@guard+4120] != 0xa5a5a5a5a5a5a5a5 [ !exit[75]. ]
+? @status == 0 [
+ !put[1]. 0 -> @index.
+ ?? :load16[@path+@index*2] != 0 [
+  !put[:load8[@path+@index*2]]. !put[:load8[@path+@index*2+1]].
+  @index+1 -> @index.
+ ]
+] ~ [ !put[0]. ]

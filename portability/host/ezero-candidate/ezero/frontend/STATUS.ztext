@@ -1,0 +1,15 @@
+ZTEXT0010000041491fb8dbe0000000
+2026-11-16: Frontend complete, compiled and validated.
+Canonical source: ezero/compiler.zero; original Zero implementation,56variables.
+Parts: head,lexer,parser,expression,finish.zero.part. integrate.sh --check
+verifies their exact composition. No existing Zero compiler/OS source changed.
+UTF-8 whole-input validation; unquoted words and typed phrases; optional quoted
+escapes; arithmetic/comparisons; lists and indexing; each/repeat/when; functions
+with parameters, recursion and local/global lookup; source-line diagnostics.
+Instruction26 retains numeric phrase parts. each lowers to1-based indexing.
+Package header/function/instruction/constants follow ezero/ABI.txt.
+Own frontend validation:522 capacity/structural/malformed-input checks PASS;
+result build/ezero-dev-front/verification.json. These tests inspect package
+structure and rejection behavior, never execute Ezero in Python.
+Independent integrated suite reported79/79behavior tests PASS via real Zero
+runtime, including Unicode, recursive functions and one-based banana example.

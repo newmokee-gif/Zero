@@ -1,0 +1,73 @@
+ZTEXT00100000fd099d7e9430000000
+ZERO FLASH: FIRMWARE EDITION
+Version 0.14; original Zero implementation.
+
+This program runs under UEFI BEFORE Zero OS starts. It uses the firmware's
+Simple File System and Block I/O interfaces. It is not an in-kernel USB
+mass-storage driver and cannot run after ExitBootServices. BIOS-only machines
+can boot the written Zero image but cannot run this firmware writer.
+
+Files
+FLASHX64.EFI is the x86-64 program.
+FLASHIA32.EFI is the IA32 program; the boot volume uses the short alias
+EFI/BOOT/FLASH32.EFI. The Zero boot menu launches the matching edition.
+Standalone firmware launch is also supported.
+All program, composition, hashing and container-validation source is Zero.
+
+Source selection
+Place system.zmedia at the ROOT of a firmware-readable volume. A separate
+FAT-formatted source volume is normally needed because the small Zero ESP
+cannot hold a complete system image. The program asks existing firmware
+drivers to connect their devices, then scans up to1024 firmware handles.
+It lists up to32 matching source volumes with their image size and complete
+firmware device path. One source is selected automatically; multiple sources
+require a visible number starting at1. Escape cancels.
+The whole selected image is loaded and its exact container length, reserved
+fields and SHA256 are verified BEFORE any target is written. No source bytes
+are reread during writing. Images are bounded to256MiB payload; adequate free
+firmware memory is required. SHA256 checks integrity, not publisher identity.
+
+Target selection
+Only present, writable, removable, whole-device USB Block I/O handles with
+512-byte sectors and valid alignment up to4096 bytes are eligible. Internal
+fixed disks, partitions, read-only media and targets too small for the payload
+are excluded. Both the program's boot disk and the selected image's source
+disk are excluded using their complete firmware device-path ancestry.
+
+Each eligible target is listed with number, capacity, media ID and full
+firmware path. The user selects a target number and types ERASE. The program
+then reacquires its protocols and compares the copied device path, media ID,
+capacity, removable/media flags, sector size and alignment before writing.
+A changed or removed device fails before the first write.
+
+Writing and verification
+The container header is not written to the target: its validated disk payload
+is written in64KiB aligned chunks. If the disk is larger, the final up to33
+sectors outside the payload are cleared to remove a stale backup GPT. The
+middle area outside the payload and tail is preserved; this is not a secure
+erasure tool. The program flushes firmware block I/O and rereads every written
+payload byte and cleared tail byte before reporting success.
+Any failed write, flush or readback is reported as failure. A partial target
+may no longer boot; no rollback is claimed. Escape and incorrect confirmation
+before writing preserve the target.
+
+Platform details
+IA32 allocations use AllocateMaxAddress with a4GiB address ceiling. Every
+64-bit block address is passed as distinct low and high ABI words, including
+tail cleanup on disks larger than2TiB. Both editions use their own aligned
+coroutine stacks and explicit firmware page allocations.
+
+Build
+Compile media/firmware-compose.zero with the Zero native compiler. Invoke it
+with PROJECT NEW_SOURCE, or PROJECT NEW_SOURCE --ia32. Existing output paths
+are refused. The composer checks that every required ABI replacement matches
+and that the source-discovery insertion occurs exactly once. Compile the
+result with Zero --efi or --efi32 respectively. Canonical composed sources are
+media/firmware.zero and media/firmware32.zero.
+
+Current limits
+Only UEFI x86-64 and IA32; removable USB recognized by firmware;512-byte disk
+sectors; up to32 source volumes and32 targets; max256MiB payload. Firmware
+support determines which USB controllers and source filesystems are usable.
+There is no native Zero kernel USB stack, no BIOS writer edition, no signature
+trust store and no guarantee of power-loss recovery during a write.

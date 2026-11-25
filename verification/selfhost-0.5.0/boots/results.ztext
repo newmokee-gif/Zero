@@ -1,0 +1,76 @@
+ZTEXT0010000103dd139d56c0000000
+Zero OS 0.5.0 - fresh boot checks after the Zero-written compiler build
+Date: 2026-11-15
+
+Build completion
+The checks began after verification/selfhost-0.5.0/build.txt contained:
+Compiler self-compilation is stable.
+Built BIOS/UEFI x86/x64 ISO: build/zero.iso
+
+Exact inputs
+ISO SHA-256:
+2d9d492b564a260ee77598ea7ac9987b3e8a006e809b80b32192e239b36a96e6
+bootstrap/zero SHA-256:
+419f29a1c509f3ede1b092ed9bc716cc62169e4b8ef1647028652a6403e64a91
+These hashes and both packaged data-disk hashes were recorded before the
+tests and verified unchanged afterward. See input-sha256.txt.
+
+Four fresh QEMU processes passed
+BIOS32: SeaBIOS, -cpu qemu64,-lm,-pae. The BIOS dispatcher selected the
+        32-bit kernel without long mode or PAE. ZeroFS mounted, the visible
+        VGA terminal accepted PS/2 info, and reported x86-32.
+BIOS64: SeaBIOS, -cpu qemu64. The dispatcher selected the 64-bit kernel.
+        ZeroFS mounted, the visible terminal accepted PS/2 info and reported
+        x86-64.
+UEFI32: IA32 OVMF, -cpu qemu64,-lm. The IA32 UEFI loader reached the kernel
+        after ending boot services. ZeroFS mounted, the visible GOP terminal
+        accepted PS/2 info and reported x86-32.
+UEFI64: AMD64 OVMF, -cpu qemu64. The AMD64 loader reached the kernel after
+        ending boot services. ZeroFS mounted, the visible GOP terminal
+        accepted PS/2 info and reported x86-64.
+
+All four returned to the zero> prompt after info. Each process was then
+terminated through its QEMU monitor and exited successfully. No test VM is
+left running. Every mode has a raw serial log and a PNG screen capture in
+this directory; PNG conversion preserved the QEMU screendump pixels.
+
+Environment
+QEMU 10.0.13, pc/TCG, 128 MiB RAM, no network, one CPU. The exact delivered
+ISO was attached read-only as IDE secondary-master CD-ROM; each process had
+its own writable copy of the initial data.img as IDE primary master. UEFI
+processes also had separate copies of their matching variable-store images.
+Guest input came from PS/2 monitor sendkey events. Serial devices only wrote
+logs to files, so the input checks did not depend on COM1 input.
+
+External firmware paths
+BIOS: /workspace/qemu-local/root/usr/share/seabios/bios-256k.bin
+VGA: /workspace/qemu-local/root/usr/share/seabios/vgabios-stdvga.bin
+IA32 code: /workspace/uefi32-test/root/usr/share/OVMF/OVMF32_CODE_4M.fd
+IA32 vars template: /workspace/uefi32-test/root/usr/share/OVMF/OVMF32_VARS_4M.fd
+AMD64 code: /workspace/qemu-local/root/usr/share/OVMF/OVMF_CODE_4M.fd
+AMD64 vars template: /workspace/qemu-local/root/usr/share/OVMF/OVMF_VARS_4M.fd
+These are external test dependencies, not OS implementation files.
+
+Launch command structure
+LD_LIBRARY_PATH=/workspace/qemu-local/root/usr/lib/x86_64-linux-gnu /workspace/qemu-local/root/usr/bin/qemu-system-x86_64 -L /workspace/qemu-local/root/usr/share/qemu -machine pc -accel tcg -m 128 -display none -nic none -no-reboot -boot order=d -vga none -device VGA,romfile=/workspace/qemu-local/root/usr/share/seabios/vgabios-stdvga.bin -cpu CPU -serial file:verification/selfhost-0.5.0/boots/MODE.serial -monitor tcp:127.0.0.1:PORT,server=on,wait=off FIRMWARE -drive file=/tmp/zero-selfhost-boots/MODE-data.img,format=raw,if=ide,index=0 -drive file=build/zero.iso,format=raw,media=cdrom,if=ide,index=2,readonly=on
+
+MODE / CPU / PORT:
+bios32 / qemu64,-lm,-pae / 45131
+bios64 / qemu64 / 45132
+uefi32 / qemu64,-lm / 45133
+uefi64 / qemu64 / 45134
+
+BIOS FIRMWARE argument:
+-bios /workspace/qemu-local/root/usr/share/seabios/bios-256k.bin
+UEFI FIRMWARE arguments:
+-drive if=pflash,format=raw,readonly=on,file=matching_CODE_file -drive if=pflash,format=raw,file=/tmp/zero-selfhost-boots/MODE-vars.fd
+
+The monitor sent i, n, f, o and Enter with a 30 ms hold and 100 ms interval,
+then waited 500 ms before screendump. Packaged data.img and data.vdi were
+never attached writable; their hashes remain unchanged.
+
+Scope
+These are fresh full boot and terminal smoke checks of the final image in
+all four firmware/CPU combinations. No assembler or linker was invoked by
+this verification. Native VirtualBox, physical hardware and separate 8-bit
+targets are outside these four checks.

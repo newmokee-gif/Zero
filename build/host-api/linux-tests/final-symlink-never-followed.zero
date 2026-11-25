@@ -1,0 +1,5 @@
+
+? :fileopen["link" | 0] != -1 [ !exit[1]. ]
+? :fileopen["link" | 2] != -1 [ !exit[2]. ]
+? :fileopen["link" | 3] != -1 [ !exit[3]. ]
+? :filedelete["link"] != 0 [ !exit[4]. ] !exit[0].

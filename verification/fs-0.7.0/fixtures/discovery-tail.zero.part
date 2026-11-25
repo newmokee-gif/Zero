@@ -1,0 +1,22 @@
+ ? @current == 90 [
+  ? (@io_write != 0) + (@disk_select > 3) + (@io_count == 0) + (@io_count > 32) [ !exit[82]. ]
+  ? (@io_lba >= :load64[@memory + 25472 + @disk_select * 32]) + (@io_lba + @io_count > :load64[@memory + 25472 + @disk_select * 32]) [ !exit[83]. ]
+  ? (@io_buffer != @memory + 32768) * (@io_buffer != @memory + 49152) [ !exit[84]. ]
+  :pread[3 + @disk_select| @io_buffer| @io_count * 512| @io_lba * 512] -> @temporary.
+  0 -> @io_ok. ? @temporary == @io_count * 512 [ 1 -> @io_ok. ]
+  @io_return -> @state.
+  # Deliberately destroy every volatile scalar normally used by drivers.
+  0x1234 -> @i. 0x1234 -> @j. 0x1234 -> @k.
+  0x1234 -> @c0. 0x1234 -> @c1. 0x1234 -> @c2.
+  0x1234 -> @c3. 0x1234 -> @c4. 0x1234 -> @c5.
+  0x1234 -> @pointer. 0x1234 -> @valid. 0x1234 -> @checksum.
+  0x1234 -> @status. 0x1234 -> @temporary. 0x1234 -> @character.
+  0x1234 -> @ready. 0x1234 -> @done. 0x1234 -> @timeout.
+ ]
+]
+? :load64[@memory + 24824] != 0x123456789abcdef0 [ !exit[85]. ]
+? :load64[@memory + 25456] != 0xfedcba9876543210 [ !exit[86]. ]
+# Serialize exact inventory plus physical results for an independent shell oracle.
+? :write[@memory + 24704| 8] != 8 [ !exit[87]. ]
+? :write[@memory + 24832| 624] != 624 [ !exit[87]. ]
+? :write[@memory + 25472| 128] != 128 [ !exit[87]. ]

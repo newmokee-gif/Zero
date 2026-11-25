@@ -1,0 +1,13 @@
+# Original Zero CSS checks; fixtures are external CSS input data, not code run
+# by another language. All construction, invocation and assertions are Zero.
+0 => @t_case. 0 => @t_pass. 0 => @t_fail. 0 => @t_i. 0 => @t_j.
+0 => @t_p. 0 => @t_n. 0 => @t_css. 0 => @t_inline. 0 => @t_tag.
+0 => @t_id. 0 => @t_class. 0 => @t_color. 0 => @t_bg. 0 => @t_font.
+0 => @t_display. 0 => @t_padding. 0 => @t_margin. 0 => @t_width.
+0 => @t_warning. 0 => @t_error. 0 => @t_count. 0 => @t_seed.
+0 => @t_hash. 0 => @t_after. 0 => @t_k. 0 => @t_guard.
+:hostalloc[4194432] -> @t_p.
+? @t_p == 0 [ !exit[70]. ]
+@t_p+64 -> @web.
+0 -> @t_i. ?? @t_i < 4194432 [ !store64[@t_p+@t_i|0]. @t_i+8 -> @t_i. ]
+0 -> @t_i. ?? @t_i < 64 [ !store8[@web-64+@t_i|165]. !store8[@web+4194304+@t_i|165]. @t_i+1 -> @t_i. ]

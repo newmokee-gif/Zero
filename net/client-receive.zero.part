@@ -1,0 +1,141 @@
+# ARP replies populate only the pending exact next-hop cache.
+? (@io_count >= 42) * (:load16[@io_buffer + 12] == 0x0608) * (:load64[@work + 64] != 0) [
+ ? (:load16[@io_buffer + 14] == 0x0100) * (:load16[@io_buffer + 16] == 0x0008) * (:load16[@io_buffer + 18] == 0x0406) * (:load16[@io_buffer + 20] == 0x0200) * (:load32[@io_buffer + 28] == :load32[@work + 224]) * (:load32[@io_buffer + 38] == :load32[@work + 64]) [
+  1 -> @ready. 0 -> @i.
+  ?? @i < 6 [
+   ? :load8[@io_buffer + 32 + @i] != :load8[@work + 256 + @i] [ 0 -> @ready. ] @i + 1 -> @i.
+  ]
+  ? :bitand[:load8[@io_buffer + 22]|1] [ 0 -> @ready. ]
+  ? @ready [
+   0 -> @i. ?? @i < 6 [ !store8[@work + 240 + @i|:load8[@io_buffer + 22 + @i]]. @i + 1 -> @i. ]
+   !store64[@work + 248|1].
+  ]
+ ]
+]
+? (:load64[@work + 400] == 1) * (@io_count >= 34) * (:load16[@io_buffer + 12] == 0x0008) [
+ 1 -> @valid.
+ :bitand[:load8[@io_buffer + 14]|15] * 4 -> @name_length.
+ :load8[@io_buffer + 16] * 256 + :load8[@io_buffer + 17] -> @text_length.
+ ? (:shr[:load8[@io_buffer + 14]|4] != 4) + (@name_length < 20) + (@name_length > 60) + (@text_length < @name_length) + (@text_length + 14 > @io_count) [ 0 -> @valid. ]
+ ? (:bitand[:load8[@io_buffer + 20]|63] != 0) + (:load8[@io_buffer + 21] != 0) + (:load32[@io_buffer + 30] != :load32[@work + 64]) [ 0 -> @valid. ]
+ ? @valid [
+  0 -> @checksum. 0 -> @i. ?? @i < @name_length [ @checksum + :load16[@io_buffer + 14 + @i] -> @checksum. @i + 2 -> @i. ]
+  ?? @checksum > 65535 [ :bitand[@checksum|65535] + :shr[@checksum|16] -> @checksum. ]
+  ? @checksum != 65535 [ 0 -> @valid. ]
+ ]
+ ? @valid * (:load64[@work + 464] == 2) * (:load8[@io_buffer + 23] == 17) * (@text_length >= @name_length + 20) * (:load32[@io_buffer + 26] == :load32[@work + 88]) [
+  @io_buffer + 14 + @name_length -> @pointer.
+  :load8[@pointer + 4] * 256 + :load8[@pointer + 5] -> @line_length.
+  ? (@line_length < 20) + (@line_length > @text_length - @name_length) + (:load16[@pointer] != 0x3500) + (:load16[@pointer + 2] != 0x00c0) [ 0 -> @valid. ]
+  ? @valid * (:load16[@pointer + 6] != 0) [
+   :load16[@io_buffer + 26] + :load16[@io_buffer + 28] + :load16[@io_buffer + 30] + :load16[@io_buffer + 32] + 0x1100 + :load16[@pointer + 4] -> @checksum.
+   0 -> @i. ?? @i + 1 < @line_length [ @checksum + :load16[@pointer + @i] -> @checksum. @i + 2 -> @i. ]
+   ? @i < @line_length [ @checksum + :load8[@pointer + @i] -> @checksum. ]
+   ?? @checksum > 65535 [ :bitand[@checksum|65535] + :shr[@checksum|16] -> @checksum. ]
+   ? @checksum != 65535 [ 0 -> @valid. ]
+  ]
+  ? @valid [
+   @pointer + 8 -> @name. @pointer + @line_length -> @free_file.
+   ? (:load16[@name] != :load16[@work + 440]) + (:bitand[:load8[@name + 2]|128] == 0) + (:load16[@name + 4] != 0x0100) [ 0 -> @valid. ]
+   ? @valid [
+    ? :bitand[:load8[@name + 3]|15] + :bitand[:load8[@name + 2]|2] [ !store64[@work + 408|5]. 0 -> @valid. ]
+   ]
+   :load64[@work + 632] -> @j.
+   ? @name + 12 + @j > @free_file [ 0 -> @valid. ]
+   ? @valid [
+    0 -> @i. ?? @i < @j [
+     ? :load8[@name + 12 + @i] != :load8[@work + 22000 + @i] [ 0 -> @valid. ] @i + 1 -> @i.
+    ]
+   ]
+   ? @valid [
+    @name + 12 + @j -> @text.
+    :load8[@name + 6] * 256 + :load8[@name + 7] -> @k.
+    ? (@k == 0) + (@k > 32) [ 0 -> @valid. !store64[@work + 408|5]. ]
+    0 -> @word_index. 0 -> @done.
+    ?? (@word_index < @k) * @valid * (@done == 0) [
+     0 -> @ready. 0 -> @i.
+     ?? (@ready == 0) * @valid * (@i < 128) [
+      ? @text >= @free_file [ 0 -> @valid. ] ~ [
+       :load8[@text] -> @c0.
+       ? @c0 == 0 [ @text + 1 -> @text. 1 -> @ready. ] ~ [
+        ? :bitand[@c0|192] == 192 [
+         ? @text + 2 > @free_file [ 0 -> @valid. ] ~ [
+          ? :bitand[@c0|63] * 256 + :load8[@text + 1] >= @free_file - @name [ 0 -> @valid. ]
+          @text + 2 -> @text. 1 -> @ready.
+         ]
+        ] ~ [
+         ? (@c0 > 63) + (@text + @c0 + 1 > @free_file) [ 0 -> @valid. ] ~ [ @text + @c0 + 1 -> @text. ]
+        ]
+       ]
+      ]
+      @i + 1 -> @i.
+     ]
+     ? (@ready == 0) + (@text + 10 > @free_file) [ 0 -> @valid. ]
+     ? @valid [
+      :load8[@text + 8] * 256 + :load8[@text + 9] -> @j.
+      ? @text + 10 + @j > @free_file [ 0 -> @valid. ] ~ [
+       ? (:load16[@text] == 0x0100) * (:load16[@text + 2] == 0x0100) * (@j == 4) [
+        :load32[@text + 10] -> @c0.
+        ? (@c0 != 0) * (@c0 != 0xffffffff) [
+         !store64[@work + 424|@c0]. !store64[@work + 464|3].
+         !store64[@work + 448|0]. !store64[@work + 456|0]. 1 -> @done.
+        ]
+       ]
+       @text + 10 + @j -> @text.
+      ]
+     ]
+     @word_index + 1 -> @word_index.
+    ]
+    ? (@done == 0) * @valid [ !store64[@work + 408|5]. ]
+   ]
+  ]
+ ]
+ ? @valid * (:load64[@work + 464] >= 4) * (:load64[@work + 464] <= 6) * (:load8[@io_buffer + 23] == 6) * (@text_length >= @name_length + 20) * (:load32[@io_buffer + 26] == :load32[@work + 424]) [
+  @io_buffer + 14 + @name_length -> @pointer.
+  @text_length - @name_length -> @free_file.
+  :shr[:load8[@pointer + 12]|4] * 4 -> @line_length.
+  ? (@line_length < 20) + (@line_length > @free_file) + (:load8[@pointer + 2] * 256 + :load8[@pointer + 3] != :load64[@work + 616]) + (:load8[@pointer] * 256 + :load8[@pointer + 1] != :load64[@work + 432]) [ 0 -> @valid. ]
+  ? @valid [
+   :load16[@io_buffer + 26] + :load16[@io_buffer + 28] + :load16[@io_buffer + 30] + :load16[@io_buffer + 32] + 0x0600 + :bitand[@free_file|255] * 256 + :shr[@free_file|8] -> @checksum.
+   0 -> @i. ?? @i + 1 < @free_file [ @checksum + :load16[@pointer + @i] -> @checksum. @i + 2 -> @i. ]
+   ? @i < @free_file [ @checksum + :load8[@pointer + @i] -> @checksum. ]
+   ?? @checksum > 65535 [ :bitand[@checksum|65535] + :shr[@checksum|16] -> @checksum. ]
+   ? @checksum != 65535 [ 0 -> @valid. ]
+  ]
+  ? @valid [
+   :load8[@pointer + 4] * 16777216 + :load8[@pointer + 5] * 65536 + :load8[@pointer + 6] * 256 + :load8[@pointer + 7] -> @command.
+   :load8[@pointer + 8] * 16777216 + :load8[@pointer + 9] * 65536 + :load8[@pointer + 10] * 256 + :load8[@pointer + 11] -> @arguments.
+   :load8[@pointer + 13] -> @operation.
+   ? :load64[@work + 464] == 4 [
+    ? :bitand[@operation|4] * (@arguments == :load64[@work + 496] + 1) [ !store64[@work + 408|7]. ]
+    ? (:bitand[@operation|0x16] == 0x12) * (@arguments == :load64[@work + 496] + 1) [
+     !store64[@work + 480|:bitand[@command + 1|0xffffffff]].
+     !store64[@work + 464|5]. !store64[@work + 448|0]. !store64[@work + 456|0].
+    ]
+   ] ~ [
+    ? :bitand[@operation|4] * (@command == :load64[@work + 480]) [ !store64[@work + 408|7]. ]
+    ? (:bitand[@operation|0x16] == 0x10) * (@arguments >= :load64[@work + 496] + 1) * (@arguments <= :load64[@work + 472]) [
+     @free_file - @line_length -> @j.
+     :load64[@work + 480] -> @c0.
+     :bitand[@c0 - @command|0xffffffff] -> @i.
+     ? @i <= @j [
+      ? :load64[@work + 416] + @j - @i > 65535 [ !store64[@work + 408|9]. ] ~ [
+       :load64[@work + 416] -> @k.
+       ?? @i < @j [
+        :load8[@pointer + @line_length + @i] -> @c1.
+        !store8[:load64[@work + 688] + @k|@c1]. @k + 1 -> @k. @i + 1 -> @i.
+       ]
+       !store64[@work + 416|@k]. !store8[:load64[@work + 688] + @k|0].
+       !store64[@work + 480|:bitand[@command + @j|0xffffffff]].
+       ? @j [ !store64[@work + 568|1]. !store64[@work + 448|@current + 50]. ]
+      ]
+     ]
+     ? @j [ !store64[@work + 544|1]. ]
+     ? :bitand[@operation|1] * (:bitand[@command + @j|0xffffffff] == :load64[@work + 480]) [
+      !store64[@work + 480|:bitand[:load64[@work + 480] + 1|0xffffffff]]. !store64[@work + 608|1]. !store64[@work + 544|1].
+     ]
+    ]
+   ]
+  ]
+ ]
+]

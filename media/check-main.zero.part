@@ -1,0 +1,59 @@
+0 -> @testvector.
+?? @testvector < 4 [
+ "" -> @testliteral. 0 -> @testlength.
+ "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" -> @testexpected.
+ ? @testvector == 1 [ "abc" -> @testliteral. 3 -> @testlength. "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad" -> @testexpected. ]
+ ? @testvector == 2 [ "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq" -> @testliteral. 56 -> @testlength. "248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1" -> @testexpected. ]
+ ? @testvector == 3 [ 1000000 -> @testlength. "cdc76e5c9914fb9281a1c7e284d73e67f1809a48a497200e046d39ccc7112cd0" -> @testexpected. ]
+ 0 -> @testi. ?? @testi < @testlength [
+  97 -> @testchar. ? @testvector < 3 [ :load8[@testliteral+@testi] -> @testchar. ]
+  !store8[@testinput+@testi|@testchar]. @testi+1 -> @testi.
+ ]
+ !store64[@zm|@testinput]. !store64[@zm+8|@testlength]. !store64[@zm+16|1].
+ !switch[@zm+128|@zm+224]. ? :load64[@zm+24] != 0 [ @testfailures+1 -> @testfailures. ]
+ "0123456789abcdef" -> @testliteral. 0 -> @testi.
+ ?? @testi < 32 [
+  :load8[@zm+48+@testi] -> @testactual.
+  ? :load8[@testliteral+:shr[@testactual|4]] != :load8[@testexpected+@testi*2] [ @testfailures+1 -> @testfailures. ]
+  ? :load8[@testliteral+:bitand[@testactual|15]] != :load8[@testexpected+@testi*2+1] [ @testfailures+1 -> @testfailures. ]
+  @testi+1 -> @testi.
+ ]
+ @testvector+1 -> @testvector. @testcases+1 -> @testcases.
+]
+# Canonical512-byte raw disk payload is wrapped, then this exact validator is
+# exercised at every header-byte corruption and every truncated input length.
+@testinput -> @testheader. 0 -> @testi.
+?? @testi < 4609 [ !store8[@testheader+@testi|0]. @testi+1 -> @testi. ]
+!store64[@zm|@testheader+4096]. !store64[@zm+8|512]. !store64[@zm+16|1].
+!switch[@zm+128|@zm+224].
+!store64[@testheader|0x3130414944454d5a]. !store64[@testheader+8|1].
+!store64[@testheader+16|4096]. !store64[@testheader+24|512].
+!store64[@testheader+32|512]. !store64[@testheader+40|0].
+0 -> @testi. ?? @testi < 32 [ !store8[@testheader+48+@testi|:load8[@zm+48+@testi]]. @testi+1 -> @testi. ]
+!store64[@zm|@testheader]. !store64[@zm+8|4608]. !store64[@zm+16|0].
+!switch[@zm+128|@zm+224].
+? (:load64[@zm+24] != 0)+(:load64[@zm+32] != @testheader+4096)+(:load64[@zm+40] != 512) [ @testfailures+1 -> @testfailures. ]
+@testcases+1 -> @testcases.
+0 -> @testi.
+?? @testi < 4096 [
+ :load8[@testheader+@testi] -> @testsaved.
+ !store8[@testheader+@testi|:bitxor[@testsaved|1]].
+ !switch[@zm+128|@zm+224].
+ ? (:load64[@zm+24] != 65)+(:load64[@zm+32] != 0)+(:load64[@zm+40] != 0) [ @testfailures+1 -> @testfailures. ]
+ !store8[@testheader+@testi|@testsaved]. @testi+1 -> @testi. @testcases+1 -> @testcases.
+]
+0 -> @testi.
+?? @testi < 4608 [
+ !store64[@zm+8|@testi]. !switch[@zm+128|@zm+224].
+ ? :load64[@zm+24] != 65 [ @testfailures+1 -> @testfailures. ] @testi+1 -> @testi. @testcases+1 -> @testcases.
+]
+!store64[@zm+8|4609]. !switch[@zm+128|@zm+224].
+? :load64[@zm+24] != 65 [ @testfailures+1 -> @testfailures. ] @testcases+1 -> @testcases.
+!store64[@zm+8|4608]. !store8[@testheader+4096|1]. !switch[@zm+128|@zm+224].
+? :load64[@zm+24] != 65 [ @testfailures+1 -> @testfailures. ] @testcases+1 -> @testcases.
+!store8[@testheader+4096|0]. !store64[@zm+16|2]. !switch[@zm+128|@zm+224].
+? :load64[@zm+24] != 65 [ @testfailures+1 -> @testfailures. ] @testcases+1 -> @testcases.
+"Zmedia SHA/header regression checks passed:8712.\n" -> @testliteral.
+? @testfailures [ "Zmedia SHA/header regression FAILED.\n" -> @testliteral. ]
+0 -> @testi. ?? :load8[@testliteral+@testi] [ !put[:load8[@testliteral+@testi]]. @testi+1 -> @testi. ]
+? @testcases != 8712 [ !exit[1]. ] ? @testfailures [ !exit[1]. ] !exit[0].

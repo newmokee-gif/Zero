@@ -1,0 +1,35 @@
+# Original Zero Web experimental engine. Shared worker register names;
+# each fork owns its saved frame. No host calls are made by document workers.
+0 => @web.
+0 => @v0. 0 => @v1. 0 => @v2. 0 => @v3. 0 => @v4. 0 => @v5.
+0 => @v6. 0 => @v7. 0 => @v8. 0 => @v9. 0 => @v10. 0 => @v11.
+0 => @v12. 0 => @v13. 0 => @v14. 0 => @v15. 0 => @v16. 0 => @v17.
+0 => @v18. 0 => @v19. 0 => @v20. 0 => @v21. 0 => @v22. 0 => @v23.
+0 => @v24. 0 => @v25. 0 => @v26. 0 => @v27. 0 => @v28. 0 => @v29.
+0 => @v30. 0 => @v31.
+# Arena: caller zeroes 4194304 bytes. Descriptor input pointer0,length8,
+# error16,warning flags24,node count32,viewport width40,height48.
+# Node N (1-based): web+4096+(N-1)*1024, at most512 nodes.
+# Node: parent0, kind8(1element,2text,3style,4script), tag ASCII[16]16,
+# id[64]32,class[128]96,inline CSS[256]224,
+# text pointer480,text bytes488,flags496(bit1 textContent replacement),
+# reserved504,owned text[512]512 (NUL terminated for ordinary text).
+# style/script raw text refers to immutable input; ordinary text uses owned512.
+# Script tag type goes in class field for kind4 only (empty means JavaScript).
+# All strings NUL terminated, oversized supported fields produce error65.
+# Computed styles: web+540672+(N-1)*64. color0 RGB,background8 RGB,
+# font px16,display24(0none,1block,2inline),padding32,margin40,width48,
+# reserved56. CSS worker initializes every field, inherits text color/font.
+# Parent caller context web+1024; DOM context1152,stack1048576..1130495;
+# CSS context1280,stack1146880..1228799;
+# JS context1408,stack1245184..1327103;
+# renderer context1664,stack1605632..1687551.
+# DOM scratch web+600000..639999; CSS scratch640000..739999;
+# JS scratch740000..839999. No Python interpreter is required for server pages.
+# Root input web+1507328 with capacity65568. Workers see input pointer/length.
+# Raster web+2097152,800*600 native BGRX pixels. Renderer rectangle scratch
+#1802240..1835007, ancestor stack1851392..1855487. Header80 scroll,88height.
+# Child starts, yields to caller, executes one complete request per resume,
+# returns by switch[worker context|caller context], then accepts next request.
+# Errors:65 malformed or unsupported required syntax,28 capacity,70 contract.
+# Each worker leaves a nonzero incoming error unchanged and skips its work.

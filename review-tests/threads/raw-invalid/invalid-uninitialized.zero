@@ -1,0 +1,5 @@
+:reserve[160] => @contexts.
+0 => @index.
+?? @index < 160 [ !store8[@contexts + @index | 0]. @index + 1 -> @index. ]
+!switch[@contexts | @contexts + 80].
+!out16[0xf4 | 99]. !halt.

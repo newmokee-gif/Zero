@@ -1,0 +1,518 @@
+# Original Zero Web experimental engine. Shared worker register names;
+# each fork owns its saved frame. No host calls are made by document workers.
+0 => @web.
+0 => @v0. 0 => @v1. 0 => @v2. 0 => @v3. 0 => @v4. 0 => @v5.
+0 => @v6. 0 => @v7. 0 => @v8. 0 => @v9. 0 => @v10. 0 => @v11.
+0 => @v12. 0 => @v13. 0 => @v14. 0 => @v15. 0 => @v16. 0 => @v17.
+0 => @v18. 0 => @v19. 0 => @v20. 0 => @v21. 0 => @v22. 0 => @v23.
+0 => @v24. 0 => @v25. 0 => @v26. 0 => @v27. 0 => @v28. 0 => @v29.
+0 => @v30. 0 => @v31.
+# Arena: caller zeroes 4194304 bytes. Descriptor input pointer0,length8,
+# error16,warning flags24,node count32,viewport width40,height48.
+# Node N (1-based): web+4096+(N-1)*1024, at most512 nodes.
+# Node: parent0, kind8(1element,2text,3style,4script), tag ASCII[16]16,
+# id[64]32,class[128]96,inline CSS[256]224,
+# text pointer480,text bytes488,flags496(bit1 textContent replacement),
+# reserved504,owned text[512]512 (NUL terminated for ordinary text).
+# style/script raw text refers to immutable input; ordinary text uses owned512.
+# Script tag type goes in class field for kind4 only (empty means JavaScript).
+# All strings NUL terminated, oversized supported fields produce error65.
+# Computed styles: web+540672+(N-1)*64. color0 RGB,background8 RGB,
+# font px16,display24(0none,1block,2inline),padding32,margin40,width48,
+# reserved56. CSS worker initializes every field, inherits text color/font.
+# Parent caller context web+1024; DOM context1152,stack1048576..1130495;
+# CSS context1280,stack1146880..1228799;
+# JS context1408,stack1245184..1327103;
+# renderer context1664,stack1605632..1687551.
+# DOM scratch web+600000..639999; CSS scratch640000..739999;
+# JS scratch740000..839999. No Python interpreter is required for server pages.
+# Root input web+1507328 with capacity65568. Workers see input pointer/length.
+# Raster web+2097152,800*600 native BGRX pixels. Renderer rectangle scratch
+#1802240..1835007, ancestor stack1851392..1855487. Header80 scroll,88height.
+# Child starts, yields to caller, executes one complete request per resume,
+# returns by switch[worker context|caller context], then accepts next request.
+# Errors:65 malformed or unsupported required syntax,28 capacity,70 contract.
+# Each worker leaves a nonzero incoming error unchanged and skips its work.
+# Original Zero JavaScript-profile checks; executable after own composition.
+0 => @t0. 0 => @t1. 0 => @t2. 0 => @t3. 0 => @t4. 0 => @t5.
+0 => @t6. 0 => @t7. 0 => @t8. 0 => @t9. 0 => @t10. 0 => @t11.
+0 => @t12. 0 => @t13. 0 => @t14. 0 => @t15.
+:hostalloc[4194432] -> @t0.
+? @t0 == 0 [ !exit[70]. ]
+@t0+64 -> @web.
+0 -> @t1. ?? @t1 < 4194432 [ !store8[@t0+@t1|0]. @t1+1 -> @t1. ]
+0 -> @t1. ?? @t1 < 64 [ !store8[@t0+@t1|165]. !store8[@web+4194304+@t1|165]. @t1+1 -> @t1. ]
+# Original bounded JavaScript interoperability profile, implemented in Zero.
+# Not an ECMAScript engine. No host services, code generation or unbounded loops.
+# Each request starts fresh document-level bindings; scripts run in tree order.
+# Statements: let/const/var name=expression; name=expression;
+# document.getElementById(string).textContent=expression;
+# Expressions: nonnegative safe integers, strings, names, left-associative +.
+# Semicolons required between statements; final semicolon is optional.
+# Unsupported syntax fails65; callers MUST discard the entire failed document.
+:fork[@web+1408|@web+1245184|81920] -> @v31.
+? @v31 == 1 [
+ !switch[@web+1408|@web+1024].
+ ?? 1 [
+  ? :load64[@web+16] == 0 [
+   @web+740000 -> @v0. 1 -> @v1. 0 -> @v23. 1 -> @v6.
+   ? (:load64[@web+32] > 512)+(:load64[@web+8] > 65536)+(:load64[@web] == 0)+(:load64[@web]+:load64[@web+8] < :load64[@web]) [ !store64[@web+16|70]. ]
+   ?? (@v6 != 0)*(:load64[@web+16] == 0) [
+    @v6 -> @v7.
+    ? @v7 == 1 [
+     ? @v1 > :load64[@web+32] [ 0 -> @v6. ] ~ [
+      @web+4096+(@v1-1)*1024 -> @v2. 0 -> @v29.
+      ? :load64[@v2+8] == 4 [
+       # MIME type comparison is ASCII insensitive, allowing surrounding space.
+       0 -> @v12. ?? (@v12 < 127)*(:load8[@v2+96+@v12] == 32) [ @v12+1 -> @v12. ]
+       @v12 -> @v13. ?? (@v13 < 128)*(:load8[@v2+96+@v13] != 0) [ @v13+1 -> @v13. ]
+       ? @v13 == 128 [ !store64[@web+16|70]. ]
+       ?? (@v13 > @v12)*(:load8[@v2+96+@v13-1] == 32) [ @v13-1 -> @v13. ]
+       ? @v13 == @v12 [ 1 -> @v29. ]
+       0 -> @v14.
+       ?? @v14 < 3 [
+        "text/javascript" -> @v15. 15 -> @v16.
+        ? @v14 == 1 [ "application/javascript" -> @v15. 22 -> @v16. ]
+        ? @v14 == 2 [ "module" -> @v15. 6 -> @v16. ]
+        ? @v13-@v12 == @v16 [
+         1 -> @v27. 0 -> @v28.
+         ?? @v28 < @v16 [
+          :load8[@v2+96+@v12+@v28] -> @v30.
+          ? (@v30 >= 65)*(@v30 <= 90) [ @v30+32 -> @v30. ]
+          ? @v30 != :load8[@v15+@v28] [ 0 -> @v27. ] @v28+1 -> @v28.
+         ]
+         ? @v27 [
+          ? @v14 < 2 [ 1 -> @v29. ] ~ [
+           ? :bitand[:load64[@web+24]|4] == 0 [ !store64[@web+24|:load64[@web+24]+4]. ]
+          ]
+         ]
+        ] @v14+1 -> @v14.
+       ]
+      ]
+      ? @v29 [
+       :load64[@v2+480] -> @v3. :load64[@v2+488] -> @v4. 0 -> @v5.
+       ? (@v3 < :load64[@web])+(@v4 > :load64[@web+8])+(@v3+@v4 < @v3)+(@v3+@v4 > :load64[@web]+:load64[@web+8]) [ !store64[@web+16|70]. ]
+       10 -> @v8. 1000 -> @v6.
+      ] ~ [ @v1+1 -> @v1. ]
+     ]
+    ]
+    ? @v7 == 10 [
+     ? @v9 == 0 [ @v1+1 -> @v1. 1 -> @v6. ] ~ [
+      ? @v9 == 59 [ 10 -> @v8. 1000 -> @v6. ] ~ [
+       ? @v9 != 256 [ !store64[@web+16|65]. ] ~ [
+        0 -> @v20. 0 -> @v22.
+        0 -> @v12. ?? @v12 < 4 [
+         "let" -> @v14. 3 -> @v15.
+         ? @v12 == 1 [ "const" -> @v14. 5 -> @v15. ]
+         ? @v12 == 2 [ "var" -> @v14. 3 -> @v15. ]
+         ? @v12 == 3 [ "document" -> @v14. 8 -> @v15. ]
+         ? @v11 == @v15 [
+          0 -> @v13. 1 -> @v16.
+          ?? @v13 < @v15 [ ? :load8[@v0+@v13] != :load8[@v14+@v13] [ 0 -> @v16. ] @v13+1 -> @v13. ]
+          ? @v16 [
+           ? @v12 == 3 [ 3 -> @v20. 30 -> @v8. ] ~ [
+            1 -> @v20. 20 -> @v8. ? @v12 == 1 [ 1 -> @v22. ]
+           ]
+          ]
+         ] @v12+1 -> @v12.
+        ]
+        ? @v20 == 0 [
+         2 -> @v20. 0 -> @v21. 0 -> @v12.
+         ?? @v12 < @v23 [
+          @v0+2048+@v12*640 -> @v14. 0 -> @v13. 1 -> @v16.
+          ?? @v13 <= @v11 [ ? :load8[@v0+@v13] != :load8[@v14+@v13] [ 0 -> @v16. ] @v13+1 -> @v13. ]
+          ? @v16 [ @v12+1 -> @v21. ] @v12+1 -> @v12.
+         ]
+         ? @v21 == 0 [ !store64[@web+16|65]. ] ~ [
+          ? :load64[@v0+2048+(@v21-1)*640+56] [ !store64[@web+16|65]. ]
+         ] 23 -> @v8.
+        ] 1000 -> @v6.
+       ]
+      ]
+     ]
+    ]
+    ? @v7 == 20 [
+     ? @v9 != 256 [ !store64[@web+16|65]. ] ~ [
+      ? @v23 >= 64 [ !store64[@web+16|28]. ]
+      # Reserved names are excluded from this deliberately small grammar.
+      0 -> @v12. 0 -> @v27.
+      "document let const var true false null break case catch class continue debugger default delete do else export extends finally for function if import in instanceof new return super switch this throw try typeof void while with yield await enum implements interface package private protected public static " -> @v14.
+      ?? :load8[@v14+@v12] [
+       0 -> @v13. 1 -> @v16.
+       ?? :load8[@v14+@v12] != 32 [
+        ? @v13 >= @v11 [ 0 -> @v16. ] ~ [ ? :load8[@v0+@v13] != :load8[@v14+@v12] [ 0 -> @v16. ] ]
+        @v13+1 -> @v13. @v12+1 -> @v12.
+       ] ? @v16*(@v13 == @v11) [ 1 -> @v27. ] @v12+1 -> @v12.
+      ]
+      0 -> @v12.
+      ?? @v12 < @v23 [
+       @v0+2048+@v12*640 -> @v14. 0 -> @v13. 1 -> @v16.
+       ?? @v13 <= @v11 [ ? :load8[@v0+@v13] != :load8[@v14+@v13] [ 0 -> @v16. ] @v13+1 -> @v13. ]
+       ? @v16 [ 1 -> @v27. ] @v12+1 -> @v12.
+      ]
+      ? @v27 [ !store64[@web+16|65]. ]
+      0 -> @v12. ?? @v12 <= @v11 [ !store8[@v0+1600+@v12|:load8[@v0+@v12]]. @v12+1 -> @v12. ]
+      @v23+1 -> @v21. 23 -> @v8. 1000 -> @v6.
+     ]
+    ]
+    ? @v7 == 23 [
+     ? @v9 != 61 [ !store64[@web+16|65]. ] ~ [ 0 -> @v29. 50 -> @v8. 1000 -> @v6. ]
+    ]
+    ? (@v7 >= 30)*(@v7 <= 37) [
+     1 -> @v27.
+     ? (@v7 == 30)+(@v7 == 35) [ ? @v9 != 46 [ 0 -> @v27. ] ]
+     ? @v7 == 32 [ ? @v9 != 40 [ 0 -> @v27. ] ]
+     ? @v7 == 34 [ ? @v9 != 41 [ 0 -> @v27. ] ]
+     ? (@v7 == 31)+(@v7 == 36) [
+      "getElementById" -> @v14. 14 -> @v15. ? @v7 == 36 [ "textContent" -> @v14. 11 -> @v15. ]
+      ? (@v9 != 256)+(@v11 != @v15) [ 0 -> @v27. ] ~ [
+       0 -> @v12. ?? @v12 < @v15 [ ? :load8[@v0+@v12] != :load8[@v14+@v12] [ 0 -> @v27. ] @v12+1 -> @v12. ]
+      ]
+     ]
+     ? @v7 == 33 [
+      ? (@v9 != 258)+(@v11 == 0)+(@v11 > 63) [ 0 -> @v27. ] ~ [
+       0 -> @v12. ?? @v12 <= @v11 [ !store8[@v0+1536+@v12|:load8[@v0+@v12]]. @v12+1 -> @v12. ]
+       !store64[@v0+1680|@v11].
+      ]
+     ]
+     ? @v7 == 37 [
+      ? @v9 != 61 [ 0 -> @v27. ]
+      0 -> @v21. 1 -> @v12.
+      ?? (@v12 <= :load64[@web+32])*(@v21 == 0) [
+       @web+4096+(@v12-1)*1024 -> @v14.
+       ? :load64[@v14+8] == 1 [
+        1 -> @v16. 0 -> @v13.
+        ?? @v13 <= :load64[@v0+1680] [
+         ? :load8[@v14+32+@v13] != :load8[@v0+1536+@v13] [ 0 -> @v16. ] @v13+1 -> @v13.
+        ] ? @v16 [ @v12 -> @v21. ]
+       ] @v12+1 -> @v12.
+      ]
+      ? @v21 == 0 [ 0 -> @v27. ]
+     ]
+     ? @v27 == 0 [ !store64[@web+16|65]. ] ~ [
+      @v7+1 -> @v8. ? @v7 == 37 [ 0 -> @v29. 50 -> @v8. ] 1000 -> @v6.
+     ]
+    ]
+    ? @v7 == 50 [
+     0 -> @v24. 0 -> @v25. 0 -> @v26.
+     ? @v9 == 257 [ @v10 -> @v25. ] ~ [
+      ? @v9 == 258 [
+       1 -> @v24. @v11 -> @v26. 0 -> @v12.
+       ?? @v12 < @v26 [ !store8[@v0+1024+@v12|:load8[@v0+@v12]]. @v12+1 -> @v12. ]
+      ] ~ [
+       ? @v9 == 256 [
+        0 -> @v27. 0 -> @v12.
+        ?? @v12 < @v23 [
+         @v0+2048+@v12*640 -> @v14. 0 -> @v13. 1 -> @v16.
+         ?? @v13 <= @v11 [ ? :load8[@v0+@v13] != :load8[@v14+@v13] [ 0 -> @v16. ] @v13+1 -> @v13. ]
+         ? @v16 [ @v14 -> @v27. ] @v12+1 -> @v12.
+        ]
+        ? @v27 == 0 [ !store64[@web+16|65]. ] ~ [
+         :load64[@v27+32] -> @v24. :load64[@v27+40] -> @v25. :load64[@v27+48] -> @v26.
+         0 -> @v12. ?? @v12 < @v26 [ !store8[@v0+1024+@v12|:load8[@v27+64+@v12]]. @v12+1 -> @v12. ]
+        ]
+       ] ~ [ !store64[@web+16|65]. ]
+      ]
+     ]
+     ? :load64[@web+16] == 0 [
+      ? @v29 == 0 [
+       @v24 -> @v17. @v25 -> @v18. @v26 -> @v19. 1 -> @v29.
+       0 -> @v12. ?? @v12 < @v19 [ !store8[@v0+512+@v12|:load8[@v0+1024+@v12]]. @v12+1 -> @v12. ]
+      ] ~ [
+       ? (@v17 == 0)*(@v24 == 0) [
+        ? @v18 > 9007199254740991-@v25 [ !store64[@web+16|65]. ] ~ [ @v18+@v25 -> @v18. ]
+       ] ~ [
+        # JavaScript + converts a numeric operand to decimal when concatenating.
+        ? @v17 == 0 [
+         @v18 -> @v12. 1000000000000000 -> @v13. 0 -> @v19. 0 -> @v15.
+         ?? @v13 [
+          0 -> @v14. ?? @v12 >= @v13 [ @v12-@v13 -> @v12. @v14+1 -> @v14. ]
+          ? @v14+@v15+(@v13 == 1) [ !store8[@v0+512+@v19|48+@v14]. @v19+1 -> @v19. 1 -> @v15. ]
+          1 -> @v16. ?? @v16*10 < @v13 [ @v16*10 -> @v16. ] ? @v13 == 1 [ 0 -> @v16. ] @v16 -> @v13.
+         ] 1 -> @v17.
+        ]
+        ? @v24 == 0 [
+         @v25 -> @v12. 1000000000000000 -> @v13. 0 -> @v26. 0 -> @v15.
+         ?? @v13 [
+          0 -> @v14. ?? @v12 >= @v13 [ @v12-@v13 -> @v12. @v14+1 -> @v14. ]
+          ? @v14+@v15+(@v13 == 1) [ !store8[@v0+1024+@v26|48+@v14]. @v26+1 -> @v26. 1 -> @v15. ]
+          1 -> @v16. ?? @v16*10 < @v13 [ @v16*10 -> @v16. ] ? @v13 == 1 [ 0 -> @v16. ] @v16 -> @v13.
+         ] 1 -> @v24.
+        ]
+        ? @v19+@v26 > 511 [ !store64[@web+16|28]. ] ~ [
+         0 -> @v12. ?? @v12 < @v26 [ !store8[@v0+512+@v19+@v12|:load8[@v0+1024+@v12]]. @v12+1 -> @v12. ] @v19+@v26 -> @v19.
+        ]
+       ]
+      ]
+      51 -> @v8. 1000 -> @v6.
+     ]
+    ]
+    ? @v7 == 51 [
+     ? @v9 == 43 [ 50 -> @v8. 1000 -> @v6. ] ~ [
+      ? (@v9 == 59)+(@v9 == 0) [ 60 -> @v6. ] ~ [ !store64[@web+16|65]. ]
+     ]
+    ]
+    ? @v7 == 60 [
+     ? @v20 == 3 [
+      ? @v17 == 0 [
+       @v18 -> @v12. 1000000000000000 -> @v13. 0 -> @v19. 0 -> @v15.
+       ?? @v13 [
+        0 -> @v14. ?? @v12 >= @v13 [ @v12-@v13 -> @v12. @v14+1 -> @v14. ]
+        ? @v14+@v15+(@v13 == 1) [ !store8[@v0+512+@v19|48+@v14]. @v19+1 -> @v19. 1 -> @v15. ]
+        1 -> @v16. ?? @v16*10 < @v13 [ @v16*10 -> @v16. ] ? @v13 == 1 [ 0 -> @v16. ] @v16 -> @v13.
+       ]
+      ]
+      @web+4096+(@v21-1)*1024 -> @v14. 0 -> @v12.
+      ?? @v12 < @v19 [ !store8[@v14+512+@v12|:load8[@v0+512+@v12]]. @v12+1 -> @v12. ]
+      !store8[@v14+512+@v19|0]. !store64[@v14+480|@v14+512]. !store64[@v14+488|@v19].
+      ? :bitand[:load64[@v14+496]|1] == 0 [ !store64[@v14+496|:load64[@v14+496]+1]. ]
+     ] ~ [
+      @v0+2048+(@v21-1)*640 -> @v14.
+      ? @v20 == 1 [
+       0 -> @v12. ?? :load8[@v0+1600+@v12] [ !store8[@v14+@v12|:load8[@v0+1600+@v12]]. @v12+1 -> @v12. ]
+       !store8[@v14+@v12|0]. !store64[@v14+56|@v22]. @v23+1 -> @v23.
+      ]
+      !store64[@v14+32|@v17]. !store64[@v14+40|@v18]. !store64[@v14+48|@v19].
+      0 -> @v12. ?? @v12 < @v19 [ !store8[@v14+64+@v12|:load8[@v0+512+@v12]]. @v12+1 -> @v12. ]
+      !store8[@v14+64+@v19|0].
+     ]
+     ? @v9 == 0 [ @v1+1 -> @v1. 1 -> @v6. ] ~ [ 10 -> @v8. 1000 -> @v6. ]
+    ]
+    ? @v7 == 1000 [
+     0 -> @v9. 0 -> @v10. 0 -> @v11. 1 -> @v30.
+     # Whitespace/comments: every step advances or terminates.
+     ?? (@v5 < @v4)*@v30*(:load64[@web+16] == 0) [
+      :load8[@v3+@v5] -> @v13. 0 -> @v30.
+      ? (@v13 == 32)+(@v13 == 9)+(@v13 == 10)+(@v13 == 13) [ @v5+1 -> @v5. 1 -> @v30. ]
+      ? (@v13 == 47)*(@v4-@v5 >= 2) [
+       :load8[@v3+@v5+1] -> @v14.
+       ? @v14 == 47 [
+        @v5+2 -> @v5. 1 -> @v15.
+        ?? (@v5 < @v4)*@v15 [
+         :load8[@v3+@v5] -> @v14.
+         ? (@v14 == 10)+(@v14 == 13) [ 0 -> @v15. ] ~ [ @v5+1 -> @v5. ]
+        ] 1 -> @v30. 47 -> @v14.
+       ]
+       ? @v14 == 42 [
+        @v5+2 -> @v5. 0 -> @v15.
+        ?? (@v5 < @v4)*(@v15 == 0) [
+         ? @v4-@v5 >= 2 [ ? (:load8[@v3+@v5] == 42)*(:load8[@v3+@v5+1] == 47) [ 1 -> @v15. @v5+2 -> @v5. ] ]
+         ? @v15 == 0 [ @v5+1 -> @v5. ]
+        ]
+        ? @v15 == 0 [ !store64[@web+16|65]. ] 1 -> @v30.
+       ]
+      ]
+     ]
+     ? (@v5 < @v4)*(:load64[@web+16] == 0) [
+      :load8[@v3+@v5] -> @v13.
+      ? ((@v13 >= 65)*(@v13 <= 90))+((@v13 >= 97)*(@v13 <= 122))+(@v13 == 95)+(@v13 == 36) [
+       256 -> @v9. 1 -> @v30.
+       ?? (@v5 < @v4)*@v30*(:load64[@web+16] == 0) [
+        :load8[@v3+@v5] -> @v13.
+        ? ((@v13 >= 65)*(@v13 <= 90))+((@v13 >= 97)*(@v13 <= 122))+((@v13 >= 48)*(@v13 <= 57))+(@v13 == 95)+(@v13 == 36) [
+         ? @v11 >= 31 [ !store64[@web+16|65]. ] ~ [ !store8[@v0+@v11|@v13]. @v11+1 -> @v11. @v5+1 -> @v5. ]
+        ] ~ [ 0 -> @v30. ]
+       ] !store8[@v0+@v11|0].
+      ] ~ [
+       ? (@v13 >= 48)*(@v13 <= 57) [
+        257 -> @v9. @v13 -> @v16. 1 -> @v30.
+        ?? (@v5 < @v4)*@v30*(:load64[@web+16] == 0) [
+         :load8[@v3+@v5] -> @v13.
+         ? (@v13 >= 48)*(@v13 <= 57) [
+          ? (@v10 > 900719925474099)+((@v10 == 900719925474099)*(@v13 > 49))+((@v11 != 0)*(@v16 == 48)) [ !store64[@web+16|65]. ] ~ [
+           @v10*10+@v13-48 -> @v10. @v11+1 -> @v11. @v5+1 -> @v5.
+          ]
+         ] ~ [ 0 -> @v30. ]
+        ]
+       ] ~ [
+        ? (@v13 == 34)+(@v13 == 39) [
+         258 -> @v9. @v13 -> @v16. @v5+1 -> @v5. 0 -> @v30.
+         ?? (@v5 < @v4)*(@v30 == 0)*(:load64[@web+16] == 0) [
+          :load8[@v3+@v5] -> @v13. @v5+1 -> @v5.
+          ? @v13 == @v16 [ 1 -> @v30. ] ~ [
+           ? @v13 < 32 [ !store64[@web+16|65]. ]
+           ? @v13 == 92 [
+            ? @v5 >= @v4 [ !store64[@web+16|65]. ] ~ [
+             :load8[@v3+@v5] -> @v13. @v5+1 -> @v5. 0 -> @v14.
+             ? (@v13 == 92)+(@v13 == 34)+(@v13 == 39) [ 1 -> @v14. ]
+             ? @v13 == 110 [ 10 -> @v13. 1 -> @v14. ]
+             ? @v13 == 114 [ 13 -> @v13. 1 -> @v14. ]
+             ? @v13 == 116 [ 9 -> @v13. 1 -> @v14. ]
+             ? @v14 == 0 [ !store64[@web+16|65]. ]
+            ]
+           ]
+           ? @v11 >= 511 [ !store64[@web+16|28]. ] ~ [ !store8[@v0+@v11|@v13]. @v11+1 -> @v11. ]
+          ]
+         ]
+         ? (@v30 == 0)*(:load64[@web+16] == 0) [ !store64[@web+16|65]. ] !store8[@v0+@v11|0].
+        ] ~ [
+         ? (@v13 == 46)+(@v13 == 40)+(@v13 == 41)+(@v13 == 61)+(@v13 == 59)+(@v13 == 43) [ @v13 -> @v9. @v5+1 -> @v5. ] ~ [ !store64[@web+16|65]. ]
+        ]
+       ]
+      ]
+     ]
+     @v8 -> @v6.
+    ]
+   ]
+   ? :load64[@web+16] [
+    ? :bitand[:load64[@web+24]|4] == 0 [ !store64[@web+24|:load64[@web+24]+4]. ]
+   ]
+  ]
+  !switch[@web+1408|@web+1024].
+ ]
+]
+# Prime the worker's explicit initial handshake before the first request.
+!switch[@web+1024|@web+1408].
+1 -> @t1.
+?? @t1 <= 320 [
+ !store64[@web+16|0]. !store64[@web+24|0]. !store64[@web+32|2].
+ @web+4096 -> @t4. 0 -> @t5. ?? @t5 < 3072 [ !store8[@t4+@t5|0]. @t5+1 -> @t5. ]
+ !store64[@t4+8|1]. !store8[@t4+32|120]. !store64[@t4+480|@t4+512].
+ !store8[@t4+512|79]. !store8[@t4+513|108]. !store8[@t4+514|100]. !store64[@t4+488|3].
+ !store64[@t4+1024+8|4].
+ "document.getElementById('x').textContent='Hello';" -> @t2. "Hello" -> @t3. 0 -> @t6. 0 -> @t10.
+ ? @t1 == 2 [ "let a=2; const b=3; document.getElementById('x').textContent=a+b;" -> @t2. "5" -> @t3. ]
+ ? @t1 == 3 [ "var a='Zero'; a=a+' Web'; document.getElementById('x').textContent=a;" -> @t2. "Zero Web" -> @t3. ]
+ ? @t1 == 4 [ "document.getElementById('x').textContent='Count: '+12+3;" -> @t2. "Count: 123" -> @t3. ]
+ ? @t1 == 5 [ "document.getElementById('x').textContent=12+3+' items';" -> @t2. "15 items" -> @t3. ]
+ ? @t1 == 6 [ "// comment\n let a=4; /* ignored */ document . getElementById ( 'x' ) . textContent = a + 6" -> @t2. "10" -> @t3. ]
+ ? @t1 == 7 [ "document.getElementById('x').textContent=0;" -> @t2. "0" -> @t3. ]
+ ? @t1 == 8 [ "document.getElementById('x').textContent=9007199254740991;" -> @t2. "9007199254740991" -> @t3. ]
+ ? @t1 == 9 [ "document.getElementById('x').textContent='Line\\nTwo\\t!';" -> @t2. "Line\nTwo\t!" -> @t3. ]
+ ? @t1 == 10 [ "document.getElementById('x').textContent='';" -> @t2. "" -> @t3. ]
+ ? @t1 == 11 [ "const a=1; a=2;" -> @t2. 65 -> @t6. ]
+ ? @t1 == 12 [ "let a=1; let a=2;" -> @t2. 65 -> @t6. ]
+ ? @t1 == 13 [ "document.getElementById('missing').textContent='x';" -> @t2. 65 -> @t6. ]
+ ? @t1 == 14 [ "document.getElementById('x').textContent=unknown;" -> @t2. 65 -> @t6. ]
+ ? @t1 == 15 [ "document.getElementById('x').textContent=9007199254740992;" -> @t2. 65 -> @t6. ]
+ ? @t1 == 16 [ "document.getElementById('x').textContent=9007199254740991+1;" -> @t2. 65 -> @t6. ]
+ ? @t1 == 17 [ "document.getElementById('x').textContent=01;" -> @t2. 65 -> @t6. ]
+ ? @t1 == 18 [ "document.getElementById('x').textContent=1.5;" -> @t2. 65 -> @t6. ]
+ ? @t1 == 19 [ "document.getElementById('x').textContent=-1;" -> @t2. 65 -> @t6. ]
+ ? @t1 == 20 [ "while(1){}" -> @t2. 65 -> @t6. ]
+ ? @t1 == 21 [ "document.getElementById('x').textContent='unterminated" -> @t2. 65 -> @t6. ]
+ ? @t1 == 22 [ "/* unterminated" -> @t2. 65 -> @t6. ]
+ ? @t1 == 23 [ "document.getElementById('x').textContent='\\u0041';" -> @t2. 65 -> @t6. ]
+ ? @t1 == 24 [ "let a=1 let b=2;" -> @t2. 65 -> @t6. ]
+ ? @t1 == 25 [ "let document=3;" -> @t2. 65 -> @t6. ]
+ ? @t1 == 26 [ "eval('danger');" -> @t2. 65 -> @t6. ]
+ ? @t1 == 27 [ "fetch('http://invalid/');" -> @t2. 65 -> @t6. ]
+ ? @t1 == 28 [ "document.getElementById('x').innerHTML='x';" -> @t2. 65 -> @t6. ]
+ ? @t1 == 29 [ "document.getElementById('x').textContent='safe'; unknown();" -> @t2. 65 -> @t6. ]
+ ? @t1 == 30 [ "// only comment" -> @t2. "Old" -> @t3. ]
+ ? @t1 == 31 [ ";;;" -> @t2. "Old" -> @t3. ]
+ ? @t1 == 32 [ "" -> @t2. "Old" -> @t3. ]
+ ? @t1 == 33 [ "let $a_1=8; document.getElementById('x').textContent=$a_1;" -> @t2. "8" -> @t3. ]
+ ? @t1 == 34 [ "let abcdefghijklmnopqrstuvwxyzabcdef=1;" -> @t2. 65 -> @t6. ]
+ ? @t1 == 35 [ "let abcdefghijklmnopqrstuvwxyzabcde=7;document.getElementById('x').textContent=abcdefghijklmnopqrstuvwxyzabcde;" -> @t2. "7" -> @t3. ]
+ ? @t1 == 36 [ "document.getElementById('x').textContent='2'+3+4;" -> @t2. "234" -> @t3. ]
+ ? @t1 == 37 [ "document.getElementById('x').textContent=2+3+'4';" -> @t2. "54" -> @t3. ]
+ ? @t1 == 38 [ "document.getElementById('x').textContent='\\\"'+\"'\"+'\\\\';" -> @t2. "\"'\\" -> @t3. ]
+ ? @t1 == 39 [ "let a=4;" -> @t2. "9" -> @t3. ]
+ ? @t1 == 40 [ "not executable!" -> @t2. "Old" -> @t3. "application/python" -> @t10. ]
+ ? @t1 == 41 [ "not executable!" -> @t2. "Old" -> @t3. "module" -> @t10. ]
+ ? @t1 == 42 [ " Text/JavaScript " -> @t10. ]
+ ? @t1 == 43 [ "application/javascript" -> @t10. ]
+ ? @t1 == 44 [ 123 -> @t6. !store64[@web+16|123]. "Old" -> @t3. ]
+ ? @t1 == 45 [ "document.getElementById('x').textContent='x';" -> @t2. 70 -> @t6. ]
+ ? @t1 == 46 [ "document.getElementById('x').textContent='x';" -> @t2. 70 -> @t6. ]
+ ? @t1 == 47 [ "document.getElementById('x').textContent='x';" -> @t2. 70 -> @t6. ]
+ ? (@t1 == 48)+(@t1 == 49) [ "" -> @t3. ]
+ ? @t1 == 50 [ "63" -> @t3. ]
+ ? @t1 == 51 [ 28 -> @t6. ]
+ ? @t1 == 52 [ 28 -> @t6. ]
+ ? @t1 == 53 [ "let a=1; let b=a; a=2; document.getElementById('x').textContent=b;" -> @t2. "1" -> @t3. ]
+ ? @t1 == 54 [ "let while=1;" -> @t2. 65 -> @t6. ]
+ ? @t1 == 55 [ "document.getElementById('x').textContent='one';document.getElementById('x').textContent='two';" -> @t2. "two" -> @t3. ]
+ ? @t1 == 56 [ 70 -> @t6. ]
+ ? @t1 == 57 [ 70 -> @t6. ]
+ ? @t1 == 58 [ "document.getElementById('x').textContent=9007199254740991+'!';" -> @t2. "9007199254740991!" -> @t3. ]
+ ? @t1 == 59 [ "document.getElementById('x').textContent='raw\nnewline';" -> @t2. 65 -> @t6. ]
+ ? @t1 == 60 [ "document.getElementById('x').textContent='escape\\" -> @t2. 65 -> @t6. ]
+ ? @t1 == 61 [ "not JavaScript!" -> @t2. "application/ld+json" -> @t10. "Old" -> @t3. ]
+ ? @t1 == 62 [ "/" -> @t2. 65 -> @t6. ]
+ ? @t1 == 63 [ "let a=2;//*" -> @t2. "Old" -> @t3. ]
+ ? @t1 == 64 [ "document.getElementById('x').textContent=2+3+4;" -> @t2. "9" -> @t3. ]
+ @web+1507328 -> @t7. 0 -> @t5.
+ ?? :load8[@t2+@t5] [ !store8[@t7+@t5|:load8[@t2+@t5]]. @t5+1 -> @t5. ]
+ !store64[@web|@t7]. !store64[@web+8|@t5]. !store64[@t4+1024+480|@t7]. !store64[@t4+1024+488|@t5].
+ ? @t10 [ 0 -> @t5. ?? :load8[@t10+@t5] [ !store8[@t4+1024+96+@t5|:load8[@t10+@t5]]. @t5+1 -> @t5. ] ]
+ ? @t1 == 39 [
+  @t7+:load64[@web+8] -> @t7. "document.getElementById('x').textContent=a+5;" -> @t2. 0 -> @t5.
+  ?? :load8[@t2+@t5] [ !store8[@t7+@t5|:load8[@t2+@t5]]. @t5+1 -> @t5. ]
+  !store64[@t4+2048+8|4]. !store64[@t4+2048+480|@t7]. !store64[@t4+2048+488|@t5]. !store64[@web+8|:load64[@web+8]+@t5]. !store64[@web+32|3].
+ ]
+ ? @t1 == 45 [ !store64[@t4+1024+480|1]. ]
+ ? @t1 == 46 [ !store64[@web+32|513]. ]
+ ? @t1 == 47 [ !store64[@t4+1024+488|65537]. ]
+ ? (@t1 == 48)+(@t1 == 49) [
+  @web+1507328 -> @t7. "document.getElementById('x').textContent='" -> @t2. 0 -> @t5.
+  ?? :load8[@t2+@t5] [ !store8[@t7+@t5|:load8[@t2+@t5]]. @t5+1 -> @t5. ]
+  511 -> @t11. ? @t1 == 49 [ 512 -> @t11. 28 -> @t6. ]
+  0 -> @t12. ?? @t12 < @t11 [ !store8[@t7+@t5|65]. @t5+1 -> @t5. @t12+1 -> @t12. ]
+  !store8[@t7+@t5|39]. !store8[@t7+@t5+1|59]. @t5+2 -> @t5.
+  !store64[@web|@t7]. !store64[@web+8|@t5]. !store64[@t4+1024+480|@t7]. !store64[@t4+1024+488|@t5].
+ ]
+ ? (@t1 == 50)+(@t1 == 51) [
+  @web+1507328 -> @t7. 0 -> @t5. 0 -> @t11. 64 -> @t12. ? @t1 == 51 [ 65 -> @t12. ]
+  ?? @t11 < @t12 [
+   "let a" -> @t2. 0 -> @t13. ?? :load8[@t2+@t13] [ !store8[@t7+@t5|:load8[@t2+@t13]]. @t5+1 -> @t5. @t13+1 -> @t13. ]
+   @t11 -> @t14. 0 -> @t15. ?? @t14 >= 10 [ @t14-10 -> @t14. @t15+1 -> @t15. ]
+   ? @t15 [ !store8[@t7+@t5|48+@t15]. @t5+1 -> @t5. ] !store8[@t7+@t5|48+@t14]. @t5+1 -> @t5.
+   !store8[@t7+@t5|61]. @t5+1 -> @t5.
+   ? @t15 [ !store8[@t7+@t5|48+@t15]. @t5+1 -> @t5. ] !store8[@t7+@t5|48+@t14]. @t5+1 -> @t5.
+   !store8[@t7+@t5|59]. @t5+1 -> @t5. @t11+1 -> @t11.
+  ]
+  "document.getElementById('x').textContent=a63;" -> @t2. 0 -> @t13. ?? :load8[@t2+@t13] [ !store8[@t7+@t5|:load8[@t2+@t13]]. @t5+1 -> @t5. @t13+1 -> @t13. ]
+  !store64[@web+8|@t5]. !store64[@t4+1024+488|@t5].
+ ]
+ ? @t1 == 52 [
+  @web+1507328 -> @t7. "document.getElementById('x').textContent='" -> @t2. 0 -> @t5.
+  ?? :load8[@t2+@t5] [ !store8[@t7+@t5|:load8[@t2+@t5]]. @t5+1 -> @t5. ]
+  0 -> @t12. ?? @t12 < 256 [ !store8[@t7+@t5|65]. @t5+1 -> @t5. @t12+1 -> @t12. ]
+  !store8[@t7+@t5|39]. !store8[@t7+@t5+1|43]. !store8[@t7+@t5+2|39]. @t5+3 -> @t5.
+  0 -> @t12. ?? @t12 < 256 [ !store8[@t7+@t5|66]. @t5+1 -> @t5. @t12+1 -> @t12. ]
+  !store8[@t7+@t5|39]. !store8[@t7+@t5+1|59]. @t5+2 -> @t5.
+  !store64[@web+8|@t5]. !store64[@t4+1024+488|@t5].
+ ]
+ ? @t1 == 56 [ 0 -> @t5. ?? @t5 < 128 [ !store8[@t4+1024+96+@t5|65]. @t5+1 -> @t5. ] ]
+ ? @t1 == 57 [ !store64[@t4+1024+480|-4]. ]
+ ? @t1 > 64 [
+  "abcde0123456789/!*\"' =+;.$_()\n\t" -> @t2. 0 -> @t11. ?? :load8[@t2+@t11] [ @t11+1 -> @t11. ]
+  @web+1507328 -> @t7. 0 -> @t5. @t1 -> @t12.
+  ?? @t5 < 256 [
+   :bitand[@t12*1664525+1013904223|0xffffffff] -> @t12. :bitand[:shr[@t12|16]|255] -> @t13.
+   ?? @t13 >= @t11 [ @t13-@t11 -> @t13. ]
+   !store8[@t7+@t5|:load8[@t2+@t13]]. @t5+1 -> @t5.
+  ] !store64[@web+8|256]. !store64[@t4+1024+488|256]. -1 -> @t6.
+ ]
+ # Guard local scratch, complete input immutability hash, and whole arena ends.
+ 0 -> @t5. ?? @t5 < 32 [ !store8[@web+739968+@t5|165]. !store8[@web+840000+@t5|165]. @t5+1 -> @t5. ]
+ 2166136261 -> @t8. 0 -> @t5.
+ ?? @t5 < :load64[@web+8] [ :bitand[(@t8*16777619)+:load8[:load64[@web]+@t5]|0xffffffff] -> @t8. @t5+1 -> @t5. ]
+ !switch[@web+1024|@web+1408].
+ ? (@t6 != -1)*(:load64[@web+16] != @t6) [ "JavaScript status mismatch case " -> @t2. 0 -> @t5. ?? :load8[@t2+@t5] [ !put[:load8[@t2+@t5]]. @t5+1 -> @t5. ] @t1 -> @t14. 0 -> @t15. ?? @t14 >= 10 [ @t14-10 -> @t14. @t15+1 -> @t15. ] !put[48+@t15]. !put[48+@t14]. !put[32]. :load64[@web+16] -> @t14. 0 -> @t15. ?? @t14 >= 10 [ @t14-10 -> @t14. @t15+1 -> @t15. ] !put[48+@t15]. !put[48+@t14]. !put[10]. !exit[1]. ]
+ ? @t6 == -1 [ ? (:load64[@web+16] != 0)*(:load64[@web+16] != 65)*(:load64[@web+16] != 28) [ !exit[13]. ] ]
+ ? @t6 == 0 [
+  ? @t1 != 48 [
+   0 -> @t5. ?? :load8[@t3+@t5] [ ? :load8[@t4+512+@t5] != :load8[@t3+@t5] [ @t1 -> @t14. 0 -> @t15. ?? @t14 >= 10 [ @t14-10 -> @t14. @t15+1 -> @t15. ] !put[48+@t15]. !put[48+@t14]. !exit[2]. ] @t5+1 -> @t5. ]
+   ? (:load8[@t4+512+@t5] != 0)+(:load64[@t4+488] != @t5) [ @t1 -> @t14. 0 -> @t15. ?? @t14 >= 10 [ @t14-10 -> @t14. @t15+1 -> @t15. ] !put[48+@t15]. !put[48+@t14]. !exit[3]. ]
+  ] ~ [
+   ? :load64[@t4+488] != 511 [ !exit[4]. ]
+   0 -> @t5. ?? @t5 < 511 [ ? :load8[@t4+512+@t5] != 65 [ !exit[5]. ] @t5+1 -> @t5. ]
+   ? :load8[@t4+1023] != 0 [ !exit[6]. ]
+  ]
+ ]
+ ? (:load64[@web+16] != 0)*(@t6 != 123) [ ? :bitand[:load64[@web+24]|4] == 0 [ !exit[7]. ] ]
+ ? @t1 == 41 [ ? :bitand[:load64[@web+24]|4] == 0 [ !exit[8]. ] ]
+ ? @t1 == 44 [ ? :load64[@web+24] [ !exit[9]. ] ]
+ 2166136261 -> @t9. 0 -> @t5.
+ ?? @t5 < :load64[@web+8] [ :bitand[(@t9*16777619)+:load8[:load64[@web]+@t5]|0xffffffff] -> @t9. @t5+1 -> @t5. ]
+ ? @t8 != @t9 [ !exit[10]. ]
+ 0 -> @t5. ?? @t5 < 32 [ ? (:load8[@web+739968+@t5] != 165)+(:load8[@web+840000+@t5] != 165) [ !exit[11]. ] @t5+1 -> @t5. ]
+ 0 -> @t5. ?? @t5 < 64 [ ? (:load8[@t0+@t5] != 165)+(:load8[@web+4194304+@t5] != 165) [ !exit[12]. ] @t5+1 -> @t5. ]
+ @t1+1 -> @t1.
+]
+"JavaScript profile: 64 semantic/boundary checks and 256 malformed probes passed.\n" -> @t2.
+0 -> @t5. ?? :load8[@t2+@t5] [ !put[:load8[@t2+@t5]]. @t5+1 -> @t5. ]
+!exit[0].

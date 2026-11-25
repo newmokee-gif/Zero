@@ -1,0 +1,56 @@
+ZTEXT00100000e8041ddc5990000000
+Ezero file extension validation, 2026-11-17
+
+Completed on the frozen own Zero compiler b9b807:
+  Linux suite: 58/58 checks passed.
+  Windows suite: 46/46 checks passed, native PE programs executed under Wine.
+Each suite includes actual file/runtime execution and frontend arity/path
+checks; the compile-only cases are not presented as runtime executions.
+Frontend, packer and generated runtime are original Zero. Environmental test
+orchestration is private external validation, not product source or a runtime
+dependency. No claim of testing on physical Windows hardware is made.
+
+Covered create/save/read/readfile/writefile/del/rm/watch/search/go/disks;
+existing-file preservation; explicit save replacement; empty and Unicode text;
+Unicode/spaced native paths; exact 65536-byte round trip and overflow rejection;
+listing 2048/2049-item and byte limits; repeated listing collection with live
+path and retained text roots; one-based results; exact/*/? case-sensitive
+matching including accented and supplementary Unicode scalars; directory
+refusal; malformed UTF-8 and embedded NUL; invalid types and arities; bare Zero
+drive paths; and normal argument/list separator regression. Oversized save
+text was rejected before modifying an existing private fixture. Linux also
+checked final-symlink/FIFO refusal, invalid UTF-8 filenames and newline names.
+
+The first Windows candidate failed listing tests. Isolated probes identified
+incorrect stack displacements in the platform helper. The corrected compiler
+and its final stack-bound fix were used to rebuild every final Windows PE
+fixture. The entire suite then passed; failed preliminary runs are not counted.
+
+Independent real Zero OS verification by the guest service agent passed the
+compact files_guest.ezero sequence in BIOS32, BIOS64, UEFI32 and UEFI64. Each
+mode also handled a missing-file Ezero runtime error followed by a successful
+next program. The component's full VM fixture covered 40 terminal commands per
+mode, including Zero operations and reboot persistence. Canonical full OS evidence is
+verification/guest-files-0.12/report.ztext; native/Wine execution alone is not guest evidence.
+
+External detail reports:
+/tmp/zero-support/validation-0.12/ezero/linux-2bukgpum/results.txt
+/tmp/zero-support/validation-0.12/ezero/windows-pbxmf9a7/results.txt
+
+Passing finite checks is not proof of the absence of all defects. Native save
+is explicit non-atomic replacement. The guest writable ZeroFS profile still
+has eight slots, 31-byte ASCII names and 400 printable ASCII bytes per file.
+Guest applications share kernel memory; this API does not add process isolation.
+
+SHA256 of tested implementation and own fixtures:
+00c399c24d89e1c946c8dbfc3144c40a657d145067bd4aca5ebf8723f8ae613d  ezero/compiler.zero
+4ad3a2a36cecd23c9bc3fe120097c2239a5c6bc8c3b82ee6028d3464d2158b11  ezero/pack.zero
+d8e3150d894ab806ace33e90b49beb65b622266345d28777c73beb0eca63b948  ezero/runtime-prefix.zero.part
+3aa27d38eff55cf6d8e72a16da1d57a2a60c4d5bc0143df5f9a7cfaecd837858  ezero/runtime.zero.part
+beb269b9254db86f38dbc869ae13dd62ce9d39f4c5ae0bec19629105b2a26f37  ezero/tests/files.ezero
+f5f5437b07967bb661f7ff97d0ad7c87761642f91c1a71daf49fa0863a569ad2  ezero/tests/files_text.ezero
+e267ecf29d6feb12e5ce6d497598c8cbdf7932339447a84fca0a53b247a436e8  ezero/tests/files_listing_gc.ezero
+f94510d606e55bb1cbe6def8167fadae63b5c8f02803f8f1c7648730ee5453b1  ezero/tests/files_unicode_glob.ezero
+b8b9bd4798b5c4f6905193c90a0671aa6d6e126f4de76b7e7b145e9eb52b846c  ezero/tests/files_mutation.ezero
+760f03ee7dfa0fbf6ace9d570d1aea945de341a809e429fd9db946bb81e9acc4  ezero/tests/files_guest.ezero
+b9b807fa14b4aab9f2f5b52f676df5201be812acd973ef9aa5a5b9dbf9ad3d7a  frozen original Zero compiler

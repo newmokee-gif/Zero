@@ -1,0 +1,99 @@
+# Original Zero bytecode-to-Zero initializer writer. No foreign backend.
+:reserve[70016] => @data.
+0 => @length.
+0 => @read_count.
+0 => @done.
+0 => @offset.
+0 => @amount.
+0 => @i.
+0 => @j.
+0 => @byte.
+0 => @text.
+0 => @value.
+0 => @place.
+0 => @digit.
+0 => @started.
+0 => @phase.
+0 => @functions.
+0 => @instructions.
+0 => @constants.
+"0123456789abcdef" => @hex.
+?? @done == 0 [
+ :read[@data + @length | 70001 - @length] -> @read_count.
+ ? @read_count == 0 [ 1 -> @done. ] ~ [
+  ? @read_count == 0xfffffffffffffffc [ ] ~ [
+   ? @read_count > 70001 - @length [ !exit[1]. ]
+   @length + @read_count -> @length.
+   ? @length > 70000 [ !exit[1]. ]
+  ]
+ ]
+]
+? @length < 96 [ !exit[1]. ]
+? :load64[@data] != 0x31564d4f52455a45 [ !exit[1]. ]
+? :load64[@data + 8] != @length [ !exit[1]. ]
+? :load64[@data + 48] != 1 [ !exit[1]. ]
+? :load64[@data + 56] != 0 [ !exit[1]. ]
+:load64[@data + 16] -> @instructions.
+:load64[@data + 24] -> @functions.
+:load64[@data + 40] -> @constants.
+? (@instructions == 0) + (@instructions > 1536) [ !exit[1]. ]
+? (@functions == 0) + (@functions > 64) [ !exit[1]. ]
+? :load64[@data + 32] > 256 [ !exit[1]. ]
+? @constants > 16384 [ !exit[1]. ]
+? 64 + @functions * 32 + @instructions * 32 + @constants != @length [ !exit[1]. ]
+# Validate before producing any initializer. Package semantics are validated
+# by the compiler/runtime; the packer owns transport length and encoding.
+?? @offset < @length [
+ @length - @offset -> @amount. ? @amount > 1024 [ 1024 -> @amount. ]
+ !put[34].
+ 0 -> @i.
+ ?? @i < @amount [
+  :load8[@data + @offset + @i] -> @byte.
+  !put[:load8[@hex + :shr[@byte | 4]]].
+  !put[:load8[@hex + :bitand[@byte | 15]]].
+  @i + 1 -> @i.
+ ]
+ "\" -> @ez_encoded.\n0 -> @ez_decode_i.\n" -> @text.
+ 0 -> @j. ?? :load8[@text + @j] [ !put[:load8[@text + @j]]. @j + 1 -> @j. ]
+ # Emit two bounded decimal values with the same original formatter.
+ 0 -> @phase.
+ ?? @phase < 2 [
+  @amount -> @value. ? @phase == 1 [ @offset -> @value. ]
+  10000 -> @place. 0 -> @started.
+  ?? @place [
+   0 -> @digit.
+   ?? @value >= @place [ @value - @place -> @value. @digit + 1 -> @digit. ]
+   ? (@digit != 0) + @started + (@place == 1) [ !put[48 + @digit]. 1 -> @started. ]
+   ? @place == 10000 [ 1000 -> @place. ] ~ [
+    ? @place == 1000 [ 100 -> @place. ] ~ [
+     ? @place == 100 [ 10 -> @place. ] ~ [
+      ? @place == 10 [ 1 -> @place. ] ~ [ 0 -> @place. ]
+     ]
+    ]
+   ]
+  ]
+  ? @phase == 0 [
+   " -> @ez_decode_n.\n?? @ez_decode_i < @ez_decode_n [\n :load8[@ez_encoded + @ez_decode_i * 2] -> @ez_decode_a.\n :load8[@ez_encoded + @ez_decode_i * 2 + 1] -> @ez_decode_b.\n ? @ez_decode_a < 58 [ @ez_decode_a - 48 -> @ez_decode_a. ] ~ [ @ez_decode_a - 87 -> @ez_decode_a. ]\n ? @ez_decode_b < 58 [ @ez_decode_b - 48 -> @ez_decode_b. ] ~ [ @ez_decode_b - 87 -> @ez_decode_b. ]\n !store8[@ez_program + " -> @text.
+  ] ~ [
+   " + @ez_decode_i | @ez_decode_a * 16 + @ez_decode_b].\n @ez_decode_i + 1 -> @ez_decode_i.\n]\n" -> @text.
+  ]
+  0 -> @j. ?? :load8[@text + @j] [ !put[:load8[@text + @j]]. @j + 1 -> @j. ]
+  @phase + 1 -> @phase.
+ ]
+ @offset + @amount -> @offset.
+]
+@length -> @value. 10000 -> @place. 0 -> @started.
+?? @place [
+ 0 -> @digit.
+ ?? @value >= @place [ @value - @place -> @value. @digit + 1 -> @digit. ]
+ ? (@digit != 0) + @started + (@place == 1) [ !put[48 + @digit]. 1 -> @started. ]
+ ? @place == 10000 [ 1000 -> @place. ] ~ [
+  ? @place == 1000 [ 100 -> @place. ] ~ [
+   ? @place == 100 [ 10 -> @place. ] ~ [
+    ? @place == 10 [ 1 -> @place. ] ~ [ 0 -> @place. ]
+   ]
+  ]
+ ]
+]
+" -> @ez_program_bytes.\n" -> @text.
+0 -> @j. ?? :load8[@text + @j] [ !put[:load8[@text + @j]]. @j + 1 -> @j. ]

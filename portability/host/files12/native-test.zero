@@ -1,0 +1,20 @@
+# Native file primitive probe. Every operation runs only on caller-supplied paths.
+:reserve[65536] => @buffer.
+:argument[1] => @method.
+:argument[2] => @path.
+:load8[@method] => @kind.
+0 => @result.
+0 => @output.
+? @kind == 99 [ :create[@path] -> @result. ]
+? @kind == 100 [ :del[@path] -> @result. ]
+? @kind == 115 [ :save[@path|"Hello\n"|6] -> @result. ]
+? @kind == 120 [ :writefile[@path|"First\n"|6] -> @result. ]
+? @kind == 114 [ :readfile[@path|@buffer|65536] -> @result. 1 -> @output. ]
+? @kind == 119 [ :watch[@path|@buffer|65536] -> @result. 1 -> @output. ]
+? @kind == 102 [ :search[@path|@buffer|65536] -> @result. 1 -> @output. ]
+? @kind == 103 [ :go[@path] -> @result. ? @result == 0 [ :watch[""|@buffer|65536] -> @result. 1 -> @output. ] ]
+? @kind == 118 [ :disks[@buffer|65536] -> @result. 1 -> @output. ]
+? @kind == 98 [ :watch[@path|@buffer|1] -> @result. 1 -> @output. ]
+? @result == -1 [ !exit[65]. ]
+? @output [ ? :write[@buffer|@result] != @result [ !exit[74]. ] ]
+!exit[0].

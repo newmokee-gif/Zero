@@ -1,0 +1,9 @@
+lines("Still\r\nhere\n") => retained
+[retained | retained] => aliases
+empty => temporary
+10000 => repeat [
+Prefix + join(lines("Some\nUnicode 🌍\r\n") | /) => temporary
+]
+aliases[1] => show
+aliases[2][2] => show
+temporary => show

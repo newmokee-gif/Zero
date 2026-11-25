@@ -1,0 +1,29 @@
+
+:reserve[1958656] -> @file.
+!store64[@console + 2000 | @file].
+0 -> @i.
+?? @i < 1958656 [ !store32[@file + @i | 0x5a5a5a5a]. @i + 4 -> @i. ]
+!store64[@console | 2]. !store64[@console + 8 | @file + 128].
+!store64[@console + 16 | 800]. !store64[@console + 24 | 600].
+!store64[@console + 32 | 816]. !store64[@console + 40 | 1].
+:reserve[24576] -> @pointer.
+0 -> @i. ?? @i < 24576 [ !store8[@pointer + @i | 0]. @i + 1 -> @i. ]
+!store64[@console + 2048 | @pointer]. !store64[@console + 2056 | 3].
+!store64[@console + 2064 | 0]. !store64[@console + 2072 | 3].
+!store64[@console + 2080 | 0]. !store64[@console + 2088 | 1].
+:read[@echo_byte | 1] -> @i.
+? @i == 1 [
+ ? :load8[@echo_byte] == 115 [ !store64[@console + 2080 | 1]. !store64[@console + 2064 | 1]. ]
+ ? :load8[@echo_byte] == 114 [ !store64[@console + 40 | 0]. ]
+]
+0 -> @k.
+?? @k < 3 [
+ @pointer + @k * 8192 -> @c0.
+ !store64[@c0 | 1]. !store64[@c0 + 8 | @k + 1]. !store64[@c0 + 64 | 1].
+ "A:|> help\r\nZero windows.\r\nA:|> write FIRST\r\nFIRST\r\nA:|> " -> @message.
+ ? @k == 1 [ "B:|> read second\r\nSecond terminal\r\nB:|> " -> @message. ]
+ ? @k == 2 [ "A:|> tasks\r\nterminal RUN\r\ngraphics RUN\r\ncompute RUN\r\nA:|> " -> @message. ]
+ 0 -> @i. ?? :load8[@message + @i] [ !store8[@c0 + 1024 + @i | :load8[@message + @i]]. @i + 1 -> @i. ]
+ !store64[@c0 + 16 | @i]. !store64[@c0 + 24 | @i].
+ @k + 1 -> @k.
+]

@@ -1,0 +1,10 @@
+:reserve[16] => @buffer.
+!store64[@buffer | 0].
+? :filesync[:write["A" | 1]] != 18446744073709551615 [ !exit[1]. ]
+? :hostwait[:write["B" | 1]] != 18446744073709551615 [ !exit[2]. ]
+? :hostwait[86400000] != 18446744073709551615 [ !exit[3]. ]
+? :filesync[:hostwait[0]] != 18446744073709551615 [ !exit[4]. ]
+? 10 + :hostwait[0] != 9 [ !exit[5]. ]
+? :filesync[0] + 10 != 9 [ !exit[6]. ]
+!put[10].
+!exit[0].

@@ -1,0 +1,39 @@
+ZTEXT00100000e817e429fa70000000
+ZERO PS/2 POINTER ABI 1
+
+Implementation: original Zero only. A standard PS/2 auxiliary device produces three-byte relative packets. The keyboard remains translated set 1 and polled; mouse IRQs are not required. USB-only pointer devices are not implemented.
+
+All coordinates below are physical framebuffer pixels, zero-based internally. User-visible coordinates should start at one. Coordinates clamp to width-1 and height-1; each drawn cursor pixel is also clipped independently. The cursor is a 12 by 17 original arrow with 92 opaque pixels.
+
+Console fields, unsigned 64-bit unless noted:
+2520 device initialized, 0 or 1
+2528 packet phase, 0..2
+2536 current packet flags
+2544 current packet horizontal byte
+2552 current X
+2560 current Y
+2568 current button bits: 1 left, 2 right, 4 middle
+2576 completed packet generation
+2584 saved cursor background valid
+2592 last drawn X
+2600 last drawn Y
+2608 last drawn packet generation
+2616 reserved
+2624 left-button press generation
+2632 captured left-button press X
+2640 captured left-button press Y
+2648 read-only original cursor mask pointer
+2656..3055 private saved raw pixels, 100 entries of 32 bits
+
+Only mouse parts own console+2520..3055. The text renderer owns console+3072 onward. Existing filesystem state at console+2512 remains separate. Pointer saving and restoring never yield; this prevents a renderer slice from overwriting saved background while the snapshot is incomplete. An idle frame retains its existing pointer pixels. Before repainting, the renderer invalidates the saved overlay for pointer movement, layout or theme changes, unfinished frames, terminal caret changes, or a changed generation in any visible window. The visibility scan follows tiled, scrolling and modal-owner rules; hidden dirty windows do not trigger flicker. Drawing occurs after a complete scene and before the final switch. The pixel command updates a saved background entry and redraws the covered mask pixel if a user explicitly writes beneath the pointer.
+
+Integration locations:
+init.zero.part: after existing keyboard initialization, before worker startup.
+poll.zero.part: immediately after the main keyboard input read, with c0 holding controller status and c1 holding data. It preserves c0, c1 and character.
+restore.zero.part: first statement of the window renderer outer loop.
+draw.zero.part: last statement before that outer loop's final switch.
+pixel.zero.part: after the terminal pixel command writes the framebuffer, with c3 holding its color.
+
+The polling parser drops parity/timeout-corrupt packets, resynchronizes on the mandatory first-byte bit, and ignores movement in overflow packets while retaining button state. AUX bytes cannot become keyboard characters. The GUI compares press generation with its previous value; a held button does not repeatedly emit press events.
+
+Validation: the original native Zero compiler built an executable which passed signed relative movement, both clipping directions, overflow handling, button-edge capture, keyboard-byte isolation, controller-error reset, exact background restoration, edge-clipped restoration, and explicit pixel writes underneath the cursor. Actual device initialization, framebuffer display and relative movement passed BIOS64, BIOS32 without long mode, UEFI64 and UEFI32 VM verification. Release ISO SHA256 a95ac7d301c08e4e4dd100cdd4c6e4d1786635199bb1d0f60319aa95eb90dac5. The focused regression also verified four stable idle captures, both screen corners, clipped background restoration, a user pixel written while rendering was paused and preserved after resume and movement, and window/focus/theme changes. These are QEMU device tests, not a claim of testing every physical PS/2 controller.

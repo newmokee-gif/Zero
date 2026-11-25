@@ -1,0 +1,28 @@
+ 0 -> @result.
+ ? :load64[@editor+16] != @wantlength [ 1 -> @result. ]
+ ? :load64[@editor+24] != @wantcursor [ 2 -> @result. ]
+ ? :load64[@editor+40] != @wantdirty [ 3 -> @result. ]
+ ? :load64[@editor+8] != @wantmode [ 4 -> @result. ]
+ ? :load64[@editor+64] != @wantstatus [ 5 -> @result. ]
+ ? :load64[@console+2416] != @wantmodal [ 6 -> @result. ]
+ ? :load64[@editor+80] != @wantio [ 7 -> @result. ]
+ ? :load64[@editor+96] != @wantbuild [ 8 -> @result. ]
+ 0 -> @position.
+ ?? @position <= @wantlength [ ? :load8[@editor+512+@position] != :load8[@expected+@position] [ 9 -> @result. ] @position+1 -> @position. ]
+ ? (@check == 20)*((:load64[@editor+72] != 1)+(:load8[@editor+192] != 90)) [ 10 -> @result. ]
+ ? (@check == 25)*(:load64[@editor+48] != 1) [ 11 -> @result. ]
+ ? @result [
+  !put[70]. !put[65]. !put[73]. !put[76]. !put[32]. !put[48+:shr[@check|4]]. !put[:load8["0123456789abcdef"+:bitand[@check|15]]]. !put[32]. !put[:load8["0123456789abcdef"+@result]]. !put[10]. @failure+1 -> @failure.
+ ]
+ @editor -> @c5. !store64[@editor+56|1].
+ # INCLUDE EDITOR guest-render.zero.part
+ ? :load8[@editor+5391] != 0 [ @failure+1 -> @failure. ]
+ ? :load8[@editor+4096] != 90 [ @failure+1 -> @failure. ]
+ ? :load8[@editor+4096+4*81+4] != 124 [ @failure+1 -> @failure. ]
+ ? :load64[@editor+120] >= 1295 [ @failure+1 -> @failure. ]
+ @check+1 -> @check.
+]
+? @failure [ !exit[1]. ]
+"28 editor event/render checks passed.\n" -> @text. 0 -> @position.
+?? :load8[@text+@position] [ !put[:load8[@text+@position]]. @position+1 -> @position. ]
+!exit[0].

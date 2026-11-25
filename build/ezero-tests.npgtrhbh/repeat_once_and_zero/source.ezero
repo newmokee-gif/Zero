@@ -1,0 +1,10 @@
+3 => amount
+0 => total
+amount => repeat [
+ 0 => amount
+ total + 1 => total
+]
+total => show
+0 => repeat [
+ Never => show
+]

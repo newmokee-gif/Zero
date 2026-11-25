@@ -1,0 +1,4 @@
+arguments() => args
+readfile(args[1]) => text
+writefile(args[2] | text) => show
+readfile(args[2]) == text => show

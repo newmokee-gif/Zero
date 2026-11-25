@@ -1,0 +1,115 @@
+? :argcount[] != 1 [ !exit[90]. ] ? :load8[:argument[1]] != 88 [ !exit[91]. ]
+# Independent cooperative-thread regression. Compile with --host.
+# Two workers have separate native stacks, cloned local slots and fresh arenas.
+:reserve[512] => @shared.
+:reserve[80] => @main_context.
+:reserve[80] => @first_context.
+:reserve[80] => @second_context.
+:reserve[81920] => @first_stack.
+:reserve[81920] => @second_stack.
+:reserve[0] => @main_cursor.
+0 => @role.
+0 => @iteration.
+0 => @index.
+0 => @allocation.
+0 => @previous.
+0 => @expected.
+0x1111222233334444 => @private.
+?? @index < 512 [ !store8[@shared + @index | 0]. @index + 1 -> @index. ]
+0 -> @index.
+?? @index < 64 [
+ !store8[@first_stack + @index | 0x5a].
+ !store8[@second_stack + @index | 0xa5].
+ @index + 1 -> @index.
+]
+
+# Both the pending multiplication and addition operands must be cloned.
+5 * (7 + :fork[@first_context | @first_stack | 81920]) -> @role.
+? @role == 40 [
+ ? @private != 0x1111222233334444 [ !exit[11]. ]
+ :reserve[16] -> @previous.
+ ? @previous < @first_stack [ !exit[12]. ]
+ ? @previous + 4096 >= @first_stack + 81920 [ !exit[13]. ]
+ !store64[@shared | @previous].
+ 0 -> @iteration.
+ ?? @iteration < 128 [
+  :reserve[16] -> @allocation.
+  ? @allocation != @previous + 16 [ !exit[14]. ]
+  @allocation -> @previous.
+  0xaaaabbbb00000000 + @iteration -> @expected.
+  !store64[@allocation | @expected].
+  @private + 1 -> @private.
+  @iteration + 1 -> @iteration.
+  !store64[@shared + 16 | @iteration].
+  !switch[@first_context | @main_context].
+ ? :argcount[] != 1 [ !exit[90]. ] ? :load8[:argument[1]] != 88 [ !exit[91]. ]
+
+  ? :load64[@allocation] != @expected [ !exit[15]. ]
+  ? @private != 0x1111222233334444 + @iteration [ !exit[16]. ]
+ ]
+ !store64[@shared + 32 | 1].
+ ?? 1 [ !switch[@first_context | @main_context].
+ ? :argcount[] != 1 [ !exit[90]. ] ? :load8[:argument[1]] != 88 [ !exit[91]. ]
+ ]
+]
+? @role != 35 [ !exit[17]. ]
+? @private != 0x1111222233334444 [ !exit[18]. ]
+0x2222333344445555 -> @private.
+
+3 * (11 + :fork[@second_context | @second_stack | 81920]) -> @role.
+? @role == 36 [
+ ? @private != 0x2222333344445555 [ !exit[21]. ]
+ :reserve[16] -> @previous.
+ ? @previous < @second_stack [ !exit[22]. ]
+ ? @previous + 4096 >= @second_stack + 81920 [ !exit[23]. ]
+ !store64[@shared + 8 | @previous].
+ 0 -> @iteration.
+ ?? @iteration < 128 [
+  :reserve[16] -> @allocation.
+  ? @allocation != @previous + 16 [ !exit[24]. ]
+  @allocation -> @previous.
+  0xccccdddd00000000 + @iteration -> @expected.
+  !store64[@allocation | @expected].
+  @private + 1 -> @private.
+  @iteration + 1 -> @iteration.
+  !store64[@shared + 24 | @iteration].
+  !switch[@second_context | @main_context].
+ ? :argcount[] != 1 [ !exit[90]. ] ? :load8[:argument[1]] != 88 [ !exit[91]. ]
+
+  ? :load64[@allocation] != @expected [ !exit[25]. ]
+  ? @private != 0x2222333344445555 + @iteration [ !exit[26]. ]
+ ]
+ !store64[@shared + 40 | 1].
+ ?? 1 [ !switch[@second_context | @main_context].
+ ? :argcount[] != 1 [ !exit[90]. ] ? :load8[:argument[1]] != 88 [ !exit[91]. ]
+ ]
+]
+? @role != 33 [ !exit[27]. ]
+? @private != 0x2222333344445555 [ !exit[28]. ]
+? :load64[@first_context + 72] == 0 [ !exit[29]. ]
+? :load64[@second_context + 72] == 0 [ !exit[30]. ]
+0x3333444455556666 -> @private.
+0 -> @iteration.
+?? @iteration < 128 [
+ !switch[@main_context | @first_context].
+ ? :load64[@shared + 16] != @iteration + 1 [ !exit[31]. ]
+ !switch[@main_context | @second_context].
+ ? :load64[@shared + 24] != @iteration + 1 [ !exit[32]. ]
+ ? @private != 0x3333444455556666 [ !exit[33]. ]
+ ? :reserve[0] != @main_cursor [ !exit[34]. ]
+ @iteration + 1 -> @iteration.
+]
+!switch[@main_context | @first_context].
+!switch[@main_context | @second_context].
+? :load64[@shared + 32] != 1 [ !exit[35]. ]
+? :load64[@shared + 40] != 1 [ !exit[36]. ]
+? :load64[@shared] == :load64[@shared + 8] [ !exit[37]. ]
+0 -> @index.
+?? @index < 64 [
+ ? :load8[@first_stack + @index] != 0x5a [ !exit[38]. ]
+ ? :load8[@second_stack + @index] != 0xa5 [ !exit[39]. ]
+ @index + 1 -> @index.
+]
+!put[84]. !put[72]. !put[82]. !put[69]. !put[65].
+!put[68]. !put[83]. !put[32]. !put[79]. !put[75]. !put[10].
+!exit[0].

@@ -1,0 +1,8 @@
+# Original Zero Studio example. F5 builds the current buffer.
+1 => @number.
+?? @number <= 5 [
+ !put[@number + 48].
+ !put[10].
+ @number + 1 -> @number.
+]
+!exit[0].

@@ -1,0 +1,166 @@
+ZTEXT00100002a3639bd810d0000000
+Documentation and fixture format migration
+
+149 additional authored documents, plain text fixtures, checksum records and
+TSV records were encoded through original zero-text make and compared against
+the intended payload bytes. Every encoding succeeded. Each output has a real
+ZTEXT001 header, exact length and checksum; files were not merely renamed.
+The earlier checker/text migration encoded161 containers. The separate Ezero
+owner migrated14 files. Current verification reports may add further containers.
+
+Active workflow documents were rewritten around zero-integrate, zero-build,
+zero-check and zero-text. Historical notes identify removed runners and past
+results as history, not current runnable instructions or current certification.
+Top-level README/WORKSTATE/verification/SHA256 and generated artifact removal
+were owned by the main integration task; Ezero docs by the Ezero owner.
+
+Additional authored path migrations:
+BIOS-GRAPHICS.txt -> BIOS-GRAPHICS.ztext
+BIOS.txt -> BIOS.ztext
+COMPATIBLE-DISKS.txt -> COMPATIBLE-DISKS.ztext
+CONSOLE.txt -> CONSOLE.ztext
+DISTRIBUTIONS.txt -> DISTRIBUTIONS.ztext
+DRIVES.txt -> DRIVES.ztext
+IMAGE.txt -> IMAGE.ztext
+ISO.txt -> ISO.ztext
+KERNEL.txt -> KERNEL.ztext
+LANGUAGE.txt -> LANGUAGE.ztext
+MIGRATION.txt -> MIGRATION.ztext
+PHILOSOPHY.txt -> PHILOSOPHY.ztext
+REAL.txt -> REAL.ztext
+ROADMAP.txt -> ROADMAP.ztext
+SELFHOST.txt -> SELFHOST.ztext
+SYNTAX.txt -> SYNTAX.ztext
+UEFI-CONSOLE.txt -> UEFI-CONSOLE.ztext
+UEFI-NOTES.txt -> UEFI-NOTES.ztext
+UEFI-REVIEW.txt -> UEFI-REVIEW.ztext
+UEFI32.txt -> UEFI32.ztext
+VIRTUALBOX.txt -> VIRTUALBOX.ztext
+WINDOWS.txt -> WINDOWS.ztext
+X86.txt -> X86.ztext
+apps/README.txt -> apps/README.ztext
+audit-kernel.txt -> audit-kernel.ztext
+audit-loader.txt -> audit-loader.ztext
+bootstrap/NOTES.txt -> bootstrap/NOTES.ztext
+bootstrap/network448.sha256 -> bootstrap/network448.ztext
+bootstrap/zero-0.10.sha256 -> bootstrap/zero-0.10.ztext
+bootstrap/zero-0.6.sha256 -> bootstrap/zero-0.6.ztext
+bootstrap/zero-0.7.sha256 -> bootstrap/zero-0.7.ztext
+bootstrap/zero-0.9.sha256 -> bootstrap/zero-0.9.ztext
+fs/ABI.txt -> fs/ABI.ztext
+fs/btrfs-profile.txt -> fs/btrfs-profile.ztext
+fs/discovery-profile.txt -> fs/discovery-profile.ztext
+fs/ext4-profile.txt -> fs/ext4-profile.ztext
+fs/ext4-verification.txt -> fs/ext4-verification.ztext
+fs/ntfs-profile.txt -> fs/ntfs-profile.ztext
+installer/README.txt -> installer/README.ztext
+installer/STATUS.txt -> installer/STATUS.ztext
+installer/boot/README.txt -> installer/boot/README.ztext
+net/ABI.txt -> net/ABI.ztext
+net/BOOT-CAPACITY-STATUS.txt -> net/BOOT-CAPACITY-STATUS.ztext
+net/PORTS-STATUS.txt -> net/PORTS-STATUS.ztext
+net/STATUS.txt -> net/STATUS.ztext
+net/WIFI-STATUS.txt -> net/WIFI-STATUS.ztext
+net/wifi-ABI.txt -> net/wifi-ABI.ztext
+net/wifi-fixtures/auth-failure.txt -> net/wifi-fixtures/auth-failure.ztext
+net/wifi-fixtures/backspace.txt -> net/wifi-fixtures/backspace.ztext
+net/wifi-fixtures/cancel-connect.txt -> net/wifi-fixtures/cancel-connect.ztext
+net/wifi-fixtures/cancel-password.txt -> net/wifi-fixtures/cancel-password.ztext
+net/wifi-fixtures/cards.txt -> net/wifi-fixtures/cards.ztext
+net/wifi-fixtures/connected.txt -> net/wifi-fixtures/connected.ztext
+net/wifi-fixtures/connecting.txt -> net/wifi-fixtures/connecting.ztext
+net/wifi-fixtures/detecting.txt -> net/wifi-fixtures/detecting.ztext
+net/wifi-fixtures/empty-scan.txt -> net/wifi-fixtures/empty-scan.ztext
+net/wifi-fixtures/invalid-count.txt -> net/wifi-fixtures/invalid-count.ztext
+net/wifi-fixtures/lower-card-bound.txt -> net/wifi-fixtures/lower-card-bound.ztext
+net/wifi-fixtures/masked.txt -> net/wifi-fixtures/masked.ztext
+net/wifi-fixtures/network-bound.txt -> net/wifi-fixtures/network-bound.ztext
+net/wifi-fixtures/networks.txt -> net/wifi-fixtures/networks.ztext
+net/wifi-fixtures/no-radio.txt -> net/wifi-fixtures/no-radio.ztext
+net/wifi-fixtures/open-network.txt -> net/wifi-fixtures/open-network.ztext
+net/wifi-fixtures/password-cap.txt -> net/wifi-fixtures/password-cap.ztext
+net/wifi-fixtures/password.txt -> net/wifi-fixtures/password.ztext
+net/wifi-fixtures/results.txt -> net/wifi-fixtures/results.ztext
+net/wifi-fixtures/scan-failure.txt -> net/wifi-fixtures/scan-failure.ztext
+net/wifi-fixtures/scan.txt -> net/wifi-fixtures/scan.ztext
+net/wifi-fixtures/second-card.txt -> net/wifi-fixtures/second-card.ztext
+net/wifi-fixtures/short-password.txt -> net/wifi-fixtures/short-password.ztext
+net/wifi-fixtures/single-card-auto.txt -> net/wifi-fixtures/single-card-auto.ztext
+net/wifi-fixtures/stale-reply.txt -> net/wifi-fixtures/stale-reply.ztext
+net/wifi-fixtures/unsupported.txt -> net/wifi-fixtures/unsupported.ztext
+net/wifi-fixtures/upper-card-bound.txt -> net/wifi-fixtures/upper-card-bound.ztext
+portability/capacity480/README.txt -> portability/capacity480/README.ztext
+portability/capacity480/STATUS.txt -> portability/capacity480/STATUS.ztext
+portability/guest/ABI.txt -> portability/guest/ABI.ztext
+portability/guest/BUNDLE.txt -> portability/guest/BUNDLE.ztext
+portability/guest/STATUS.txt -> portability/guest/STATUS.ztext
+portability/guest/biosmove/README.txt -> portability/guest/biosmove/README.ztext
+portability/host/ABI.txt -> portability/host/ABI.ztext
+portability/host/STATUS.txt -> portability/host/STATUS.ztext
+portability/host/ezero-README.txt -> portability/host/ezero-README.ztext
+portability/host/ezero-STATUS.txt -> portability/host/ezero-STATUS.ztext
+portability/host/ezero-overlay.sha256 -> portability/host/ezero-overlay.ztext
+portability/host/files12/boot-review.txt -> portability/host/files12/boot-review.ztext
+portability/host/files12/candidate-results.txt -> portability/host/files12/candidate-results.ztext
+portability/host/files12/contract.txt -> portability/host/files12/contract.ztext
+portability/host/files12/linux-results.txt -> portability/host/files12/linux-results.ztext
+portability/host/files12/windows-API.txt -> portability/host/files12/windows-API.ztext
+portability/host/files12/windows-fixedpoint.txt -> portability/host/files12/windows-fixedpoint.ztext
+portability/host/files12/windows-verification.txt -> portability/host/files12/windows-verification.ztext
+portability/host/linux-README.txt -> portability/host/linux-README.ztext
+portability/host/windows-README.txt -> portability/host/windows-README.ztext
+portability/host/windows-layout.txt -> portability/host/windows-layout.ztext
+portability/host/windows-package-README.txt -> portability/host/windows-package-README.ztext
+portability/host/windows-tested-inputs.sha256 -> portability/host/windows-tested-inputs.ztext
+portability/linux/README.txt -> portability/linux/README.ztext
+portability/linux/STATUS.txt -> portability/linux/STATUS.ztext
+portability/linux/native-README.txt -> portability/linux/native-README.ztext
+portability/linux/native-verification/SUMMARY.txt -> portability/linux/native-verification/SUMMARY.ztext
+portability/linux/native-verification/arch-smoke.txt -> portability/linux/native-verification/arch-smoke.ztext
+portability/linux/native-verification/debian-smoke.txt -> portability/linux/native-verification/debian-smoke.ztext
+portability/linux/native-verification/deterministic-rebuild.txt -> portability/linux/native-verification/deterministic-rebuild.ztext
+portability/linux/native-verification/iso.sha256 -> portability/linux/native-verification/iso.ztext
+portability/linux/native-verification/package.sha256 -> portability/linux/native-verification/package.ztext
+portability/linux/native-verification/tested-inputs.sha256 -> portability/linux/native-verification/tested-inputs.ztext
+portability/linux/templates/README.txt -> portability/linux/templates/README.ztext
+portability/native/README.txt -> portability/native/README.ztext
+portability/windows/README.txt -> portability/windows/README.ztext
+portability/windows/STATUS.txt -> portability/windows/STATUS.ztext
+review-tests/TESTS.txt -> review-tests/TESTS.ztext
+review-tests/boot-capacity/README.txt -> review-tests/boot-capacity/README.ztext
+review-tests/compiler-fs/oracle-0.6.tsv -> review-tests/compiler-fs/oracle-0.6.ztext
+review-tests/guest-bundle/README.txt -> review-tests/guest-bundle/README.ztext
+review-tests/network-ports/README.txt -> review-tests/network-ports/README.ztext
+review-tests/selfhost-targets/ABI-MIGRATION-0.6.txt -> review-tests/selfhost-targets/ABI-MIGRATION-0.6.ztext
+review-tests/selfhost-targets/README.txt -> review-tests/selfhost-targets/README.ztext
+review-tests/selfhost-targets/REFERENCE-SHA256.txt -> review-tests/selfhost-targets/REFERENCE-SHA256.ztext
+review-tests/selfhost-targets/archive/0.5.0/ARCHIVE.txt -> review-tests/selfhost-targets/archive/0.5.0/ARCHIVE.ztext
+review-tests/selfhost-targets/archive/0.5.0/README.txt -> review-tests/selfhost-targets/archive/0.5.0/README.ztext
+review-tests/selfhost-targets/archive/0.5.0/REFERENCE-SHA256.txt -> review-tests/selfhost-targets/archive/0.5.0/REFERENCE-SHA256.ztext
+review-tests/selfhost-targets/archive/0.5.0/expected.tsv -> review-tests/selfhost-targets/archive/0.5.0/expected.ztext
+review-tests/selfhost-targets/boundaries.tsv -> review-tests/selfhost-targets/boundaries.ztext
+review-tests/selfhost-targets/cases.tsv -> review-tests/selfhost-targets/cases.ztext
+review-tests/selfhost-targets/empty.txt -> review-tests/selfhost-targets/empty.ztext
+review-tests/selfhost-targets/expected-io.txt -> review-tests/selfhost-targets/expected-io.ztext
+review-tests/selfhost-targets/expected-text.txt -> review-tests/selfhost-targets/expected-text.ztext
+review-tests/selfhost-targets/expected-u64.txt -> review-tests/selfhost-targets/expected-u64.ztext
+review-tests/selfhost-targets/expected.tsv -> review-tests/selfhost-targets/expected.ztext
+review-tests/selfhost-targets/input-io.txt -> review-tests/selfhost-targets/input-io.ztext
+review-tests/selfhost-targets/runtime.tsv -> review-tests/selfhost-targets/runtime.ztext
+review-tests/selfhost-targets/semantic-overrides.tsv -> review-tests/selfhost-targets/semantic-overrides.ztext
+review-tests/video-mode-policy/README.txt -> review-tests/video-mode-policy/README.ztext
+review-tests/wm-renderer/README.txt -> review-tests/wm-renderer/README.ztext
+review-tests/wm-renderer-hd/README.txt -> review-tests/wm-renderer-hd/README.ztext
+review-tests/wm-sessions/README.txt -> review-tests/wm-sessions/README.ztext
+selfhost/CORE.txt -> selfhost/CORE.ztext
+selfhost/ia32-real-layout.txt -> selfhost/ia32-real-layout.ztext
+selfhost/port32.txt -> selfhost/port32.ztext
+selfhost/x64-targets.txt -> selfhost/x64-targets.ztext
+tools/compiler-cli.txt -> tools/compiler-cli.ztext
+updater/FORMAT.txt -> updater/FORMAT.ztext
+updater/README.txt -> updater/README.ztext
+updater/STATUS.txt -> updater/STATUS.ztext
+wm/RENDERER.txt -> wm/RENDERER.ztext
+wm/SESSION.txt -> wm/SESSION.ztext
+wm/design/DESIGN.txt -> wm/design/DESIGN.ztext
+wm/design/SHA256.txt -> wm/design/SHA256.ztext

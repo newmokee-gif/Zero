@@ -1,0 +1,7 @@
+10 => value
+value + 5 => value
+value => show
+Mira => value
+value => show
+[1 | value] => value
+value => show

@@ -1,0 +1,16 @@
+ZTEXT001000003993e3d178c0000000
+Original Zero checks and historical review fixtures
+
+The active verifier is authored in tools/check.zero:
+  zero-check PROJECT_DIRECTORY NEW_TEST_DIRECTORY
+Its source fixtures and exact expectations live in checks/. Read the complete
+contract with zero-text read checks/README.ztext. The original Zero verifier
+loads the owned compiler application, compiles the frontend/packer and runs
+language fixtures in process, then performs native host file checks.
+
+The Zero/Ezero programs below review-tests/ are retained review fixtures from
+earlier compiler, filesystem, window and boot work. Their old orchestration
+scripts and generated result trees were removed. Historical capacity numbers,
+exit expectations and prior pass counts must not be treated as current proof.
+The active compiler grammar is documented in SYNTAX.ztext and LANGUAGE.ztext.
+Native host checks do not replace firmware, disk-restart or hardware tests.

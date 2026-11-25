@@ -1,0 +1,9 @@
+# Original Zero JavaScript-profile checks; executable after own composition.
+0 => @t0. 0 => @t1. 0 => @t2. 0 => @t3. 0 => @t4. 0 => @t5.
+0 => @t6. 0 => @t7. 0 => @t8. 0 => @t9. 0 => @t10. 0 => @t11.
+0 => @t12. 0 => @t13. 0 => @t14. 0 => @t15.
+:hostalloc[4194432] -> @t0.
+? @t0 == 0 [ !exit[70]. ]
+@t0+64 -> @web.
+0 -> @t1. ?? @t1 < 4194432 [ !store8[@t0+@t1|0]. @t1+1 -> @t1. ]
+0 -> @t1. ?? @t1 < 64 [ !store8[@t0+@t1|165]. !store8[@web+4194304+@t1|165]. @t1+1 -> @t1. ]

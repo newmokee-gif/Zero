@@ -1,0 +1,109 @@
+# Fail-closed USB whole-device opener. No shell, helper program or device write.
+? (:load64[@mh+40] == 0) * (:load64[@mh+96] == 1) [
+ :load64[@mh+8] -> @mh0. 0 -> @mh1.
+ ?? (:load8[@mh0+@mh1] != 0) * (@mh1 < 32) [ @mh1+1 -> @mh1. ]
+ ? (@mh1 < 8) + (@mh1 > 10) [ !store64[@mh+40|64]. ] ~ [
+  ? :load32[@mh0] != 0x7665642f [ !store64[@mh+40|64]. ]
+  ? (:load16[@mh0+4] != 0x732f) + (:load8[@mh0+6] != 100) [ !store64[@mh+40|64]. ]
+  7 -> @mh2. ?? @mh2 < @mh1 [
+   ? (:load8[@mh0+@mh2] < 97) + (:load8[@mh0+@mh2] > 122) [ !store64[@mh+40|64]. ]
+   @mh2+1 -> @mh2.
+  ]
+ ]
+ !store64[@mh+48|"Target must be a whole USB disk named /dev/sd plus one to three letters.\n"].
+ ? :load64[@mh+40] == 0 [
+  # Preserve the exact canonical sysfs name, then pin the device with O_EXCL.
+  "/sys/class/block/" -> @mh3. 0 -> @mh2.
+  ?? @mh2 < 17 [ !store8[@mh+1024+@mh2|:load8[@mh3+@mh2]]. @mh2+1 -> @mh2. ]
+  5 -> @mh2. ?? @mh2 < @mh1 [ !store8[@mh+1024+12+@mh2|:load8[@mh0+@mh2]]. @mh2+1 -> @mh2. ]
+  @mh1+12 -> @mh3. !store8[@mh+1024+@mh3|0]. !store64[@mh+160|@mh3].
+  0xa0080 -> @mh2. ? :load64[@mh] == 2 [ 0xa0082 -> @mh2. ]
+  :hostsyscall[2|@mh0|@mh2|0|0|0|0] -> @mh4.
+  ? @mh4 > 2147483647 [
+   !store64[@mh+40|73]. !store64[@mh+48|"Cannot exclusively open USB disk. Unmount every volume and disable swap on it; administrator access is required.\n"].
+  ] ~ [ !store64[@mh+16|@mh4]. ]
+ ]
+ ? :load64[@mh+40] == 0 [
+  :hostsyscall[5|@mh4|@mh+512|0|0|0|0] -> @mh2.
+  ? (@mh2 != 0) + (:bitand[:load32[@mh+536]|0xf000] != 0x6000) [ !store64[@mh+40|65]. ]
+  !store64[@mh+104|:load64[@mh+552]].
+  ? :hostsyscall[73|@mh4|6|0|0|0|0] != 0 [ !store64[@mh+40|73]. ]
+  !store64[@mh+48|"Target is not an exclusively locked block device.\n"].
+ ]
+ ? :load64[@mh+40] == 0 [
+  :hostsyscall[89|@mh+1024|@mh+2048|4095|0|0|0] -> @mh5.
+  0 -> @mh6. 14695981039346656037 -> @mh7. 0 -> @mh2.
+  ? (@mh5 == 0) + (@mh5 >= 4095) [ !store64[@mh+40|65]. ] ~ [
+   ?? @mh2 < @mh5 [
+    :bitxor[@mh7|:load8[@mh+2048+@mh2]] * 1099511628211 -> @mh7.
+    ? @mh2+5 < @mh5 [
+     ? :load32[@mh+2048+@mh2] == 0x6273752f [
+      ? (:load8[@mh+2052+@mh2] >= 48) * (:load8[@mh+2052+@mh2] <= 57) [ 1 -> @mh6. ]
+     ]
+    ]
+    @mh2+1 -> @mh2.
+   ]
+  ]
+  ? @mh6 == 0 [ !store64[@mh+40|65]. ]
+  !store64[@mh+48|"Target is not attached through a USB controller.\n"].
+ ]
+ # All attributes are required. A partition, read-only disk or unidentifiable
+ # removable device is rejected before obtaining permission to write.
+ ? :load64[@mh+40] == 0 [ !store64[@mh+48|"USB disk is not a writable removable whole disk with a readable identity; no data was written.\n"]. ]
+ 0 -> @mh8.
+ ?? (@mh8 < 5) * (:load64[@mh+40] == 0) [
+  "/removable" -> @mh9.
+  ? @mh8 == 1 [ "/ro" -> @mh9. ]
+  ? @mh8 == 2 [ "/partition" -> @mh9. ]
+  ? @mh8 == 3 [ "/dev" -> @mh9. ]
+  ? @mh8 == 4 [ "/device/wwid" -> @mh9. ]
+  0 -> @mh2. :load64[@mh+160] -> @mh3.
+  ?? :load8[@mh9+@mh2] [ !store8[@mh+1024+@mh3+@mh2|:load8[@mh9+@mh2]]. @mh2+1 -> @mh2. ]
+  !store8[@mh+1024+@mh3+@mh2|0].
+  :hostsyscall[2|@mh+1024|0xa0000|0|0|0|0] -> @mh6.
+  ? @mh8 == 2 [
+   ? @mh6 != -2 [ !store64[@mh+40|65]. ]
+   ? @mh6 <= 2147483647 [ :hostsyscall[3|@mh6|0|0|0|0|0] -> @mh2. ]
+  ] ~ [
+   ? @mh6 > 2147483647 [ !store64[@mh+40|65]. ] ~ [
+    :hostsyscall[0|@mh6|@mh+2048|4095|0|0|0] -> @mh5.
+    :hostsyscall[3|@mh6|0|0|0|0|0] -> @mh2.
+    ? (@mh5 == 0) + (@mh5 >= 4095) [ !store64[@mh+40|65]. ] ~ [
+     ? @mh8 == 0 [ ? (@mh5 != 2) + (:load16[@mh+2048] != 0x0a31) [ !store64[@mh+40|65]. ] ]
+     ? @mh8 == 1 [ ? (@mh5 != 2) + (:load16[@mh+2048] != 0x0a30) [ !store64[@mh+40|65]. ] ]
+     ? @mh8 == 3 [
+      0 -> @mh9. 0 -> @mh10. 0 -> @mh11. 0 -> @mh2.
+      ?? @mh2 < @mh5 [
+       :load8[@mh+2048+@mh2] -> @mh3.
+       ? (@mh3 >= 48) * (@mh3 <= 57) [
+        ? @mh11 == 0 [ @mh9*10+@mh3-48 -> @mh9. ] ~ [ @mh10*10+@mh3-48 -> @mh10. ]
+        ? (@mh9 > 1048575) + (@mh10 > 4294967295) [ !store64[@mh+40|65]. ]
+       ] ~ [
+        ? (@mh3 == 58) * (@mh11 == 0) * (@mh2 > 0) [ 1 -> @mh11. ] ~ [
+         ? (@mh3 != 10) + (@mh2+1 != @mh5) [ !store64[@mh+40|65]. ]
+        ]
+       ]
+       @mh2+1 -> @mh2.
+      ]
+      :load64[@mh+104] -> @mh2.
+      ? (@mh11 != 1) + (@mh9 != :bitand[:shr[@mh2|8]|4095]+:bitand[:shr[@mh2|32]|0xfffff000]) + (@mh10 != :bitand[@mh2|255]+:bitand[:shr[@mh2|12]|0xffffff00]) [ !store64[@mh+40|65]. ]
+     ]
+     ? @mh8 == 4 [
+      ? @mh5 < 5 [ !store64[@mh+40|65]. ]
+      0 -> @mh2. ?? @mh2 < @mh5 [ :bitxor[@mh7|:load8[@mh+2048+@mh2]]*1099511628211 -> @mh7. @mh2+1 -> @mh2. ]
+     ]
+    ]
+   ]
+  ]
+  @mh8+1 -> @mh8.
+ ]
+ ? :load64[@mh+40] == 0 [
+  !store64[@mh+24|0]. !store64[@mh+32|0].
+  :hostsyscall[16|@mh4|0x80081272|@mh+24|0|0|0] -> @mh2.
+  :hostsyscall[16|@mh4|0x1268|@mh+32|0|0|0] -> @mh3.
+  ? (@mh2 != 0) + (@mh3 != 0) + (:load64[@mh+32] != 512) + (:load64[@mh+24] < 1048576) + (:bitand[:load64[@mh+24]|511] != 0) [
+   !store64[@mh+40|65]. !store64[@mh+48|"Cannot determine USB capacity, or logical sector size is not 512 bytes.\n"].
+  ]
+  !store64[@mh+128|@mh7].
+ ]
+]

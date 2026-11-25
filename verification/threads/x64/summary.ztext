@@ -1,0 +1,5 @@
+ZTEXT0010000019dc70d29d90000000
+PASS: --raw thread VM, CPUqemu64; exact THREADS OK and debug-exit status1.
+3f9da290f0afc54da61c02297ca9a385b70a49da45fc5094688f966904ad98c6  /workspace/zero-foundation/build/selfhost-core-threads-v2-stage2
+598783796f4069f6029dd8b8ce9ff33eb2448f9c4cbca51fae79074833c8d2f9  review-tests/threads/raw64-call.zero
+55285b082c57fa959ea732a6b7130a35e764505823c833745661485dfceb4ee2  /tmp/zero-threads-x64-call/kernel.bin

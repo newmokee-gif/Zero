@@ -1,0 +1,694 @@
+# Original Zero ext4 state machine. See ext4-profile.txt and common ABI.
+# H=memory+24576: op/name/name_len/input/input_len/out/cap/outlen/result/return/base/sectors/id/flags.
+# Private persistent slots start at memory+25600. All I/O passes through state90.
+? @current == 200 [
+ !store64[@memory + 24640| 0]. !store64[@memory + 24632| 0].
+ !store64[@memory + 24680| 0].
+ 0 -> @i. ?? @i < 512 [ !store8[@memory + 25600 + @i| 0]. @i + 1 -> @i. ]
+ :load64[@memory + 24656] -> @io_lba. @memory + 32768 -> @io_buffer.
+ 8 -> @io_count. 0 -> @io_write. 201 -> @io_return. 90 -> @state.
+]
+? @current == 201 [
+ 1 -> @valid.
+ ? @io_ok == 0 [ 0 -> @valid. ]
+ @memory + 33792 -> @pointer.
+ ? :load16[@pointer + 56] != 0xef53 [ 0 -> @valid. ]
+ ? @io_ok * (:load16[@pointer + 56] == 0xef53) [ !store64[@memory + 24672| 1]. ]
+ ? :load32[@pointer + 76] != 1 [ 0 -> @valid. ]
+ ? :load16[@pointer + 58] != 1 [ 0 -> @valid. ]
+ ? :load32[@pointer + 24] != 2 [ 0 -> @valid. ]
+ ? :load32[@pointer + 28] != 2 [ 0 -> @valid. ]
+ ? :load32[@pointer + 20] != 0 [ 0 -> @valid. ]
+ ? :load32[@pointer + 92] != 0 [ 0 -> @valid. ]
+ :load32[@pointer + 96] -> @c0.
+ ? (@c0 != 2) * (@c0 != 66) [ 0 -> @valid. ]
+ ? :load32[@pointer + 100] > 3 [ 0 -> @valid. ]
+ ? :load32[@pointer + 232] != 0 [ 0 -> @valid. ]
+ :load32[@pointer + 4] -> @c0. :load32[@pointer] -> @c1.
+ :load16[@pointer + 88] -> @c2.
+ ? (@c0 < 32) + (@c0 > 32768) [ 0 -> @valid. ]
+ ? @c0 > :load32[@pointer + 32] [ 0 -> @valid. ]
+ ? :load32[@pointer + 32] > 32768 [ 0 -> @valid. ]
+ ? :load32[@pointer + 36] != :load32[@pointer + 32] [ 0 -> @valid. ]
+ ? (@c1 < 16) + (@c1 > 32768) [ 0 -> @valid. ]
+ ? @c1 != :load32[@pointer + 40] [ 0 -> @valid. ]
+ ? (@c2 != 128) * (@c2 != 256) [ 0 -> @valid. ]
+ ? @c0 * 8 > :load64[@memory + 24664] [ 0 -> @valid. ]
+ ? :load32[@pointer + 84] < 11 [ 0 -> @valid. ]
+ ? :load32[@pointer + 84] > @c1 [ 0 -> @valid. ]
+ ? :load32[@pointer + 12] > @c0 [ 0 -> @valid. ]
+ ? :load32[@pointer + 16] > @c1 [ 0 -> @valid. ]
+ !store64[@memory + 25600| @c0]. !store64[@memory + 25608| @c1].
+ !store64[@memory + 25616| @c2].
+ ? @valid [
+  :load64[@memory + 24656] + 8 -> @io_lba. @memory + 36864 -> @io_buffer.
+  8 -> @io_count. 0 -> @io_write. 202 -> @io_return. 90 -> @state.
+ ] ~ [
+  !store64[@memory + 24640| 1].
+  ? :load16[@pointer + 58] != 1 [ !store64[@memory + 24640| 9]. ]
+  ? :load16[@pointer + 56] != 0xef53 [ !store64[@memory + 24640| 10]. ]
+  ? @io_ok == 0 [ !store64[@memory + 24640| 3]. ]
+  299 -> @state.
+ ]
+]
+? @current == 202 [
+ @io_ok -> @valid. @memory + 36864 -> @pointer.
+ :load32[@pointer] -> @c0. :load32[@pointer + 4] -> @c1. :load32[@pointer + 8] -> @c2.
+ :shr[:load64[@memory + 25608] * :load64[@memory + 25616] + 4095| 12] -> @c3.
+ ? (@c0 < 2) + (@c1 < 2) + (@c2 < 2) [ 0 -> @valid. ]
+ ? (@c0 >= :load64[@memory + 25600]) + (@c1 >= :load64[@memory + 25600]) [ 0 -> @valid. ]
+ ? @c2 + @c3 > :load64[@memory + 25600] [ 0 -> @valid. ]
+ ? @c0 == @c1 [ 0 -> @valid. ]
+ ? (@c0 >= @c2) * (@c0 < @c2 + @c3) [ 0 -> @valid. ]
+ ? (@c1 >= @c2) * (@c1 < @c2 + @c3) [ 0 -> @valid. ]
+ ? (:load16[@pointer + 18] != 0) * (:load16[@pointer + 18] != 4) [ 0 -> @valid. ]
+ ? :load16[@pointer + 12] != :load32[@memory + 33804] [ 0 -> @valid. ]
+ ? :load16[@pointer + 14] != :load32[@memory + 33808] [ 0 -> @valid. ]
+ !store64[@memory + 25624| @c0]. !store64[@memory + 25632| @c1].
+ !store64[@memory + 25640| @c2]. !store64[@memory + 25792| @c3].
+ ? @valid [
+  :load64[@memory + 24656] + @c0 * 8 -> @io_lba. @memory + 40960 -> @io_buffer.
+  8 -> @io_count. 0 -> @io_write. 203 -> @io_return. 90 -> @state.
+ ] ~ [
+  !store64[@memory + 24640| 2]. ? @io_ok == 0 [ !store64[@memory + 24640| 3]. ] 299 -> @state.
+ ]
+]
+? @current == 203 [
+ ? @io_ok [
+  :load64[@memory + 24656] + :load64[@memory + 25632] * 8 -> @io_lba.
+  @memory + 45056 -> @io_buffer. 8 -> @io_count. 0 -> @io_write. 204 -> @io_return. 90 -> @state.
+ ] ~ [ !store64[@memory + 24640| 3]. 299 -> @state. ]
+]
+? @current == 204 [
+ @io_ok -> @valid.
+ ? :bitand[:load8[@memory + 45056]| 2] == 0 [ 0 -> @valid. ]
+ # Every fixed metadata block must be allocated; later allocation avoids them independently.
+ 0 -> @i. 0 -> @c0.
+ ?? @i < :load64[@memory + 25600] [
+  :bitand[@i| 7] -> @j. 1 -> @k. ?? @j [ @k * 2 -> @k. @j - 1 -> @j. ]
+  ? :bitand[:load8[@memory + 40960 + :shr[@i| 3]]| @k] == 0 [ @c0 + 1 -> @c0. ]
+  ? (@i < 2) + (@i == :load64[@memory + 25624]) + (@i == :load64[@memory + 25632]) + ((@i >= :load64[@memory + 25640]) * (@i < :load64[@memory + 25640] + :load64[@memory + 25792])) [
+   ? :bitand[:load8[@memory + 40960 + :shr[@i| 3]]| @k] == 0 [ 0 -> @valid. ]
+  ]
+  @i + 1 -> @i.
+ ]
+ ? @c0 != :load32[@memory + 33804] [ 0 -> @valid. ]
+ 0 -> @i. 0 -> @c0.
+ ?? @i < :load64[@memory + 25608] [
+  :bitand[@i| 7] -> @j. 1 -> @k. ?? @j [ @k * 2 -> @k. @j - 1 -> @j. ]
+  ? :bitand[:load8[@memory + 45056 + :shr[@i| 3]]| @k] == 0 [
+   @c0 + 1 -> @c0.
+   ? @i + 1 < :load32[@memory + 33876] [ 0 -> @valid. ]
+  ]
+  @i + 1 -> @i.
+ ]
+ ? @c0 != :load32[@memory + 33808] [ 0 -> @valid. ]
+ ? @valid [
+  :load64[@memory + 24656] + :load64[@memory + 25640] * 8 -> @io_lba.
+  @memory + 49152 -> @io_buffer. 8 -> @io_count. 0 -> @io_write. 205 -> @io_return. 90 -> @state.
+ ] ~ [
+  !store64[@memory + 24640| 2]. ? @io_ok == 0 [ !store64[@memory + 24640| 3]. ] 299 -> @state.
+ ]
+]
+? @current == 205 [
+ @io_ok -> @valid.
+ @memory + 49152 + :load64[@memory + 25616] -> @pointer.
+ ? :bitand[:load16[@pointer]| 0xf000] != 0x4000 [ 0 -> @valid. ]
+ ? :load32[@pointer + 4] != 4096 [ 0 -> @valid. ]
+ ? :load32[@pointer + 108] != 0 [ 0 -> @valid. ]
+ ? :load32[@pointer + 28] != 8 [ 0 -> @valid. ]
+ ? :load32[@pointer + 104] != 0 [ 0 -> @valid. ]
+ ? :load16[@pointer + 26] < 2 [ 0 -> @valid. ]
+ ? :load32[@pointer + 20] != 0 [ 0 -> @valid. ]
+ ? :load32[@pointer + 116] != 0 [ 0 -> @valid. ]
+ 0 -> @c0.
+ ? :load32[@pointer + 32] == 0x80000 [
+  ? :load32[@memory + 33888] != 66 [ 0 -> @valid. ]
+  ? :load16[@pointer + 40] != 0xf30a [ 0 -> @valid. ]
+  ? :load16[@pointer + 42] != 1 [ 0 -> @valid. ]
+  ? :load16[@pointer + 44] != 4 [ 0 -> @valid. ]
+  ? :load16[@pointer + 46] != 0 [ 0 -> @valid. ]
+  ? :load32[@pointer + 52] != 0 [ 0 -> @valid. ]
+  ? :load16[@pointer + 56] != 1 [ 0 -> @valid. ]
+  ? :load16[@pointer + 58] != 0 [ 0 -> @valid. ]
+  :load32[@pointer + 60] -> @c0.
+ ] ~ [
+  ? :load32[@pointer + 32] != 0 [ 0 -> @valid. ]
+  :load32[@pointer + 40] -> @c0.
+  44 -> @i. ?? @i < 100 [ ? :load32[@pointer + @i] [ 0 -> @valid. ] @i + 4 -> @i. ]
+ ]
+ ? (@c0 < 2) + (@c0 >= :load64[@memory + 25600]) [ 0 -> @valid. ]
+ ? (@c0 == :load64[@memory + 25624]) + (@c0 == :load64[@memory + 25632]) [ 0 -> @valid. ]
+ ? (@c0 >= :load64[@memory + 25640]) * (@c0 < :load64[@memory + 25640] + :load64[@memory + 25792]) [ 0 -> @valid. ]
+ ? @valid [
+  :bitand[@c0| 7] -> @j. 1 -> @k. ?? @j [ @k * 2 -> @k. @j - 1 -> @j. ]
+  ? :bitand[:load8[@memory + 40960 + :shr[@c0| 3]]| @k] == 0 [ 0 -> @valid. ]
+ ]
+ !store64[@memory + 25648| @c0].
+ ? @valid [
+  :load64[@memory + 24656] + @c0 * 8 -> @io_lba.
+  @memory + 53248 -> @io_buffer. 8 -> @io_count. 0 -> @io_write. 206 -> @io_return. 90 -> @state.
+ ] ~ [
+  !store64[@memory + 24640| 1]. ? @io_ok == 0 [ !store64[@memory + 24640| 3]. ] 299 -> @state.
+ ]
+]
+? @current == 206 [
+ @io_ok -> @valid.
+ !store64[@memory + 25680| 4096]. !store64[@memory + 25688| 4096].
+ !store64[@memory + 25776| 0].
+ :load64[@memory + 24576] -> @c5.
+ ? @c5 > 5 [ 0 -> @valid. !store64[@memory + 24640| 7]. ]
+ ? @c5 >= 2 [
+  :load64[@memory + 24592] -> @c0. :load64[@memory + 24584] -> @pointer.
+  ? (@c0 == 0) + (@c0 > 31) [ 0 -> @valid. !store64[@memory + 24640| 7]. ]
+  0 -> @i. ?? (@i < @c0) * @valid [
+   :load8[@pointer + @i] -> @character.
+   ? (@character < 33) + (@character > 126) + (@character == 47) [ 0 -> @valid. !store64[@memory + 24640| 7]. ]
+   @i + 1 -> @i.
+  ]
+  ? (@c0 == 1) * (:load8[@pointer] == 46) [ 0 -> @valid. !store64[@memory + 24640| 7]. ]
+  ? (@c0 == 2) * (:load8[@pointer] == 46) * (:load8[@pointer + 1] == 46) [ 0 -> @valid. !store64[@memory + 24640| 7]. ]
+ ]
+ ? @c5 == 4 [
+  ? :load64[@memory + 24608] > 400 [ 0 -> @valid. !store64[@memory + 24640| 8]. ]
+  0 -> @i. ?? (@i < :load64[@memory + 24608]) * @valid [
+   :load8[:load64[@memory + 24600] + @i] -> @character.
+   ? ((@character < 32) + (@character > 126)) * (@character != 9) * (@character != 10) * (@character != 13) [ 0 -> @valid. !store64[@memory + 24640| 7]. ]
+   @i + 1 -> @i.
+  ]
+ ]
+ ? @c5 == 3 [ ? :load64[@memory + 24608] [ 0 -> @valid. !store64[@memory + 24640| 7]. ] ]
+ # Validate the complete directory before any mutation or successful mount.
+ 0 -> @i. 0 -> @c4.
+ ?? (@i < 4096) * @valid [
+  @memory + 53248 + @i -> @pointer.
+  :load32[@pointer] -> @c0. :load16[@pointer + 4] -> @c1. :load8[@pointer + 6] -> @c2.
+  :bitand[8 + @c2 + 3| 0xfffffffc] -> @c3.
+  ? (@c1 < 8) + (:bitand[@c1| 3] != 0) + (@i + @c1 > 4096) + (@c3 > @c1) [ 0 -> @valid. ]
+  ? @c0 > :load64[@memory + 25608] [ 0 -> @valid. ]
+  ? @valid [
+   ? @c0 [
+    # Every directory reference must name an allocated inode.
+    :bitand[@c0 - 1| 7] -> @j. 1 -> @k. ?? @j [ @k * 2 -> @k. @j - 1 -> @j. ]
+    ? :bitand[:load8[@memory + 45056 + :shr[@c0 - 1| 3]]| @k] == 0 [ 0 -> @valid. ]
+    ? @c2 == 0 [ 0 -> @valid. ]
+    ? :load8[@pointer + 7] > 7 [ 0 -> @valid. ]
+    ? (@c2 == 1) * (:load8[@pointer + 8] == 46) [
+     !store64[@memory + 25800| :load64[@memory + 25800] + 1].
+     ? (@c0 != 2) + (:load8[@pointer + 7] != 2) [ 0 -> @valid. ]
+    ]
+    ? (@c2 == 2) * (:load8[@pointer + 8] == 46) * (:load8[@pointer + 9] == 46) [
+     !store64[@memory + 25808| :load64[@memory + 25808] + 1].
+     ? (@c0 != 2) + (:load8[@pointer + 7] != 2) [ 0 -> @valid. ]
+    ]
+    0 -> @j. ?? @j < @c2 [
+     :load8[@pointer + 8 + @j] -> @character.
+     ? (@character == 0) + (@character == 47) [ 0 -> @valid. ]
+     @j + 1 -> @j.
+    ]
+    ? @c5 == 1 [
+     1 -> @ready.
+     ? :load64[@memory+24712]*(:load8[@pointer+7] != 1) [ 0 -> @ready. ]
+     ? (@c2 == 1) * (:load8[@pointer + 8] == 46) [ 0 -> @ready. ]
+     ? (@c2 == 2) * (:load8[@pointer + 8] == 46) * (:load8[@pointer + 9] == 46) [ 0 -> @ready. ]
+     ? @ready [
+      ? @c4 + @c2 + 2 > :load64[@memory + 24624] [ 0 -> @valid. !store64[@memory + 24640| 6]. ]
+      ~ [
+       0 -> @j. ?? @j < @c2 [
+        :load8[@pointer + 8 + @j] -> @character.
+        ? (@character < 32) + (@character > 126) [ 63 -> @character. ]
+        !store8[:load64[@memory + 24616] + @c4| @character]. @c4 + 1 -> @c4. @j + 1 -> @j.
+       ]
+       !store8[:load64[@memory + 24616] + @c4| 10]. @c4 + 1 -> @c4.
+      ]
+     ]
+    ]
+    ? @c5 >= 2 [
+     ? @c2 == :load64[@memory + 24592] [
+      1 -> @ready. 0 -> @j.
+      ?? @j < @c2 [
+       ? :load8[@pointer + 8 + @j] != :load8[:load64[@memory + 24584] + @j] [ 0 -> @ready. ]
+       @j + 1 -> @j.
+      ]
+      ? @ready [
+       ? :load64[@memory + 25680] != 4096 [ 0 -> @valid. ]
+       !store64[@memory + 25680| @i]. !store64[@memory + 25656| @c0].
+      ]
+     ]
+    ]
+   ]
+   ? (@c5 == 3) + (@c5 == 4) [
+    :bitand[8 + :load64[@memory + 24592] + 3| 0xfffffffc] -> @j.
+    ? @c0 == 0 [ 0 -> @c3. ]
+    ? (@c1 >= @c3 + @j) * (:load64[@memory + 25688] == 4096) [
+     !store64[@memory + 25688| @i]. !store64[@memory + 25696| @c3].
+    ]
+   ]
+   @i + @c1 -> @i.
+  ]
+ ]
+ ? (:load64[@memory + 25800] != 1) + (:load64[@memory + 25808] != 1) [ 0 -> @valid. ]
+ ? @valid [
+  !store64[@memory + 24680| 3]. !store64[@memory + 24672| 1].
+  ? @c5 <= 1 [
+   ? @c5 == 1 [
+    ? :load64[@memory + 24624] == 0 [ !store64[@memory + 24640| 6]. ]
+    ~ [ !store8[:load64[@memory + 24616] + @c4| 0]. !store64[@memory + 24632| @c4]. ]
+   ]
+   299 -> @state.
+  ] ~ [
+   ? :load64[@memory + 25680] == 4096 [
+    ? (@c5 == 3) + (@c5 == 4) [ 208 -> @state. ]
+    ~ [ !store64[@memory + 24640| 4]. 299 -> @state. ]
+   ] ~ [
+    ? @c5 == 3 [ !store64[@memory + 24640| 5]. 299 -> @state. ]
+    ~ [
+     (:load64[@memory + 25656] - 1) * :load64[@memory + 25616] -> @c0.
+     !store64[@memory + 25664| :load64[@memory + 25640] + :shr[@c0| 12]].
+     !store64[@memory + 25672| :bitand[@c0| 4095]].
+     :load64[@memory + 24656] + :load64[@memory + 25664] * 8 -> @io_lba.
+     @memory + 57344 -> @io_buffer. 8 -> @io_count. 0 -> @io_write. 207 -> @io_return. 90 -> @state.
+    ]
+   ]
+  ]
+ ] ~ [
+  ? :load64[@memory + 24640] == 0 [ !store64[@memory + 24640| 2]. ]
+  ? @io_ok == 0 [ !store64[@memory + 24640| 3]. ]
+  299 -> @state.
+ ]
+]
+? @current == 207 [
+ @io_ok -> @valid. 1 -> @status.
+ :load8[@memory + 53248 + :load64[@memory + 25680] + 7] -> @c0.
+ ? (@c0 != 0) * (@c0 != 1) [ 0 -> @valid. 2 -> @status. ]
+ # A singly-linked file must not have a second directory reference.
+ 0 -> @i. 0 -> @c0.
+ ?? @i < 4096 [
+  @memory + 53248 + @i -> @pointer.
+  ? :load32[@pointer] == :load64[@memory + 25656] [ @c0 + 1 -> @c0. ]
+  @i + :load16[@pointer + 4] -> @i.
+ ]
+ ? @c0 != 1 [ 0 -> @valid. ]
+ @memory + 57344 + :load64[@memory + 25672] -> @pointer.
+ ? :bitand[:load16[@pointer]| 0xf000] != 0x8000 [ 0 -> @valid. ]
+ ? :load16[@pointer + 26] != 1 [ 0 -> @valid. ]
+ ? :load32[@pointer + 4] > 400 [ 0 -> @valid. ]
+ ? :load32[@pointer + 108] != 0 [ 0 -> @valid. ]
+ ? :load32[@pointer + 104] != 0 [ 0 -> @valid. ]
+ ? :load32[@pointer + 20] != 0 [ 0 -> @valid. ]
+ ? :load16[@pointer + 116] != 0 [ 0 -> @valid. ]
+ ? :load16[@pointer + 118] != 0 [ 0 -> @valid. ]
+ !store64[@memory + 25712| :load32[@pointer + 4]].
+ 0 -> @c0.
+ ? :load32[@pointer + 32] == 0x80000 [
+  ? :load32[@memory + 33888] != 66 [ 0 -> @valid. ]
+  ? :load16[@pointer + 40] != 0xf30a [ 0 -> @valid. ]
+  ? :load16[@pointer + 42] > 1 [ 0 -> @valid. ]
+  ? :load16[@pointer + 44] != 4 [ 0 -> @valid. ]
+  ? :load16[@pointer + 46] != 0 [ 0 -> @valid. ]
+  ? :load16[@pointer + 42] == 1 [
+   ? :load32[@pointer + 52] != 0 [ 0 -> @valid. ]
+   ? :load16[@pointer + 56] != 1 [ 0 -> @valid. ]
+   ? :load16[@pointer + 58] != 0 [ 0 -> @valid. ]
+   :load32[@pointer + 60] -> @c0.
+   ? @c0 == 0 [ 0 -> @valid. ]
+  ]
+ ] ~ [
+  ? :load32[@pointer + 32] != 0 [ 0 -> @valid. ]
+  :load32[@pointer + 40] -> @c0.
+  44 -> @i. ?? @i < 100 [ ? :load32[@pointer + @i] [ 0 -> @valid. ] @i + 4 -> @i. ]
+ ]
+ ? @c0 [
+  ? :load32[@pointer + 28] != 8 [ 0 -> @valid. ]
+  ? :load32[@pointer + 4] == 0 [ 0 -> @valid. ]
+  ? (@c0 < 2) + (@c0 >= :load64[@memory + 25600]) [ 0 -> @valid. ]
+  ? (@c0 == :load64[@memory + 25624]) + (@c0 == :load64[@memory + 25632]) + (@c0 == :load64[@memory + 25648]) [ 0 -> @valid. ]
+  ? (@c0 >= :load64[@memory + 25640]) * (@c0 < :load64[@memory + 25640] + :load64[@memory + 25792]) [ 0 -> @valid. ]
+  ? @valid [
+   :bitand[@c0| 7] -> @j. 1 -> @k. ?? @j [ @k * 2 -> @k. @j - 1 -> @j. ]
+   ? :bitand[:load8[@memory + 40960 + :shr[@c0| 3]]| @k] == 0 [ 0 -> @valid. ]
+  ]
+ ] ~ [
+  ? :load32[@pointer + 4] != 0 [ 0 -> @valid. ]
+  ? :load32[@pointer + 28] != 0 [ 0 -> @valid. ]
+ ]
+ !store64[@memory + 25704| @c0].
+ ? @valid [
+  ? :load64[@memory + 24576] == 2 [
+   ? :load64[@memory + 25712] + 1 > :load64[@memory + 24624] [ !store64[@memory + 24640| 6]. 299 -> @state. ]
+   ~ [
+    ? @c0 [
+     :load64[@memory + 24656] + @c0 * 8 -> @io_lba.
+     @memory + 61440 -> @io_buffer. 8 -> @io_count. 0 -> @io_write. 209 -> @io_return. 90 -> @state.
+    ] ~ [ !store8[:load64[@memory + 24616]| 0]. 299 -> @state. ]
+   ]
+  ] ~ [ 243 -> @state. ]
+ ] ~ [
+  !store64[@memory + 24640| @status].
+  ? @io_ok == 0 [ !store64[@memory + 24640| 3]. ]
+  ? :load32[@pointer + 4] > 400 [ !store64[@memory + 24640| 8]. ]
+  299 -> @state.
+ ]
+]
+? @current == 208 [
+ # Choose a genuinely free inode from the bitmap, without modifying it yet.
+ 0 -> @c0.
+ ? (:load32[@memory + 33808] > 0) * (:load64[@memory + 25688] < 4096) [
+  :load32[@memory + 33876] - 1 -> @i.
+  ?? (@i < :load64[@memory + 25608]) * (@c0 == 0) [
+   :bitand[@i| 7] -> @j. 1 -> @k. ?? @j [ @k * 2 -> @k. @j - 1 -> @j. ]
+   ? :bitand[:load8[@memory + 45056 + :shr[@i| 3]]| @k] == 0 [ @i + 1 -> @c0. ]
+   @i + 1 -> @i.
+  ]
+ ]
+ ? @c0 [
+  !store64[@memory + 25656| @c0]. !store64[@memory + 25736| 1].
+  (@c0 - 1) * :load64[@memory + 25616] -> @c0.
+  !store64[@memory + 25664| :load64[@memory + 25640] + :shr[@c0| 12]].
+  !store64[@memory + 25672| :bitand[@c0| 4095]].
+  :load64[@memory + 24656] + :load64[@memory + 25664] * 8 -> @io_lba.
+  @memory + 57344 -> @io_buffer. 8 -> @io_count. 0 -> @io_write. 211 -> @io_return. 90 -> @state.
+ ] ~ [ !store64[@memory + 24640| 6]. 299 -> @state. ]
+]
+? @current == 209 [
+ @io_ok -> @valid. 0 -> @i.
+ ?? @i < :load64[@memory + 25712] [
+  :load8[@memory + 61440 + @i] -> @character.
+  ? ((@character < 32) + (@character > 126)) * (@character != 9) * (@character != 10) * (@character != 13) [ 0 -> @valid. ]
+  @i + 1 -> @i.
+ ]
+ ? @valid [
+  0 -> @i. ?? @i < :load64[@memory + 25712] [
+   !store8[:load64[@memory + 24616] + @i| :load8[@memory + 61440 + @i]]. @i + 1 -> @i.
+  ]
+  !store8[:load64[@memory + 24616] + @i| 0]. !store64[@memory + 24632| @i].
+ ] ~ [
+  !store64[@memory + 24640| 1]. ? @io_ok == 0 [ !store64[@memory + 24640| 3]. ]
+ ]
+ 299 -> @state.
+]
+? @current == 211 [
+ ? @io_ok [
+  @memory + 57344 + :load64[@memory + 25672] -> @pointer.
+  0 -> @i. ?? @i < :load64[@memory + 25616] [ !store8[@pointer + @i| 0]. @i + 1 -> @i. ]
+  !store16[@pointer| 0x81a4]. !store16[@pointer + 26| 1].
+  !store32[@pointer + 8| :load32[@memory + 33840]].
+  !store32[@pointer + 12| :load32[@memory + 33840]].
+  !store32[@pointer + 16| :load32[@memory + 33840]].
+  ? :load64[@memory + 25616] == 256 [
+   !store16[@pointer + 128| 32]. !store32[@pointer + 144| :load32[@memory + 33840]].
+  ]
+  ? :load32[@memory + 33888] == 66 [
+   !store32[@pointer + 32| 0x80000]. !store16[@pointer + 40| 0xf30a]. !store16[@pointer + 44| 4].
+  ]
+  243 -> @state.
+ ] ~ [ !store64[@memory + 24640| 3]. 299 -> @state. ]
+]
+? @current == 212 [
+ # Finish all allocation and capacity checks before the first disk write.
+ 1 -> @valid.
+ :load64[@memory + 24576] -> @c5.
+ 0 -> @c4. ? @c5 == 4 [ :load64[@memory + 24608] -> @c4. ]
+ !store64[@memory + 25720| 0].
+ ? @c5 != 5 [
+  ? @c4 [
+   ? :load64[@memory + 25704] == 0 [
+    0 -> @c0.
+    ? :load32[@memory + 33804] [
+     2 -> @i.
+     ?? (@i < :load64[@memory + 25600]) * (@c0 == 0) [
+      :bitand[@i| 7] -> @j. 1 -> @k. ?? @j [ @k * 2 -> @k. @j - 1 -> @j. ]
+      ? :bitand[:load8[@memory + 40960 + :shr[@i| 3]]| @k] == 0 [ @i -> @c0. ]
+      @i + 1 -> @i.
+     ]
+    ]
+    ? @c0 [
+     !store64[@memory + 25704| @c0]. !store64[@memory + 25784| 1].
+     :bitand[@c0| 7] -> @j. 1 -> @k. ?? @j [ @k * 2 -> @k. @j - 1 -> @j. ]
+     @memory + 40960 + :shr[@c0| 3] -> @pointer.
+     !store8[@pointer| :load8[@pointer] + @k].
+     !store32[@memory + 33804| :load32[@memory + 33804] - 1].
+     !store16[@memory + 36876| :load16[@memory + 36876] - 1].
+    ] ~ [ 0 -> @valid. ]
+   ]
+   !store64[@memory + 25720| 1].
+  ]
+ ]
+ ? @valid [
+  # Free an old data block for deletion or replacement with an empty file.
+  ? (@c5 == 5) + (@c4 == 0) [
+   :load64[@memory + 25704] -> @c0.
+   ? @c0 [
+    :bitand[@c0| 7] -> @j. 1 -> @k. ?? @j [ @k * 2 -> @k. @j - 1 -> @j. ]
+    @memory + 40960 + :shr[@c0| 3] -> @pointer.
+    !store8[@pointer| :load8[@pointer] - @k].
+    !store32[@memory + 33804| :load32[@memory + 33804] + 1].
+    !store16[@memory + 36876| :load16[@memory + 36876] + 1].
+    !store64[@memory + 25704| 0].
+   ]
+  ]
+  # Allocate/free the inode bitmap and matching counters.
+  :load64[@memory + 25656] - 1 -> @c0.
+  :bitand[@c0| 7] -> @j. 1 -> @k. ?? @j [ @k * 2 -> @k. @j - 1 -> @j. ]
+  @memory + 45056 + :shr[@c0| 3] -> @pointer.
+  ? :load64[@memory + 25736] [
+   !store8[@pointer| :load8[@pointer] + @k].
+   !store32[@memory + 33808| :load32[@memory + 33808] - 1].
+   !store16[@memory + 36878| :load16[@memory + 36878] - 1].
+  ]
+  ? @c5 == 5 [
+   !store8[@pointer| :load8[@pointer] - @k].
+   !store32[@memory + 33808| :load32[@memory + 33808] + 1].
+   !store16[@memory + 36878| :load16[@memory + 36878] + 1].
+  ]
+  # The inode's canonical direct/extent map has zero or one initialized block.
+  @memory + 57344 + :load64[@memory + 25672] -> @pointer.
+  !store32[@pointer + 4| @c4]. !store32[@pointer + 28| 0].
+  40 -> @i. ?? @i < 100 [ !store8[@pointer + @i| 0]. @i + 1 -> @i. ]
+  ? @c5 == 5 [
+   # A freed inode must not retain EXTENTS with a cleared, invalid extent header.
+   !store32[@pointer + 32| 0].
+   !store16[@pointer + 26| 0]. !store32[@pointer + 20| :load32[@memory + 33840]].
+   ? :load32[@pointer + 20] == 0 [ !store32[@pointer + 20| 1]. ]
+   !store32[@memory + 53248 + :load64[@memory + 25680]| 0].
+  ] ~ [
+   ? :load64[@memory + 25704] [ !store32[@pointer + 28| 8]. ]
+   ? :load32[@pointer + 32] == 0x80000 [
+    !store16[@pointer + 40| 0xf30a]. !store16[@pointer + 44| 4].
+    ? :load64[@memory + 25704] [
+     !store16[@pointer + 42| 1]. !store16[@pointer + 56| 1].
+     !store32[@pointer + 60| :load64[@memory + 25704]].
+    ]
+   ] ~ [ !store32[@pointer + 40| :load64[@memory + 25704]]. ]
+  ]
+  # Fill a directory hole or split only existing entry slack.
+  ? :load64[@memory + 25736] [
+   @memory + 53248 + :load64[@memory + 25688] -> @pointer.
+   :load16[@pointer + 4] -> @c0. :load64[@memory + 25696] -> @c1.
+   ? @c1 [ !store16[@pointer + 4| @c1]. @pointer + @c1 -> @pointer. ]
+   !store32[@pointer| :load64[@memory + 25656]]. !store16[@pointer + 4| @c0 - @c1].
+   !store8[@pointer + 6| :load64[@memory + 24592]]. !store8[@pointer + 7| 1].
+   0 -> @i. ?? @i < :load64[@memory + 24592] [
+    !store8[@pointer + 8 + @i| :load8[:load64[@memory + 24584] + @i]]. @i + 1 -> @i.
+   ]
+  ]
+  ? :load64[@memory + 25720] [
+   0 -> @i. ?? @i < 4096 [ !store8[@memory + 61440 + @i| 0]. @i + 1 -> @i. ]
+   0 -> @i. ?? @i < @c4 [
+    !store8[@memory + 61440 + @i| :load8[:load64[@memory + 24600] + @i]]. @i + 1 -> @i.
+   ]
+  ]
+  # An interrupted mutation must leave the filesystem marked unclean.
+  !store16[@memory + 33850| 0].
+  :load64[@memory + 24656] -> @io_lba. @memory + 32768 -> @io_buffer.
+  8 -> @io_count. 1 -> @io_write. 231 -> @io_return. 90 -> @state.
+ ] ~ [ !store64[@memory + 24640| 6]. 299 -> @state. ]
+]
+? @current == 231 [
+ ? @io_ok [ 0 -> @io_count. 2 -> @io_write. 232 -> @io_return. 90 -> @state. ]
+ ~ [ !store64[@memory + 24640| 3]. 299 -> @state. ]
+]
+? @current == 232 [
+ ? @io_ok [
+  ? :load64[@memory + 25720] [
+   :load64[@memory + 24656] + :load64[@memory + 25704] * 8 -> @io_lba.
+   @memory + 61440 -> @io_buffer. 8 -> @io_count. 1 -> @io_write. 233 -> @io_return. 90 -> @state.
+  ] ~ [ 234 -> @state. ]
+ ] ~ [ !store64[@memory + 24640| 3]. 299 -> @state. ]
+]
+? @current == 233 [
+ ? @io_ok [ 0 -> @io_count. 2 -> @io_write. 234 -> @io_return. 90 -> @state. ]
+ ~ [ !store64[@memory + 24640| 3]. 299 -> @state. ]
+]
+? @current == 234 [
+ ? @io_ok [
+  :load64[@memory + 24656] + :load64[@memory + 25624] * 8 -> @io_lba.
+  @memory + 40960 -> @io_buffer. 8 -> @io_count. 1 -> @io_write. 235 -> @io_return. 90 -> @state.
+ ] ~ [ !store64[@memory + 24640| 3]. 299 -> @state. ]
+]
+? @current == 235 [
+ ? @io_ok [
+  :load64[@memory + 24656] + :load64[@memory + 25632] * 8 -> @io_lba.
+  @memory + 45056 -> @io_buffer. 8 -> @io_count. 1 -> @io_write. 236 -> @io_return. 90 -> @state.
+ ] ~ [ !store64[@memory + 24640| 3]. 299 -> @state. ]
+]
+? @current == 236 [
+ ? @io_ok [
+  :load64[@memory + 24656] + 8 -> @io_lba.
+  @memory + 36864 -> @io_buffer. 8 -> @io_count. 1 -> @io_write. 237 -> @io_return. 90 -> @state.
+ ] ~ [ !store64[@memory + 24640| 3]. 299 -> @state. ]
+]
+? @current == 237 [
+ ? @io_ok [
+  :load64[@memory + 24656] + :load64[@memory + 25664] * 8 -> @io_lba.
+  @memory + 57344 -> @io_buffer. 8 -> @io_count. 1 -> @io_write. 238 -> @io_return. 90 -> @state.
+ ] ~ [ !store64[@memory + 24640| 3]. 299 -> @state. ]
+]
+? @current == 238 [
+ ? @io_ok [
+  :load64[@memory + 24656] + :load64[@memory + 25648] * 8 -> @io_lba.
+  @memory + 53248 -> @io_buffer. 8 -> @io_count. 1 -> @io_write. 239 -> @io_return. 90 -> @state.
+ ] ~ [ !store64[@memory + 24640| 3]. 299 -> @state. ]
+]
+? @current == 239 [
+ ? @io_ok [ 0 -> @io_count. 2 -> @io_write. 240 -> @io_return. 90 -> @state. ]
+ ~ [ !store64[@memory + 24640| 3]. 299 -> @state. ]
+]
+? @current == 240 [
+ ? @io_ok [
+  !store16[@memory + 33850| 1].
+  :load64[@memory + 24656] -> @io_lba. @memory + 32768 -> @io_buffer.
+  8 -> @io_count. 1 -> @io_write. 241 -> @io_return. 90 -> @state.
+ ] ~ [ !store64[@memory + 24640| 3]. 299 -> @state. ]
+]
+? @current == 241 [
+ ? @io_ok [ 0 -> @io_count. 2 -> @io_write. 242 -> @io_return. 90 -> @state. ]
+ ~ [ !store64[@memory + 24640| 3]. 299 -> @state. ]
+]
+? @current == 242 [
+ ? @io_ok == 0 [ !store64[@memory + 24640| 3]. ]
+ 299 -> @state.
+]
+? @current == 243 [
+ # Before mutation, audit all allocated inode maps for ownership conflicts.
+ # Reuse only the obsolete root-inode cache; preserve target table and directory.
+ !store64[@memory + 25816| 1]. !store64[@memory + 25824| 0].
+ 244 -> @state.
+]
+? @current == 244 [
+ :load64[@memory + 25816] -> @i. 0 -> @ready.
+ ?? (@i <= :load64[@memory + 25608]) * (@ready == 0) [
+  :bitand[@i - 1| 7] -> @j. 1 -> @k. ?? @j [ @k * 2 -> @k. @j - 1 -> @j. ]
+  ? :bitand[:load8[@memory + 45056 + :shr[@i - 1| 3]]| @k] [ 1 -> @ready. ]
+  ~ [ @i + 1 -> @i. ]
+ ]
+ ? @ready [
+  !store64[@memory + 25816| @i].
+  (@i - 1) * :load64[@memory + 25616] -> @c0.
+  !store64[@memory + 25832| :bitand[@c0| 4095]].
+  :load64[@memory + 25640] + :shr[@c0| 12] -> @c0.
+  ? @c0 != :load64[@memory + 25824] [
+   !store64[@memory + 25824| @c0].
+   :load64[@memory + 24656] + @c0 * 8 -> @io_lba.
+   @memory + 49152 -> @io_buffer. 8 -> @io_count. 0 -> @io_write. 245 -> @io_return. 90 -> @state.
+  ] ~ [ 1 -> @io_ok. 245 -> @state. ]
+ ] ~ [ 212 -> @state. ]
+]
+? @current == 245 [
+ @io_ok -> @valid. 1 -> @status.
+ @memory + 49152 + :load64[@memory + 25832] -> @pointer.
+ :bitand[:load16[@pointer]| 0xf000] -> @c0.
+ ? :load32[@pointer + 104] [ 0 -> @valid. ]
+ ? :load32[@pointer + 116] [ 0 -> @valid. ]
+ ? @c0 == 0 [
+  # Only the conventional empty reserved inodes may have mode zero.
+  ? :load64[@memory + 25816] >= :load32[@memory + 33876] [ 0 -> @valid. ]
+  ? :load32[@pointer + 4] [ 0 -> @valid. ]
+  ? :load32[@pointer + 28] [ 0 -> @valid. ]
+  ? :load32[@pointer + 32] [ 0 -> @valid. ]
+  40 -> @i. ?? @i < 100 [ ? :load32[@pointer + @i] [ 0 -> @valid. ] @i + 4 -> @i. ]
+  ? @valid [
+   !store64[@memory + 25816| :load64[@memory + 25816] + 1]. 244 -> @state.
+  ]
+ ] ~ [
+  ? (@c0 != 0x4000) * (@c0 != 0x8000) [ 0 -> @valid. ]
+  ? :load16[@pointer + 26] == 0 [ 0 -> @valid. 2 -> @status. ]
+  ? :load32[@pointer + 20] [ 0 -> @valid. 2 -> @status. ]
+  !store64[@memory + 25864| 0]. !store64[@memory + 25872| 0].
+  !store64[@memory + 25880| :load32[@pointer + 28]].
+  ? :load32[@pointer + 32] == 0x80000 [
+   ? :load32[@memory + 33888] != 66 [ 0 -> @valid. ]
+   ? :load16[@pointer + 40] != 0xf30a [ 0 -> @valid. 2 -> @status. ]
+   ? :load16[@pointer + 42] > 4 [ 0 -> @valid. ]
+   ? :load16[@pointer + 44] != 4 [ 0 -> @valid. ]
+   ? :load16[@pointer + 46] != 0 [ 0 -> @valid. ]
+   !store64[@memory + 25848| 1].
+   !store64[@memory + 25856| :load16[@pointer + 42]].
+  ] ~ [
+   ? :load32[@pointer + 32] != 0 [ 0 -> @valid. ]
+   ? :load32[@pointer + 88] + :load32[@pointer + 92] + :load32[@pointer + 96] [ 0 -> @valid. ]
+   !store64[@memory + 25848| 0]. !store64[@memory + 25856| 12].
+  ]
+  ? @valid [ 246 -> @state. ]
+ ]
+ ? @valid == 0 [
+  !store64[@memory + 24640| @status].
+  ? @io_ok == 0 [ !store64[@memory + 24640| 3]. ]
+  299 -> @state.
+ ]
+]
+? @current == 246 [
+ ? :load64[@memory + 25864] == :load64[@memory + 25856] [
+  ? :load64[@memory + 25872] * 8 == :load64[@memory + 25880] [
+   !store64[@memory + 25816| :load64[@memory + 25816] + 1]. 244 -> @state.
+  ] ~ [ !store64[@memory + 24640| 2]. 299 -> @state. ]
+ ] ~ [
+  1 -> @valid. 2 -> @status.
+  @memory + 49152 + :load64[@memory + 25832] -> @pointer.
+  ? :load64[@memory + 25848] [
+   @pointer + 52 + :load64[@memory + 25864] * 12 -> @pointer.
+   :load16[@pointer + 4] -> @c1.
+   # Exactly 0x8000 is an initialized 32768-block extent. Larger means unwritten.
+   ? @c1 > 32768 [ @c1 - 32768 -> @c1. ]
+   ? @c1 == 0 [ 0 -> @valid. ]
+   ? :load16[@pointer + 6] [ 0 -> @valid. 1 -> @status. ]
+   :load32[@pointer + 8] -> @c0.
+   ? @c0 == 0 [ 0 -> @valid. ]
+  ] ~ [
+   :load32[@pointer + 40 + :load64[@memory + 25864] * 4] -> @c0.
+   0 -> @c1. ? @c0 [ 1 -> @c1. ]
+  ]
+  ? @c1 [
+   ? (@c0 < 2) + (@c0 + @c1 > :load64[@memory + 25600]) [ 0 -> @valid. ]
+   ? (@c0 <= :load64[@memory + 25624]) * (@c0 + @c1 > :load64[@memory + 25624]) [ 0 -> @valid. ]
+   ? (@c0 <= :load64[@memory + 25632]) * (@c0 + @c1 > :load64[@memory + 25632]) [ 0 -> @valid. ]
+   ? (@c0 < :load64[@memory + 25640] + :load64[@memory + 25792]) * (@c0 + @c1 > :load64[@memory + 25640]) [ 0 -> @valid. ]
+   ? :load64[@memory + 25816] != 2 [
+    ? (@c0 <= :load64[@memory + 25648]) * (@c0 + @c1 > :load64[@memory + 25648]) [ 0 -> @valid. ]
+   ]
+   ? :load64[@memory + 25816] != :load64[@memory + 25656] [
+    ? :load64[@memory + 25704] [
+     ? (@c0 <= :load64[@memory + 25704]) * (@c0 + @c1 > :load64[@memory + 25704]) [ 0 -> @valid. ]
+    ]
+   ]
+   # Free bitmap candidates cannot be blocks still named by another inode.
+   0 -> @i.
+   ?? (@i < @c1) * @valid [
+    @c0 + @i -> @c2.
+    :bitand[@c2| 7] -> @j. 1 -> @k. ?? @j [ @k * 2 -> @k. @j - 1 -> @j. ]
+    ? :bitand[:load8[@memory + 40960 + :shr[@c2| 3]]| @k] == 0 [ 0 -> @valid. ]
+    @i + 1 -> @i.
+   ]
+  ]
+  ? @valid [
+   !store64[@memory + 25872| :load64[@memory + 25872] + @c1].
+   !store64[@memory + 25864| :load64[@memory + 25864] + 1].
+   246 -> @state.
+  ] ~ [ !store64[@memory + 24640| @status]. 299 -> @state. ]
+ ]
+]
+? @current == 299 [
+ ? :load64[@memory + 24640] [ !store64[@memory + 24632| 0]. ]
+ ? :load64[@memory + 24640] == 3 [ !store64[@memory + 24680| 0]. ]
+ :load64[@memory + 24648] -> @state.
+]

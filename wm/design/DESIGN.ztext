@@ -1,0 +1,90 @@
+ZTEXT00100000fd3282e76f30000000
+Current original Zero workflow (0.12)
+
+Use the native tools on Linux or their .exe versions on Windows:
+  zero-integrate PROJECT_DIRECTORY NEW_KERNEL.zero
+  zero-build PROJECT_DIRECTORY NEW_OUTPUT_DIRECTORY NEW_KERNEL.zero
+  zero-check PROJECT_DIRECTORY NEW_TEST_DIRECTORY
+All destination paths must be new. The integrator preserves authored sources;
+the builder checks its compiler fixed point and builds the original targets;
+the verifier checks language behavior and host file operations in process.
+See tools/integrate.ztext, tools/build.ztext and checks/README.ztext.
+Read these documents with zero-text read FILE.
+
+The notes below preserve earlier implementation and test history. Any old
+shell/Python runner names, generated artifacts, JSON reports or commands are
+historical references: they were removed from the active project and are not
+current runnable instructions or current-release validation. Native host
+checks do not replace BIOS/UEFI, persistence or physical-hardware testing.
+
+Historical implementation notes
+
+ZERO WINDOW MANAGER - FIRST VISUAL DESIGN
+Date: 2026-11-16 UTC
+
+These are static design previews, not screenshots of a finished window
+manager. Sample terminal text is illustrative. They are rendered by the
+original Zero program preview.zero, compiled with build/zero --host. The
+existing original kernel 5x7 ASCII glyph data is reused; no external font,
+GUI toolkit, image, drawing library or guest runtime is involved.
+
+Files
+  tiles.png   800x600; one master window left, two stack windows right.
+  scroll.png  800x600; focused middle column, clipped neighbors at each edge.
+  preview.zero  complete authoritative Zero source for both previews.
+  make-preview.py  authoring helper that writes declarative scene records;
+                   not needed to compile or render preview.zero.
+
+Palette (0xRRGGBB)
+  background       0x0b101b
+  top/title bars   0x111a2a
+  terminal panel   0x101927
+  inactive border  0x2a374d
+  focus accent     0xac9ae8
+  foreground       0xdce3ef
+  secondary text   0x8596af
+  prompt/status    0x89d8cd
+  window footer    0x0e1522
+  active title     0x20263b
+
+Common geometry at800x600
+  Top bar y0..57; ZERO brand at18,15, scaled2.
+  Workspace row y73; window content region y104..539.
+  Footer bar y574..599, hints at18,581.
+  Window border1pixel; title bar34pixels plus divider; footer24pixels.
+  Body starts16pixels from left,50pixels from top; line advance20pixels.
+  Terminal glyphs use8x16 cells; the 5x7 bitmap rows are doubled vertically.
+  Focus uses lavender border/title and cyan FOCUSED footer.
+
+Tiled preview windows (x,y,width,height)
+  1:16,104,440,436; active.
+  2:472,104,312,210.
+  3:472,330,312,210.
+  Horizontal gap16; vertical gap16.
+
+Scrolling preview windows
+  1:-176,104,368,436; clipped at the left screen edge.
+  2:208,104,368,436; active, fully visible.
+  3:592,104,368,436; clipped at the right screen edge.
+  Horizontal gap16; edge markers and PREVIOUS/NEXT hints show continuity.
+  Text and borders are clipped to visible window bounds, not wrapped into
+  a neighbor. Runtime focus/scroll behavior remains the integration task.
+
+Keyboard labels agreed with the implementation agent
+  F1 NEW  F2 CLOSE  F3 NEXT  F4 PREV  F5 LAYOUT
+The preview does not handle input beyond selecting which static scene to draw.
+
+Reproduce from project root
+  build/zero --host < wm/design/preview.zero > wm/design/preview
+  chmod +x wm/design/preview
+  wm/design/preview < /dev/null > wm/design/tiles.ppm
+  printf s | wm/design/preview > wm/design/scroll.ppm
+The source writes standard P6 RGB,800x600,1440015bytes including header.
+PNG files were made by external host format conversion for review only:
+  convert wm/design/tiles.ppm wm/design/tiles.png
+  convert wm/design/scroll.ppm wm/design/scroll.png
+No host conversion tool becomes part of the OS.
+
+Both previews compiled and rendered successfully and were visually checked.
+They make no claim about runtime multitasking, layout algorithms, memory
+allocation, window limits, filesystem isolation, keyboard routing or boot.

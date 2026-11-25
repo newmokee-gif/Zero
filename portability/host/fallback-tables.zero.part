@@ -1,0 +1,72 @@
+# Original capability constants and unavailable guest host-service returns.
+# Host backends override their own mode; absent backends reject file APIs.
+ !store64[@templates + 1376 | "31c0"].
+ !store64[@templates + 1384 | 2].
+ !store64[@templates + 3424 | "31c031d2"].
+ !store64[@templates + 3432 | 4].
+ !store64[@templates + 5472 | "6631c0"].
+ !store64[@templates + 5480 | 3].
+? @mode == 8 [
+ !store64[@templates + 1392 | "31c0"].
+ !store64[@templates + 1400 | 2].
+ !store64[@templates + 1408 | "31c0"].
+ !store64[@templates + 1416 | 2].
+ !store64[@templates + 1424 | "48c7c0ffffffff"].
+ !store64[@templates + 1432 | 7].
+ !store64[@templates + 1440 | "4883c41848c7c0ffffffff"].
+ !store64[@templates + 1448 | 11].
+ !store64[@templates + 1456 | "4883c41848c7c0ffffffff"].
+ !store64[@templates + 1464 | 11].
+ !store64[@templates + 1472 | "48c7c0ffffffff"].
+ !store64[@templates + 1480 | 7].
+ !store64[@templates + 1488 | "48c7c0ffffffff"].
+ !store64[@templates + 1496 | 7].
+ !store64[@templates + 1504 | "48c7c0ffffffff"].
+ !store64[@templates + 1512 | 7].
+ !store64[@templates + 1520 | "48c7c0ffffffff"].
+ !store64[@templates + 1528 | 7].
+ !store64[@templates + 1536 | "48c7c0ffffffff"].
+ !store64[@templates + 1544 | 7].
+ !store64[@templates + 1552 | "48c7c0ffffffff"].
+ !store64[@templates + 1560 | 7].
+ !store64[@templates + 1568 | "31c0"].
+ !store64[@templates + 1576 | 2].
+ !store64[@templates + 1584 | "4883c41848c7c0ffffffff"].
+ !store64[@templates + 1592 | 11].
+ !store64[@templates + 1600 | "48c7c0ffffffff"].
+ !store64[@templates + 1608 | 7].
+ !store64[@templates + 1616 | "31c0"].
+ !store64[@templates + 1624 | 2].
+]
+? @mode == 9 [
+ !store64[@templates + 3440 | "31c031d2"].
+ !store64[@templates + 3448 | 4].
+ !store64[@templates + 3456 | "31c031d2"].
+ !store64[@templates + 3464 | 4].
+ !store64[@templates + 3472 | "b8ffffffffbaffffffff"].
+ !store64[@templates + 3480 | 10].
+ !store64[@templates + 3488 | "83c418b8ffffffffbaffffffff"].
+ !store64[@templates + 3496 | 13].
+ !store64[@templates + 3504 | "83c418b8ffffffffbaffffffff"].
+ !store64[@templates + 3512 | 13].
+ !store64[@templates + 3520 | "b8ffffffffbaffffffff"].
+ !store64[@templates + 3528 | 10].
+ !store64[@templates + 3536 | "b8ffffffffbaffffffff"].
+ !store64[@templates + 3544 | 10].
+ !store64[@templates + 3552 | "b8ffffffffbaffffffff"].
+ !store64[@templates + 3560 | 10].
+ !store64[@templates + 3568 | "b8ffffffffbaffffffff"].
+ !store64[@templates + 3576 | 10].
+ !store64[@templates + 3584 | "b8ffffffffbaffffffff"].
+ !store64[@templates + 3592 | 10].
+ !store64[@templates + 3600 | "b8ffffffffbaffffffff"].
+ !store64[@templates + 3608 | 10].
+ !store64[@templates + 3616 | "31c031d2"].
+ !store64[@templates + 3624 | 4].
+ !store64[@templates + 3632 | "83c418b8ffffffffbaffffffff"].
+ !store64[@templates + 3640 | 13].
+ !store64[@templates + 3648 | "b8ffffffffbaffffffff"].
+ !store64[@templates + 3656 | 10].
+ !store64[@templates + 3664 | "31c031d2"].
+ !store64[@templates + 3672 | 4].
+]

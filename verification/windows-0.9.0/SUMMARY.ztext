@@ -1,0 +1,10 @@
+ZTEXT0010000026c94a5d2310000000
+Zero/Ezero Windows x64 0.9.0
+Final merged source and executables verified under Wine10 on Debian13.
+Native ABI/PE:25/25 PASS. Ezero behavior:85/85 PASS. Windows cmd/checker:12/12 PASS.
+Windows Zero self-compilation produced a byte-identical PE executable.
+All cross-target byte-parity checks passed, including Zero OS app64/app32.
+The ZIP contains only the Windows toolkit, sources, examples and text documentation.
+No Wine, Linux, Python, foreign compiler/backend or CRT product dependency.
+No native Microsoft Windows machine run is claimed.
+ZIP SHA256:07927b9dd8450453210049654a149bfcd3dd2e608668f36679e2797ebef447c3

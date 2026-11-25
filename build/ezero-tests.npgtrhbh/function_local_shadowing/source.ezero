@@ -1,0 +1,7 @@
+9 => value
+change :: value [
+ value + 1 => value
+ value => return
+]
+change(4) => show
+value => show

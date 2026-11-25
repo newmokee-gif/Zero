@@ -1,0 +1,135 @@
+ZTEXT0010000174e256daadc0000000
+Ezero 0.1 - an easy language built on Zero
+
+Zero remains the existing system language. Ezero adds automatically managed
+values, text without required quotes, typed phrases, lists, functions and
+simple control actions. The frontend, package writer and runtime are original
+Zero code, built by the existing self-hosted Zero compiler. No external
+language engine, compiler backend or runtime library is used.
+
+The hosted workflow below runs on Linux x86-64. The same original frontend,
+packer and runtime also run inside Zero OS through its native32/64-bit
+memory-stream application ABI. The boot ISO includes both architectures in
+TOOLS.BIN; no Linux or firmware service is used by those guest applications.
+Guest execution shares kernel memory and is not process isolation. See
+../portability/guest/ABI.txt and ../portability/guest/BUNDLE.txt.
+
+Build and run
+From the zero-foundation project directory, with build/zero already present:
+
+    bash ezero/build.sh
+    bash ezero/run.sh ezero/examples/hello.ezero
+
+Expected output:
+    Hello
+    Hello
+    Hello
+
+To keep an executable and its generated Zero source:
+
+    bash ezero/compile.sh ezero/examples/banana.ezero build/banana build/banana.zero
+    ./build/banana
+
+compile.sh accepts INPUT.ezero OUTPUT and an optional EMITTED.zero path.
+It publishes outputs only after compilation succeeds. Source and output paths
+must differ. run.sh uses a temporary executable and removes it afterwards.
+If the original Zero compiler has not been built, first run bash build.sh.
+
+A first program
+    Mira => name
+    Hello name => show
+
+Mira is unquoted text. name becomes a binding, and its later use reads the
+stored value. Hello name forms a phrase and prints Hello Mira.
+
+Numbers remain numbers inside phrases
+    3 банана => purchase
+    purchase => show
+    purchase[1] + 2 => show
+    purchase[2] => show
+    size(purchase[2]) => show
+
+Output is 3 банана, then 5, then банана, then 6, each on its own line.
+The first element is the number 3; the second is UTF-8 text. Collection indices
+start at 1. Index 0 and indices beyond size are errors.
+
+Ezero and Zero, the same observable result
+Ezero:
+    3 => repeat [
+        Hello => show
+    ]
+
+Zero:
+    0 => @count.
+    0 => @position.
+    "Hello\n" => @message.
+    ?? @count < 3 [
+        0 -> @position.
+        ?? :load8[@message + @position] != 0 [
+            !put[:load8[@message + @position]].
+            @position + 1 -> @position.
+        ]
+        @count + 1 -> @count.
+    ]
+
+Both print Hello three times. Ezero owns the traversal, output formatting and
+value storage. The matching source files are examples/hello.ezero and
+examples/hello.zero. See LANGUAGE.txt for lists, functions, controls and the
+exact text/name rules. Other runnable examples are in examples/README.txt.
+
+How the current implementation works
+The Ezero frontend validates source and produces a bounded instruction/data
+package. pack.zero emits its initialization as ordinary Zero source. The
+build wrapper combines that initialization with the original Zero runtime;
+the existing Zero compiler produces one standalone Linux executable.
+This first version embeds our instruction interpreter in that executable.
+It does not directly translate every Ezero expression into native instructions.
+There is no separate installed language runtime needed to execute the result.
+
+Values have automatic runtime types. Immutable text, lists and phrases live
+in a copying garbage collector with two 262144-byte (256 KiB) semispaces. The
+live objects plus a requested allocation must fit one space. Exhaustion is a
+reported error; memory is managed automatically but is not unlimited.
+MEMORY.txt gives the frame, stack, heap and collection contracts.
+
+Verification and current scope
+The integrated suite passed 85 checks through the real frontend, generated
+Zero program and runtime. The frontend additionally passed 522 structural,
+capacity and malformed-input checks. These are bounded tests, not proof of
+absence of all defects. Reproduce the integrated suite with:
+
+    bash ezero/tests/run.sh
+
+Host shell and Python arrange builds and check results; they are not Ezero
+parsing or execution implementations. No source or components were taken from
+the internet for this language implementation.
+
+Current Ezero has no modules, closures, classes, guest file/window/network APIs,
+exceptions, threads, floating-point numbers, signed numbers or division.
+Native guest compilation and execution are verified separately in
+../verification/guest-app/bundle-merged/. Persistent source/project files and
+protected application execution remain further work.
+Existing Zero and Zero OS sources remain the foundation; Ezero does not
+replace or rename their language or compiler.
+
+Host files and program arguments
+The0.10 compiler/runtime supports host(),arguments(),
+readfile(path),writefile(path|text),fileexists(path). See HOST.txt for exact
+limits and examples/host-files.ezero for a file-copy example. writefile creates
+a NEW file only and preserves every existing destination. Host operations
+except host() report a source-line error in Zero OS; host() permits a guard.
+
+Native compiler commands on Linux and Windows
+The native toolkit supplies zero/ezero (zero.exe/ezero.exe on Windows):
+    ezero INPUT.ezero NEW_OUTPUT
+These original Zero commands perform the pipeline in-process, with no shell,
+CMD or Python runtime. The earlier shell workflow above remains source-build
+orchestration. See ../tools/compiler-cli.txt and ../DISTRIBUTIONS.txt.
+
+Text convenience
+lines(text) returns a one-based list of lines, recognizing LF and CRLF.
+join(list | separator) combines a list of text without manual loops. Both
+work on Linux, Windows and Zero OS; files can be composed with readfile and
+writefile on hosts. See LANGUAGE.txt for empty lines, strict types and limits,
+and examples/text.ezero for a runnable example.
+The external behavioral regression suite is ezero/tests/text.py --baseline.

@@ -1,0 +1,6 @@
+# Original INT15/AH87 block-move shim. ECX=table, EAX=word count.
+# Low-memory table<=0xffd0; word count1..32768. Caller owns descriptors.
+# Return0success, BIOSAH or256 onCFerror,0xffffffff on invalid arguments.
+# Preserve general/segment registers and flags; EAX is result, DF is clear.
+!store64[@templates + 1360 | "669c1e0666606681f9d0ff000077376685c07432663d00800000772a6689ce6689c131c08ed88ec0b487fbcd15fa660fb6c4730d6685c0751366b800010000eb0b6631c0eb0666b8ffffffff2e66a3086e6661071f669dfc2e66a1086e"].
+!store64[@templates + 1368 | 93].

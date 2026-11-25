@@ -1,0 +1,12 @@
+# comment
+add :: a | b [
+ a + b => return
+]
+[
+ 1 |
+ 2
+] => values
+add(
+ values[1] |
+ values[2]
+) => show # tail

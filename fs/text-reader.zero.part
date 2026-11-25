@@ -1,0 +1,49 @@
+# Original Ztext terminal decoder. Whole-file guest primitives keep raw bytes.
+# Decode only a completed terminal read; never print an unchecked payload.
+? @boot_information*((@current == 31)+(@current == 140)) [
+ 0 -> @ready.
+ ? (@current == 31)*(@operation == 7)*(@file != 0) [
+  @file+36 -> @text. :load16[@file+34] -> @text_length. @file+1 -> @wanted. @name_length -> @i. 1 -> @ready.
+ ]
+ ? (@current == 140)*(:load64[@memory+24576] == 2)*(:load64[@memory+24640] == 0) [
+  @listing -> @text. :load64[@memory+24632] -> @text_length. :load64[@memory+24584] -> @wanted. :load64[@memory+24592] -> @i. 1 -> @ready.
+ ]
+ ? @ready [
+  0 -> @ready.
+  ? @i >= 6 [
+   ? (:load32[@wanted+@i-6] == 0x65747a2e)*(:load16[@wanted+@i-2] == 0x7478) [ 1 -> @ready. ]
+  ]
+  ? @text_length >= 8 [ ? :load64[@text] == 0x313030545845545a [ 1 -> @ready. ] ]
+  ? @ready [
+   "Invalid Ztext header or payload length.\r\n" -> @message. 9 -> @state. 1 -> @valid.
+   ? (@text_length < 32)+(@text_length > 400) [ 0 -> @valid. ]
+   ? @valid [
+    ? (:load64[@text] != 0x313030545845545a)+(:load64[@text+24] != 0x0a30303030303030) [ 0 -> @valid. ]
+    8 -> @i. 0 -> @j. 0 -> @c0.
+    ?? (@i < 24)*@valid [
+     :load8[@text+@i] -> @character. 0 -> @ready.
+     ? (@character >= 48)*(@character <= 57) [ @character-48 -> @character. 1 -> @ready. ] ~ [
+      ? (@character >= 97)*(@character <= 102) [ @character-87 -> @character. 1 -> @ready. ]
+     ]
+     ? @ready == 0 [ 0 -> @valid. ]
+     @j*16+@character -> @j. ? @i == 15 [ @j -> @c0. 0 -> @j. ] @i+1 -> @i.
+    ]
+    @j -> @c1. ? @c0 != @text_length-32 [ 0 -> @valid. ]
+   ]
+   ? @valid [
+    2166136261 -> @checksum. 0 -> @i. 1 -> @ready.
+    ?? @i < @c0 [
+     :load8[@text+32+@i] -> @character.
+     :bitand[:bitxor[@checksum|@character]*16777619|4294967295] -> @checksum.
+     ? ((@character < 32)*(@character != 9)*(@character != 10)*(@character != 13))+(@character > 126) [ 0 -> @ready. ]
+     @i+1 -> @i.
+    ]
+    "Ztext checksum mismatch; payload not displayed.\r\n" -> @message.
+    ? @checksum == @c1 [
+     "Ztext payload requires characters unsupported by this terminal.\r\n" -> @message.
+     ? @ready [ @text+32 -> @message. 12 -> @state. ]
+    ]
+   ]
+  ]
+ ]
+]

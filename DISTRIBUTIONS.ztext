@@ -1,0 +1,57 @@
+ZTEXT00100000c5413c3061c0000000
+Zero/Ezero 0.11 native tools - Linux x86-64 and Windows x64
+
+Extract the platform toolkit and keep lib beside its executables. The binaries
+and libraries are our own Zero implementations. No Bash/CMD/Python script is
+needed to run the compiler, preparation tool or local updater.
+
+Compile a source file (Windows appends.exe to the tool name):
+  zero examples/hello.zero NEW_PROGRAM
+  ezero examples/banana.ezero NEW_PROGRAM
+The optional third argument chooses a compiler target; the default is native
+Linux ELF or Windows PE for the current host. Existing output files are kept
+and cause an error. Run the produced program using the host's normal executable
+launch mechanism. Ezero file operations belong to native generated programs;
+Zero OS guest apps deliberately report that host files are unavailable.
+
+Prepare a dedicated directory:
+  zero-setup prepare zero.iso NEW_DIRECTORY
+  zero-setup status DIRECTORY
+  zero-setup remove DIRECTORY
+Preparation copies the ISO and creates an original empty ZeroFS data file.
+The original v1 preparation/removal contract remains compatible.
+
+Deploy a bootable UEFI x64 application and its sibling ISO:
+  zero-setup deploy zero.iso ZEROX64.EFI NEW_DIRECTORY
+The toolkit includes our own ZEROX64.EFI and its complete Zero source. Firmware
+must be able to read the destination filesystem and launch that file; normally
+this means FAT. No boot entry or partition is changed automatically. Arbitrary
+NTFS/ext4/Btrfs directories and a live storage.data block device remain further
+work. v2 status accepts changed valid ZeroFS data; remove still preserves it
+by refusal. See installer/README.ztext and installer/boot/README.ztext.
+
+Local staged rolling-release backend:
+  zero-update init zero.iso 1000 NEW_STORE
+  zero-update publish next-zero.iso 1001 NEW_INBOX
+  zero-update check NEW_INBOX NEW_STORE
+  zero-update verify NEW_STORE
+  zero-update rollback NEW_STORE
+  zero-update watch NEW_INBOX NEW_STORE 3600
+  zero-update inspect NEW_STORE
+  zero-update recover NEW_STORE RECOVERED_STORE
+watch repeats local checks while the native process is running, using real
+timed waits. An optional final check count makes it finite. A missing or
+corrupt inbox stops with an error. inspect exposes incomplete journal tails;
+recover creates a new verified store without altering the original. This is
+not a registered startup task, network updater or boot activation mechanism. Images
+have SHA256 corruption checks, but no publisher signatures or configured remote
+release server. Keep previous known-good media. See updater/README.ztext.
+Native payload and journal writes request file flushing before publication
+or successful commit. Directory metadata is not flushed by the current API;
+complete rename/power-loss durability is not claimed.
+
+Verification boundaries: Linux runs natively on Debian13.6; Arch tests use an
+official Arch userspace container sharing the host kernel. Windows PE tools
+are executed through Wine10 on Debian, not a native Windows installation.
+Wine does not emulate all Windows reparse behavior; documented skipped checks
+are not claimed as passes. OS boot tests use four QEMU BIOS/UEFI32/64 modes.

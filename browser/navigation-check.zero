@@ -1,0 +1,1195 @@
+# Original Zero executable browser navigation/UI/frame regression.
+0 => @afterhash.
+0 => @arena.
+0 => @beforehash.
+0 => @boot_information.
+0 => @c0.
+0 => @c1.
+0 => @c2.
+0 => @c3.
+0 => @c4.
+0 => @c5.
+0 => @character.
+0 => @console.
+0 => @equal.
+0 => @expected.
+0 => @expectgen.
+0 => @expecthistory.
+0 => @expectindex.
+0 => @expectmodal.
+0 => @expectphase.
+0 => @expectscroll.
+0 => @expectselection.
+0 => @failed.
+0 => @failures.
+0 => @fixture.
+0 => @fixturebuf.
+0 => @i.
+0 => @j.
+0 => @k.
+0 => @line_length.
+0 => @message.
+0 => @mode.
+0 => @net.
+0 => @overflow.
+0 => @pointer.
+0 => @session.
+0 => @state.
+0 => @status.
+0 => @testcase.
+0 => @testname.
+0 => @testpos.
+0 => @testvalue.
+0 => @temporary.
+0 => @text.
+0 => @valid.
+:hostalloc[524288] -> @arena. ? @arena == 0 [ !exit[71]. ]
+@arena+64 -> @console. @arena+8192 -> @net. @net+163840 -> @session. @arena+300000 -> @fixturebuf.
+?? @testcase < 76 [
+0 -> @testpos. ?? @testpos < 524288 [ !store64[@arena+@testpos|0]. @testpos+8 -> @testpos. ]
+0 -> @failed. 0 -> @mode. 3 -> @expectphase. 0 -> @expectgen. 2 -> @expecthistory. 2 -> @expectindex. 0 -> @expectscroll. 1 -> @expectselection. 2 -> @expectmodal.
+!store64[@console+2400|@net]. !store64[@console+2112|@arena+310000]. !store64[@console+2416|2].
+!store64[@net+32|4]. !store64[@net+400|1].
+!store64[@session+8|3]. !store64[@session+32|1]. !store64[@session+64|2]. !store64[@session+72|2].
+!store64[@session+8208|13].
+"http://example.test/dir/page?old=1" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@session+128+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@session+128+@testpos|0].
+"http://example.test/first" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@session+768+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@session+768+@testpos|0].
+"http://example.test/dir/page?old=1" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@session+1024+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@session+1024+@testpos|0].
+"hello\nsecond\n" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@session+24768+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@session+24768+@testpos|0].
+"run bad" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@arena+320000+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@arena+320000+@testpos|0].
+
+"http://example.test/dir/page?old=1" -> @expected.
+? @testcase == 0 [
+"bare host" -> @testname.
+0 -> @mode.
+"example.test" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+2 -> @expectphase.
+"http://example.test" -> @expected. 1 -> @expectgen.
+]
+? @testcase == 1 [
+"absolute" -> @testname.
+0 -> @mode.
+"http://example.test/hello" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+2 -> @expectphase.
+"http://example.test/hello" -> @expected. 1 -> @expectgen.
+]
+? @testcase == 2 [
+"relative file" -> @testname.
+0 -> @mode.
+"next" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+!store64[@session+104|1].
+2 -> @expectphase.
+"http://example.test/dir/next" -> @expected. 1 -> @expectgen.
+]
+? @testcase == 3 [
+"root relative" -> @testname.
+0 -> @mode.
+"/next?q=2" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+!store64[@session+104|1].
+2 -> @expectphase.
+"http://example.test/next?q=2" -> @expected. 1 -> @expectgen.
+]
+? @testcase == 4 [
+"scheme relative" -> @testname.
+0 -> @mode.
+"//other.test/path" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+!store64[@session+104|1].
+2 -> @expectphase.
+"http://other.test/path" -> @expected. 1 -> @expectgen.
+]
+? @testcase == 5 [
+"query replacement" -> @testname.
+0 -> @mode.
+"?next=2" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+!store64[@session+104|1].
+2 -> @expectphase.
+"http://example.test/dir/page?next=2" -> @expected. 1 -> @expectgen.
+]
+? @testcase == 6 [
+"fragment preserves query" -> @testname.
+0 -> @mode.
+"#section" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+!store64[@session+104|1].
+2 -> @expectphase.
+"http://example.test/dir/page?old=1" -> @expected. 1 -> @expectgen.
+]
+? @testcase == 7 [
+"query colon" -> @testname.
+0 -> @mode.
+"?next=http://other.test" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+!store64[@session+104|1].
+2 -> @expectphase.
+"http://example.test/dir/page?next=http://other.test" -> @expected. 1 -> @expectgen.
+]
+? @testcase == 8 [
+"fragment colon" -> @testname.
+0 -> @mode.
+"#a:b" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+!store64[@session+104|1].
+2 -> @expectphase.
+"http://example.test/dir/page?old=1" -> @expected. 1 -> @expectgen.
+]
+? @testcase == 9 [
+"dot relative" -> @testname.
+0 -> @mode.
+"./next" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+!store64[@session+104|1].
+2 -> @expectphase.
+"http://example.test/dir/next" -> @expected. 1 -> @expectgen.
+]
+? @testcase == 10 [
+"parent relative" -> @testname.
+0 -> @mode.
+"../next" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+!store64[@session+104|1].
+2 -> @expectphase.
+"http://example.test/next" -> @expected. 1 -> @expectgen.
+]
+? @testcase == 11 [
+"root parent" -> @testname.
+0 -> @mode.
+"/../../next" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+!store64[@session+104|1].
+2 -> @expectphase.
+"http://example.test/next" -> @expected. 1 -> @expectgen.
+]
+? @testcase == 12 [
+"upper HTTP" -> @testname.
+0 -> @mode.
+"HTTP://example.test/next" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+2 -> @expectphase.
+"http://example.test/next" -> @expected. 1 -> @expectgen.
+]
+? @testcase == 13 [
+"bare port" -> @testname.
+0 -> @mode.
+"example.test:8080/path" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+2 -> @expectphase.
+"http://example.test:8080/path" -> @expected. 1 -> @expectgen.
+]
+? @testcase == 14 [
+"bare query" -> @testname.
+0 -> @mode.
+"example.test?q=1" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+2 -> @expectphase.
+"http://example.test/?q=1" -> @expected. 1 -> @expectgen.
+]
+? @testcase == 15 [
+"https rejected" -> @testname.
+0 -> @mode.
+"https://example.test/" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+4 -> @expectphase.
+]
+? @testcase == 16 [
+"javascript rejected" -> @testname.
+0 -> @mode.
+"javascript:alert(1)" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+!store64[@session+104|1].
+4 -> @expectphase.
+]
+? @testcase == 17 [
+"data rejected" -> @testname.
+0 -> @mode.
+"data:text/html,hello" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+!store64[@session+104|1].
+4 -> @expectphase.
+]
+? @testcase == 18 [
+"file rejected" -> @testname.
+0 -> @mode.
+"file:///etc/passwd" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+!store64[@session+104|1].
+4 -> @expectphase.
+]
+? @testcase == 19 [
+"zero command rejected" -> @testname.
+0 -> @mode.
+"zero:run" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+!store64[@session+104|1].
+4 -> @expectphase.
+]
+? @testcase == 20 [
+"newline rejected" -> @testname.
+0 -> @mode.
+"example.test/\r\nHost: evil" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+4 -> @expectphase.
+]
+? @testcase == 21 [
+"space rejected" -> @testname.
+0 -> @mode.
+"example.test/a b" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+4 -> @expectphase.
+]
+? @testcase == 22 [
+"backslash rejected" -> @testname.
+0 -> @mode.
+"example.test\\evil" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+4 -> @expectphase.
+]
+? @testcase == 23 [
+"empty rejected" -> @testname.
+0 -> @mode.
+"" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+4 -> @expectphase.
+]
+? @testcase == 24 [
+"256 bytes rejected" -> @testname.
+0 -> @mode.
+"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+4 -> @expectphase.
+]
+? @testcase == 25 [
+"255 byte final URL" -> @testname.
+0 -> @mode.
+"http://example.test/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+2 -> @expectphase.
+"http://example.test/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" -> @expected. 1 -> @expectgen.
+]
+? @testcase == 26 [
+"prefix overflow rejected" -> @testname.
+0 -> @mode.
+"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+4 -> @expectphase.
+]
+? @testcase == 27 [
+"long relative overflow" -> @testname.
+0 -> @mode.
+"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+!store64[@session+104|1].
+4 -> @expectphase.
+]
+? @testcase == 28 [
+"link source unchanged" -> @testname.
+0 -> @mode.
+"next" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+!store64[@session+104|1].
+2 -> @expectphase.
+"http://example.test/dir/next" -> @expected. 1 -> @expectgen.
+"next" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@session+8384+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@session+8384+@testpos|0].
+]
+? @testcase == 29 [
+"reload aliases URL" -> @testname.
+1 -> @mode.
+"" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+2 -> @expectphase.
+"http://example.test/dir/page?old=1" -> @expected. 1 -> @expectgen.
+2 -> @expecthistory.
+2 -> @expectindex.
+!store64[@console+2448|114].
+]
+? @testcase == 30 [
+"back history" -> @testname.
+1 -> @mode.
+"" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+2 -> @expectphase.
+"http://example.test/first" -> @expected. 1 -> @expectgen.
+2 -> @expecthistory.
+1 -> @expectindex.
+!store64[@console+2448|98].
+]
+? @testcase == 31 [
+"address field opens" -> @testname.
+1 -> @mode.
+"" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+1 -> @expectphase.
+!store64[@session+8|1].
+!store64[@console+2448|111].
+]
+? @testcase == 32 [
+"escape clears modal" -> @testname.
+1 -> @mode.
+"" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+3 -> @expectphase.
+!store64[@session+8|3].
+0 -> @expectmodal.
+!store64[@console+2448|27].
+]
+? @testcase == 33 [
+"link enter" -> @testname.
+1 -> @mode.
+"next" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+2 -> @expectphase.
+"http://example.test/dir/next" -> @expected. 1 -> @expectgen.
+3 -> @expecthistory.
+3 -> @expectindex.
+!store64[@console+2448|10].
+!store64[@session+8216|1].
+"next" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@session+8384+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@session+8384+@testpos|0].
+]
+? @testcase == 34 [
+"unsafe link enter" -> @testname.
+1 -> @mode.
+"javascript:alert(1)" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+4 -> @expectphase.
+!store64[@console+2448|10].
+!store64[@session+8216|1].
+"javascript:alert(1)" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@session+8384+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@session+8384+@testpos|0].
+]
+? @testcase == 35 [
+"space selects link" -> @testname.
+1 -> @mode.
+"" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+3 -> @expectphase.
+2 -> @expectselection.
+!store64[@console+2448|32].
+2 -> @expectselection.
+!store64[@session+8216|2].
+"/target" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@session+8384+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@session+8384+@testpos|0].
+]
+? @testcase == 36 [
+"tab wraps link" -> @testname.
+1 -> @mode.
+"" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+3 -> @expectphase.
+1 -> @expectselection.
+!store64[@console+2448|9].
+!store64[@session+32|2]. 2 -> @expectselection.
+1 -> @expectselection.
+!store64[@session+8216|2].
+"/target" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@session+8384+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@session+8384+@testpos|0].
+]
+? @testcase == 37 [
+"scroll down" -> @testname.
+1 -> @mode.
+"" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+3 -> @expectphase.
+6 -> @expectscroll.
+!store64[@console+2448|257].
+]
+? @testcase == 38 [
+"scroll up" -> @testname.
+1 -> @mode.
+"" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+3 -> @expectphase.
+0 -> @expectscroll.
+!store64[@console+2448|256].
+!store64[@session+16|6].
+]
+? @testcase == 39 [
+"no history underflow" -> @testname.
+1 -> @mode.
+"" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+3 -> @expectphase.
+2 -> @expecthistory.
+1 -> @expectindex.
+!store64[@console+2448|98].
+!store64[@session+72|1].
+]
+? @testcase == 40 [
+"render max document" -> @testname.
+2 -> @mode.
+"" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+3 -> @expectphase.
+!store64[@session+8208|32768]. 0 -> @testpos. ?? @testpos < 32768 [ !store8[@session+24768+@testpos|65+:bitand[@testpos|15]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 41 [
+"render error frame" -> @testname.
+2 -> @mode.
+"" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+4 -> @expectphase.
+!store64[@session+8|4].
+0 -> @testpos. ?? @testpos < 127 [ !store8[@session+640+@testpos|88]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 42 [
+"render input caret" -> @testname.
+2 -> @mode.
+"" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+1 -> @expectphase.
+!store64[@session+8|1].
+0 -> @testpos. ?? @testpos < 255 [ !store8[@session+384+@testpos|89]. @testpos+1 -> @testpos. ] !store64[@session+24|255].
+]
+? @testcase == 43 [
+"render max link" -> @testname.
+2 -> @mode.
+"" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+3 -> @expectphase.
+!store64[@session+32|32]. 32 -> @expectselection.
+!store64[@session+8216|32].
+"/target" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@session+8384+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@session+8384+@testpos|0].
+!store64[@session+8208|32768]. 0 -> @testpos. ?? @testpos < 32768 [ !store8[@session+24768+@testpos|65+:bitand[@testpos|15]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 44 [
+"stale response ignored" -> @testname.
+1 -> @mode.
+"" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+2 -> @expectphase.
+!store64[@session+8|2].
+!store64[@console+2448|0].
+!store64[@net+400|2]. !store64[@net+392|2]. !store64[@session+48|1].
+]
+? @testcase == 45 [
+"offline prevents request" -> @testname.
+0 -> @mode.
+"example.test" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+4 -> @expectphase.
+!store64[@net+32|2].
+]
+? @testcase == 46 [
+"percent CRLF remains encoded" -> @testname.
+0 -> @mode.
+"example.test/%0d%0a" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+2 -> @expectphase.
+"http://example.test/%0d%0a" -> @expected. 1 -> @expectgen.
+]
+? @testcase == 47 [
+"literal command characters path" -> @testname.
+0 -> @mode.
+"example.test/run;zero" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+2 -> @expectphase.
+"http://example.test/run;zero" -> @expected. 1 -> @expectgen.
+]
+? @testcase == 48 [
+"reload while loading ignored" -> @testname.
+1 -> @mode.
+"" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+2 -> @expectphase.
+!store64[@session+8|2].
+!store64[@console+2448|114].
+]
+? @testcase == 49 [
+"back while loading ignored" -> @testname.
+1 -> @mode.
+"" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+2 -> @expectphase.
+!store64[@session+8|2].
+!store64[@console+2448|98].
+]
+? @testcase == 50 [
+"trailing dot directory" -> @testname.
+0 -> @mode.
+"/one/." -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+!store64[@session+104|1].
+2 -> @expectphase.
+"http://example.test/one/" -> @expected. 1 -> @expectgen.
+]
+? @testcase == 51 [
+"parent directory" -> @testname.
+0 -> @mode.
+"/one/two/.." -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+!store64[@session+104|1].
+2 -> @expectphase.
+"http://example.test/one/" -> @expected. 1 -> @expectgen.
+]
+? @testcase == 52 [
+"query dot left literal" -> @testname.
+0 -> @mode.
+"/path?q=../x" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+!store64[@session+104|1].
+2 -> @expectphase.
+"http://example.test/path?q=../x" -> @expected. 1 -> @expectgen.
+]
+? @testcase == 53 [
+"encoded dot left literal" -> @testname.
+0 -> @mode.
+"/%2e%2e/path" -> @fixture.
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+!store64[@session+104|1].
+2 -> @expectphase.
+"http://example.test/%2e%2e/path" -> @expected. 1 -> @expectgen.
+]
+
+? @testcase == 54 [ "history rollover" -> @testname.
+1 -> @mode. 2 -> @expectphase. 1 -> @expectgen. 8 -> @expecthistory. 8 -> @expectindex. !store64[@session+64|8]. !store64[@session+72|8]. !store64[@session+8216|1]. !store64[@console+2448|10]. "/latest" -> @fixture. 0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@session+8384+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@session+8384+@testpos|0].
+ "http://example.test/latest" -> @expected.
+"http://example.test/item0" -> @fixture. 0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@session+768+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@session+768+@testpos|0].
+"http://example.test/item1" -> @fixture. 0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@session+1024+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@session+1024+@testpos|0].
+"http://example.test/item2" -> @fixture. 0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@session+1280+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@session+1280+@testpos|0].
+"http://example.test/item3" -> @fixture. 0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@session+1536+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@session+1536+@testpos|0].
+"http://example.test/item4" -> @fixture. 0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@session+1792+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@session+1792+@testpos|0].
+"http://example.test/item5" -> @fixture. 0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@session+2048+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@session+2048+@testpos|0].
+"http://example.test/item6" -> @fixture. 0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@session+2304+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@session+2304+@testpos|0].
+"http://example.test/item7" -> @fixture. 0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@session+2560+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@session+2560+@testpos|0].
+
+]
+? @testcase == 55 [ "history branch replaces forward" -> @testname.
+1 -> @mode. 2 -> @expectphase. 1 -> @expectgen. !store64[@session+72|1]. !store64[@session+8216|1]. !store64[@console+2448|10]. "/branch" -> @fixture. 0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@session+8384+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@session+8384+@testpos|0].
+ "http://example.test/branch" -> @expected.
+]
+? @testcase == 56 [ "history full reload unchanged" -> @testname.
+1 -> @mode. 2 -> @expectphase. 1 -> @expectgen. 8 -> @expecthistory. 8 -> @expectindex. !store64[@session+64|8]. !store64[@session+72|8]. !store64[@console+2448|114].
+]
+? @testcase == 57 [ "bare port query" -> @testname.
+"example.test:8080?x=1" -> @fixture. 0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+ 2 -> @expectphase. 1 -> @expectgen. "http://example.test:8080/?x=1" -> @expected.
+]
+? @testcase == 58 [ "redirect root relative" -> @testname.
+1 -> @mode. !store64[@session+8|2]. !store64[@session+48|1]. !store64[@net+384|1]. !store64[@net+392|1]. !store64[@net+400|2]. !store64[@net+672|301]. 1 -> @expectgen.
+"http://example.test/dir/page?old=1" -> @fixture. 0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@net+16384+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@net+16384+@testpos|0].
+ 2 -> @expectphase. 2 -> @expectgen. !store64[@net+720|5]. "/next" -> @fixture. 0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@net+23296+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@net+23296+@testpos|0].
+ "http://example.test/next" -> @expected.
+]
+? @testcase == 59 [ "redirect HTTPS blocked" -> @testname.
+1 -> @mode. !store64[@session+8|2]. !store64[@session+48|1]. !store64[@net+384|1]. !store64[@net+392|1]. !store64[@net+400|2]. !store64[@net+672|301]. 1 -> @expectgen.
+"http://example.test/dir/page?old=1" -> @fixture. 0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@net+16384+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@net+16384+@testpos|0].
+ 4 -> @expectphase. !store64[@net+720|23]. "https://example.test/path" -> @fixture. 0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@net+23296+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@net+23296+@testpos|0].
+
+]
+? @testcase == 60 [ "redirect limit" -> @testname.
+1 -> @mode. !store64[@session+8|2]. !store64[@session+48|1]. !store64[@net+384|1]. !store64[@net+392|1]. !store64[@net+400|2]. !store64[@net+672|301]. 1 -> @expectgen.
+"http://example.test/dir/page?old=1" -> @fixture. 0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@net+16384+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@net+16384+@testpos|0].
+ 4 -> @expectphase. !store64[@session+80|5]. !store64[@net+720|5]. "/loop" -> @fixture. 0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@net+23296+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@net+23296+@testpos|0].
+
+]
+? @testcase == 61 [ "redirect missing location" -> @testname.
+1 -> @mode. !store64[@session+8|2]. !store64[@session+48|1]. !store64[@net+384|1]. !store64[@net+392|1]. !store64[@net+400|2]. !store64[@net+672|301]. 1 -> @expectgen.
+"http://example.test/dir/page?old=1" -> @fixture. 0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@net+16384+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@net+16384+@testpos|0].
+ 4 -> @expectphase.
+]
+? @testcase == 62 [ "compressed response error" -> @testname.
+1 -> @mode. !store64[@session+8|2]. !store64[@session+48|1]. !store64[@net+384|1]. !store64[@net+392|1]. !store64[@net+400|2]. !store64[@net+672|301]. 1 -> @expectgen.
+"http://example.test/dir/page?old=1" -> @fixture. 0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@net+16384+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@net+16384+@testpos|0].
+ 4 -> @expectphase. !store64[@net+400|3]. !store64[@net+408|13].
+]
+? @testcase == 63 [ "unsupported MIME error" -> @testname.
+1 -> @mode. !store64[@session+8|2]. !store64[@session+48|1]. !store64[@net+384|1]. !store64[@net+392|1]. !store64[@net+400|2]. !store64[@net+672|301]. 1 -> @expectgen.
+"http://example.test/dir/page?old=1" -> @fixture. 0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@net+16384+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@net+16384+@testpos|0].
+ 4 -> @expectphase. !store64[@net+672|200]. !store64[@net+704|3].
+]
+? @testcase == 64 [ "open while loading ignores finished reply" -> @testname.
+1 -> @mode. !store64[@session+8|2]. !store64[@session+48|1]. !store64[@net+384|1]. !store64[@net+392|1]. !store64[@net+400|2]. !store64[@net+672|301]. 1 -> @expectgen.
+"http://example.test/dir/page?old=1" -> @fixture. 0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@net+16384+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@net+16384+@testpos|0].
+ 1 -> @expectphase. !store64[@console+2448|111].
+]
+? @testcase == 65 [ "address limit keyboard" -> @testname.
+1 -> @mode. 1 -> @expectphase. !store64[@session+8|1]. !store64[@session+24|255]. !store64[@console+2448|88]. "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" -> @fixture. 0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@session+384+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@session+384+@testpos|0].
+
+]
+? @testcase == 66 [ "address empty backspace" -> @testname.
+1 -> @mode. 1 -> @expectphase. !store64[@session+8|1]. !store64[@console+2448|8].
+]
+? @testcase == 67 [ "address normal backspace" -> @testname.
+1 -> @mode. 1 -> @expectphase. !store64[@session+8|1]. !store64[@session+24|3]. !store64[@console+2448|8]. "abc" -> @fixture. 0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@session+384+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@session+384+@testpos|0].
+
+]
+? @testcase == 68 [ "address Enter" -> @testname.
+1 -> @mode. 2 -> @expectphase. 1 -> @expectgen. 3 -> @expecthistory. 3 -> @expectindex. !store64[@session+8|1]. !store64[@session+24|12]. !store64[@console+2448|10]. "example.test" -> @fixture. 0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@session+384+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@session+384+@testpos|0].
+ "http://example.test" -> @expected.
+]
+? @testcase == 69 [ "escape during fetch" -> @testname.
+1 -> @mode. 2 -> @expectphase. 0 -> @expectmodal. !store64[@session+8|2]. !store64[@console+2448|27].
+]
+? @testcase == 70 [ "frame control bytes" -> @testname.
+2 -> @mode. !store8[@session+24768|27]. !store8[@session+24769|0]. !store8[@session+24770|255].
+]
+? @testcase == 71 [ "frame final document bytes" -> @testname.
+2 -> @mode. 32760 -> @expectscroll. !store64[@session+16|32760]. !store64[@session+8208|32768]. 0 -> @testpos. ?? @testpos < 32768 [ !store8[@session+24768+@testpos|90]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 72 [ "long authority relative overflow" -> @testname.
+"http://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" -> @fixture. 0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@session+128+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@session+128+@testpos|0].
+ "http://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" -> @expected. "x" -> @fixture. 0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+ !store64[@session+104|1]. 4 -> @expectphase.
+]
+? @testcase == 73 [ "255 byte base fragment" -> @testname.
+"http://example.test/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx?q=12" -> @fixture. 0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@session+128+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@session+128+@testpos|0].
+ "http://example.test/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx?q=12" -> @expected. "#x" -> @fixture. 0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+ !store64[@session+104|1]. 2 -> @expectphase. 1 -> @expectgen.
+]
+? @testcase == 74 [ "empty authority rejected" -> @testname.
+"http:///path" -> @fixture. 0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+ 4 -> @expectphase.
+]
+? @testcase == 75 [ "port fragment strips" -> @testname.
+"example.test:8080#frag" -> @fixture. 0 -> @testpos. ?? :load8[@fixture+@testpos] [ !store8[@fixturebuf+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ] !store8[@fixturebuf+@testpos|0].
+ 2 -> @expectphase. 1 -> @expectgen. "http://example.test:8080" -> @expected.
+]
+
+!store64[@session-8|0x0102030405060708]. !store64[@session+65536|0x1122334455667788].
+!store8[@session+4095|173]. !store8[@session+5392|174]. !store8[@session+3071|175]. !store8[@session+3328|176].
+!store8[@net+16383|177]. !store8[@net+16640|178].
+@fixturebuf -> @pointer.
+? @testcase == 28 [ @session+8384 -> @pointer. ]
+0 -> @testpos. ?? @testpos < 2048 [ !store8[@arena+400000+@testpos|:load8[@session+768+@testpos]]. @testpos+1 -> @testpos. ]
+2166136261 -> @beforehash. 0 -> @testpos.
+?? @testpos < 512 [ :bitand[:bitxor[@beforehash|:load8[@fixturebuf+@testpos]]*16777619|4294967295] -> @beforehash. @testpos+1 -> @testpos. ]
+0 -> @testpos. ?? @testpos < 16384 [ :bitand[:bitxor[@beforehash|:load8[@session+8384+@testpos]]*16777619|4294967295] -> @beforehash. @testpos+1 -> @testpos. ]
+0 -> @testpos. ?? @testpos < 256 [ :bitand[:bitxor[@beforehash|:load8[@net+23296+@testpos]]*16777619|4294967295] -> @beforehash. @testpos+1 -> @testpos. ]
+? @mode == 0 [
+# BEGIN BROWSER ADDRESS CHECK
+# Input pointer: NUL-terminated address, <=255 ASCII bytes.
+# state+104: relative link; +112: add history; +80: redirect count.
+# Output is bounded at state+3072, then atomically publishes the request.
+:load64[@console+2400] -> @c0. @c0+163840 -> @c5.
+1 -> @valid. 0 -> @i. 0 -> @j. 0 -> @k.
+?? (:load8[@pointer+@i] != 0)*(@i < 256) [
+ :load8[@pointer+@i] -> @character.
+ ? (@character <= 32)+(@character >= 127)+(@character == 92) [ 0 -> @valid. ]
+ ? (@character == 58)*(@k == 0) [ @i+1 -> @k. ]
+ ? ((@character == 47)+(@character == 63)+(@character == 35))*(@k == 0) [ 512 -> @k. ]
+ @i+1 -> @i.
+]
+? (@i == 0)+(@i > 255) [ 0 -> @valid. ]
+0 -> @c1. "http://" -> @text. 0 -> @j. 1 -> @equal.
+?? @j < 7 [
+ :load8[@pointer+@j] -> @character. ? (@character >= 65)*(@character <= 90) [ @character+32 -> @character. ]
+ ? @character != :load8[@text+@j] [ 0 -> @equal. ] @j+1 -> @j.
+]
+? @equal [ 1 -> @c1. ]
+? (@k > 0)*(@k < 512)*(@c1 == 0) [
+ # A bare host:port is permitted in the address field, never as a link scheme.
+ ? :load64[@c5+104] [ 0 -> @valid. ] ~ [
+  @k -> @j. 0 -> @equal.
+  ?? (@j < @i)*(:load8[@pointer+@j] >= 48)*(:load8[@pointer+@j] <= 57) [ @j+1 -> @j. 1 -> @equal. ]
+  ? (@equal == 0)+((@j < @i)*(:load8[@pointer+@j] != 47)*(:load8[@pointer+@j] != 63)*(:load8[@pointer+@j] != 35)) [ 0 -> @valid. ]
+ ]
+]
+0 -> @j. 0 -> @c2.
+? @valid*(@c1 == 0) [
+ ? (:load8[@pointer] == 47)*(:load8[@pointer+1] == 47) [
+  "http:" -> @text. 5 -> @c2.
+ ] ~ [
+  ? :load64[@c5+104] [
+   @c5+128 -> @text. 7 -> @c2.
+   ?? (:load8[@text+@c2] != 0)*(:load8[@text+@c2] != 47)*(:load8[@text+@c2] != 63)*(:load8[@text+@c2] != 35)*(@c2 < 255) [ @c2+1 -> @c2. ]
+   ? :load8[@pointer] != 47 [
+    @c2 -> @c3. @c2 -> @c4.
+    ?? (:load8[@text+@c3] != 0)*(:load8[@text+@c3] != 63)*(:load8[@text+@c3] != 35)*(@c3 < 255) [
+     ? :load8[@text+@c3] == 47 [ @c3+1 -> @c4. ] @c3+1 -> @c3.
+    ]
+    @c4 -> @c2.
+    ? (:load8[@pointer] == 63)+(:load8[@pointer] == 35) [ @c3 -> @c2. ]
+    ? :load8[@pointer] == 35 [
+     ?? (:load8[@text+@c3] != 0)*(:load8[@text+@c3] != 35)*(@c3 < 255) [ @c3+1 -> @c3. ] @c3 -> @c2.
+    ]
+   ]
+  ] ~ [ "http://" -> @text. 7 -> @c2. ]
+ ]
+ ?? @j < @c2 [ !store8[@c5+3072+@j|:load8[@text+@j]]. @j+1 -> @j. ]
+ ? :load64[@c5+104]*(@c2 > 7)*(:load8[@pointer] != 47)*(:load8[@pointer] != 63)*(:load8[@pointer] != 35) [
+  ? :load8[@c5+3072+@j-1] != 47 [
+   ? @j >= 255 [ 0 -> @valid. ] ~ [ !store8[@c5+3072+@j|47]. @j+1 -> @j. ]
+  ]
+ ]
+]
+0 -> @i.
+?? @valid*(:load8[@pointer+@i] != 0)*(:load8[@pointer+@i] != 35) [
+ ? @j >= 255 [ 0 -> @valid. ] ~ [ !store8[@c5+3072+@j|:load8[@pointer+@i]]. @j+1 -> @j. ] @i+1 -> @i.
+]
+!store8[@c5+3072+@j|0].
+# Normalize only URL syntax. Percent-encoded bytes and query bytes stay literal.
+? @valid [
+ "http://" -> @text. 0 -> @i.
+ ?? @i < 7 [ !store8[@c5+3072+@i|:load8[@text+@i]]. @i+1 -> @i. ]
+ 7 -> @k.
+ ?? (@k < @j)*(:load8[@c5+3072+@k] != 47)*(:load8[@c5+3072+@k] != 63) [ @k+1 -> @k. ]
+ ? @k == 7 [ 0 -> @valid. ]
+ ? (@k < @j)*(:load8[@c5+3072+@k] == 63) [
+  ? @j >= 255 [ 0 -> @valid. ] ~ [
+   @j+1 -> @i. ?? @i > @k [ !store8[@c5+3072+@i|:load8[@c5+3072+@i-1]]. @i-1 -> @i. ]
+   !store8[@c5+3072+@k|47]. @j+1 -> @j.
+  ]
+ ]
+ ? @valid*(@k < @j) [
+  @k -> @i. @k -> @c2.
+  ?? (@i < @j)*(:load8[@c5+3072+@i] != 63) [
+   @i -> @temporary. @i+1 -> @c3. @c3 -> @c4.
+   ?? (@c4 < @j)*(:load8[@c5+3072+@c4] != 47)*(:load8[@c5+3072+@c4] != 63) [ @c4+1 -> @c4. ]
+   0 -> @equal.
+   ? (@c4-@c3 == 1)*(:load8[@c5+3072+@c3] == 46) [ 1 -> @equal. ]
+   ? (@c4-@c3 == 2)*(:load16[@c5+3072+@c3] == 0x2e2e) [ 2 -> @equal. ]
+   ? @equal [
+    ? @equal == 2 [
+     ?? (@c2 > @k)*(:load8[@c5+3072+@c2-1] != 47) [ @c2-1 -> @c2. ]
+     ? @c2 > @k [ @c2-1 -> @c2. ]
+    ]
+    ? (@c4 == @j)+(:load8[@c5+3072+@c4] == 63) [
+     ? (@c2 == @k)+(:load8[@c5+3072+@c2-1] != 47) [ !store8[@c5+3072+@c2|47]. @c2+1 -> @c2. ]
+    ]
+   ] ~ [
+    @temporary -> @i. ?? @i < @c4 [ !store8[@c5+3072+@c2|:load8[@c5+3072+@i]]. @i+1 -> @i. @c2+1 -> @c2. ]
+   ]
+   @c4 -> @i.
+  ]
+  ?? @i < @j [ !store8[@c5+3072+@c2|:load8[@c5+3072+@i]]. @i+1 -> @i. @c2+1 -> @c2. ]
+  @c2 -> @j. !store8[@c5+3072+@j|0].
+ ]
+]
+? @valid [
+ ? :load64[@c0+32] != 4 [ 0 -> @valid. "Network is not connected. DHCP continues automatically." -> @text. ]
+] ~ [ "Unsupported or invalid address. HTTP only; no HTTPS or active schemes." -> @text. ]
+? @valid [
+ 0 -> @i. ?? @i <= @j [
+  :load8[@c5+3072+@i] -> @character.
+  !store8[@c5+128+@i|@character]. !store8[@c0+16384+@i|@character]. @i+1 -> @i.
+ ]
+ ? :load64[@c5+112] [
+  :load64[@c5+72] -> @k. ? @k >= 8 [
+   0 -> @i. ?? @i < 1792 [ !store8[@c5+768+@i|:load8[@c5+1024+@i]]. @i+1 -> @i. ] 7 -> @k.
+  ]
+  0 -> @i. ?? @i < 256 [ !store8[@c5+768+@k*256+@i|:load8[@c5+128+@i]]. @i+1 -> @i. ]
+  !store64[@c5+64|@k+1]. !store64[@c5+72|@k+1].
+ ]
+ :load64[@c0+384]+1 -> @c1. ? @c1 == 0 [ 1 -> @c1. ]
+ !store64[@c5+48|@c1]. !store64[@c5+8|2]. !store64[@c5+16|0].
+ !store64[@c5+56|1]. !store64[@c0+384|@c1].
+] ~ [
+ !store64[@c5+8|4]. 0 -> @i.
+ ?? (:load8[@text+@i] != 0)*(@i < 127) [ !store8[@c5+640+@i|:load8[@text+@i]]. @i+1 -> @i. ]
+ !store8[@c5+640+@i|0]. !store64[@c5+56|1].
+]
+
+# END BROWSER ADDRESS CHECK
+]
+? @mode == 1 [
+# BEGIN BROWSER UI CHECK
+# Original Zero browser events. Page bytes never enter the shell input buffer.
+? :load64[@console+2416] == 2 [
+ :load64[@console+2400] -> @c0. @c0+163840 -> @c5.
+ :load64[@console+2448] -> @character. !store64[@console+2448|0].
+ ? @character == 27 [
+  !store64[@console+2416|0]. !store64[@console+2424|0].
+  !store64[@console+2088|:load64[@console+2088]+1].
+  0 -> @line_length. 0 -> @overflow. 9 -> @state.
+ ] ~ [
+  ? :load64[@c5+120] [ !store64[@c5+120|0]. 10 -> @character. ]
+  :load64[@c5+8] -> @c1.
+  ? @c1 == 1 [
+   :load64[@c5+24] -> @i.
+   ? (@character >= 32)*(@character <= 126)*(@i < 255) [
+    !store8[@c5+384+@i|@character]. @i+1 -> @i. !store8[@c5+384+@i|0]. !store64[@c5+24|@i].
+   ]
+   ? (@character == 8)*(@i > 0) [ @i-1 -> @i. !store8[@c5+384+@i|0]. !store64[@c5+24|@i]. ]
+   ? @character == 10 [
+    @c5+384 -> @pointer. !store64[@c5+104|0]. !store64[@c5+112|1]. !store64[@c5+80|0].
+    !store64[@c5+88|@pointer].
+   ]
+  ] ~ [
+   ? (@character == 111)+(@character == 79) [
+    0 -> @i. ?? (:load8[@c5+128+@i] != 0)*(@i < 255) [ !store8[@c5+384+@i|:load8[@c5+128+@i]]. @i+1 -> @i. ]
+    !store8[@c5+384+@i|0]. !store64[@c5+24|@i]. !store64[@c5+8|1].
+   ]
+   ? ((@character == 114)+(@character == 82))*(@c1 != 2) [
+    @c5+128 -> @pointer. !store64[@c5+104|0]. !store64[@c5+112|0]. !store64[@c5+80|0].
+    !store64[@c5+88|@pointer].
+   ]
+   ? ((@character == 98)+(@character == 66))*(@c1 != 2)*(:load64[@c5+72] > 1) [
+    :load64[@c5+72]-1 -> @i. !store64[@c5+72|@i]. @c5+768+(@i-1)*256 -> @pointer.
+    !store64[@c5+104|0]. !store64[@c5+112|0]. !store64[@c5+80|0].
+    !store64[@c5+88|@pointer].
+   ]
+   ? @c1 == 3 [
+    :load64[@c5+16] -> @i. :load64[@c5+8192+16] -> @j.
+    ? @character == 257 [
+     ?? (@i < @j)*(:load8[@c5+24768+@i] != 10) [ @i+1 -> @i. ] ? @i < @j [ @i+1 -> @i. ]
+    ]
+    ? (@character == 256)*(@i > 0) [
+     @i-1 -> @i. ? @i [ @i-1 -> @i. ?? (@i > 0)*(:load8[@c5+24768+@i] != 10) [ @i-1 -> @i. ] ? :load8[@c5+24768+@i] == 10 [ @i+1 -> @i. ] ]
+    ]
+    !store64[@c5+16|@i].
+    :load64[@c5+32] -> @i. :load64[@c5+8192+24] -> @j.
+    ? (@character == 32)+(@character == 9) [ @i+1 -> @i. ? @i > @j [ 1 -> @i. ] ]
+    ? (@character >= 49)*(@character <= 57) [ @character-48 -> @i. ]
+    ? (@i >= 1)*(@i <= @j) [ !store64[@c5+32|@i]. ]
+    ? (@character == 10)*(@j > 0) [
+     @c5+8384+(:load64[@c5+32]-1)*512 -> @pointer.
+     !store64[@c5+104|1]. !store64[@c5+112|1]. !store64[@c5+80|0].
+     !store64[@c5+88|@pointer].
+    ]
+   ]
+  ]
+  ? @character [ !store64[@c5+56|1]. ]
+  ? (:load64[@c5+8] == 2)*(:load64[@c0+392] == :load64[@c5+48])*(:load64[@c0+400] >= 2) [
+   ? :load64[@c0+400] == 2 [
+    :load64[@c0+672] -> @i. !store64[@c5+40|@i].
+    ? (@i == 301)+(@i == 302)+(@i == 303)+(@i == 307)+(@i == 308) [
+     ? (:load64[@c0+720] > 0)*(:load64[@c5+80] < 5) [
+      !store64[@c5+80|:load64[@c5+80]+1]. @c0+23296 -> @pointer.
+      !store64[@c5+104|1]. !store64[@c5+112|0].
+      !store64[@c5+88|@pointer].
+     ] ~ [ !store64[@c5+8|4]. "Redirect loop, missing address, or more than five redirects." -> @text. ]
+    ] ~ [
+     ? :load64[@c0+704] == 3 [
+      !store64[@c5+8|4]. "This content type is not supported by the page reader." -> @text.
+     ] ~ [
+      # A separately compiled original Zero HTML reader keeps kernel code bounded.
+:load64[@boot_information+128] -> @c1. :load64[@boot_information+144] -> @c2.
+1 -> @valid. 339968 -> @k. 6 -> @j.
+? :load64[@boot_information+104] == 32 [ 819200 -> @k. 7 -> @j. ]
+? (@c1 == 0)+(@c2 == 0)+(:load64[@boot_information+136] != 1048576)+(:load64[@boot_information+152] != 8388608) [ 0 -> @valid. ]
+? @valid [
+ ? (:load64[@c1] != 0x31304c444e42525a)+(:load64[@c1+24] != 8) [ 0 -> @valid. ]
+ @c1+128+@j*32 -> @pointer. @c1+@k -> @c3.
+ ? (:load64[@pointer] != @k)+(:load64[@pointer+24] != 4)+(:load64[@pointer+16] != :load64[@boot_information+104]) [ 0 -> @valid. ]
+ ? (:load64[@c3] != 0x315050414f52455a)+(:load64[@c3+8] != :load64[@boot_information+104])+(:load64[@c3+16] <= 64)+(:load64[@c3+16] > 143360)+(:load64[@c3+16] != :load64[@pointer+8])+(:load64[@c3+24] != 64) [ 0 -> @valid. ]
+ ? (:load64[@c3+32] != 4198400)+(:load64[@c3+40] != 1)+(:load64[@c3+48] != 0)+(:load64[@c3+56] != 0) [ 0 -> @valid. ]
+]
+? @valid [
+ 0 -> @i. ?? @i < 192 [ !store64[@c2+@i|0]. @i+8 -> @i. ]
+ !store64[@c2|1]. !store64[@c2+8|@c2+8388608].
+ !store64[@c2+168|@c2+2097152]. !store64[@c2+176|6291456].
+ !store64[@c2+16|:load64[@c0+696]]. !store64[@c2+24|:load64[@c0+680]].
+ !store64[@c2+40|@c5+8192]. !store64[@c2+48|49344].
+ !store64[@c2+64|1]. !store64[@c2+72|"zero-browser"].
+ ? :load64[@c0+704] == 2 [ !store64[@c2+64|2]. !store64[@c2+80|"--plain"]. ]
+ :call[@c3+64|@c2|0|0|0|0] -> @status.
+ ? (@status != 0)+(:load64[@c2+88] != 0)+(:load64[@c2+56] < 16576)+(:load64[@c2+56] > 49344) [ 0 -> @valid. ]
+ ? @valid [
+  @c5+8192 -> @c3.
+  ? (:load64[@c3] != 0x313030574f52425a)+(:load64[@c3+8] != 1)+(:load64[@c3+16] > 32768)+(:load64[@c3+24] > 32)+(:load64[@c3+40] != 0)+(:load64[@c3+48] != 78) [ 0 -> @valid. ]
+  ? :load64[@c2+56] != 16576+:load64[@c3+16] [ 0 -> @valid. ]
+ ]
+]
+? @valid [
+ !store64[@c5+8|3]. !store64[@c5+16|0]. !store64[@c5+32|1]. !store64[@c5+96|1].
+ !store8[@c5+8192+16576+:load64[@c5+8192+16]|0].
+] ~ [
+ !store64[@c5+8|4]. "This page is invalid, too large, or the HTML reader is unavailable." -> @text.
+ 0 -> @i. ?? :load8[@text+@i] [ !store8[@c5+640+@i|:load8[@text+@i]]. @i+1 -> @i. ] !store8[@c5+640+@i|0].
+]
+!store64[@c5+56|1].
+
+      ? :load64[@c5+8] == 4 [ @c5+640 -> @text. ]
+     ]
+    ]
+   ] ~ [
+    !store64[@c5+8|4]. :load64[@c0+408] -> @i.
+    "HTTP request failed. Press R to retry or O to change the address." -> @text.
+    ? @i == 2 [ "Invalid HTTP address. HTTPS is not implemented yet." -> @text. ]
+    ? @i == 5 [ "DNS lookup failed. Check the address and network connection." -> @text. ]
+    ? (@i == 6)+(@i == 8) [ "The server did not respond before the connection timeout." -> @text. ]
+    ? @i == 9 [ "Page exceeds the bounded 64 KiB HTTP response capacity." -> @text. ]
+    ? @i == 10 [ "Invalid or incomplete HTTP response. Nothing was executed." -> @text. ]
+    ? @i == 12 [ "Unsupported or ambiguous HTTP transfer encoding." -> @text. ]
+    ? @i == 13 [ "Compressed responses are not supported yet." -> @text. ]
+   ]
+   ? :load64[@c5+8] == 4 [
+    0 -> @i. ?? (:load8[@text+@i] != 0)*(@i < 127) [ !store8[@c5+640+@i|:load8[@text+@i]]. @i+1 -> @i. ] !store8[@c5+640+@i|0].
+   ]
+   !store64[@c5+56|1].
+  ]
+  ? :load64[@c5+88] [
+   :load64[@c5+88] -> @pointer. !store64[@c5+88|0].
+   # Input pointer: NUL-terminated address, <=255 ASCII bytes.
+# state+104: relative link; +112: add history; +80: redirect count.
+# Output is bounded at state+3072, then atomically publishes the request.
+:load64[@console+2400] -> @c0. @c0+163840 -> @c5.
+1 -> @valid. 0 -> @i. 0 -> @j. 0 -> @k.
+?? (:load8[@pointer+@i] != 0)*(@i < 256) [
+ :load8[@pointer+@i] -> @character.
+ ? (@character <= 32)+(@character >= 127)+(@character == 92) [ 0 -> @valid. ]
+ ? (@character == 58)*(@k == 0) [ @i+1 -> @k. ]
+ ? ((@character == 47)+(@character == 63)+(@character == 35))*(@k == 0) [ 512 -> @k. ]
+ @i+1 -> @i.
+]
+? (@i == 0)+(@i > 255) [ 0 -> @valid. ]
+0 -> @c1. "http://" -> @text. 0 -> @j. 1 -> @equal.
+?? @j < 7 [
+ :load8[@pointer+@j] -> @character. ? (@character >= 65)*(@character <= 90) [ @character+32 -> @character. ]
+ ? @character != :load8[@text+@j] [ 0 -> @equal. ] @j+1 -> @j.
+]
+? @equal [ 1 -> @c1. ]
+? (@k > 0)*(@k < 512)*(@c1 == 0) [
+ # A bare host:port is permitted in the address field, never as a link scheme.
+ ? :load64[@c5+104] [ 0 -> @valid. ] ~ [
+  @k -> @j. 0 -> @equal.
+  ?? (@j < @i)*(:load8[@pointer+@j] >= 48)*(:load8[@pointer+@j] <= 57) [ @j+1 -> @j. 1 -> @equal. ]
+  ? (@equal == 0)+((@j < @i)*(:load8[@pointer+@j] != 47)*(:load8[@pointer+@j] != 63)*(:load8[@pointer+@j] != 35)) [ 0 -> @valid. ]
+ ]
+]
+0 -> @j. 0 -> @c2.
+? @valid*(@c1 == 0) [
+ ? (:load8[@pointer] == 47)*(:load8[@pointer+1] == 47) [
+  "http:" -> @text. 5 -> @c2.
+ ] ~ [
+  ? :load64[@c5+104] [
+   @c5+128 -> @text. 7 -> @c2.
+   ?? (:load8[@text+@c2] != 0)*(:load8[@text+@c2] != 47)*(:load8[@text+@c2] != 63)*(:load8[@text+@c2] != 35)*(@c2 < 255) [ @c2+1 -> @c2. ]
+   ? :load8[@pointer] != 47 [
+    @c2 -> @c3. @c2 -> @c4.
+    ?? (:load8[@text+@c3] != 0)*(:load8[@text+@c3] != 63)*(:load8[@text+@c3] != 35)*(@c3 < 255) [
+     ? :load8[@text+@c3] == 47 [ @c3+1 -> @c4. ] @c3+1 -> @c3.
+    ]
+    @c4 -> @c2.
+    ? (:load8[@pointer] == 63)+(:load8[@pointer] == 35) [ @c3 -> @c2. ]
+    ? :load8[@pointer] == 35 [
+     ?? (:load8[@text+@c3] != 0)*(:load8[@text+@c3] != 35)*(@c3 < 255) [ @c3+1 -> @c3. ] @c3 -> @c2.
+    ]
+   ]
+  ] ~ [ "http://" -> @text. 7 -> @c2. ]
+ ]
+ ?? @j < @c2 [ !store8[@c5+3072+@j|:load8[@text+@j]]. @j+1 -> @j. ]
+ ? :load64[@c5+104]*(@c2 > 7)*(:load8[@pointer] != 47)*(:load8[@pointer] != 63)*(:load8[@pointer] != 35) [
+  ? :load8[@c5+3072+@j-1] != 47 [
+   ? @j >= 255 [ 0 -> @valid. ] ~ [ !store8[@c5+3072+@j|47]. @j+1 -> @j. ]
+  ]
+ ]
+]
+0 -> @i.
+?? @valid*(:load8[@pointer+@i] != 0)*(:load8[@pointer+@i] != 35) [
+ ? @j >= 255 [ 0 -> @valid. ] ~ [ !store8[@c5+3072+@j|:load8[@pointer+@i]]. @j+1 -> @j. ] @i+1 -> @i.
+]
+!store8[@c5+3072+@j|0].
+# Normalize only URL syntax. Percent-encoded bytes and query bytes stay literal.
+? @valid [
+ "http://" -> @text. 0 -> @i.
+ ?? @i < 7 [ !store8[@c5+3072+@i|:load8[@text+@i]]. @i+1 -> @i. ]
+ 7 -> @k.
+ ?? (@k < @j)*(:load8[@c5+3072+@k] != 47)*(:load8[@c5+3072+@k] != 63) [ @k+1 -> @k. ]
+ ? @k == 7 [ 0 -> @valid. ]
+ ? (@k < @j)*(:load8[@c5+3072+@k] == 63) [
+  ? @j >= 255 [ 0 -> @valid. ] ~ [
+   @j+1 -> @i. ?? @i > @k [ !store8[@c5+3072+@i|:load8[@c5+3072+@i-1]]. @i-1 -> @i. ]
+   !store8[@c5+3072+@k|47]. @j+1 -> @j.
+  ]
+ ]
+ ? @valid*(@k < @j) [
+  @k -> @i. @k -> @c2.
+  ?? (@i < @j)*(:load8[@c5+3072+@i] != 63) [
+   @i -> @temporary. @i+1 -> @c3. @c3 -> @c4.
+   ?? (@c4 < @j)*(:load8[@c5+3072+@c4] != 47)*(:load8[@c5+3072+@c4] != 63) [ @c4+1 -> @c4. ]
+   0 -> @equal.
+   ? (@c4-@c3 == 1)*(:load8[@c5+3072+@c3] == 46) [ 1 -> @equal. ]
+   ? (@c4-@c3 == 2)*(:load16[@c5+3072+@c3] == 0x2e2e) [ 2 -> @equal. ]
+   ? @equal [
+    ? @equal == 2 [
+     ?? (@c2 > @k)*(:load8[@c5+3072+@c2-1] != 47) [ @c2-1 -> @c2. ]
+     ? @c2 > @k [ @c2-1 -> @c2. ]
+    ]
+    ? (@c4 == @j)+(:load8[@c5+3072+@c4] == 63) [
+     ? (@c2 == @k)+(:load8[@c5+3072+@c2-1] != 47) [ !store8[@c5+3072+@c2|47]. @c2+1 -> @c2. ]
+    ]
+   ] ~ [
+    @temporary -> @i. ?? @i < @c4 [ !store8[@c5+3072+@c2|:load8[@c5+3072+@i]]. @i+1 -> @i. @c2+1 -> @c2. ]
+   ]
+   @c4 -> @i.
+  ]
+  ?? @i < @j [ !store8[@c5+3072+@c2|:load8[@c5+3072+@i]]. @i+1 -> @i. @c2+1 -> @c2. ]
+  @c2 -> @j. !store8[@c5+3072+@j|0].
+ ]
+]
+? @valid [
+ ? :load64[@c0+32] != 4 [ 0 -> @valid. "Network is not connected. DHCP continues automatically." -> @text. ]
+] ~ [ "Unsupported or invalid address. HTTP only; no HTTPS or active schemes." -> @text. ]
+? @valid [
+ 0 -> @i. ?? @i <= @j [
+  :load8[@c5+3072+@i] -> @character.
+  !store8[@c5+128+@i|@character]. !store8[@c0+16384+@i|@character]. @i+1 -> @i.
+ ]
+ ? :load64[@c5+112] [
+  :load64[@c5+72] -> @k. ? @k >= 8 [
+   0 -> @i. ?? @i < 1792 [ !store8[@c5+768+@i|:load8[@c5+1024+@i]]. @i+1 -> @i. ] 7 -> @k.
+  ]
+  0 -> @i. ?? @i < 256 [ !store8[@c5+768+@k*256+@i|:load8[@c5+128+@i]]. @i+1 -> @i. ]
+  !store64[@c5+64|@k+1]. !store64[@c5+72|@k+1].
+ ]
+ :load64[@c0+384]+1 -> @c1. ? @c1 == 0 [ 1 -> @c1. ]
+ !store64[@c5+48|@c1]. !store64[@c5+8|2]. !store64[@c5+16|0].
+ !store64[@c5+56|1]. !store64[@c0+384|@c1].
+] ~ [
+ !store64[@c5+8|4]. 0 -> @i.
+ ?? (:load8[@text+@i] != 0)*(@i < 127) [ !store8[@c5+640+@i|:load8[@text+@i]]. @i+1 -> @i. ]
+ !store8[@c5+640+@i|0]. !store64[@c5+56|1].
+]
+
+  ]
+  ? :load64[@c5+56] [
+   # An original bounded page frame. No HTML byte can become a terminal command.
+:load64[@console+2400]+163840 -> @c5.
+0 -> @i. ?? @i < 1296 [ !store8[@c5+4096+@i|32]. @i+1 -> @i. ]
+0 -> @i. ?? @i < 15 [ !store8[@c5+4176+@i*81|10]. @i+1 -> @i. ] !store8[@c5+5391|0].
+0 -> @k.
+?? @k < 6 [
+ "ZERO BROWSER / ORIGINAL ZERO PAGE READER" -> @text. 0 -> @j. 78 -> @c4.
+ ? @k == 1 [ @c5+128 -> @text. 81 -> @j. ? :load64[@c5+8] == 1 [ @c5+384 -> @text. ] ]
+ ? @k == 2 [
+  "HTTP reader | HTML text and links | HTTPS, CSS and scripts unavailable" -> @text. 162 -> @j.
+  ? :load64[@c5+8] == 1 [ "Type an HTTP address, then Enter. Backspace edits. Esc closes." -> @text. ]
+  ? :load64[@c5+8] == 2 [ "Loading page... Esc closes. Network polling continues." -> @text. ]
+  ? :load64[@c5+8] == 4 [ "The page could not be displayed. O opens another address." -> @text. ]
+ ]
+ ? @k == 3 [
+  "-------------------------------------------------------------------------------" -> @text. 243 -> @j.
+  ? :load64[@c5+8] == 3 [ @c5+8256 -> @text. ]
+ ]
+ ? @k == 4 [
+  "" -> @text. 1134 -> @j.
+  ? (:load64[@c5+8] == 3)*(:load64[@c5+8192+24] > 0) [ @c5+8384+(:load64[@c5+32]-1)*512 -> @text. ]
+ ]
+ ? @k == 5 [ "O address  B back  R reload  Up/Down scroll  Space link  Enter follow  Esc close" -> @text. 1215 -> @j. ]
+ 0 -> @i. ?? (@i < @c4)*(:load8[@text+@i] != 0) [
+  :load8[@text+@i] -> @character. ? (@character < 32)+(@character > 126) [ 63 -> @character. ]
+  !store8[@c5+4096+@j+@i|@character]. @i+1 -> @i.
+ ]
+ @k+1 -> @k.
+]
+? :load64[@c5+8] == 1 [
+ :load64[@c5+24] -> @i. ? @i > 77 [ 77 -> @i. ] !store8[@c5+4177+@i|95].
+]
+? :load64[@c5+8] == 3 [
+ :load64[@c5+16] -> @i. :load64[@c5+8208] -> @c4. 4 -> @k. 0 -> @j.
+ ?? (@i < @c4)*(@k < 14) [
+  :load8[@c5+24768+@i] -> @character.
+  ? @character == 10 [ @k+1 -> @k. 0 -> @j. ] ~ [
+   ? @j >= 78 [ @k+1 -> @k. 0 -> @j. ]
+   ? @k < 14 [
+    ? (@character < 32)+(@character > 126) [ 63 -> @character. ]
+    !store8[@c5+4096+@k*81+@j|@character]. @j+1 -> @j.
+   ]
+  ] @i+1 -> @i.
+ ]
+]
+? :load64[@c5+8] == 4 [
+ 0 -> @i. ?? (@i < 127)*(:load8[@c5+640+@i] != 0) [
+  @i -> @j. 4 -> @k. ? @i >= 78 [ @i-78 -> @j. 5 -> @k. ]
+  !store8[@c5+4096+@k*81+@j|:load8[@c5+640+@i]]. @i+1 -> @i.
+ ]
+]
+@c5+4096 -> @message.
+
+   !store64[@c5+56|0]. :load64[@console+2112] -> @c0.
+   !store64[@c0+64|:load64[@c0+64]+1].
+  ]
+ ]
+]
+
+# END BROWSER UI CHECK
+]
+? @mode == 2 [
+# BEGIN BROWSER RENDER CHECK
+# An original bounded page frame. No HTML byte can become a terminal command.
+:load64[@console+2400]+163840 -> @c5.
+0 -> @i. ?? @i < 1296 [ !store8[@c5+4096+@i|32]. @i+1 -> @i. ]
+0 -> @i. ?? @i < 15 [ !store8[@c5+4176+@i*81|10]. @i+1 -> @i. ] !store8[@c5+5391|0].
+0 -> @k.
+?? @k < 6 [
+ "ZERO BROWSER / ORIGINAL ZERO PAGE READER" -> @text. 0 -> @j. 78 -> @c4.
+ ? @k == 1 [ @c5+128 -> @text. 81 -> @j. ? :load64[@c5+8] == 1 [ @c5+384 -> @text. ] ]
+ ? @k == 2 [
+  "HTTP reader | HTML text and links | HTTPS, CSS and scripts unavailable" -> @text. 162 -> @j.
+  ? :load64[@c5+8] == 1 [ "Type an HTTP address, then Enter. Backspace edits. Esc closes." -> @text. ]
+  ? :load64[@c5+8] == 2 [ "Loading page... Esc closes. Network polling continues." -> @text. ]
+  ? :load64[@c5+8] == 4 [ "The page could not be displayed. O opens another address." -> @text. ]
+ ]
+ ? @k == 3 [
+  "-------------------------------------------------------------------------------" -> @text. 243 -> @j.
+  ? :load64[@c5+8] == 3 [ @c5+8256 -> @text. ]
+ ]
+ ? @k == 4 [
+  "" -> @text. 1134 -> @j.
+  ? (:load64[@c5+8] == 3)*(:load64[@c5+8192+24] > 0) [ @c5+8384+(:load64[@c5+32]-1)*512 -> @text. ]
+ ]
+ ? @k == 5 [ "O address  B back  R reload  Up/Down scroll  Space link  Enter follow  Esc close" -> @text. 1215 -> @j. ]
+ 0 -> @i. ?? (@i < @c4)*(:load8[@text+@i] != 0) [
+  :load8[@text+@i] -> @character. ? (@character < 32)+(@character > 126) [ 63 -> @character. ]
+  !store8[@c5+4096+@j+@i|@character]. @i+1 -> @i.
+ ]
+ @k+1 -> @k.
+]
+? :load64[@c5+8] == 1 [
+ :load64[@c5+24] -> @i. ? @i > 77 [ 77 -> @i. ] !store8[@c5+4177+@i|95].
+]
+? :load64[@c5+8] == 3 [
+ :load64[@c5+16] -> @i. :load64[@c5+8208] -> @c4. 4 -> @k. 0 -> @j.
+ ?? (@i < @c4)*(@k < 14) [
+  :load8[@c5+24768+@i] -> @character.
+  ? @character == 10 [ @k+1 -> @k. 0 -> @j. ] ~ [
+   ? @j >= 78 [ @k+1 -> @k. 0 -> @j. ]
+   ? @k < 14 [
+    ? (@character < 32)+(@character > 126) [ 63 -> @character. ]
+    !store8[@c5+4096+@k*81+@j|@character]. @j+1 -> @j.
+   ]
+  ] @i+1 -> @i.
+ ]
+]
+? :load64[@c5+8] == 4 [
+ 0 -> @i. ?? (@i < 127)*(:load8[@c5+640+@i] != 0) [
+  @i -> @j. 4 -> @k. ? @i >= 78 [ @i-78 -> @j. 5 -> @k. ]
+  !store8[@c5+4096+@k*81+@j|:load8[@c5+640+@i]]. @i+1 -> @i.
+ ]
+]
+@c5+4096 -> @message.
+
+# END BROWSER RENDER CHECK
+]
+? :load64[@session+8] != @expectphase [ 1 -> @failed. !put[80]. ]
+? (:load64[@net+384] != @expectgen)+(:load64[@session+64] != @expecthistory)+(:load64[@session+72] != @expectindex) [ 1 -> @failed. !put[71]. ]
+? (:load64[@session+16] != @expectscroll)+(:load64[@session+32] != @expectselection)+(:load64[@console+2416] != @expectmodal) [ 1 -> @failed. !put[83]. ]
+0 -> @testpos. 1 -> @testvalue.
+?? @testvalue [ ? :load8[@expected+@testpos] != :load8[@session+128+@testpos] [ 1 -> @failed. !put[85]. 0 -> @testvalue. ]
+ ? :load8[@expected+@testpos] == 0 [ 0 -> @testvalue. ] @testpos+1 -> @testpos. ]
+? @expectgen [ 0 -> @testpos. 1 -> @testvalue. ?? @testvalue [ ? :load8[@expected+@testpos] != :load8[@net+16384+@testpos] [ 1 -> @failed. !put[78]. 0 -> @testvalue. ] ? :load8[@expected+@testpos] == 0 [ 0 -> @testvalue. ] @testpos+1 -> @testpos. ] ]
+? (:load64[@session-8] != 0x0102030405060708)+(:load64[@session+65536] != 0x1122334455667788)+(:load8[@session+4095] != 173)+(:load8[@session+5392] != 174)+(:load8[@session+3071] != 175)+(:load8[@session+3328] != 176)+(:load8[@net+16383] != 177)+(:load8[@net+16640] != 178) [ 1 -> @failed. !put[67]. ]
+2166136261 -> @afterhash. 0 -> @testpos.
+?? @testpos < 512 [ :bitand[:bitxor[@afterhash|:load8[@fixturebuf+@testpos]]*16777619|4294967295] -> @afterhash. @testpos+1 -> @testpos. ]
+0 -> @testpos. ?? @testpos < 16384 [ :bitand[:bitxor[@afterhash|:load8[@session+8384+@testpos]]*16777619|4294967295] -> @afterhash. @testpos+1 -> @testpos. ]
+0 -> @testpos. ?? @testpos < 256 [ :bitand[:bitxor[@afterhash|:load8[@net+23296+@testpos]]*16777619|4294967295] -> @afterhash. @testpos+1 -> @testpos. ]
+? (@testcase == 29)+(@testcase == 30)+(@testcase == 39)+(@testcase == 56) [
+ 0 -> @testpos. ?? @testpos < 2048 [ ? :load8[@arena+400000+@testpos] != :load8[@session+768+@testpos] [ 1 -> @failed. !put[72]. ] @testpos+1 -> @testpos. ]
+]
+? @beforehash != @afterhash [ 1 -> @failed. !put[73]. ]
+"run bad" -> @fixture. 0 -> @testpos. ?? @testpos < 8 [ ? :load8[@fixture+@testpos] != :load8[@arena+320000+@testpos] [ 1 -> @failed. !put[88]. ] @testpos+1 -> @testpos. ]
+? (@testcase == 65)*(:load64[@session+24] != 255) [ 1 -> @failed. !put[65]. ]
+? (@testcase == 66)*(:load64[@session+24] != 0) [ 1 -> @failed. !put[65]. ]
+? @testcase == 67 [ ? (:load64[@session+24] != 2)+(:load8[@session+386] != 0) [ 1 -> @failed. !put[65]. ] ]
+? @testcase == 70 [ ? (:load8[@session+4420] != 63)+(:load8[@session+4421] != 63)+(:load8[@session+4422] != 63) [ 1 -> @failed. !put[70]. ] ]
+
+? @failed [ @failures+1 -> @failures. " FAIL " -> @fixture. ] ~ [ "PASS " -> @fixture. ]
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !put[:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+0 -> @testpos. ?? :load8[@testname+@testpos] [ !put[:load8[@testname+@testpos]]. @testpos+1 -> @testpos. ] !put[10].
+@testcase+1 -> @testcase.
+]
+? @failures [ !exit[1]. ] !exit[0].
+

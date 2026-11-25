@@ -1,0 +1,23 @@
+  ? @boot_information [
+   0 -> @result.
+   ? @check == 1 [
+    ? (:load64[@editor+16] != 9)+(:load64[@editor+64] != 1)+(:load64[@editor+40] != 0) [ 1 -> @result. ]
+    0 -> @position. ?? @position < 9 [ ? :load8[@editor+512+@position] != :load8["!put[65]."+@position] [ 2 -> @result. ] @position+1 -> @position. ]
+   ]
+   ? @check == 2 [ ? (:load64[@editor+16] != 0)+(:load64[@editor+64] != 3)+(:load8[@editor+128] != 120) [ 3 -> @result. ] ]
+   ? @check == 4 [ ? (:load64[@editor+16] != 400)+(:load64[@editor+64] != 1)+(:load8[@editor+911] != 65)+(:load8[@editor+912] != 0) [ 4 -> @result. ] ]
+   ? (@check == 3)+(@check >= 5) [
+    ? (:load64[@editor+16] != 4)+(:load64[@editor+64] != 4)+(:load64[@editor+40] != 1)+(:load32[@editor+512] != 0x5045454b) [ 5 -> @result. ]
+   ]
+   ? :load64[@editor+80] != 0 [ 6 -> @result. ]
+   ? @result [ !put[70]. !put[65]. !put[73]. !put[76]. !put[32]. !put[48+@check]. !put[32]. !put[48+@result]. !put[10]. @failure+1 -> @failure. ]
+   @check+1 -> @check. 1 -> @state.
+  ]
+ ]
+ # INCLUDE SERVICE HERE
+]
+? @failure [ !exit[1]. ]
+"7 editor file-service client checks passed.\n" -> @text. 0 -> @position.
+?? :load8[@text+@position] [ !put[:load8[@text+@position]]. @position+1 -> @position. ]
+:hostfree[@workspace|8388608] -> @result.
+!exit[0].

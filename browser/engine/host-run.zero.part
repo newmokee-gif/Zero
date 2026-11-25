@@ -1,0 +1,77 @@
+# Start each original worker, then run DOM, scripts, cascade and layout.
+!switch[@web+1024|@web+1152]. !switch[@web+1024|@web+1280].
+!switch[@web+1024|@web+1408]. !switch[@web+1024|@web+1664].
+!switch[@web+1024|@web+1152].
+!switch[@web+1024|@web+1408].
+!switch[@web+1024|@web+1280].
+!switch[@web+1024|@web+1664].
+? :load64[@web+16] [
+ "Document rejected by the bounded Zero Web profile; no page was published.\n" -> @v0.
+ 0 -> @v1. ?? :load8[@v0+@v1] [ !put[:load8[@v0+@v1]]. @v1+1 -> @v1. ] !exit[:load64[@web+16]].
+]
+? :load64[@web+72] == 3 [
+ "Zero Web experimental document\n" -> @v0. 0 -> @v1.
+ ?? :load8[@v0+@v1] [ !put[:load8[@v0+@v1]]. @v1+1 -> @v1. ]
+ 1 -> @v0. ?? @v0 <= :load64[@web+32] [
+  @web+4096+(@v0-1)*1024 -> @v1. @web+540672+(@v0-1)*64 -> @v2.
+  ? (:load64[@v1+8] == 2)+:bitand[:load64[@v1+496]|1] [
+   0 -> @v3. :load64[@v1+480] -> @v4.
+   ? :load64[@v2+24] [
+    :load64[@v1] -> @v5. 1 -> @v6.
+    ?? @v5 [
+     @web+4096+(@v5-1)*1024 -> @v7.
+     ? :bitand[:load64[@v7+496]|1] [ 0 -> @v6. ] :load64[@v7] -> @v5.
+    ]
+    ? @v6 [
+     ?? @v3 < :load64[@v1+488] [
+      :load8[@v4+@v3] -> @v5.
+      ? (@v5 >= 32)*(@v5 <= 126) [ !put[@v5]. ] ~ [ ? (@v5 == 9)+(@v5 == 10)+(@v5 == 13) [ !put[32]. ] ? @v5 >= 128 [ !put[63]. ] ] @v3+1 -> @v3.
+     ] !put[10].
+    ]
+   ]
+  ] @v0+1 -> @v0.
+ ]
+]
+? :load64[@web+72] == 4 [
+ "Zero Web profile accepted this document.\n" -> @v0. 0 -> @v1.
+ ?? :load8[@v0+@v1] [ !put[:load8[@v0+@v1]]. @v1+1 -> @v1. ]
+]
+? :load64[@web+24] [
+ "Warning: this page uses features outside the implemented preview profile.\n" -> @v0. 0 -> @v1.
+ ?? :load8[@v0+@v1] [ !put[:load8[@v0+@v1]]. @v1+1 -> @v1. ]
+]
+# Direct own Zpix encoder. No subprocess or foreign image format is needed.
+? :load64[@web+72] == 2 [
+ :hostalloc[1920064] -> @v0. ? @v0 == 0 [ !exit[71]. ]
+ 0 -> @v1. ?? @v1 < 64 [ !store64[@v0+@v1|0]. @v1+8 -> @v1. ]
+ @web+2097152 -> @v2. 2166136261 -> @v3. 0 -> @v1.
+ ?? @v1 < 480000 [
+  :load32[@v2+@v1*4] -> @v4. 16 -> @v5.
+  ?? @v5 <= 16 [
+   :bitand[:shr[@v4|@v5]|255] -> @v6.
+   :bitand[:bitxor[@v3|@v6]*16777619|0xffffffff] -> @v3. @v5-8 -> @v5.
+  ] @v1+1 -> @v1.
+ ]
+ 0 -> @v1. 64 -> @v7.
+ ?? @v1 < 480000 [
+  :load32[@v2+@v1*4] -> @v4. 1 -> @v5. 1 -> @v6.
+  ?? (@v5 < 255)*(@v1+@v5 < 480000)*@v6 [
+   ? :load32[@v2+(@v1+@v5)*4] == @v4 [ @v5+1 -> @v5. ] ~ [ 0 -> @v6. ]
+  ]
+  !store8[@v0+@v7|@v5]. !store8[@v0+@v7+1|:shr[@v4|16]].
+  !store8[@v0+@v7+2|:shr[@v4|8]]. !store8[@v0+@v7+3|@v4].
+  @v7+4 -> @v7. @v1+@v5 -> @v1.
+ ]
+ !store64[@v0|0x313030305849505a]. !store32[@v0+8|800]. !store32[@v0+12|600].
+ !store32[@v0+16|3]. !store32[@v0+20|1]. !store64[@v0+24|480000].
+ !store64[@v0+32|@v7-64]. !store32[@v0+40|@v3]. !store64[@v0+48|@v7].
+ :fileopen[:load64[@web+112]|1] -> @v8. ? @v8 == -1 [ !exit[73]. ]
+ 0 -> @v1. 0 -> @v9.
+ ?? (@v1 < @v7)*(@v9 == 0) [
+  :filewrite[@v8|@v0+@v1|@v7-@v1] -> @v6.
+  ? (@v6 == 0)+(@v6 > @v7-@v1) [ 74 -> @v9. ] ~ [ @v1+@v6 -> @v1. ]
+ ]
+ ? :filesync[@v8] != 0 [ 74 -> @v9. ] ? :fileclose[@v8] != 0 [ 74 -> @v9. ]
+ ? @v9 [ :filedelete[:load64[@web+112]] -> @v6. !exit[@v9]. ]
+ :hostfree[@v0|1920064] -> @v6.
+]

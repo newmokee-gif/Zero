@@ -1,0 +1,31 @@
+# Host results were staged before GC; all text allocation is now exact/bounded.
+? @ez_op == 27 [
+ @ez_sp - 1 -> @ez_sp. 2 -> @ez_type. @ez_heap + @ez_used -> @ez_result.
+ :load64[@ez_mem + 1311040] -> @ez_n.
+ !store64[@ez_result | 2]. !store64[@ez_result + 8 | @ez_n].
+ 0 -> @ez_i. ?? @ez_i < @ez_n [
+  !store8[@ez_result + 16 + @ez_i | :load8[@ez_mem + 1323008 + @ez_i]]. @ez_i + 1 -> @ez_i.
+ ]
+ @ez_used + @ez_need -> @ez_used.
+]
+? (@ez_op == 28) + (@ez_op == 29) [
+ @ez_sp - 1 -> @ez_sp. ? @ez_op == 28 [ @ez_sp - 1 -> @ez_sp. ]
+ 1 -> @ez_type. :load64[@ez_mem + 1311048] -> @ez_result.
+]
+? @ez_op == 30 [
+ 3 -> @ez_type. @ez_heap + @ez_used -> @ez_result.
+ :load64[@ez_mem + 1311072] -> @ez_n.
+ !store64[@ez_result | 3]. !store64[@ez_result + 8 | @ez_n].
+ @ez_result + 16 + @ez_n * 16 -> @ez_dst. 1 -> @ez_i.
+ ?? @ez_i <= @ez_n [
+  :argument[@ez_i] -> @ez_src. :load64[@ez_mem + 1392640 + (@ez_i - 1) * 8] -> @ez_x.
+  !store64[@ez_dst | 2]. !store64[@ez_dst + 8 | @ez_x].
+  !store64[@ez_result + 16 + (@ez_i - 1) * 16 | 2].
+  !store64[@ez_result + 24 + (@ez_i - 1) * 16 | @ez_dst].
+  0 -> @ez_j. ?? @ez_j < @ez_x [ !store8[@ez_dst + 16 + @ez_j | :load8[@ez_src + @ez_j]]. @ez_j + 1 -> @ez_j. ]
+  @ez_dst + 16 + :shr[@ez_x + 15 | 4] * 16 -> @ez_dst.
+  @ez_i + 1 -> @ez_i.
+ ]
+ @ez_used + @ez_need -> @ez_used.
+]
+? @ez_op == 31 [ 1 -> @ez_type. :host[] -> @ez_result. ]

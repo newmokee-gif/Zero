@@ -1,0 +1,72 @@
+ZTEXT00100000d7d0b15caff0000000
+Original Zero archive author verification0.12
+
+archive.zero bytes=17749 SHA256=780d87646a41d5d9540c60dd86bb3641c6ba3b0fc07bc71d554c6a2acf79429d
+zero-archive bytes=27018 SHA256=6df93d632ae9d913c95aa32af14bcdf5f5f864347611eadf3d883c237d810bbb
+zero-archive.exe bytes=36352 SHA256=2e6c8be34b2c2b84f58400f4d15978d0dfd07feb7e118d8a9aa705f3ef7884a6
+
+Final source is frozen. The final addition reopens extracted files after flush/close and compares every byte and exact EOF.
+
+Original Zero archive Linux integration 36/36 PASS
+Fixture /tmp/zero-support/validation-0.12/archive/roundtrip-7jlupvyu
+make nested duplicate basenames, empty, binary and >2MiB file
+verify full index and payload
+list original manifest order
+extract nested files byte for byte
+preserve existing archive and destination
+reject path b'../escape\n'
+reject path b'/absolute\n'
+reject path b'a//b\n'
+reject path b'a/./b\n'
+reject path b'a/../b\n'
+reject path b'a/\n'
+reject path b'C:/escape\n'
+reject path b'a\\b\n'
+reject path b'NUL\n'
+reject path b'a/COM1.txt\n'
+reject path b'foo.\n'
+reject path b'foo \n'
+reject path b'plain\nplain\n'
+reject path b'plain\nPLAIN\n'
+reject path b'a/README\na/README/evil\n'
+reject path b'a/README/evil\na/README\n'
+empty archive
+reject magic before extraction
+reject version before extraction
+reject count before extraction
+reject index checksum before extraction
+reject payload checksum before extraction
+reject total size before extraction
+reject trailing data before extraction
+reject truncated before extraction
+reject absolute indexed path with valid index checksum
+reject dotdot indexed path with valid index checksum
+reject overlap with valid index checksum
+reject huge size with valid index checksum
+reject flags with valid index checksum
+reject padding with valid index checksum
+
+Archive advanced Linux bounds 16/16 PASS
+reject advanced unsafe manifest b'plain\x00evil\n'
+reject advanced unsafe manifest b'CONIN$\n'
+reject advanced unsafe manifest b'conout$.txt\n'
+reject advanced unsafe manifest b'COM\xc2\xb9\n'
+reject advanced unsafe manifest b'LPT\xc2\xb2.txt\n'
+reject advanced unsafe manifest b' plain\n'
+reject advanced unsafe manifest b'a/f\nA/g\n'
+reject advanced unsafe manifest b'bad\xc0\x80\n'
+reject advanced unsafe manifest b'x|\n'
+explicit executable permission and255-byte path
+existing symlink destination preserved
+4096 member boundary
+4097 member rejection
+64MiB archive boundary
+64MiB overflow before output creation
+existing nonempty directory preserved
+Fixture /tmp/zero-support/validation-0.12/archive/bounds-033cowes
+
+Independent review:22 additional Linux/Windows-Wine checks passed before the final extracted-file readback strengthening; format and path rules are unchanged. Evidence verification/archive-independent-0.12/report.ztext. These cover nested Unicode/binary roundtrip, identical cross-host encoding, traversal, reserved names, existing-data preservation, Unicode alias cleanup and executable flags.
+
+The final current source was rebuilt by the native builder. All43 produced artifacts match between Linux and Windows/Wine. The parent subsequently unpacked the final Windows toolkit under Wine, checked extracted files and compiled/ran its own hello program successfully. Windows host hardware was not available.
+
+CLI and binary format: tools/archive.ztext. Source-only product implementation; external validation orchestration resides outside the project. No archive member is ever executed by zero-archive.

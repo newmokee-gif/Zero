@@ -1,0 +1,103 @@
+ZTEXT00100001470db622fea0000000
+ZERO WEB JAVASCRIPT PROFILE - EXPERIMENTAL
+
+Implementation
+
+javascript.zero.part is original Zero source. It uses no Chromium/V8 code,
+external runtime, native code generation or host API. This is a small,
+deliberately bounded interoperability profile, not a complete ECMAScript
+implementation and not general Chromium compatibility.
+
+Supported statements
+
+let name = expression;
+const name = expression;
+var name = expression;
+name = expression;
+document.getElementById('id').textContent = expression;
+
+Whitespace is allowed between tokens. Statements require semicolons between
+them; the last semicolon is optional. Empty statements and // line comments
+or /* block comments */ are accepted. Unterminated comments fail.
+
+Bindings are document-wide, retain values between classic script elements in
+tree order, and are discarded at the beginning of the next document request.
+There are at most64 bindings; names are1..31 ASCII letters/digits/_/$ and cannot
+begin with a digit or be a reserved word. Duplicate declarations, including
+var declarations, are rejected by this restricted profile. A const cannot be
+assigned again. Binding values are copied, not shared references.
+
+Expressions
+
+Operands are nonnegative decimal integers0..9007199254740991, quoted strings,
+or existing binding names. Only the + binary operator is accepted, evaluated
+left to right. Two integers add if the exact result fits the safe integer bound.
+If either operand is a string, decimal conversion and string concatenation
+follow the JavaScript behavior for these two supported types.
+
+Strings may use single or double quotes and the escapes backslash, single
+quote, double quote, n, r and t. Raw controls, numeric escapes, Unicode escapes,
+template literals, interpolations, numbers with leading zeroes, fractions,
+exponents, negative numbers, other operators, parentheses and function calls
+outside the documented DOM assignment form are unsupported. String values
+are at most511 bytes. The DOM parser has already validated source UTF-8;
+the worker copies valid UTF-8 bytes without introducing an encoding converter.
+
+DOM effect
+
+getElementById accepts a literal string of1..63 bytes and chooses the first
+element with the exact, case-sensitive ID. Missing elements fail rather than
+silently dropping a write. Assignment replaces the element's owned text field,
+sets replacement flag1, and converts a numeric value to decimal text. The
+renderer must suppress former descendants of such an element. This is a
+restricted tree mutation, not the browser-standard live DOM API.
+
+Execution boundary
+
+Only kind4 nodes with an empty type, text/javascript or application/javascript
+execute. Type comparisons are ASCII-insensitive and trim surrounding spaces.
+Other types are inert. module is inert and sets warning4. Python and JSON
+types are not executed. External scripts are not fetched by this worker.
+There is no file, network, process, eval, import, worker or timer API. Loops and
+functions are unsupported. All scanning/evaluation loops have bounds derived
+from input size, identifier count or string size.
+
+This memory-only worker assumes the caller's valid4MiB arena and valid DOM.
+Descriptor node count must be<=512, document input<=65536 bytes, and every
+executed script's source span must lie inside the declared input span without
+overflow. Node strings and destination fields follow declarations.zero.part.
+The input bytes are not modified. This is not an OS process sandbox or a
+general pointer validator.
+
+Worker handshake
+
+Fork context is web+1408, stack web+1245184 with81920 bytes, parent context is
+web+1024. After including the worker, caller must switch to it once to perform
+the initial handshake. Every subsequent switch processes one document.
+Private scratch is web+740000..839999. Only @web and @v0..@v31 are used.
+
+Failure contract
+
+An incoming nonzero document error is preserved and no work is done.
+New failures set error65 for malformed/unsupported syntax or missing bindings,
+28 for bounded capacity exhaustion,70 for descriptor/source span violation,
+and warning bit4. A script may have already changed the private DOM before a
+later error. Caller MUST discard the entire failed document and must never
+publish any partial rendering or claim the script completed.
+
+Verification on25 November2026
+
+javascript-check.zero composes declarations, javascript-check-head, worker,
+and javascript-check-tail, in that order. It executes64 semantic/boundary
+cases and256 deterministic malformed ASCII probes. Each case verifies the
+input checksum and guards surrounding worker scratch and complete arena.
+Cases exercise bindings across scripts and reset across requests, const,
+duplicates, missing IDs, numeric bounds and overflow, + coercion ordering,
+escapes, comment syntax, types and modules,64/65 binding limit,511/512 byte
+strings, concatenation overflow, malformed spans, unsupported eval/fetch and
+loops, and whole-page failure after an earlier DOM mutation.
+
+Both nativeLinux x64 and the Windows x64 executable underWine passed all320
+cases with exit0. The tests were compiled with the project's own0.14 Zero
+compiler. Windows hardware, full browser integration and arbitrary websites
+are not established by these worker tests.

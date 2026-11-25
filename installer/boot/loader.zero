@@ -1,0 +1,619 @@
+# Original Zero installed-folder UEFI x64 loader. Reads sibling system.iso.
+# Shares our existing loader GOP/handoff code; firmware is a platform interface.
+:arg0[] => @image.
+:arg1[] => @system.
+:load64[@system + 96] => @services.
+0 => @status.
+:reserve[1024] => @scratch.
+@scratch => @guid.
+@scratch + 32 => @result.
+@scratch + 40 => @rootOut.
+@scratch + 48 => @fileOut.
+@scratch + 56 => @sizeOut.
+:reserve[4096] => @path.
+:reserve[16384] => @isoHead.
+0 => @devicePath.
+0 => @nodeBytes.
+0 => @nodeIndex.
+0 => @pathUnits.
+0 => @separator.
+0 => @checksum.
+0 => @recordOffset.
+0 => @recordBytes.
+0 => @record.
+0 => @nameBytes.
+0 => @match.
+0 => @kernelSeen.
+0 => @toolsSeen.
+@scratch + 256 => @fileInfo.
+"ZERO folder loader: UEFI -> sibling system.iso\r\n" => @text.
+0 => @index.
+0 => @ch.
+0 => @protocol.
+0 => @device.
+0 => @root.
+0 => @file.
+0 => @fileSize.
+0 => @code.
+0 => @bundle.
+0 => @workspace.
+0 => @received.
+0 => @stack.
+0 => @handoff.
+0 => @map.
+0 => @attempts.
+0 => @step.
+0 => @done.
+0 => @uart.
+0 => @wait.
+1 => @serial.
+0 => @gop.
+0 => @mode.
+0 => @modeInfo.
+0 => @maxMode.
+0 => @candidate.
+0xffffffff => @chosenMode.
+0xffffffff => @fallbackMode.
+0 => @fallbackRank.
+0 => @modeRank.
+0 => @gopStatus.
+0 => @width.
+0 => @height.
+0 => @stride.
+0 => @pixelKind.
+0 => @frameBuffer.
+0 => @frameBytes.
+0 => @screenValid.
+# Own UART setup for loader diagnostics.
+!out8[0x3f9|0].
+!out8[0x3fb|128].
+!out8[0x3f8|1].
+!out8[0x3f9|0].
+!out8[0x3fb|3].
+!out8[0x3fa|199].
+!out8[0x3fc|11].
+:in8[0x3fd] -> @uart.
+? @uart == 255 [ 0 -> @serial. ]
+?? (:load8[@text+@index] != 0) * @serial [
+    0 -> @uart. 0 -> @wait.
+    ?? (@uart < 32) * @serial [
+        :in8[0x3fd] -> @uart.
+        ? @uart >= 128 [ @uart-128 -> @uart. ]
+        ? @uart >= 64 [ @uart-64 -> @uart. ]
+        @wait+1 -> @wait.
+        ? @wait > 1000000 [ 0 -> @serial. ]
+    ]
+    ? @serial [ !out8[0x3f8|:load8[@text+@index]]. ]
+    @index+1 -> @index.
+]
+# Disable firmware watchdog before leaving firmware.
+:call[:load64[@services+256]|0|0|0|0|0] -> @status.
+? @status == 0 [
+    1 -> @step.
+    # EFI_LOADED_IMAGE_PROTOCOL on this application handle.
+    !store64[@guid|0x11d295625b1b31a1].
+    !store64[@guid+8|0x3b7269c9a0003f8e].
+    !store64[@result|0].
+    :call[:load64[@services+152]|@image|@guid|@result|0|0] -> @status.
+]
+? @status == 0 [
+    :load64[@result] -> @protocol.
+    :load64[@protocol+24] -> @device.
+    :load64[@protocol+32] -> @devicePath.
+    2 -> @step.
+    !store64[@guid|0x11d26459964e5b22].
+    !store64[@guid+8|0x3b7269c9a000398e].
+    !store64[@result|0].
+    :call[:load64[@services+152]|@device|@guid|@result|0|0] -> @status.
+]
+? @status == 0 [
+    :load64[@result] -> @protocol.
+    3 -> @step.
+    !store64[@rootOut|0].
+    :call[:load64[@protocol+8]|@protocol|@rootOut|0|0|0] -> @status.
+]
+# Resolve this application's directory from its loaded-image FILEPATH nodes.
+# The firmware device is reused; no partition table or host file is changed.
+? @status == 0 [
+    :load64[@rootOut] -> @root.
+    4 -> @step. 0 -> @done. 0 -> @index. 0 -> @pathUnits.
+    ? @devicePath == 0 [ 0x8000000000000001 -> @status. ]
+    ?? (@done == 0) * (@status == 0) [
+        ? @index > 4092 [ 0x8000000000000001 -> @status. ] ~ [
+            :load16[@devicePath+@index+2] -> @nodeBytes.
+            ? @nodeBytes < 4 [ 0x8000000000000001 -> @status. ]
+            ? @nodeBytes > 4096-@index [ 0x8000000000000001 -> @status. ]
+            ? @status == 0 [
+                ? (:load8[@devicePath+@index] == 127) * (:load8[@devicePath+@index+1] == 255) [
+                    ? @nodeBytes != 4 [ 0x8000000000000001 -> @status. ]
+                    1 -> @done.
+                ] ~ [
+                    ? :load8[@devicePath+@index] != 4 [ 0x8000000000000001 -> @status. ]
+                    ? :load8[@devicePath+@index+1] != 4 [ 0x8000000000000001 -> @status. ]
+                    ? @nodeBytes < 6 [ 0x8000000000000001 -> @status. ]
+                    ? :bitand[@nodeBytes|1] [ 0x8000000000000001 -> @status. ]
+                    4 -> @nodeIndex.
+                    ?? (@nodeIndex < @nodeBytes) * (@status == 0) [
+                        :load16[@devicePath+@index+@nodeIndex] -> @ch.
+                        ? @nodeIndex+2 == @nodeBytes [
+                            ? @ch != 0 [ 0x8000000000000001 -> @status. ]
+                        ] ~ [
+                            ? @ch == 0 [ 0x8000000000000001 -> @status. ]
+                            ? @pathUnits >= 2036 [ 0x8000000000000001 -> @status. ]
+                            ? @status == 0 [
+                                !store16[@path+@pathUnits*2|@ch].
+                                @pathUnits+1 -> @pathUnits.
+                                ? @ch == 92 [ @pathUnits -> @separator. ]
+                            ]
+                        ]
+                        @nodeIndex+2 -> @nodeIndex.
+                    ]
+                ]
+                @index+@nodeBytes -> @index.
+            ]
+        ]
+    ]
+    ? @separator == 0 [ 0x8000000000000001 -> @status. ]
+    ? @separator >= @pathUnits [ 0x8000000000000001 -> @status. ]
+    ? :load16[@path] != 92 [ 0x8000000000000001 -> @status. ]
+    ? @status == 0 [
+        "system.iso" -> @text. 0 -> @index.
+        ?? :load8[@text+@index] != 0 [
+            !store16[@path+(@separator+@index)*2|:load8[@text+@index]].
+            @index+1 -> @index.
+        ]
+        !store16[@path+(@separator+@index)*2|0].
+        !store64[@fileOut|0].
+        :call[:load64[@root+8]|@root|@fileOut|@path|1|0] -> @status.
+    ]
+]
+? @status == 0 [
+    :load64[@fileOut] -> @file. 5 -> @step.
+    !store64[@guid|0x11d26d3f09576e92].
+    !store64[@guid+8|0x3b7269c9a000398e].
+    !store64[@sizeOut|512].
+    :call[:load64[@file+64]|@file|@guid|@sizeOut|@fileInfo|0] -> @status.
+    ? @status == 0 [
+        ? :load64[@sizeOut] < 80 [ 0x8000000000000001 -> @status. ]
+        ? :load64[@sizeOut] > 512 [ 0x8000000000000001 -> @status. ]
+        ? :load64[@fileInfo+8] != 18890752 [ 0x8000000000000001 -> @status. ]
+        ? :bitand[:load64[@fileInfo+72]|16] [ 0x8000000000000001 -> @status. ]
+    ]
+]
+# Read only bounded ISO metadata before allocating executable payloads.
+? @status == 0 [
+    6 -> @step.
+    :call[:load64[@file+56]|@file|32768|0|0|0] -> @status.
+]
+0 -> @received. 0 -> @done.
+?? @done == 0 [
+    ? @status != 0 [ 1 -> @done. ] ~ [
+        ? @received == 16384 [ 1 -> @done. ] ~ [
+            !store64[@sizeOut|16384-@received].
+            :call[:load64[@file+32]|@file|@sizeOut|@isoHead+@received|0|0] -> @status.
+            ? @status == 0 [
+                :load64[@sizeOut] -> @ch.
+                ? @ch == 0 [ 0x8000000000000001 -> @status. ]
+                ? @ch > 16384-@received [ 0x8000000000000001 -> @status. ]
+                ? @status == 0 [ @received+@ch -> @received. ]
+            ]
+        ]
+    ]
+]
+? @status == 0 [
+    7 -> @step.
+    # Current Zero ISO identity, volume length, paired-endian blocks and root.
+    ? :load64[@isoHead] != 0x0001313030444301 [ 0x8000000000000001 -> @status. ]
+    "ZERO_SYSTEM" -> @text. 0 -> @index.
+    ?? @index < 11 [
+        ? :load8[@isoHead+40+@index] != :load8[@text+@index] [ 0x8000000000000001 -> @status. ]
+        @index+1 -> @index.
+    ]
+    ? :load32[@isoHead+80] != 9224 [ 0x8000000000000001 -> @status. ]
+    ? :load32[@isoHead+84] != 0x08240000 [ 0x8000000000000001 -> @status. ]
+    ? :load32[@isoHead+128] != 0x00080800 [ 0x8000000000000001 -> @status. ]
+    ? :load8[@isoHead+156] != 34 [ 0x8000000000000001 -> @status. ]
+    ? :load32[@isoHead+158] != 20 [ 0x8000000000000001 -> @status. ]
+    ? :load32[@isoHead+162] != 0x14000000 [ 0x8000000000000001 -> @status. ]
+    ? :load32[@isoHead+166] != 2048 [ 0x8000000000000001 -> @status. ]
+    ? :load32[@isoHead+170] != 0x00080000 [ 0x8000000000000001 -> @status. ]
+    ? :load8[@isoHead+181] != 2 [ 0x8000000000000001 -> @status. ]
+    ? :load64[@isoHead+2048] != 0x4501313030444300 [ 0x8000000000000001 -> @status. ]
+    ? :load32[@isoHead+2048+71] != 23 [ 0x8000000000000001 -> @status. ]
+    ? :load64[@isoHead+4096] != 0x00013130304443ff [ 0x8000000000000001 -> @status. ]
+    # El Torito validation checksum and BIOS/UEFI entries remain consistent.
+    0 -> @checksum. 0 -> @index.
+    ?? @index < 32 [
+        @checksum+:load16[@isoHead+14336+@index] -> @checksum.
+        @index+2 -> @index.
+    ]
+    ? :bitand[@checksum|65535] != 0 [ 0x8000000000000001 -> @status. ]
+    ? :load16[@isoHead+14336] != 1 [ 0x8000000000000001 -> @status. ]
+    ? :load16[@isoHead+14336+30] != 0xaa55 [ 0x8000000000000001 -> @status. ]
+    ? :load16[@isoHead+14336+32] != 0x88 [ 0x8000000000000001 -> @status. ]
+    ? :load16[@isoHead+14336+38] != 32 [ 0x8000000000000001 -> @status. ]
+    ? :load32[@isoHead+14336+40] != 32 [ 0x8000000000000001 -> @status. ]
+    ? :load32[@isoHead+14336+64] != 0x0001ef91 [ 0x8000000000000001 -> @status. ]
+    ? :load16[@isoHead+14336+96] != 0x88 [ 0x8000000000000001 -> @status. ]
+    ? :load16[@isoHead+14336+102] != 32768 [ 0x8000000000000001 -> @status. ]
+    ? :load32[@isoHead+14336+104] != 520 [ 0x8000000000000001 -> @status. ]
+    # Resolve and validate the two records, including each dual-endian extent.
+    # Extents are pinned to this versioned format; malformed roots cannot
+    # redirect execution to an unrelated ISO member or outside the file.
+    0 -> @recordOffset. 0 -> @done.
+    ?? (@done == 0) * (@status == 0) [
+        ? @recordOffset >= 2048 [ 1 -> @done. ] ~ [
+            @isoHead+8192+@recordOffset -> @record.
+            :load8[@record] -> @recordBytes.
+            ? @recordBytes == 0 [ 1 -> @done. ] ~ [
+                ? @recordBytes < 34 [ 0x8000000000000001 -> @status. ]
+                ? @recordBytes > 2048-@recordOffset [ 0x8000000000000001 -> @status. ]
+                ? @status == 0 [
+                    :load8[@record+32] -> @nameBytes.
+                    ? @nameBytes > @recordBytes-33 [ 0x8000000000000001 -> @status. ]
+                    0 -> @match.
+                    ? @nameBytes == 12 [ "KERNEL.BIN;1" -> @text. 1 -> @match. ]
+                    ? @nameBytes == 11 [ "TOOLS.BIN;1" -> @text. 2 -> @match. ]
+                    0 -> @index.
+                    ?? (@index < @nameBytes) * (@match != 0) * (@status == 0) [
+                        ? :load8[@record+33+@index] != :load8[@text+@index] [ 0 -> @match. ]
+                        @index+1 -> @index.
+                    ]
+                    ? @match != 0 [
+                        ? :load8[@record+1] != 0 [ 0x8000000000000001 -> @status. ]
+                        ? :load8[@record+25] != 0 [ 0x8000000000000001 -> @status. ]
+                        ? :load16[@record+26] != 0 [ 0x8000000000000001 -> @status. ]
+                        ? :load32[@record+28] != 0x01000001 [ 0x8000000000000001 -> @status. ]
+                    ]
+                    ? @match == 1 [
+                        @kernelSeen+1 -> @kernelSeen.
+                        ? :load32[@record+2] != 40 [ 0x8000000000000001 -> @status. ]
+                        ? :load32[@record+6] != 0x28000000 [ 0x8000000000000001 -> @status. ]
+                        :load32[@record+10] -> @fileSize.
+                        ? (@fileSize != 475136)*(@fileSize != 491520) [ 0x8000000000000001 -> @status. ]
+                        ? (@fileSize == 475136)*(:load32[@record+14] != 0x00400700) [ 0x8000000000000001 -> @status. ]
+                        ? (@fileSize == 491520)*(:load32[@record+14] != 0x00800700) [ 0x8000000000000001 -> @status. ]
+                    ]
+                    ? @match == 2 [
+                        @toolsSeen+1 -> @toolsSeen.
+                        ? :load32[@record+2] != 8712 [ 0x8000000000000001 -> @status. ]
+                        ? :load32[@record+6] != 0x08220000 [ 0x8000000000000001 -> @status. ]
+                        ? :load32[@record+10] != 1048576 [ 0x8000000000000001 -> @status. ]
+                        ? :load32[@record+14] != 0x00001000 [ 0x8000000000000001 -> @status. ]
+                    ]
+                ]
+                @recordOffset+@recordBytes -> @recordOffset.
+            ]
+        ]
+    ]
+    ? @kernelSeen != 1 [ 0x8000000000000001 -> @status. ]
+    ? @toolsSeen != 1 [ 0x8000000000000001 -> @status. ]
+]
+? @status == 0 [
+    8 -> @step. !store64[@result|0].
+    :call[:load64[@services+40]|0|1|120|@result|0] -> @status.
+    :load64[@result] -> @code.
+    ? @status == 0 [
+        ? @code == 0 [ 0x8000000000000001 -> @status. ]
+        ? @code+@fileSize <= @code [ 0x8000000000000001 -> @status. ]
+    ]
+]
+? @status == 0 [
+    9 -> @step. :call[:load64[@file+56]|@file|81920|0|0|0] -> @status.
+]
+0 -> @received. 0 -> @done.
+?? @done == 0 [
+    ? @status != 0 [ 1 -> @done. ] ~ [
+        ? @received == @fileSize [ 1 -> @done. ] ~ [
+            !store64[@sizeOut|@fileSize-@received].
+            :call[:load64[@file+32]|@file|@sizeOut|@code+@received|0|0] -> @status.
+            ? @status == 0 [
+                :load64[@sizeOut] -> @ch.
+                ? @ch == 0 [ 0x8000000000000001 -> @status. ]
+                ? @ch > @fileSize-@received [ 0x8000000000000001 -> @status. ]
+                ? @status == 0 [ @received+@ch -> @received. ]
+            ]
+        ]
+    ]
+]
+? @status == 0 [
+    11 -> @step. !store64[@result|0].
+    :call[:load64[@services+40]|0|1|256|@result|0] -> @status.
+    :load64[@result] -> @bundle.
+    ? @status == 0 [
+        ? @bundle == 0 [ 0x8000000000000001 -> @status. ]
+        ? @bundle+1048576 <= @bundle [ 0x8000000000000001 -> @status. ]
+    ]
+]
+? @status == 0 [
+    12 -> @step. :call[:load64[@file+56]|@file|17842176|0|0|0] -> @status.
+]
+0 -> @received. 0 -> @done.
+?? @done == 0 [
+    ? @status != 0 [ 1 -> @done. ] ~ [
+        ? @received == 1048576 [ 1 -> @done. ] ~ [
+            !store64[@sizeOut|1048576-@received].
+            :call[:load64[@file+32]|@file|@sizeOut|@bundle+@received|0|0] -> @status.
+            ? @status == 0 [
+                :load64[@sizeOut] -> @ch.
+                ? @ch == 0 [ 0x8000000000000001 -> @status. ]
+                ? @ch > 1048576-@received [ 0x8000000000000001 -> @status. ]
+                ? @status == 0 [ @received+@ch -> @received. ]
+            ]
+        ]
+    ]
+]
+? @status == 0 [
+    13 -> @step.
+    ? :load64[@bundle] != 0x31304c444e42525a [ 0x8000000000000001 -> @status. ]
+    ? :load64[@bundle+8] != 1 [ 0x8000000000000001 -> @status. ]
+    ? :load64[@bundle+16] != 1048576 [ 0x8000000000000001 -> @status. ]
+    ? :load64[@bundle+24] != 8 [ 0x8000000000000001 -> @status. ]
+]
+? @status == 0 [
+    15 -> @step.
+    :call[:load64[@file+16]|@file|0|0|0|0] -> @status.
+    ? @status == 0 [ :call[:load64[@root+16]|@root|0|0|0|0] -> @status. ]
+]
+? @status == 0 [
+    16 -> @step.
+    !store64[@result|0].
+    :call[:load64[@services+40]|0|1|2048|@result|0] -> @status.
+    :load64[@result] -> @workspace.
+    ? @status == 0 [
+        ? @workspace == 0 [ 0x8000000000000001 -> @status. ]
+        ? @workspace+8388608 <= @workspace [ 0x8000000000000001 -> @status. ]
+    ]
+]
+? @status == 0 [
+    9 -> @step.
+    !store64[@result|0].
+    :call[:load64[@services+40]|0|2|256|@result|0] -> @status.
+    :load64[@result] -> @stack.
+]
+? @status == 0 [
+    10 -> @step.
+    !store64[@result|0].
+    :call[:load64[@services+40]|0|2|17|@result|0] -> @status.
+    :load64[@result] -> @handoff.
+    @handoff+4096 -> @map.
+]
+? @status == 0 [
+    # The handoff is LoaderData, not implicitly initialized firmware memory.
+    0 -> @index.
+    ?? @index < 256 [ !store64[@handoff+@index|0]. @index+8 -> @index. ]
+    !store64[@handoff+96|2].
+    !store64[@handoff+104|64].
+    !store64[@handoff+112|@stack].
+    !store64[@handoff+120|1048576].
+    !store64[@handoff+128|@bundle].
+    !store64[@handoff+136|1048576].
+    !store64[@handoff+144|@workspace].
+    !store64[@handoff+152|8388608].
+    # Obtain GOP while firmware services are still available. Failure leaves
+    # display kind zero, preserving serial-only operation on headless systems.
+    !store64[@guid|0x4a3823dc9042a9de].
+    !store64[@guid+8|0x6a5180d0de7afb96].
+    !store64[@result|0].
+    :call[:load64[@services+320]|@guid|0|@result|0|0] -> @gopStatus.
+    ? @gopStatus == 0 [ :load64[@result] -> @gop. ]
+    ? @gop [
+        :load64[@gop+24] -> @mode.
+        ? @mode [
+            :load32[@mode] -> @maxMode.
+            # Preserve a valid active FullHD mode without resetting it.
+            :load64[@mode+8] -> @modeInfo.
+            ? @modeInfo [
+                ? :load64[@mode+16] >= 36 [
+                    :load32[@modeInfo+4] -> @width.
+                    :load32[@modeInfo+8] -> @height.
+                    :load32[@modeInfo+32] -> @stride.
+                    1 -> @screenValid.
+                    ? :load32[@modeInfo] != 0 [ 0 -> @screenValid. ]
+                    ? @width != 1920 [ 0 -> @screenValid. ]
+                    ? @height != 1080 [ 0 -> @screenValid. ]
+                    ? @stride < @width [ 0 -> @screenValid. ]
+                    ? @stride > 16384 [ 0 -> @screenValid. ]
+                    ? :load32[@modeInfo+12] > 1 [ 0 -> @screenValid. ]
+                    :load64[@mode+24] -> @frameBuffer.
+                    @stride*@height*4 -> @frameBytes.
+                    ? @frameBuffer == 0 [ 0 -> @screenValid. ]
+                    ? @frameBytes > :load64[@mode+32] [ 0 -> @screenValid. ]
+                    ? @frameBuffer+@frameBytes <= @frameBuffer [ 0 -> @screenValid. ]
+                    ? :load32[@mode+4] >= @maxMode [ 0 -> @screenValid. ]
+                    ? @screenValid [ :load32[@mode+4] -> @chosenMode. ]
+                ]
+            ]
+            0 -> @candidate.
+            # QueryMode allocates Info. Free it on every successful query;
+            # only values copied to our own variables survive FreePool.
+            # Keep searching after finding FullHD so a validated lower mode
+            # remains available if firmware refuses the preferred SetMode.
+            ? @chosenMode == 0xffffffff [
+            ?? (@candidate < @maxMode) * (@candidate < 256) [
+                !store64[@scratch+64|0].
+                !store64[@scratch+72|0].
+                :call[:load64[@gop]|@gop|@candidate|@scratch+64|@scratch+72|0] -> @gopStatus.
+                ? @gopStatus == 0 [
+                    :load64[@scratch+72] -> @modeInfo.
+                    ? @modeInfo [
+                        0 -> @screenValid.
+                        ? :load64[@scratch+64] >= 36 [
+                            :load32[@modeInfo+4] -> @width.
+                            :load32[@modeInfo+8] -> @height.
+                            :load32[@modeInfo+32] -> @stride.
+                            1 -> @screenValid.
+                            ? :load32[@modeInfo] != 0 [ 0 -> @screenValid. ]
+                            ? @width < 640 [ 0 -> @screenValid. ]
+                            ? @width > 1920 [ 0 -> @screenValid. ]
+                            ? @height < 400 [ 0 -> @screenValid. ]
+                            ? @height > 1080 [ 0 -> @screenValid. ]
+                            ? @stride < @width [ 0 -> @screenValid. ]
+                            ? @stride > 16384 [ 0 -> @screenValid. ]
+                            ? :load32[@modeInfo+12] > 1 [ 0 -> @screenValid. ]
+                        ]
+                        :call[:load64[@services+72]|@modeInfo|0|0|0|0] -> @gopStatus.
+                        ? @gopStatus != 0 [ 0 -> @screenValid. 256 -> @candidate. ]
+                        ? @screenValid [
+                            ? (@width == 1920) * (@height == 1080) [
+                                ? @chosenMode == 0xffffffff [ @candidate -> @chosenMode. ]
+                            ] ~ [
+                                1 -> @modeRank.
+                                ? (@width == 640) * (@height == 480) [ 2 -> @modeRank. ]
+                                ? (@width == 800) * (@height == 600) [ 3 -> @modeRank. ]
+                                ? @modeRank > @fallbackRank [
+                                    @candidate -> @fallbackMode. @modeRank -> @fallbackRank.
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
+                @candidate+1 -> @candidate.
+            ]
+            ]
+            ? @chosenMode == 0xffffffff [ @fallbackMode -> @chosenMode. ]
+            ? @chosenMode != 0xffffffff [
+                ? @chosenMode != :load32[@mode+4] [
+                    :call[:load64[@gop+8]|@gop|@chosenMode|0|0|0] -> @gopStatus.
+                ]
+            ]
+            ? (@gopStatus != 0) * (@fallbackMode != 0xffffffff) * (@fallbackMode != @chosenMode) [
+                :call[:load64[@gop+8]|@gop|@fallbackMode|0|0|0] -> @gopStatus.
+            ]
+            # Always validate the actual current mode after any attempted
+            # SetMode. Never trust stale pointers or queried framebuffer data.
+            :load64[@gop+24] -> @mode.
+            ? @mode [
+                :load64[@mode+8] -> @modeInfo.
+                ? @modeInfo [
+                    ? :load64[@mode+16] >= 36 [
+                        :load32[@modeInfo+4] -> @width.
+                        :load32[@modeInfo+8] -> @height.
+                        :load32[@modeInfo+32] -> @stride.
+                        :load32[@modeInfo+12] -> @pixelKind.
+                        :load64[@mode+24] -> @frameBuffer.
+                        @stride*@height*4 -> @frameBytes.
+                        1 -> @screenValid.
+                        ? :load32[@modeInfo] != 0 [ 0 -> @screenValid. ]
+                        ? @width < 640 [ 0 -> @screenValid. ]
+                        ? @width > 8192 [ 0 -> @screenValid. ]
+                        ? @height < 400 [ 0 -> @screenValid. ]
+                        ? @height > 8192 [ 0 -> @screenValid. ]
+                        ? @stride < @width [ 0 -> @screenValid. ]
+                        ? @stride > 16384 [ 0 -> @screenValid. ]
+                        ? @pixelKind > 1 [ 0 -> @screenValid. ]
+                        ? @frameBuffer == 0 [ 0 -> @screenValid. ]
+                        ? @frameBytes > :load64[@mode+32] [ 0 -> @screenValid. ]
+                        ? @frameBuffer+@frameBytes <= @frameBuffer [ 0 -> @screenValid. ]
+                        ? @screenValid [
+                            !store64[@handoff+48|2].
+                            !store64[@handoff+56|@frameBuffer].
+                            !store64[@handoff+64|@width].
+                            !store64[@handoff+72|@height].
+                            !store64[@handoff+80|@stride].
+                            !store64[@handoff+88|@pixelKind].
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    ]
+]
+? @status != 0 [
+    "ZERO folder loader: failed before exit; stage=" -> @text.
+    0 -> @index.
+    ?? (:load8[@text+@index] != 0) * @serial [
+        0 -> @uart. 0 -> @wait.
+        ?? (@uart < 32) * @serial [
+            :in8[0x3fd] -> @uart.
+            ? @uart >= 128 [ @uart-128 -> @uart. ]
+            ? @uart >= 64 [ @uart-64 -> @uart. ]
+            @wait+1 -> @wait.
+            ? @wait > 1000000 [ 0 -> @serial. ]
+        ]
+        ? @serial [ !out8[0x3f8|:load8[@text+@index]]. ] @index+1 -> @index.
+    ]
+    # Format stages 0..16 in decimal and poll before every diagnostic byte.
+    0 -> @index.
+    ? @step >= 10 [ !store8[@path|49]. 1 -> @index. @step-10 -> @step. ]
+    !store8[@path+@index|48+@step].
+    !store8[@path+@index+1|13].
+    !store8[@path+@index+2|10].
+    !store8[@path+@index+3|0].
+    0 -> @index.
+    ?? (:load8[@path+@index] != 0) * @serial [
+        0 -> @uart. 0 -> @wait.
+        ?? (@uart < 32) * @serial [
+            :in8[0x3fd] -> @uart.
+            ? @uart >= 128 [ @uart-128 -> @uart. ]
+            ? @uart >= 64 [ @uart-64 -> @uart. ]
+            @wait+1 -> @wait.
+            ? @wait > 1000000 [ 0 -> @serial. ]
+        ]
+        ? @serial [ !out8[0x3f8|:load8[@path+@index]]. ] @index+1 -> @index.
+    ]
+    !halt.
+]
+# Handoff header +0 size, +8 stride, +16 map, +24 code pages;
+# +32 map key, +40 descriptor version. All in our allocated LoaderData.
+!store64[@handoff+16|@map].
+!store64[@handoff+24|120].
+"ZERO folder loader: leaving boot services\r\n" -> @text.
+0 -> @index.
+?? (:load8[@text+@index] != 0) * @serial [
+    0 -> @uart. 0 -> @wait.
+    ?? (@uart < 32) * @serial [
+        :in8[0x3fd] -> @uart.
+        ? @uart >= 128 [ @uart-128 -> @uart. ]
+        ? @uart >= 64 [ @uart-64 -> @uart. ]
+        @wait+1 -> @wait.
+        ? @wait > 1000000 [ 0 -> @serial. ]
+    ]
+    ? @serial [ !out8[0x3f8|:load8[@text+@index]]. ] @index+1 -> @index.
+]
+# After the first attempt only GetMemoryMap/ExitBootServices may use firmware.
+# Retry within the preallocated 64 KiB map; diagnostics use our UART only.
+0 -> @done.
+?? @done == 0 [
+    !store64[@handoff|65536].
+    :call[:load64[@services+56]|@handoff|@map|@handoff+32|@handoff+8|@handoff+40] -> @status.
+    ? @status != 0 [
+        "ZERO loader: GetMemoryMap failed\r\n" -> @text.
+        1 -> @done.
+    ] ~ [
+        ? :load64[@handoff] > 65536 [ 1 -> @done. ]
+        ? :load64[@handoff+8] < 40 [ 1 -> @done. ]
+        ? :load64[@handoff+8] > :load64[@handoff] [ 1 -> @done. ]
+        ? @done != 0 [
+            "ZERO loader: invalid memory map\r\n" -> @text.
+        ] ~ [
+            :call[:load64[@services+232]|@image|:load64[@handoff+32]|0|0|0] -> @status.
+            ? @status == 0 [
+                !enter[@code|@handoff|@stack+1048576].
+            ]
+            @attempts+1 -> @attempts.
+            ? @status != 0x8000000000000002 [
+                "ZERO loader: ExitBootServices failed\r\n" -> @text.
+                1 -> @done.
+            ] ~ [
+                ? @attempts == 4 [
+                    "ZERO loader: ExitBootServices retry limit\r\n" -> @text.
+                    1 -> @done.
+                ]
+            ]
+        ]
+    ]
+]
+0 -> @index.
+?? (:load8[@text+@index] != 0) * @serial [
+    0 -> @uart. 0 -> @wait.
+    ?? (@uart < 32) * @serial [
+        :in8[0x3fd] -> @uart.
+        ? @uart >= 128 [ @uart-128 -> @uart. ]
+        ? @uart >= 64 [ @uart-64 -> @uart. ]
+        @wait+1 -> @wait.
+        ? @wait > 1000000 [ 0 -> @serial. ]
+    ]
+    ? @serial [ !out8[0x3f8|:load8[@text+@index]]. ] @index+1 -> @index.
+]
+!halt.

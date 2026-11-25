@@ -1,0 +1,11 @@
+ZTEXT0010000030487bc01a50000000
+FINAL 0.9.0: ALL FOUR COMPLETE VM RUNS PASSED; VMs stopped.
+ISO SHA256: 880feb36e9c95d26abd0adaf912668396b1c135b98a04e4d87fa996ca8a90a05
+Exact report: final-880feb36/results.txt; matrix.json; tested-artifacts.sha256.
+Real automatic DHCP/recovery, guest DNS/local HTTP, independent packet checksums,
+thread 1/2/3 controls and actual pause/resume, one-based pixel edges/bounds,
+WIRELESS modal actual PS/2/history/secret restoration, default native Zero/Ezero
+compilation, detailed errors/limits/recovery and private ext4 read regression PASS.
+ISO/private fixture disk hashes unchanged; original user disks never attached.
+Public HTTP blocked by host ENETUNREACH; native VirtualBox/radio not tested.
+Earlier different-hash failures and candidate successes remain historical.

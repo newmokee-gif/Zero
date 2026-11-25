@@ -1,0 +1,81 @@
+ZTEXT001000012fbfcba62400000000
+Current original Zero workflow (0.12)
+
+Use the native tools on Linux or their .exe versions on Windows:
+  zero-integrate PROJECT_DIRECTORY NEW_KERNEL.zero
+  zero-build PROJECT_DIRECTORY NEW_OUTPUT_DIRECTORY NEW_KERNEL.zero
+  zero-check PROJECT_DIRECTORY NEW_TEST_DIRECTORY
+All destination paths must be new. The integrator preserves authored sources;
+the builder checks its compiler fixed point and builds the original targets;
+the verifier checks language behavior and host file operations in process.
+See tools/integrate.ztext, tools/build.ztext and checks/README.ztext.
+Read these documents with zero-text read FILE.
+
+The notes below preserve earlier implementation and test history. Any old
+shell/Python runner names, generated artifacts, JSON reports or commands are
+historical references: they were removed from the active project and are not
+current runnable instructions or current-release validation. Native host
+checks do not replace BIOS/UEFI, persistence or physical-hardware testing.
+
+Historical implementation notes
+
+Ext4 implementation verification, 2026-11-15
+
+Implementation: fs/ext4.zero, original Zero source, no imported guest driver or
+assembler/linker. The unchanged state-machine fragment is concatenated with
+ext4/host-prefix.zero and host-suffix.zero, then compiled by bootstrap/zero
+--host. The adapter maps the kernel's state90 request ABI onto own compiler
+pread/pwrite/fsync primitives and deliberately clobbers all volatile scratch
+variables after every I/O. FD3 is a disposable filesystem image. Optional FD4
+configures volume offset/length and injected I/O failure; it is not guest code.
+
+Reproduce: bash ext4/run-tests.sh
+Fixture/check tools: e2fsprogs 1.47.2, separately unpacked Debian binaries at
+/workspace/ext4-tools/root. Set ZERO_EXT4_E2FSPROGS to another tool root, or
+ZERO_EXT4_COMPILER to another verified own Zero compiler if required.
+
+Passed cases:
+* Minimal standard ext4 extents + filetype, 4 KiB blocks, 256-byte inodes.
+* Filetype + direct block maps, 4 KiB blocks, 128-byte inodes.
+* Empty creation, read, save-create, overwrite, truncate empty, delete, recreate.
+* 400-byte text and 31-byte names; 401 bytes/32-byte names refused.
+* Existing files written by debugfs read and updated by Zero; Zero-created
+  contents independently read by debugfs.
+* Multiple inode-table blocks and reuse after deleting their former contents.
+* Independent e2fsck -fn exit0 after successful mutation batches.
+* Real exhaustion of free inodes, free data blocks, and supported directory
+  capacity; refusal leaves the entire image byte-identical.
+* Invalid names, wrong magic, journal/checksum defaults, dirty filesystem,
+  malformed directory record length, inconsistent free counters, short I/O.
+* Every read/write applies a nonzero partition start at LBA2048; the extracted
+  standard partition is accepted by e2fsck.
+* Twelve separate write/flush failure points return I/O status3; failures after
+  the unclean marker and before the clean-marker write cause a fresh probe to
+  return recovery-required status9. Final flush failure is reported, never
+  claimed as durable success.
+* A cross-inode data alias with otherwise matching allocation bitmaps/counters
+  refuses overwrite and deletion before mutation, for direct and extent maps.
+* A referenced block forged free with matching counters cannot be newly
+  allocated; unsupported indirect ownership maps refuse mutation.
+
+The final host suite passes 268 assertions. Independent source review by the
+compiler agent covered cache aliasing, scratch-value lifetime, bounds, and
+flush ordering. Its separate corrupt-alias fixture now returns corruption2 on
+overwrite/delete and retains the same whole-image SHA256 after both attempts.
+
+The tests found and fixed a real inode-reuse defect: clearing a deleted inode's
+extent header while retaining EXTENTS made later checking of that table block
+fail. Deleted inodes now clear that obsolete flag, and reuse passes e2fsck.
+The host adapter also now accumulates reads until EOF: a pipe read can return
+only part of a request. A deliberately fragmented pipe tests that correction.
+Six consecutive fresh-fixture runs passed after the adapter correction.
+
+This report primarily covers the exact host-executed driver logic. The main
+project also recorded a BIOS64 VM integration run at
+verification/fs-0.7.0/bios64/early.serial: B:| ext4 save/read/remove/persist and
+same-name isolation across ZeroFS/ext4/NTFS. Its ext4-check.txt records a clean
+independent e2fsck pass. Other BIOS/UEFI configurations and final release media
+are covered by the main project tests, not inferred from the host checks. The profile
+limits in ext4-profile.txt remain intentional: this is not full general ext4,
+journal replay, metadata checksums, 64-bit groups, hierarchical traversal,
+binary/large files, directory growth or power-failure atomicity.

@@ -1,0 +1,28 @@
+ZTEXT00100000667b3a55a3c0000000
+Zero OS 0.11 final optical boot regression
+
+All four QEMU/TCG paths PASS: BIOS64, BIOS32 without long mode/PAE,
+UEFI64 and UEFI32. The tested ISO is 18890752 bytes, SHA256
+2c15dbc7e8f058c5ba07024c4c6c1ddd1ffcfcd86d15a2cc7c49ca7fbfd4a3df.
+
+Tests used actual emulated PS/2 input and 1920x1080 framebuffers. They cover
+automatic DHCP before input, cable loss/recovery, network progress while
+computation is paused, real local HTTP packets and independent checksums,
+keyboard apps, WiFi no-adapter state, terminal history, independent volume
+roots, private ext4 reads, one-based tasks/pixels and compiler error recovery.
+Public Internet reachability was not tested in this run. No physical WiFi
+connection or native VirtualBox execution is implied.
+
+New 0.11 checks execute the bundled Zero/Ezero tools on every architecture:
+lines with CRLF/LF, empty input and trailing empty lines; nested lines/join;
+joining a text list; numeric-element rejection with a line diagnostic;
+successful compilation after the error; unavailable guest filesync/hostwait;
+continued wired connection after compilation. All eight new checks passed
+on each VM. Existing 0.10 application/host-fallback checks also passed and
+their per-mode reports retain the explicit filename 0.10-extra.json.
+
+All four machines were stopped. Original data.img/data.vdi and the canonical
+ISO remained hash-identical. Every filesystem fixture was a private copy.
+See results.json, matrix.json, per-mode 0.11-extra.json and action/serial logs.
+The separate folder loader is tested in installer/boot/verification; its
+no-CD-ROM test is not represented as one of these optical-boot runs.

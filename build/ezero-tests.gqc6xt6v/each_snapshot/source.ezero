@@ -1,0 +1,6 @@
+[1 | 2 | 3] => values
+values => each item [
+ [9] => values
+ item => show
+]
+values => show

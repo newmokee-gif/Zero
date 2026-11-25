@@ -1,0 +1,178 @@
+ZTEXT001000025fe0eb1ee3c0000000
+Current original Zero workflow (0.12)
+
+Use the native tools on Linux or their .exe versions on Windows:
+  zero-integrate PROJECT_DIRECTORY NEW_KERNEL.zero
+  zero-build PROJECT_DIRECTORY NEW_OUTPUT_DIRECTORY NEW_KERNEL.zero
+  zero-check PROJECT_DIRECTORY NEW_TEST_DIRECTORY
+All destination paths must be new. The integrator preserves authored sources;
+the builder checks its compiler fixed point and builds the original targets;
+the verifier checks language behavior and host file operations in process.
+See tools/integrate.ztext, tools/build.ztext and checks/README.ztext.
+Read these documents with zero-text read FILE.
+
+The notes below preserve earlier implementation and test history. Any old
+shell/Python runner names, generated artifacts, JSON reports or commands are
+historical references: they were removed from the active project and are not
+current runnable instructions or current-release validation. Native host
+checks do not replace BIOS/UEFI, persistence or physical-hardware testing.
+
+Historical implementation notes
+
+Zero 0.7.0 real-mode target
+
+compiler.zero --real implements the real-mode u32 subset in Zero. It shares
+Zero's data-first grammar and emits instructions directly. Its executable
+metadata and architectural/BIOS ABI primitives do
+not contain disk selection, retry, page-table or loader policy. Those
+operations are expressed by bios.zero.
+
+Build on Linux x86-64
+Run bash build.sh to rebuild the Zero compiler and all system artifacts.
+To compile an individual BIOS source with the resulting compiler:
+./build/zero --real < bios.zero > build/bios.bin
+
+The same executable provides the full-u64 x86-64/IA32 targets with their
+explicit target options; see LANGUAGE.ztext and X86.ztext.
+
+Language subset
+Use SYNTAX.ztext's grammar: expression => @name. declarations, expression ->
+@name. updates, @references, ? condition [ ] ~ [ ] branches, ?? condition [ ]
+loops, :operation[arguments separated by |] values and !operation[arguments].
+effects. Zero-argument effects use !halt., !enable. or !disable. Declarations
+are top-level only; legacy syntax is not accepted.
+
+Values are u32. Literals above 4294967295 reject; +, -, *, unary minus wrap
+modulo 2^32. Comparisons are unsigned and produce 0 or 1. Strings are pointers
+to embedded NUL-terminated ASCII. Arithmetic grouping uses parentheses.
+Supported values include :load8/:load16/:load32, :in8/:in16, :reserve and
+:arg0[], plus the hardware operations below. arg0 is preserved initial BIOS
+DL, zero-extended. Smaller loads and port reads zero-extend.
+:bitxor[left | right] and :bitand[left | right] operate on all32 value bits.
+:shr[value | count] is logical right shift; counts>=32 return0.
+
+Memory/port effects are !store8, !store16, !store32, !out8 and !out16 with
+their documented argument brackets. load64/store64, arg1, call/call7, enter,
+fork/switch and hosted put/exit/read/write/pread/pwrite/fsync are unavailable. Invalid or unsupported source
+returns 1 with zero stdout; no foreign runtime is used. Check the exit status:
+this compiler version does not yet print a source diagnostic.
+
+Executable and storage ABI
+Source<=262144 bytes; output<=16384 bytes;64 variables;31-byte names;
+4095-byte string payloads; 64 block/expression levels. Output writes retry
+EINTR and short writes. Host I/O errors can leave a partial output file.
+
+Firmware loads the flat file at physical 7c00. Its512-byte executable header
+contains a far jump to 0000:7e00, zero padding and 55AA at bytes510..511.
+The header encodes entry metadata only, not a BIOS disk-reading policy.
+The prologue establishes CS=0 via that header, DS=ES=SS=0, ESP=7c00,
+EBP=7000, DF=0 and IF=0, and zeroes256 bytes of u32 local-variable slots.
+Generated arithmetic uses 32-bit operands and required address overrides.
+This is a 386-or-newer encoding target; hardware primitives and the BIOS
+loader impose their own feature requirements. bios.zero requires CPUID.
+
+Low-memory ownership before a transfer
+4000..5fff    8192-byte reserve arena
+6e00..6e03    preserved initial DL
+6e04..6e07    aligned arena cursor
+6e08..6e0b    temporary BIOS status
+6e20..6e33    transfer arguments and far pointer
+6f00..6fff    64 u32 variables
+below 7c00     downward expression/firmware-call stack
+7c00..bbff    maximum executable extent
+
+The stack must not collide with reserved/local areas. :reserve[@size] rounds
+up to 16-byte alignment, returns the old cursor and traps with UD2 on wrap or
+exhaustion. It does not zero storage. Real-mode segment limits remain 64 KiB;
+32-bit address arithmetic alone does not grant access above those limits.
+Source must supply valid addresses and table contents.
+The current BIOS loader deliberately never calls reserve: after disk reads
+finish, it reuses 4000..5fff for two page directories. This is loader policy,
+not an allocation available to arbitrary real-mode programs at the same time.
+
+BIOS ABI operations
+:bios[@drive | @dap]
+  INT13 AH42, DL=drive, DS:SI=0000:dap. Source constructs the DAP and controls
+  blocks, destination, LBA and retries. Returns0 when CF is clear; otherwise
+  AH, or256 when CF is set with AH zero.
+:biosreset[@drive]
+  INT13 AH00, DL=drive; the same status conversion.
+:bioscheck[@drive]
+  INT13 AH41 with BX55AA. Returns0 only if CF is clear, BX becomesAA55 and
+  CX bit 0 is set; otherwise 1.
+!biosmode[@mode].
+  INT10 AH00, AL=mode.
+!biosput[@byte].
+  INT10 AH0E, AL=byte, BH0, BL7.
+:vbe[@ax | @bx | @cx | @buffer]
+  INT10 with the supplied low AX/BX/CX and ES:DI=0000:buffer; returns AX.
+  Buffer must fit 16 bits. The caller owns the full service-specific buffer
+  and validates firmware output. Mode enumeration, formats, framebuffer
+  mapping and mode-choice policy remain loader code.
+:far16[@segment | @offset]
+  Reads a zero-extended u16 through a real-mode segment. Segment must fit
+  16 bits, offset must be <=65534, and the word must lie entirely below
+  physical 0x100000. Invalid bounds trap with UD2. This permits reading a
+  firmware far pointer without assuming DS=0 can address the entire first MiB.
+:memmap[@continuation | @buffer]
+  INT15/E820 with EAX=E820, EDX=SMAP, ECX=24 and ES:DI=0000:buffer.
+  The buffer owns28 writable bytes at a physical address<=0xffe0. The wrapper
+  initializes extended attributes at+20 to1 and stores returned ECX at+24.
+  It returns the next EBX continuation (0 ends enumeration), or0xffffffff for
+  an invalid buffer, CF, a wrong SMAP signature or returned size outside20..24.
+  Invalid buffer is rejected before dereferencing it. The source distinguishes
+  legacy20-byte records from extended24-byte records and validates usable RAM,
+  overlaps and allocation policy. The compiler does not select memory regions.
+
+Firmware wrappers preserve general registers and DS/ES, enable interrupts
+for the firmware call, then restore incoming FLAGS/segments and clear DF.
+Value results return separately in EAX. This is fixed firmware ABI encoding.
+Use these operations only in real mode with a valid BIOS interrupt table.
+
+Architectural operations
+:cpuid[@leaf | @index] uses EAX=leaf/ECX=0. Index0/1/2/3 selects EAX/EBX/ECX/
+EDX; any other index returns 0. The source must ensure CPUID exists.
+:rdmsr[@index] returns the low 32 bits from RDMSR; the source must select a
+supported MSR and account for high bits when relevant.
+!lgdt[@address]. loads a six-byte GDTR with a 32-bit base.
+!cr0[@value]. / !cr3[@value]. / !cr4[@value]. write the supplied register.
+!wrmsr[@index | @low | @high]. writes the complete 64-bit MSR value.
+!enable. / !disable. encode STI / CLI. !halt. enters a CLI/HLT loop.
+
+!longjump[@selector | @entry | @arg | @stack].
+  Source supplies GDT, valid mappings, CR3, CR4.PAE, EFER.LME and CR0.PE|PG
+  first. The selected code descriptor has L=1/D=0. The primitive constructs
+  its temporary m16:32 far pointer, reaches an inline 64-bit ABI shim, loads
+  null DS/ES/SS, zero-extends entry/arg/stack to RAX/RCX/RSP, aligns RSP
+  down to 16 bytes and jumps. It does not return.
+
+!protectedjump[@selector | @entry | @arg | @stack].
+  Source supplies a flat 32 code descriptor, flat writable data descriptor at
+  selector 10h and CR0.PE with the required paging policy. The primitive far
+  transfers to an inline 32-bit shim, loads DS/ES/SS/FS/GS=10h, clears DF,
+  installs the aligned stack, and enters the supplied kernel with cdecl
+  arg0 at [ESP+4], arg1=0 at [ESP+8], and a return-to-halt address at [ESP].
+  Entry ESP modulo 16 is 12. The BIOS32 path leaves paging disabled and does
+  not need PAE or long mode.
+
+Neither transfer primitive constructs a GDT, page tables or memory map,
+chooses a kernel, reads a disk, or implements CPU-feature policy.
+
+Verification
+Current-grammar real-mode programs booted in SeaBIOS/QEMU and produced exact
+expected output. Arithmetic, wrapping bit extraction, comparisons, memory,
+CPUID, saved DL and BIOS-wrapper behavior have dedicated regression coverage.
+The BIOS dispatcher also uses protectedjump to enter the shared IA32 kernel.
+Compiler rejection/boundary cases and final release boot evidence are
+recorded in verification.ztext. VM success does not establish physical-hardware
+compatibility or behavior for unsupported CPU/MSR combinations.
+The0.7 standalone BIOS probe additionally passed90 u32 bit/shift cases, a full
+E820 enumeration through continuation0, size/RAM checks, buffer/local canaries
+and invalid-buffer error returns. Evidence: verification/compiler-fs/values/real-vm.
+
+
+Dword port I/O
+The386+ real-mode target supports :in32[port] and !out32[port | value]. with
+operand-size prefixes. It uses the low16 port bits and its normalu32 value
+width. PCI configuration policy remains source-owned. Native QEMU real-mode
+PCI tests are recorded in verification/network-ports; see selfhost/port32.ztext.

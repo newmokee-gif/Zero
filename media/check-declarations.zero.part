@@ -1,0 +1,7 @@
+# Own memory SHA256 vectors and envelope regression checks.
+:reserve[1100000] => @testmemory.
+0 => @testinput. 0 => @testlength. 0 => @testvector. 0 => @testexpected.
+0 => @testi. 0 => @testj. 0 => @testn. 0 => @testactual. 0 => @testchar.
+0 => @testfailures. 0 => @testcases. 0 => @testsaved. 0 => @testheader.
+0 => @testliteral.
+@testmemory -> @zm. @testmemory+90112 -> @testinput.

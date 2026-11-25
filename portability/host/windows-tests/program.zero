@@ -1,0 +1,4 @@
+:program[] => @pointer.
+0 => @i.
+? @pointer == 0 [ !exit[1]. ]
+?? :load8[@pointer + @i] [ !put[:load8[@pointer + @i]]. @i + 1 -> @i. ]

@@ -1,0 +1,97 @@
+# Hosted framebuffer test helper, written entirely in Zero.
+# stdin: an ELF64 test fixture emitted by the current own Zero compiler.
+# stdout: the same test program with its host arena raised from4MiB to16MiB.
+# Publish stdout only after successful exit; late I/O/length errors can leave
+# partial output. Never use this helper on production OS or compiler artifacts.
+:reserve[512] => @buffer.
+0 => @count.
+0 => @status.
+0 => @done.
+0 => @offset.
+0 => @size.
+0 => @seen.
+0 => @index.
+0 => @value.
+0 => @digit.
+"4883e4f04889e54881ec000200004889e731c0b940000000fcf348ab4881ec000040004989e54989e4" => @prefix.
+
+# Read up to one buffer, accepting short reads and retrying EINTR.
+?? (@count < 512) * (@done == 0) [
+    :read[@buffer + @count | 512 - @count] -> @status.
+    ? @status != -4 [
+        ? @status > 512 - @count [ !exit[1]. ]
+        ? @status == 0 [ 1 -> @done. ]
+        @count + @status -> @count.
+    ]
+]
+? @count < 161 [ !exit[2]. ]
+
+# Require exactly our simple Linux x86-64 ELF layout. No global byte search
+# is used: its entry address is file offset 120 in a single RX PT_LOAD.
+? :load32[@buffer] != 0x464c457f [ !exit[2]. ]
+? :load32[@buffer + 4] != 0x00010102 [ !exit[2]. ]
+? :load64[@buffer + 8] != 0 [ !exit[2]. ]
+? :load16[@buffer + 16] != 2 [ !exit[2]. ]
+? :load16[@buffer + 18] != 62 [ !exit[2]. ]
+? :load32[@buffer + 20] != 1 [ !exit[2]. ]
+? :load64[@buffer + 24] != 0x400078 [ !exit[2]. ]
+? :load64[@buffer + 32] != 64 [ !exit[2]. ]
+? :load64[@buffer + 40] != 0 [ !exit[2]. ]
+? :load32[@buffer + 48] != 0 [ !exit[2]. ]
+? :load16[@buffer + 52] != 64 [ !exit[2]. ]
+? :load16[@buffer + 54] != 56 [ !exit[2]. ]
+? :load16[@buffer + 56] != 1 [ !exit[2]. ]
+? :load16[@buffer + 58] != 0 [ !exit[2]. ]
+? :load16[@buffer + 60] != 0 [ !exit[2]. ]
+? :load16[@buffer + 62] != 0 [ !exit[2]. ]
+? :load32[@buffer + 64] != 1 [ !exit[2]. ]
+? :load32[@buffer + 68] != 5 [ !exit[2]. ]
+? :load64[@buffer + 72] != 0 [ !exit[2]. ]
+? :load64[@buffer + 80] != 0x400000 [ !exit[2]. ]
+? :load64[@buffer + 88] != 0x400000 [ !exit[2]. ]
+:load64[@buffer + 96] -> @size.
+? @size < 161 [ !exit[2]. ]
+? @size > 131072 [ !exit[2]. ]
+? :load64[@buffer + 104] != @size [ !exit[2]. ]
+? :load64[@buffer + 112] != 4096 [ !exit[2]. ]
+? @count > @size [ !exit[3]. ]
+
+# Compare all 41 prologue bytes, including the current4194304-byte allocation.
+# @seen is the byte index; @index advances over two hexadecimal characters.
+?? @index < 82 [
+    :load8[@prefix + @index] -> @digit.
+    ? @digit <= 57 [ @digit - 48 -> @digit. ] ~ [ @digit - 87 -> @digit. ]
+    @digit * 16 -> @value.
+    :load8[@prefix + @index + 1] -> @digit.
+    ? @digit <= 57 [ @digit - 48 -> @digit. ] ~ [ @digit - 87 -> @digit. ]
+    @value + @digit -> @value.
+    ? :load8[@buffer + 120 + @seen] != @value [ !exit[2]. ]
+    @seen + 1 -> @seen.
+    @index + 2 -> @index.
+]
+
+# Only the generic host-prologue immediate changes. ELF lengths and all
+# program instructions after this prologue remain byte-for-byte unchanged.
+!store32[@buffer + 151 | 16777216].
+0 -> @seen.
+0 -> @done.
+?? @done == 0 [
+    ? @count > @size - @seen [ !exit[3]. ]
+    0 -> @offset.
+    ?? @offset < @count [
+        :write[@buffer + @offset | @count - @offset] -> @status.
+        ? @status != -4 [
+            ? @status == 0 [ !exit[4]. ]
+            ? @status > @count - @offset [ !exit[4]. ]
+            @offset + @status -> @offset.
+        ]
+    ]
+    @seen + @count -> @seen.
+    -4 -> @status.
+    ?? @status == -4 [ :read[@buffer | 512] -> @status. ]
+    ? @status > 512 [ !exit[1]. ]
+    @status -> @count.
+    ? @count == 0 [ 1 -> @done. ]
+]
+? @seen != @size [ !exit[3]. ]
+!exit[0].

@@ -1,0 +1,41 @@
+# Original real-mode code-generator regression. Output goes to test port E9.
+var x=7;
+var y=3;
+var memory=reserve(64);
+var text="AZ";
+var i=0;
+var drive=arg0;
+var status=0;
+if x+y==10 { out8(0xe9,65); } else { out8(0xe9,33); }
+if x-y==4 { out8(0xe9,66); } else { out8(0xe9,33); }
+if x*y==21 { out8(0xe9,67); } else { out8(0xe9,33); }
+if -1==4294967295 { out8(0xe9,68); } else { out8(0xe9,33); }
+if -1>0 { out8(0xe9,69); } else { out8(0xe9,33); }
+if 0xffffffff+1==0 { out8(0xe9,70); } else { out8(0xe9,33); }
+if 0xffffffff*2==0xfffffffe { out8(0xe9,71); } else { out8(0xe9,33); }
+if 0xffffffff*0x02000000!=0xfe000000 { out8(0xe9,33); }
+if (0x41*0x02000000)<0x80000000 { out8(0xe9,33); }
+if (0x81*0x02000000)>=0x80000000 { out8(0xe9,33); }
+if x+y*2==13 { out8(0xe9,72); } else { out8(0xe9,33); }
+if (x+y)*2==20 { out8(0xe9,73); } else { out8(0xe9,33); }
+if (x!=y)*(y<=x)*(x>=y)*(y<x) { out8(0xe9,74); } else { out8(0xe9,33); }
+store32(memory,0xdeadbeef);
+if load32(memory)==0xdeadbeef { out8(0xe9,75); } else { out8(0xe9,33); }
+store16(memory+4,0xabcd);
+if load16(memory+4)==0xabcd { out8(0xe9,76); } else { out8(0xe9,33); }
+store8(memory+6,255);
+if load8(memory+6)==255 { out8(0xe9,77); } else { out8(0xe9,33); }
+out8(0xe9,load8(text));
+out8(0xe9,load8(text+1));
+while i<3 { out8(0xe9,48+i); i=i+1; }
+if 0 { out8(0xe9,33); } else { out8(0xe9,85); }
+if cpuid(0,0)>0 { out8(0xe9,80); } else { out8(0xe9,33); }
+if drive>127 { out8(0xe9,68); } else { out8(0xe9,33); }
+status=bioscheck(drive);
+if status==0 { out8(0xe9,67); } else { out8(0xe9,33); }
+biosmode(3);
+biosput(88);
+if x==7 { out8(0xe9,86); } else { out8(0xe9,33); }
+out8(0xe9,10);
+out8(0xf4,0);
+halt;

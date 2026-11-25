@@ -1,0 +1,21 @@
+# Test-only original PE fixture transformation, never part of the product.
+:reserve[491520] => @buffer.
+0 => @length.
+0 => @count.
+0 => @i.
+0 => @done.
+"CreateSymbolicLinkW" => @name.
+?? @done == 0 [
+ :read[@buffer + @length | 491520 - @length] -> @count.
+ ? @count == 0 [ 1 -> @done. ] ~ [
+  ? @count > 491520 - @length [ !exit[1]. ]
+  @length + @count -> @length. ? @length == 491520 [ !exit[1]. ]
+ ]
+]
+? :load16[@buffer] != 0x5a4d [ !exit[1]. ]
+? :load64[@buffer + 952] != 0 [ !exit[1]. ]
+!store64[@buffer + 952 | 5664].
+!store64[@buffer + 1208 | 5664].
+!store32[@buffer + 300 | 200].
+?? :load8[@name + @i] [ !store8[@buffer + 2082 + @i | :load8[@name + @i]]. @i + 1 -> @i. ]
+0 -> @i. ?? @i < @length [ :write[@buffer + @i | @length - @i] -> @count. ? (@count == 0) + (@count > @length - @i) [ !exit[1]. ] @i + @count -> @i. ]

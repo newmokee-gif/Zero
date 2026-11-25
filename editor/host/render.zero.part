@@ -1,0 +1,87 @@
+# Character grid, original 5x7 glyphs, 2x scale. No imported font or assets.
+@e + 262144 -> @render.
+0 -> @i. ?? @i < 4664 [ !store8[@render + @i | 32]. @i + 1 -> @i. ]
+# Keep caret in the visible page. Long source lines wrap at 98 columns.
+? @caret < @top [ @caret -> @top. ]
+@top -> @i. 0 -> @row. 0 -> @col.
+?? @i < @caret [
+ :load8[@text + @i] -> @c.
+ ? @c == 10 [ @row + 1 -> @row. 0 -> @col. ] ~ [ @col + 1 -> @col. ? @c == 9 [ @col + 3 -> @col. ] ? @col >= 98 [ @row + 1 -> @row. 0 -> @col. ] ]
+ @i + 1 -> @i.
+]
+? @row >= 34 [
+ @caret -> @top. 0 -> @i.
+ ?? (@top > 0) * (:load8[@text + @top - (@top > 0)] != 10) * (@i < 97) [ @top - 1 -> @top. @i + 1 -> @i. ]
+]
+@top -> @i. 6 -> @row. 6 -> @col.
+!store64[@e + 200 | 0]. !store64[@e + 208 | 0].
+?? (@i <= @length) * (@row < 40) [
+ ? @i == @caret [ !store64[@e + 200 | @col]. !store64[@e + 208 | @row]. ]
+ ? @i < @length [
+  :load8[@text + @i] -> @c.
+  ? @c == 10 [ @row + 1 -> @row. 6 -> @col. ] ~ [
+   ? @c == 9 [ @col + 4 -> @col. ] ~ [
+    ? @c != 13 [ !store8[@render + @row * 106 + @col | @c]. @col + 1 -> @col. ]
+   ]
+   ? @col >= 104 [ @row + 1 -> @row. 6 -> @col. ]
+  ]
+ ]
+ @i + 1 -> @i.
+]
+# Labels share the same bounded glyph renderer.
+0 -> @k.
+?? @k < 5 [
+ "ZERO STUDIO    /    ZERO + EZERO" -> @a. 108 -> @b.
+ ? @k == 1 [ @path -> @a. ? :load8[@path] == 0 [ "Untitled.zero" -> @a. ] 320 -> @b. ]
+ ? @k == 2 [ @status -> @a. 4348 -> @b. ]
+ ? @k == 3 [ "Ctrl+O  OPEN    Ctrl+S  SAVE    F5  BUILD    Ctrl+Q  QUIT" -> @a. 4454 -> @b. ]
+ ? @k == 4 [
+  "SOURCE   |   1-based cursor   |   ASCII / 65535 bytes" -> @a. 426 -> @b.
+  ? @mode != 0 [ @prompt -> @a. 4454 -> @b. ]
+ ]
+ 0 -> @i. ?? (:load8[@a + @i] != 0) * (@i < 100) [ !store8[@render + @b + @i | :load8[@a + @i]]. @i + 1 -> @i. ]
+ @k + 1 -> @k.
+]
+? @changed [ !store8[@render + 318 | 42]. ]
+# One-based caret line and column rendered in the header without division.
+1 -> @a. 1 -> @b. 0 -> @i.
+?? @i < @caret [ ? :load8[@text + @i] == 10 [ @a + 1 -> @a. 1 -> @b. ] ~ [ @b + 1 -> @b. ] @i + 1 -> @i. ]
+"LINE " -> @d. 0 -> @i. ?? @i < 5 [ !store8[@render + 390 + @i | :load8[@d + @i]]. @i + 1 -> @i. ]
+0 -> @k. ?? @k < 2 [
+ 10000 -> @d. 395 -> @j. ? @k == 1 [ @b -> @a. 402 -> @j. ]
+ 0 -> @i. ?? @i < 5 [
+  0 -> @n. ?? @a >= @d [ @a - @d -> @a. @n + 1 -> @n. ] !store8[@render + @j + @i | @n + 48].
+  ? @i == 0 [ 1000 -> @d. ] ? @i == 1 [ 100 -> @d. ] ? @i == 2 [ 10 -> @d. ] ? @i == 3 [ 1 -> @d. ] @i + 1 -> @i.
+ ] @k + 1 -> @k.
+]
+!store8[@render + 401 | 58].
+# Dark canvas and header/footer bands. Pixel format is native little-endian BGRX.
+0 -> @y. ?? @y < 800 [
+ 0x141824 -> @color. ? @y < 90 [ 0x20283a -> @color. ] ? @y >= 726 [ 0x20283a -> @color. ]
+ @color + @color * 4294967296 -> @a. 0 -> @x.
+ ?? @x < 1280 [ !store64[@pixels + (@y * 1280 + @x) * 4 | @a]. @x + 2 -> @x. ] @y + 1 -> @y.
+]
+0 -> @row. ?? @row < 44 [
+ 0 -> @col. ?? @col < 106 [
+  :load8[@render + @row * 106 + @col] -> @c.
+  ? (@c >= 33) * (@c <= 126) [
+   0xd9e4f0 -> @color. ? @row < 5 [ 0x68dfc7 -> @color. ] ? @row >= 41 [ 0xa9bdd5 -> @color. ]
+   ? (@row >= 6) * (@row < 40) * (@c >= 48) * (@c <= 57) [ 0xf1bf73 -> @color. ]
+   0 -> @y. ?? @y < 7 [
+    :load8[@font + (@c - 32) * 7 + @y] - 48 -> @bits. 0 -> @x.
+    ?? @x < 5 [
+     ? :bitand[:shr[@bits | 4 - @x] | 1] [
+      @pixels + ((@row * 18 + @y * 2 + 2) * 1280 + @col * 12 + @x * 2 + 2) * 4 -> @a.
+      @color + @color * 4294967296 -> @b. !store64[@a | @b]. !store64[@a + 5120 | @b].
+     ] @x + 1 -> @x.
+    ] @y + 1 -> @y.
+   ]
+  ] @col + 1 -> @col.
+ ] @row + 1 -> @row.
+]
+# A visible insertion caret, separate from the native pointer cursor.
+:load64[@e + 200] -> @col. :load64[@e + 208] -> @row.
+? @mode != 0 [ 42 -> @row. @plen + 2 -> @col. ? @col > 103 [ 103 -> @col. ] ]
+? @row != 0 [
+ 0 -> @y. ?? @y < 16 [ !store64[@pixels + ((@row * 18 + @y + 1) * 1280 + @col * 12) * 4 | 0x0075e5cb0075e5cb]. @y + 1 -> @y. ]
+]

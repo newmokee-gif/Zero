@@ -1,0 +1,6 @@
+# Place immediately before the shared compiler-command block, outside state20.
+? @boot_information*(@current == 760)*(:load64[@console+2416] == 3) [
+ :load64[@console+2400]+163840 -> @c5.
+ @c5+512 -> @arguments. 25+:load64[@c5+48] -> @operation.
+ 761 -> @state. 0 -> @message.
+]

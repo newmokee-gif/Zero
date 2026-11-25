@@ -1,0 +1,63 @@
+ZTEXT0010000082ef70408f30000000
+RESULT
+PASS bios64 ext4 rejected profile, four mutation APIs refused, Ezero error recovery, complete private disk SHA256 unchanged
+d49f3eb8e0a28faba4c4b02f0c480f7df9f4a22bef91312fe6c8cc558bacbf43
+
+VM ARGUMENTS
+/tmp/zero-support/tools/qemu-local/root/usr/bin/qemu-system-x86_64
+-L
+/tmp/zero-support/tools/qemu-local/root/usr/share/qemu
+-machine
+pc
+-accel
+tcg
+-cpu
+qemu64
+-m
+128
+-display
+none
+-nic
+none
+-no-reboot
+-boot
+order=d
+-vga
+none
+-device
+VGA,romfile=/tmp/zero-support/tools/qemu-local/root/usr/share/seabios/vgabios-stdvga.bin
+-monitor
+unix:/tmp/zero-support/validation-0.12/guest-service/rejected-bios64-ext4/monitor.socket,server=on,wait=off
+-serial
+unix:/tmp/zero-support/validation-0.12/guest-service/rejected-bios64-ext4/serial.socket,server=on,wait=off
+-drive
+file=/tmp/zero-support/validation-0.12/build-root-patched/zero.iso,format=raw,media=cdrom,if=ide,index=2,readonly=on
+-drive
+file=/tmp/zero-support/validation-0.12/guest-service/rejected-bios64-ext4/private-zero.img,format=raw,if=ide,index=0
+-drive
+file=/tmp/zero-support/validation-0.12/guest-service/rejected-bios64-ext4/private-foreign.img,format=raw,if=ide,index=1
+-bios
+/tmp/zero-support/tools/qemu-local/root/usr/share/seabios/bios-256k.bin
+
+CAPTURED SERIAL
+ZERO BIOS: loading own Zero kernel
+ZERO BIOS: entering 64-bit kernel
+
+ZERO OS 0.12.0 / OWN LANGUAGE
+Native threads. Pixel graphics. Independent volumes.
+F1 new, F2 close, F3/F4 focus, F5 layout. Type help.
+Primary disk is not a valid ZeroFS volume. Detecting other formats.
+Volume discovery complete. Type disks.
+A:|> disks
+A:|  disk 1 16 MiB  unknown [limited/unavailable]
+B:|  disk 2 32 MiB  ext4 [read-only] [limited/unavailable]
+A:|> zero ? :create["B:|shouldnot"] != -1 [!exit[1].]? :save["B:|shouldnot"|"No"|2] != -1 [!exit[2].]? :writefile["B:|shouldnot"|"No"|2] != -1 [!exit[3].]? :del["B:|shouldnot"] != -1 [!exit[4].]!put[79].!put[75].
+OK
+A:|> ezero save(B:|shouldnot | No) => show
+Ezero runtime error at line 1: file operation failed or is unavailable; check path, capacity and filesystem profile
+
+Program exit: 65
+A:|> ezero 40+2 => show
+42
+
+A:|> 

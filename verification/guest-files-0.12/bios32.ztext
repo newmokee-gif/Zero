@@ -1,0 +1,157 @@
+ZTEXT001000012f85d1bd9230000000
+RESULT
+PASS bios32 40 commands, real guest files and reboot persistence
+ISO SHA256 386b4b3442ba47a939edb878d305327acc5df09378d85cbe595570d874b78312
+
+VM ARGUMENTS
+/tmp/zero-support/tools/qemu-local/root/usr/bin/qemu-system-x86_64
+-L
+/tmp/zero-support/tools/qemu-local/root/usr/share/qemu
+-machine
+pc
+-accel
+tcg
+-cpu
+qemu64,-lm,-pae
+-m
+128
+-display
+none
+-nic
+none
+-no-reboot
+-boot
+order=d
+-vga
+none
+-device
+VGA,romfile=/tmp/zero-support/tools/qemu-local/root/usr/share/seabios/vgabios-stdvga.bin
+-monitor
+unix:/tmp/zero-support/validation-0.12/guest-service/bios32/monitor.socket,server=on,wait=off
+-serial
+unix:/tmp/zero-support/validation-0.12/guest-service/bios32/serial.socket,server=on,wait=off
+-drive
+file=/tmp/zero-support/validation-0.12/build-root-patched/zero.iso,format=raw,media=cdrom,if=ide,index=2,readonly=on
+-drive
+file=/tmp/zero-support/validation-0.12/guest-service/bios32/private-zero.img,format=raw,if=ide,index=0
+-bios
+/tmp/zero-support/tools/qemu-local/root/usr/share/seabios/bios-256k.bin
+
+CAPTURED SERIAL
+ZERO BIOS: loading own Zero kernel
+ZERO BIOS: entering 32-bit kernel
+
+ZERO OS 0.12.0 / OWN LANGUAGE
+Native threads. Pixel graphics. Independent volumes.
+F1 new, F2 close, F3/F4 focus, F5 layout. Type help.
+Primary disk is not a valid ZeroFS volume. Detecting other formats.
+Volume discovery complete. Type disks.
+A:|> format ZERO
+Saved to disk.
+A:|> search no*
+No files.
+A:|> GO .
+Current volume changed.
+A:|> zero !put[79].!put[75].
+OK
+A:|> zero :reserve[64]=>@b.? :create["zfile"] != 0 [!exit[1].]? :save["zfile"|"Alpha"|5] != 5 [!exit[2].]? :readfile["zfile"|@b|64] != 5 [!exit[3].]? :load8[@b] != 65 [!exit[4].]!put[79].!put[75].
+OK
+A:|> read zfile
+Alpha
+A:|> zero :reserve[64]=>@b.? :create["zfile"] != 0 [!exit[1].]? :writefile["zfile"|"Bad"|3] != -1 [!exit[2].]? :readfile["zfile"|@b|64] != 5 [!exit[3].]? :load8[@b] != 65 [!exit[4].]!put[79].!put[75].
+OK
+A:|> zero :reserve[64]=>@b.!store64[@b|123].? :readfile["zfile"|@b|2] != -1 [!exit[1].]? :load64[@b] != 123 [!exit[2].]!store8[@b|1].? :save["zfile"|@b|1] != -1 [!exit[3].]? :readfile["zfile"|@b|64] != 5 [!exit[4].]!put[79].!put[75].
+OK
+A:|> zero ? :writefile["zother"|"Other"|5] != 5 [!exit[1].]? :create["third"] != 0 [!exit[2].]!put[79].!put[75].
+OK
+A:|> zero :reserve[64]=>@b.? :watch["."|@b|64] != 19 [!exit[1].]? :search["z*"|@b|64] != 13 [!exit[2].]? :search["z?ile"|@b|64] != 6 [!exit[3].]? :search["absent"|@b|64] != 0 [!exit[4].]? :search["zother"|@b|64] != 7 [!exit[5].]!put[79].!put[75].
+OK
+A:|> zero :reserve[64]=>@b.!store64[@b|123].? :watch["."|@b|2] != -1 [!exit[1].]? :load64[@b] != 123 [!exit[2].]? :disks[@b|64] != 4 [!exit[3].]? :go["."] != 0 [!exit[4].]? :go["Z:|"] != -1 [!exit[5].]!put[79].!put[75].
+OK
+A:|> search z?ile
+zfile
+A:|> search no*
+No matching files.
+A:|> del third
+Saved to disk.
+A:|> zero ? :del["zother"] != 0 [!exit[1].]? :del["zother"] != -1 [!exit[2].]? :save["kept"|"Persistent"|10] != 10 [!exit[3].]!put[79].!put[75].
+OK
+A:|> ezero create(A:|ef) => show
+1
+
+A:|> ezero save(A:|ef | Hello) => show
+5
+
+A:|> ezero read(A:|ef) => show
+Hello
+
+A:|> ezero create(A:|ef) => show
+1
+
+A:|> ezero readfile(A:|ef) => show
+Hello
+
+A:|> ezero search("A:|e*") => show
+[ef]
+
+A:|> ezero watch(A:|) => show
+[zfile | kept | ef]
+
+A:|> ezero disks() => show
+[A:|]
+
+A:|> ezero go(A:|) => show
+1
+
+A:|> ezero del(A:|ef) => show
+1
+
+A:|> ezero read(A:|ef) => show
+Ezero runtime error at line 1: file operation failed or is unavailable; check path, capacity and filesystem profile
+
+Program exit: 65
+A:|> ezero 40+2 => show
+42
+
+A:|> ezero [create(eguest) | save(eguest | Hello) | read(eguest) | create(eguest) | readfile(eguest) | size(search(eguest)) | size(watch(.)) | go(.) | size(disks()) | del(eguest) | fileexists(eguest)] => show
+[1 | 5 | Hello | 1 | Hello | 1 | 3 | 1 | 1 | 1 | 0]
+
+A:|> zero ? :save["valid.ztext"|"ZTEXT00100000006812189530000000\nHello\n"|38] != 38 [!exit[1].]!put[79].!put[75].
+OK
+A:|> read valid.ztext
+Hello
+
+A:|> zero ? :save["bad.ztext"|"ZTEXT00100000006812189540000000\nHello\n"|38] != 38 [!exit[1].]!put[79].!put[75].
+OK
+A:|> read bad.ztext
+Ztext checksum mismatch; payload not displayed.
+A:|> zero ? :save["short.ztext"|"Bad"|3] != 3 [!exit[1].]!put[79].!put[75].
+OK
+A:|> read short.ztext
+Invalid Ztext header or payload length.
+A:|> ZERO BIOS: loading own Zero kernel
+ZERO BIOS: entering 32-bit kernel
+
+ZERO OS 0.12.0 / OWN LANGUAGE
+Native threads. Pixel graphics. Independent volumes.
+F1 new, F2 close, F3/F4 focus, F5 layout. Type help.
+ZeroFS mounted. Files survive restart. Type help.
+Volume discovery complete. Type disks.
+A:|> read kept
+Persistent
+A:|> read zfile
+Alpha
+A:|> read zother
+File not found.
+A:|> watch
+zfile
+kept
+valid.ztext
+bad.ztext
+short.ztext
+A:|> read valid.ztext
+Hello
+
+A:|> zero :reserve[64]=>@b.? :readfile["kept"|@b|64] != 10 [!exit[1].]? :load8[@b] != 80 [!exit[2].]!put[79].!put[75].
+OK
+A:|> 

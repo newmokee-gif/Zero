@@ -1,0 +1,43 @@
+ZTEXT0010000096b977b49e10000000
+Zero installed-folder UEFI x64 loader verification - 2026-11-17
+
+PASS: actual QEMU/OVMF full Zero kernel boot from sibling system.iso in a
+private FAT directory, with no CD-ROM or ISO virtual optical device attached.
+The fixture was produced by native zero-setup deploy; the test added a copy
+of ZEROX64.EFI at the firmware-standard EFI/BOOT/BOOTX64.EFI fallback name.
+The loader was still in a nested directory and resolved its own sibling ISO.
+The terminal executed native Zero (42 -> ASCII Z), Ezero arithmetic (42) and
+Ezero host() (0), proving both the kernel and compiler bundle were loaded.
+
+PASS: five additional actual firmware runs refused malformed ISO input before
+ExitBootServices: truncated length, altered PVD volume length, altered root
+extent, altered kernel member extent and invalid compiler-bundle header.
+
+PASS: independent native execution of the exact authored Zero parser blocks:
+16 path cases plus10 ISO metadata cases, including Unicode, multiple FILEPATH
+nodes, maximum accepted path, overlong/unterminated/malformed nodes, adjacent
+buffer canaries, paired-endian mismatch, missing members and catalog damage.
+Evidence is in ../review/results.json and ../review/check-parser.py.
+
+All6 firmware tests stopped their QEMU process. The original build/data.img,
+build/data.vdi and build/zero.iso remained hash-identical throughout the final
+test run. User data disks were never attached. Private FAT payloads were also
+hash-identical after each run; QEMU used read-only backing with a private
+snapshot. No host boot configuration was modified.
+
+Loader source SHA256:
+d5ae3ac753ee5004cccedfc6071085c0a5ba48208ee5c204b347e3f8f1570706
+EFI binary size24576, SHA256:
+29c3f0ec66936228671eb348d4259e259cbcc639f09f86c40a7288f9c62636ef
+Tested current ISO SHA256:
+2c15dbc7e8f058c5ba07024c4c6c1ddd1ffcfcd86d15a2cc7c49ca7fbfd4a3df
+
+The same EFI bytes were emitted by the frozen0.10 compiler and the current
+compiler with new host durability operations. No assembler or foreign
+compiler is used by the product implementation.
+
+Scope: UEFI x64 and a firmware-readable filesystem, normally FAT. This does
+not implement arbitrary NTFS/ext4/Btrfs host-folder boot, storage.data as a
+writable kernel block device, boot-menu registration, BIOS/IA32 directory
+boot, signature verification or unattended recovery. It is a real new early
+loader step toward installed boot, not complete Wubi-style installation.

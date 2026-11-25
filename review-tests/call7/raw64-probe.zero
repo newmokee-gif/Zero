@@ -1,0 +1,22 @@
+# Original Zero native raw64 probe. Stub addresses supplied by own host driver.
+:arg0[] => @stub. :arg1[] => @finish.
+:reserve[128] => @result.
+:reserve[128] => @nested.
+:reserve[0] => @cursor.
+0 => @answer. 0 => @round. 0 => @i. 0 => @failure.
+0x1122334455667788 => @private.
+?? (@round < 128)*(@failure == 0) [
+ 3 + :call7[@stub|@result|11|22|33|44|55|66] -> @answer.
+ ? @answer != 0x123456789abcdef3 [ 1 -> @failure. ]
+ 0 -> @i. ?? @i < 6 [ ? :load64[@result+@i*8] != (@i+1)*11 [ 2 -> @failure. ] @i+1 -> @i. ]
+ ? :load64[@result+48] != 8 [ 3 -> @failure. ]
+ ? :reserve[0] != @cursor [ 4 -> @failure. ]
+ ? @private != 0x1122334455667788 [ 5 -> @failure. ]
+ 7 * (3 + :call7[@stub|@result|1|2|3|4|5|:call7[@stub|@nested|11|22|33|44|55|66]]) -> @answer.
+ ? :load64[@result+40] != 0x123456789abcdef0 [ 6 -> @failure. ]
+ ? @answer != 7*0x123456789abcdef3 [ 7 -> @failure. ]
+ ? (:load64[@result+48] != 8)+(:load64[@nested+48] != 8) [ 8 -> @failure. ]
+ @round+1 -> @round.
+]
+? @failure [ :call[@finish|@failure|"FAIL raw64 call7 ABI\n"|21|0|0] -> @answer. ]
+:call[@finish|0|"PASS raw64 call7 ABI\n"|21|0|0] -> @answer.

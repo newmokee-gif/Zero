@@ -1,0 +1,289 @@
+# Zero native text container. No external codec or process is used.
+# ZTEXT001 + eight lower hex length + eight lower hex FNV1a32 + seven zeros + LF.
+0 => @mode.
+0 => @testing.
+0 => @testcase.
+1 => @testlimit.
+0 => @expectederror.
+0 => @failures.
+0 => @option.
+0 => @literal.
+0 => @source.
+0 => @destination.
+0 => @work.
+0 => @buffer.
+0 => @payload.
+0 => @length.
+0 => @size.
+0 => @count.
+0 => @n.
+0 => @i.
+0 => @j.
+0 => @c.
+0 => @next.
+0 => @extra.
+0 => @value.
+0 => @wanted.
+0 => @hash.
+0 => @phase.
+0 => @same.
+0 => @created.
+0 => @status.
+0 => @error.
+0 => @message.
+-1 => @handle.
+"Usage: zero-text make INPUT NEW_ZTEXT | read FILE | verify FILE | selftest\n" -> @message.
+? (:argcount[] < 1)+(:argcount[] > 3) [ 64 -> @error. ]
+? (:host[] != 1)*(:host[] != 2) [ 64 -> @error. ]
+? @error == 0 [
+ :argument[1] -> @option. 1 -> @phase.
+ ?? @phase <= 4 [
+  "make" -> @literal. ? @phase == 2 [ "read" -> @literal. ] ? @phase == 3 [ "verify" -> @literal. ] ? @phase == 4 [ "selftest" -> @literal. ]
+  0 -> @i. 1 -> @same.
+  ?? :load8[@literal+@i]*@same [
+   ? :load8[@option+@i] != :load8[@literal+@i] [ 0 -> @same. ] ~ [ @i+1 -> @i. ]
+  ]
+  ? @same [ ? :load8[@option+@i] == 0 [ @phase -> @mode. ] ]
+  @phase+1 -> @phase.
+ ]
+ ? (@mode == 0)+((@mode == 1)*(:argcount[] != 3))+((@mode > 1)*(@mode < 4)*(:argcount[] != 2))+((@mode == 4)*(:argcount[] != 1)) [ 64 -> @error. ]
+ ? @mode < 4 [ :argument[2] -> @source. ] ? @mode == 1 [ :argument[3] -> @destination. ]
+ ? @mode == 4 [ 1 -> @testing. 51 -> @testlimit. ]
+]
+? @error == 0 [
+ :hostalloc[2101248] -> @work. @work -> @buffer.
+ ? @work == 0 [ "Cannot allocate text memory.\n" -> @message. 70 -> @error. ]
+]
+? (@error == 0)*(@testing == 0) [
+ :fileopen[@source|0] -> @handle.
+ ? @handle == -1 [ "Cannot open text input.\n" -> @message. 66 -> @error. ]
+]
+? (@error == 0)*(@testing == 0) [
+ :filesize[@handle] -> @size. 1048608 -> @length.
+ ? @mode == 1 [ @buffer+32 -> @buffer. 1048576 -> @length. ]
+ ? @size > @length [ "Text input exceeds one MiB payload limit.\n" -> @message. 65 -> @error. ]
+ ?? (@count < @size)*(@error == 0) [
+  :fileread[@handle|@buffer+@count|@size-@count] -> @n.
+  ? (@n == 0)+(@n > @size-@count) [ "Cannot read complete text input.\n" -> @message. 74 -> @error. ] ~ [ @count+@n -> @count. ]
+ ]
+ ? @error == 0 [
+  ? :fileread[@handle|@work+2101240|1] != 0 [ "Text input changed while reading.\n" -> @message. 74 -> @error. ]
+ ]
+]
+? @handle != -1 [
+ :fileclose[@handle] -> @status. -1 -> @handle.
+ ? (@status != 0)*(@error == 0) [ "Cannot close text input.\n" -> @message. 74 -> @error. ]
+]
+# The native selftest feeds valid and malformed envelopes into this exact decoder.
+?? (@testcase < @testlimit)*(@error == 0) [
+? @testing [
+ @work -> @buffer. @work+32 -> @payload. 6 -> @length. 0 -> @expectederror.
+ "Hello\n" -> @literal. 0 -> @i.
+ ?? @i < 6 [ !store8[@payload+@i|:load8[@literal+@i]]. @i+1 -> @i. ]
+ ? @testcase == 0 [ 0 -> @length. ]
+ ? @testcase == 1 [ "A\tB\r\nC" -> @literal. 0 -> @i. ?? @i < 6 [ !store8[@payload+@i|:load8[@literal+@i]]. @i+1 -> @i. ] ]
+ ? @testcase == 2 [ 2 -> @length. !store8[@payload|194]. !store8[@payload+1|162]. ]
+ ? @testcase == 3 [ 3 -> @length. !store8[@payload|224]. !store8[@payload+1|160]. !store8[@payload+2|128]. ]
+ ? @testcase == 4 [ 3 -> @length. !store8[@payload|237]. !store8[@payload+1|159]. !store8[@payload+2|191]. ]
+ ? @testcase == 5 [ 3 -> @length. !store8[@payload|238]. !store8[@payload+1|128]. !store8[@payload+2|128]. ]
+ ? @testcase == 6 [ 3 -> @length. !store8[@payload|239]. !store8[@payload+1|191]. !store8[@payload+2|191]. ]
+ ? @testcase == 7 [ 4 -> @length. !store8[@payload|240]. !store8[@payload+1|144]. !store8[@payload+2|128]. !store8[@payload+3|128]. ]
+ ? @testcase == 8 [ 4 -> @length. !store8[@payload|244]. !store8[@payload+1|143]. !store8[@payload+2|191]. !store8[@payload+3|191]. ]
+ ? (@testcase >= 9)*(@testcase <= 38) [ 65 -> @expectederror. ]
+ ? @testcase == 9 [ 2 -> @length. !store8[@payload|192]. !store8[@payload+1|175]. ]
+ ? @testcase == 10 [ 2 -> @length. !store8[@payload|193]. !store8[@payload+1|191]. ]
+ ? (@testcase == 11)+(@testcase == 12) [
+  3 -> @length. !store8[@payload|224]. !store8[@payload+1|128]. !store8[@payload+2|128].
+  ? @testcase == 12 [ !store8[@payload|237]. !store8[@payload+1|160]. ]
+ ]
+ ? (@testcase >= 13)*(@testcase <= 15) [
+  4 -> @length. !store8[@payload|240]. !store8[@payload+1|128]. !store8[@payload+2|128]. !store8[@payload+3|128].
+  ? @testcase == 14 [ !store8[@payload|244]. !store8[@payload+1|144]. ] ? @testcase == 15 [ !store8[@payload|245]. ]
+ ]
+ ? @testcase == 16 [ 1 -> @length. !store8[@payload|255]. ]
+ ? @testcase == 17 [ 1 -> @length. !store8[@payload|128]. ]
+ ? @testcase == 18 [ 1 -> @length. !store8[@payload|194]. ]
+ ? @testcase == 19 [ 2 -> @length. !store8[@payload|224]. !store8[@payload+1|160]. ]
+ ? @testcase == 20 [ 3 -> @length. !store8[@payload|240]. !store8[@payload+1|144]. !store8[@payload+2|128]. ]
+ ? @testcase == 21 [ 2 -> @length. !store8[@payload|194]. !store8[@payload+1|65]. ]
+ ? @testcase == 22 [ 3 -> @length. !store8[@payload|224]. !store8[@payload+1|160]. !store8[@payload+2|65]. ]
+ ? @testcase == 23 [ 4 -> @length. !store8[@payload|240]. !store8[@payload+1|144]. !store8[@payload+2|128]. !store8[@payload+3|65]. ]
+ ? @testcase == 24 [ 1 -> @length. !store8[@payload|0]. ]
+ ? @testcase == 25 [ 3 -> @length. !store8[@payload|65]. !store8[@payload+1|0]. !store8[@payload+2|66]. ]
+ ? @testcase == 39 [
+  1048576 -> @length. 0 -> @i. ?? @i < @length [ !store8[@payload+@i|65]. @i+1 -> @i. ]
+ ]
+ ? @testcase == 40 [
+  65 -> @expectederror. 1048577 -> @length. 0 -> @i. ?? @i < @length [ !store8[@payload+@i|65]. @i+1 -> @i. ]
+ ]
+ ? @testcase == 41 [
+  6 -> @length. !store8[@payload|65]. !store8[@payload+1|240]. !store8[@payload+2|159]. !store8[@payload+3|152]. !store8[@payload+4|128]. !store8[@payload+5|66].
+ ]
+ ? @testcase == 42 [ 2 -> @length. !store8[@payload|1]. !store8[@payload+1|7]. ]
+ ? (@testcase >= 43)*(@testcase <= 48) [ 65 -> @expectederror. ]
+ ? @testcase == 43 [ 2 -> @length. !store8[@payload|192]. !store8[@payload+1|128]. ]
+ ? @testcase == 44 [ 3 -> @length. !store8[@payload|237]. !store8[@payload+1|191]. !store8[@payload+2|191]. ]
+ ? @testcase == 45 [ 1 -> @length. !store8[@payload|248]. ]
+ ? @testcase == 46 [ 1 -> @length. !store8[@payload|254]. ]
+ ? @testcase == 47 [ 2 -> @length. !store8[@payload|65]. !store8[@payload+1|224]. ]
+ ? @testcase == 48 [ 1 -> @length. !store8[@payload|191]. ]
+ ? @testcase == 49 [ 2 -> @length. !store8[@payload|194]. !store8[@payload+1|128]. ]
+ ? @testcase == 50 [ 2 -> @length. !store8[@payload|223]. !store8[@payload+1|191]. ]
+ 2166136261 -> @hash. 0 -> @i.
+ ?? @i < @length [ :bitand[:bitxor[@hash|:load8[@payload+@i]]*16777619|4294967295] -> @hash. @i+1 -> @i. ]
+ @length+32 -> @size. "ZTEXT001" -> @literal. 0 -> @i.
+ ?? @i < 8 [ !store8[@buffer+@i|:load8[@literal+@i]]. @i+1 -> @i. ]
+ "0123456789abcdef" -> @literal. 0 -> @phase.
+ ?? @phase < 2 [
+  @length -> @value. ? @phase == 1 [ @hash -> @value. ] 0 -> @i.
+  ?? @i < 8 [ :bitand[:shr[@value|(7-@i)*4]|15] -> @n. !store8[@buffer+8+@phase*8+@i|:load8[@literal+@n]]. @i+1 -> @i. ] @phase+1 -> @phase.
+ ]
+ 24 -> @i. ?? @i < 31 [ !store8[@buffer+@i|48]. @i+1 -> @i. ] !store8[@buffer+31|10].
+ ? @testcase == 26 [ !store8[@buffer|88]. ]
+ ? @testcase == 27 [ !store8[@buffer+15|65]. ]
+ ? @testcase == 28 [ !store8[@buffer+15|103]. ]
+ ? @testcase == 29 [ !store8[@buffer+23|65]. ]
+ ? @testcase == 30 [ !store8[@buffer+23|103]. ]
+ ? @testcase == 31 [ !store8[@buffer+24|49]. ]
+ ? @testcase == 32 [ !store8[@buffer+31|13]. ]
+ ? @testcase == 33 [ !store8[@buffer+15|53]. ]
+ ? @testcase == 34 [ !store8[@buffer+23|52]. ]
+ ? @testcase == 35 [ @size+1 -> @size. !store8[@buffer+@size-1|65]. ]
+ ? @testcase == 36 [ 31 -> @size. ]
+ ? @testcase == 37 [ 7 -> @size. ]
+ ? @testcase == 38 [ 0 -> @size. ]
+]
+@buffer -> @payload. @size -> @length.
+? (@error == 0)*(@mode != 1) [
+ "Invalid ZTEXT001 header or exact length.\n" -> @message.
+ ? @size < 32 [ 65 -> @error. ]
+ ? @error == 0 [
+  "ZTEXT001" -> @literal. 0 -> @i.
+  ?? @i < 8 [ ? :load8[@buffer+@i] != :load8[@literal+@i] [ 65 -> @error. ] @i+1 -> @i. ]
+  0 -> @phase.
+  ?? @phase < 2 [
+   0 -> @value. 0 -> @i.
+   ?? @i < 8 [
+    :load8[@buffer+8+@phase*8+@i] -> @c. 0 -> @next.
+    ? (@c >= 48)*(@c <= 57) [ @c-48 -> @next. ] ~ [
+     ? (@c >= 97)*(@c <= 102) [ @c-87 -> @next. ] ~ [ 65 -> @error. ]
+    ]
+    @value*16+@next -> @value. @i+1 -> @i.
+   ]
+   ? @phase == 0 [ @value -> @length. ] ~ [ @value -> @wanted. ]
+   @phase+1 -> @phase.
+  ]
+  24 -> @i. ?? @i < 31 [ ? :load8[@buffer+@i] != 48 [ 65 -> @error. ] @i+1 -> @i. ]
+  ? (:load8[@buffer+31] != 10)+(@length != @size-32)+(@length > 1048576) [ 65 -> @error. ]
+  @buffer+32 -> @payload.
+ ]
+]
+# Validate every UTF-8 scalar and checksum before revealing any payload byte.
+? @error == 0 [
+ 2166136261 -> @hash. 0 -> @i.
+ "Invalid UTF-8 scalar or forbidden NUL in text payload.\n" -> @message.
+ ?? (@i < @length)*(@error == 0) [
+  :load8[@payload+@i] -> @c. 0 -> @extra.
+  ? @c == 0 [ 65 -> @error. ]
+  ? @c >= 128 [
+   ? (@c >= 194)*(@c <= 223) [ 1 -> @extra. ] ~ [
+    ? (@c >= 224)*(@c <= 239) [ 2 -> @extra. ] ~ [
+     ? (@c >= 240)*(@c <= 244) [ 3 -> @extra. ] ~ [ 65 -> @error. ]
+    ]
+   ]
+  ]
+  ? @extra >= @length-@i [ 65 -> @error. ]
+  ? (@error == 0)*(@extra != 0) [
+   :load8[@payload+@i+1] -> @next.
+   ? ((@c == 224)*(@next < 160))+((@c == 237)*(@next > 159))+((@c == 240)*(@next < 144))+((@c == 244)*(@next > 143)) [ 65 -> @error. ]
+  ]
+  0 -> @j.
+  ?? (@j <= @extra)*(@error == 0) [
+   :load8[@payload+@i+@j] -> @next.
+   ? @j [ ? (@next < 128)+(@next > 191) [ 65 -> @error. ] ]
+   :bitand[:bitxor[@hash|@next]*16777619|4294967295] -> @hash.
+   @j+1 -> @j.
+  ]
+  @i+@extra+1 -> @i.
+ ]
+ ? (@error == 0)*(@mode != 1) [
+  ? @hash != @wanted [ "ZTEXT001 checksum does not match payload.\n" -> @message. 65 -> @error. ]
+ ]
+]
+? @testing [
+ ? @error != @expectederror [
+  @failures+1 -> @failures. "FAIL text-case " -> @literal. 0 -> @i.
+  ?? :load8[@literal+@i] [ !put[:load8[@literal+@i]]. @i+1 -> @i. ]
+  @testcase+1 -> @n. 0 -> @j. ?? @n >= 10 [ @n-10 -> @n. @j+1 -> @j. ]
+  ? @j [ !put[48+@j]. ] !put[48+@n]. !put[10].
+ ]
+ 0 -> @error.
+]
+@testcase+1 -> @testcase.
+]
+? @testing [
+ "Text decoder checks: 51 total; " -> @literal. 0 -> @i.
+ ?? :load8[@literal+@i] [ !put[:load8[@literal+@i]]. @i+1 -> @i. ]
+ @failures -> @n. 0 -> @j. ?? @n >= 10 [ @n-10 -> @n. @j+1 -> @j. ]
+ ? @j [ !put[48+@j]. ] !put[48+@n].
+ " failed.\n" -> @literal. 0 -> @i. ?? :load8[@literal+@i] [ !put[:load8[@literal+@i]]. @i+1 -> @i. ]
+ ? @failures [ 1 -> @error. "Text decoder selftest failed.\n" -> @message. ]
+]
+? (@error == 0)*(@mode == 1) [
+ @work -> @buffer. @length+32 -> @size.
+ "ZTEXT001" -> @literal. 0 -> @i.
+ ?? @i < 8 [ !store8[@buffer+@i|:load8[@literal+@i]]. @i+1 -> @i. ]
+ "0123456789abcdef" -> @literal. 0 -> @phase.
+ ?? @phase < 2 [
+  @length -> @value. ? @phase == 1 [ @hash -> @value. ]
+  0 -> @i. ?? @i < 8 [
+   :bitand[:shr[@value|(7-@i)*4]|15] -> @n.
+   !store8[@buffer+8+@phase*8+@i|:load8[@literal+@n]]. @i+1 -> @i.
+  ] @phase+1 -> @phase.
+ ]
+ 24 -> @i. ?? @i < 31 [ !store8[@buffer+@i|48]. @i+1 -> @i. ] !store8[@buffer+31|10].
+ :fileopen[@destination|1] -> @handle.
+ ? @handle == -1 [ "Cannot create text output; existing files are preserved.\n" -> @message. 73 -> @error. ] ~ [ 1 -> @created. ]
+ 0 -> @count.
+ ?? (@count < @size)*(@error == 0) [
+  :filewrite[@handle|@buffer+@count|@size-@count] -> @n.
+  ? (@n == 0)+(@n > @size-@count) [ "Cannot write complete text output.\n" -> @message. 74 -> @error. ] ~ [ @count+@n -> @count. ]
+ ]
+ ? (@handle != -1)*(@error == 0) [ ? :filesync[@handle] != 0 [ "Cannot flush text output.\n" -> @message. 74 -> @error. ] ]
+ ? @handle != -1 [
+  :fileclose[@handle] -> @status. -1 -> @handle.
+  ? (@status != 0)*(@error == 0) [ "Cannot close text output.\n" -> @message. 74 -> @error. ]
+ ]
+ # Read back the entire exclusive output, including header and exact EOF.
+ ? @error == 0 [
+  :fileopen[@destination|0] -> @handle.
+  ? @handle == -1 [ "Cannot reopen text output for verification.\n" -> @message. 74 -> @error. ]
+ ]
+ ? @error == 0 [
+  ? :filesize[@handle] != @size [ "Written text output has changed length.\n" -> @message. 74 -> @error. ]
+  0 -> @count.
+  ?? (@count < @size)*(@error == 0) [
+   :fileread[@handle|@work+1048608+@count|@size-@count] -> @n.
+   ? (@n == 0)+(@n > @size-@count) [ "Cannot verify complete text output.\n" -> @message. 74 -> @error. ] ~ [ @count+@n -> @count. ]
+  ]
+  ? @error == 0 [
+   ? :fileread[@handle|@work+2101240|1] != 0 [ "Written text output has trailing data.\n" -> @message. 74 -> @error. ]
+   0 -> @i. ?? (@i < @size)*(@error == 0) [
+    ? :load8[@work+@i] != :load8[@work+1048608+@i] [ "Written text output differs from input.\n" -> @message. 74 -> @error. ] @i+1 -> @i.
+   ]
+  ]
+ ]
+ ? @handle != -1 [
+  :fileclose[@handle] -> @status. -1 -> @handle.
+  ? (@status != 0)*(@error == 0) [ "Cannot close verified text output.\n" -> @message. 74 -> @error. ]
+ ]
+]
+? (@error == 0)*(@mode == 2) [
+ 0 -> @i. ?? @i < @length [ !put[:load8[@payload+@i]]. @i+1 -> @i. ]
+]
+? @created*@error [
+ ? :filedelete[@destination] != 0 [ "Incomplete text output could not be removed.\n" -> @message. ]
+]
+? @error [ 0 -> @i. ?? :load8[@message+@i] [ !put[:load8[@message+@i]]. @i+1 -> @i. ] ]
+? @work [ :hostfree[@work|2101248] -> @status. ]
+!exit[@error].

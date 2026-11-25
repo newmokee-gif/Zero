@@ -1,0 +1,38 @@
+ZTEXT001000009d48759efcc0000000
+NATIVE ZERO/EZERO LINUX TOOLKIT VERIFICATION
+
+b97b1f4f537e54583d8ef20064877928fe8c3d2d434b16b91e26dc4bb4930f4c  /workspace/zero-foundation/build/native-linux-dist/zero-ezero-linux-x86_64.tar.gz
+Archive bytes: 152179
+Debian host native package checks: PASS (see debian-smoke.txt).
+Arch userspace native package checks: PASS (see arch-smoke.txt).
+Image ID: sha256:ad77cf4a18d84f94e1e678496f9f5a5f2adc8bd2a62d2f13bf15598c2b214b1b
+Repository digests: ["archlinux@sha256:d4594bb2300cba11f41c2f27923eb56f63d9988909c402f9c95517d1e362c899"]
+Arch ran with no network, no capabilities, read-only root and UID65534.
+No host directories were mounted; package/ISO were streamed into private tmpfs.
+This is real Arch userspace on the shared host Linux kernel, not an Arch boot.
+
+Native compiler/installer/updater/hash programs and reference seed have no
+PT_INTERP/PT_DYNAMIC. All product behavior uses original Zero. Bash/coreutils/
+Docker are external test infrastructure only; no .sh/.cmd file is needed in
+the delivered toolkit. Installer/updater prepare files, not boot integration.
+
+Exact build inputs:
+cf01adff93330c930d1fa6628bbc459d6e93a404b3196afa6ae783922ecc77b7  compiler.zero
+911f6d67361300755c13bbf5f3d231d54ceae5736f1ec5e60dde5d6e4095ed3a  build/zero
+3f596a1819424fcb2a70af035a5a218911bd8ea862d2cdc882ee41dc1933d1e0  tools/compiler-cli.zero
+c6d822a38a7ab793cd9924959fa19a33c26dadd51826919467690e263b5e4660  installer/setup.zero
+8bf6fb5dcc0ee103acf810a4f0b029f4977c96197ac302b7e4f0d5745e2db00d  updater/update.zero
+f10845b7c697123351b4ff9e7d52e3ed225f16b8e84affc0b4318b420134d076  updater/sha256.zero
+6fb5b55e71f8ad07944a46471516944bfc35a2d1791693fb1a51245f93f60d46  ezero/compiler.zero
+4ad3a2a36cecd23c9bc3fe120097c2239a5c6bc8c3b82ee6028d3464d2158b11  ezero/pack.zero
+d8e3150d894ab806ace33e90b49beb65b622266345d28777c73beb0eca63b948  ezero/runtime-prefix.zero.part
+91907d65f76fdcefecd19a1655744a8c2984022cfc5e262b4eb926ad2a017ec8  ezero/runtime.zero.part
+
+Documentation-only refresh after execution tests: source/HOST-ABI.txt added.
+All other sources, executables, app images and examples are byte-identical.
+Final SHA256SUMS was independently verified; see documentation-refresh.json.
+ISO source SHA256: 8f31413952cbac47c16074ef6fb6534ada173246f822916e54d79b35d9ffb129, 18890752 bytes.
+
+Final Ezero documentation correction: only source/ezero/{README,LANGUAGE,ABI,MEMORY}.txt
+and SHA256SUMS changed. All other archive payloads remain byte-identical.
+The final manifest passed; see ezero-documentation-refresh.json.

@@ -1,0 +1,53 @@
+# Hosted execution of the full-u64 edge-case regression.
+:reserve[64] => @buffer.
+0 => @index.
+0xffffffffffffffff => @all.
+? 0xffffffff + 1 != 0x100000000 [ !exit[1]. !exit[99]. ]
+!put[65].
+? 0x100000000 - 1 != 0xffffffff [ !exit[2]. !exit[99]. ]
+!put[66].
+? @all + 1 != 0 [ !exit[3]. !exit[99]. ]
+? 0 - 1 != @all [ !exit[4]. !exit[99]. ]
+!put[67].
+? 0xffffffff * 0xffffffff != 0xfffffffe00000001 [ !exit[5]. !exit[99]. ]
+? @all * 2 != 0xfffffffffffffffe [ !exit[6]. !exit[99]. ]
+? 0x100000001 * 0x200000003 != 0x500000003 [ !exit[7]. !exit[99]. ]
+!put[68].
+? -0 != 0 [ !exit[8]. !exit[99]. ]
+? -1 != @all [ !exit[9]. !exit[99]. ]
+? -0x100000000 != 0xffffffff00000000 [ !exit[10]. !exit[99]. ]
+? -0x8000000000000000 != 0x8000000000000000 [ !exit[11]. !exit[99]. ]
+!put[69].
+? 0x8000000000000000 > 0x7fffffffffffffff [ !put[70]. ] ~ [ !exit[12]. !exit[99]. ]
+? 0x100000000 > 0xffffffff [ !put[71]. ] ~ [ !exit[13]. !exit[99]. ]
+? 0x1234567800000000 < 0x1234567800000001 [ !put[72]. ] ~ [ !exit[14]. !exit[99]. ]
+? @all >= @all [ !put[73]. ] ~ [ !exit[15]. !exit[99]. ]
+? 0x100000000 <= 0x100000000 [ !put[74]. ] ~ [ !exit[16]. !exit[99]. ]
+? 0x100000000 [ !put[75]. ] ~ [ !exit[17]. !exit[99]. ]
+!store64[@buffer | 0xfedcba9876543210].
+? :load64[@buffer] != 0xfedcba9876543210 [ !exit[18]. !exit[99]. ]
+? :load32[@buffer] != 0x76543210 [ !exit[19]. !exit[99]. ]
+? :load32[@buffer + 4] != 0xfedcba98 [ !exit[20]. !exit[99]. ]
+? :load16[@buffer] != 0x3210 [ !exit[21]. !exit[99]. ]
+? :load8[@buffer] != 0x10 [ !exit[22]. !exit[99]. ]
+!put[76].
+!store8[@buffer | 0x1234].
+!store16[@buffer + 2 | 0x12345678].
+!store32[@buffer + 4 | 0x123456789abcdef0].
+? :load8[@buffer] != 0x34 [ !exit[23]. !exit[99]. ]
+? :load16[@buffer + 2] != 0x5678 [ !exit[24]. !exit[99]. ]
+? :load32[@buffer + 4] != 0x9abcdef0 [ !exit[25]. !exit[99]. ]
+!put[77].
+? :load8["ASCII"] != 65 [ !exit[26]. !exit[99]. ]
+? :load8["ASCII" + 4] != 73 [ !exit[27]. !exit[99]. ]
+!put[78].
+?? @index < 4 [
+    !put[48 + @index].
+    @index + 1 -> @index.
+]
+? (0x100000002 + 3) * (0x200000003 - 1) != 0xc0000000a [ !exit[28]. !exit[99]. ]
+!put[79].
+!put[80].
+!put[10].
+!exit[0].
+!exit[99].

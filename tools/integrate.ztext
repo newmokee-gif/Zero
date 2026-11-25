@@ -1,0 +1,50 @@
+ZTEXT00100000ae91b4f45d80000000
+ZERO NATIVE SOURCE COMPOSITION
+
+tools/integrate.zero replaces the former foreign-language source insertion
+scripts. It is original Zero, built as a native Linux/Windows command.
+
+  zero-integrate PROJECT_DIRECTORY NEW_SOURCE.zero [--ezero|--picture|--picture-check|--browser|--browser-check]
+
+Default mode reads kernel.zero as the complete source template. It replaces
+the filesystem, window, network, guest compiler, guest file-service and Zero
+text-reader, browser, mouse and guest-editor marker
+blocks with their original Zero source fragments. The allowed NET, APP,
+BROWSER, MOUSE and EDITOR
+include lines expand recursively from a fixed filename whitelist. Network
+client receive/poll markers expand from their own source parts. Required
+markers must occur exactly once; missing/duplicate blocks, missing closing
+markers, unknown includes, NUL source bytes and excessive bounds fail before
+an output is created. No arbitrary include pathname is executed or imported.
+
+--ezero concatenates head, lexer, parser, expression and finish original Zero
+frontend parts in that order. This regenerates the complete Ezero compiler
+source; it does not implement Ezero parsing in another language.
+
+--picture replaces the shared memory-only ZPIX decoder block in tools/picture.zero.
+--picture-check replaces the same block in media/picture-check.zero. The decoder
+marker is required exactly once in these modes; both preserve the surrounding
+original Zero source. See media/ZPIX.ztext for the memory contract.
+
+--browser concatenates the browser reader head, HTML declarations, reader
+input, HTML parser and reader output parts. --browser-check concatenates the
+check head, HTML declarations, check input, shared HTML parser and check output.
+Both modes compose original Zero source without an external parser or runtime.
+
+Source files are limited to 524288 bytes and include nesting to 16 buffers.
+Output is bounded to 524288 bytes. Files are checked for premature EOF, excess
+bytes and size changes while reading. The compositor preserves source lines
+and inserts a final newline when a fragment lacks one. It does not rewrite
+string literals or program statements. Inputs must not be edited concurrently.
+
+The output path is created exclusively after complete composition succeeds.
+It is flushed and closed before reporting success. An existing output is
+preserved; a failed new write removes only its own partial file. Source inputs
+are read-only. There is no automatic replacement of the canonical kernel.
+
+Use a composed kernel directly with the native builder:
+  zero-integrate . kernel.next.zero
+  zero-build . new-build kernel.next.zero
+
+These commands use our own native Zero implementations. They do not launch
+shells, subprocess compilers, source-transformer scripts or foreign runtimes.

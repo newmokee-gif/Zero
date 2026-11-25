@@ -1,0 +1,78 @@
+ZTEXT001000010b5d921a19c0000000
+ZERO WEB 0.15 PREVIEW
+25 November 2026
+
+An original document engine and native GUI written entirely in Zero. Chromium,
+WebKit, V8, a Python interpreter and external GUI toolkits are not included.
+Ezero remains the project's easier language built on Zero; this engine is Zero.
+External HTML, CSS and JavaScript are interoperability inputs, not project
+implementation languages. A website's server-side Python does not require a
+Python interpreter in the browser.
+
+This is a local-document preview, not a finished modern Internet browser.
+The previous Zero OS HTTP text reader remains available in the system. This
+new engine is currently a Linux/Windows program and is not installed in the
+running Zero OS kernel. The system image itself remains the verified0.14base.
+
+Run
+  zero-web INPUT
+  zero-web --render INPUT NEW.zpix
+  zero-web --inspect INPUT
+  zero-web --check INPUT
+Windows uses zero-web.exe. INPUT is a regular external HTML file or our own
+ZTEXT001 container containing HTML. demo.ztext is included. --render creates
+an original ZPIX0001 image exclusively and refuses an existing destination.
+--inspect prints sanitized ASCII text; --check validates the supported profile.
+Warnings identify unsupported features; acceptance never means full web support.
+
+GUI
+The native800x600window paints an original RGB canvas and own bitmap font.
+Up/Down, PageUp/PageDown, Home/End and mouse wheel scroll; Esc or the window
+close button exits. Linux uses an original X11 wire client (Xwayland works).
+Windows uses Win32 host interfaces. There is no imported toolkit or font.
+
+Engine
+HTML is strict UTF-8, at most65536bytes and512nodes. Element parentage,
+id/class/style, entities, raw script/style and title/textarea RCDATA are parsed.
+Oversized attributes and unsupported executable contexts are rejected.
+CSS supports simple tag/class/id/universal selectors, source order/specificity,
+inline styles, inherited color/font-size, color/background-color, display,
+one-value padding/margin and width. Unsupported syntax is skipped with a warning.
+JavaScript supports a bounded subset: let/const/var, assignments, nonnegative
+safe integers, strings, addition/concatenation and getElementById(...).textContent.
+Failed script parsing rejects the whole page before GUI/output publication.
+There are no file, process, eval, import or network APIs available to scripts.
+
+Layout is a bounded block/inline flow preview with BR breaks, ASCII word wrap,
+character fallback for long words, block and inline text backgrounds, margin,
+padding and width. Fonts use an integer-scaled original5x7glyph set; supported
+glyphs are ASCII. Other Unicode scalars display as question marks. This is not
+CSS box-layout conformance, shaping, browser-standard font metrics or HTML5
+tree-building recovery. Read DOM.ztext, CSS.ztext and JAVASCRIPT.ztext for details.
+
+Not implemented in this new engine
+URL/network fetching, TLS/HTTPS, external styles/scripts, full ECMAScript,
+DOM events, forms, flex/grid, image formats, multimedia, cookies/storage,
+WebAssembly, accessibility tree, complex fonts and guest-app integration.
+All-sites compatibility and a complete Chromium rewrite are not claimed.
+
+Build from original source
+The raw original compiler accepts source on stdin and writes native bytes:
+  zero --host < browser/engine/compose.zero > zero-web-compose
+  zero-web-compose PROJECT NEW_WEB.zero
+  zero --host < NEW_WEB.zero > zero-web
+Use --windows for a Windows executable. Set the executable bit on Linux.
+The standard zero-build now emits72artifacts in76stages, including zero-web,
+zero-web-compose and zero-web-check for Linux and Windows. The own compiler
+fixed point is verified first. No foreign compiler, linker or bundler is used.
+
+Own checks
+The composer also accepts --dom-check, --css-check, --javascript-check,
+--engine-check and --gui-check as the final argument, producing original Zero
+test programs. Compiler/runtime and source modules remain shared with the
+project. Execution evidence and limitations are recorded in VERIFICATION.ztext.
+
+Next work
+Integrate the engine with network fetching and the guest runtime, implement
+TLS using original code, extend DOM/ECMAScript and CSS compatibility, add own
+media decoders and scalable text. These are plans, not present capabilities.

@@ -1,0 +1,125 @@
+# Original Zero firmware-source composer; no foreign preprocessor or script.
+0 => @mem. 0 => @buffer. 0 => @next. 0 => @part. 0 => @table.
+0 => @project. 0 => @dest. 0 => @path. 0 => @plen. 0 => @size.
+0 => @bytes. 0 => @got. 0 => @fd. 0 => @i. 0 => @j. 0 => @k.
+0 => @phase. 0 => @mode. 0 => @error. 0 => @name. 0 => @a. 0 => @b.
+0 => @alen. 0 => @blen. 0 => @count. 0 => @same. 0 => @outbytes.
+0 => @sourcepart. 0 => @sourcelen. 0 => @created. 0 => @status.
+? (:argcount[] != 2)*(:argcount[] != 3) [ !exit[64]. ]
+:argument[1] -> @project. :argument[2] -> @dest.
+? :argcount[] == 3 [
+ :argument[3] -> @a. "--ia32" -> @b. 0 -> @i.
+ ?? :load8[@b+@i] [ ? :load8[@a+@i] != :load8[@b+@i] [ !exit[64]. ] @i+1 -> @i. ]
+ ? :load8[@a+@i] [ !exit[64]. ] 1 -> @mode.
+]
+?? :load8[@project+@plen] [ @plen+1 -> @plen. ? @plen > 3800 [ !exit[64]. ] ]
+:hostalloc[4194304] -> @mem. ? @mem == 0 [ !exit[71]. ]
+@mem -> @path. @mem+4096 -> @table. @mem+16384 -> @part.
+@mem+524288 -> @sourcepart. @mem+1048576 -> @buffer. @mem+2097152 -> @next.
+0 -> @i. ?? @i < @plen [ !store8[@path+@i|:load8[@project+@i]]. @i+1 -> @i. ]
+!store8[@path+@plen|47].
+0 -> @phase.
+?? @phase < 5 [
+ "media/format-declarations.zero.part" -> @name.
+ ? @phase == 1 [ "media/firmware-head.zero.part" -> @name. ]
+ ? @phase == 2 [ "media/format-worker.zero.part" -> @name. ]
+ ? @phase == 3 [ "media/firmware-main.zero.part" -> @name. ]
+ ? @phase == 4 [ "media/firmware-source.zero.part" -> @name. ]
+ 0 -> @i. ?? :load8[@name+@i] [ !store8[@path+@plen+1+@i|:load8[@name+@i]]. @i+1 -> @i. ]
+ !store8[@path+@plen+1+@i|0]. :fileopen[@path|0] -> @fd. ? @fd == -1 [ !exit[66]. ]
+ :filesize[@fd] -> @bytes. ? @bytes > 500000 [ !exit[65]. ]
+ 0 -> @got. ?? @got < @bytes [
+  :fileread[@fd|@part+@got|@bytes-@got] -> @i.
+  ? (@i == 0)+(@i > @bytes-@got) [ !exit[74]. ] @got+@i -> @got.
+ ]
+ ? :fileclose[@fd] [ !exit[74]. ]
+ ? @phase == 4 [
+  0 -> @i. ?? @i < @bytes [ !store8[@sourcepart+@i|:load8[@part+@i]]. @i+1 -> @i. ]
+  !store8[@sourcepart+@bytes|0]. @bytes -> @sourcelen.
+ ] ~ [
+  ? @size+@bytes > 900000 [ !exit[65]. ]
+  0 -> @i. ?? @i < @bytes [ !store8[@buffer+@size+@i|:load8[@part+@i]]. @i+1 -> @i. ]
+  @size+@bytes -> @size.
+ ]
+ @phase+1 -> @phase.
+]
+# Ordered literal replacements. Firmware pointer fields change; Zero u64 state does not.
+!store64[@table|"# BEGIN FIRMWARE SOURCE CHOICE\n# END FIRMWARE SOURCE CHOICE"]. !store64[@table+8|@sourcepart].
+1 -> @count.
+? @mode [
+ !store64[@table+16|":load64[@system+96]"]. !store64[@table+24|":load32[@system+60]"].
+ !store64[@table+32|":load64[@system+64]"]. !store64[@table+40|":load32[@system+44]"].
+ !store64[@table+48|":load64[@system+48]"]. !store64[@table+56|":load32[@system+36]"].
+ !store64[@table+64|":load64[@services+40]"]. !store64[@table+72|":load32[@services+32]"].
+ !store64[@table+80|":load64[@services+48]"]. !store64[@table+88|":load32[@services+36]"].
+ !store64[@table+96|":load64[@services+64]"]. !store64[@table+104|":load32[@services+44]"].
+ !store64[@table+112|":load64[@services+72]"]. !store64[@table+120|":load32[@services+48]"].
+ !store64[@table+128|":load64[@services+152]"]. !store64[@table+136|":load32[@services+88]"].
+ !store64[@table+144|":load64[@services+216]"]. !store64[@table+152|":load32[@services+120]"].
+ !store64[@table+160|":load64[@services+248]"]. !store64[@table+168|":load32[@services+136]"].
+ !store64[@table+176|":load64[@services+256]"]. !store64[@table+184|":load32[@services+140]"].
+ !store64[@table+192|":load64[@services+312]"]. !store64[@table+200|":load32[@services+168]"].
+ !store64[@table+208|":load64[@out+8]"]. !store64[@table+216|":load32[@out+4]"].
+ !store64[@table+224|":load64[@in+8]"]. !store64[@table+232|":load32[@in+4]"].
+ !store64[@table+240|":load64[@p+24] -> @source"]. !store64[@table+248|":load32[@p+12] -> @source"].
+ !store64[@table+256|":call[:load64[@p+8]|@p|@s+64|@s+2048|1|0]"]. !store64[@table+264|":call7[:load32[@p+8]|@p|@s+64|@s+2048|1|0|0|0]"].
+ !store64[@table+272|":load64[@p+8]"]. !store64[@table+280|":load32[@p+8]"].
+ !store64[@table+288|":load64[@p+16]"]. !store64[@table+296|":load32[@p+12]"].
+ !store64[@table+304|":load64[@p+32]"]. !store64[@table+312|":load32[@p+20]"].
+ !store64[@table+320|":load64[@p+64]"]. !store64[@table+328|":load32[@p+36]"].
+ !store64[@table+336|":load64[@protocol+8]"]. !store64[@table+344|":load32[@protocol+8]"].
+ !store64[@table+352|":load64[:load64[@s+104]+@i*8]"]. !store64[@table+360|":load32[:load64[@s+104]+@i*4]"].
+ !store64[@table+368|":load64[:load64[@s+232]+@i*8]"]. !store64[@table+376|":load32[:load64[@s+232]+@i*4]"].
+ !store64[@table+384|"0x8000000000000006"]. !store64[@table+392|"0x80000006"].
+ !store64[@table+400|":call[:load64[@protocol+32]|@protocol|:load64[@s+128]|:shr[@i|9]|@n|@p]"]. !store64[@table+408|":call7[:load32[@protocol+20]|@protocol|:load64[@s+128]|:bitand[:shr[@i|9]|0xffffffff]|:shr[@i|41]|@n|@p|0]"].
+ !store64[@table+416|":call[:load64[@protocol+24]|@protocol|:load64[@s+128]|:shr[@i|9]|@n|@p]"]. !store64[@table+424|":call7[:load32[@protocol+16]|@protocol|:load64[@s+128]|:bitand[:shr[@i|9]|0xffffffff]|:shr[@i|41]|@n|@p|0]"].
+ !store64[@table+432|":load64[@protocol+40]"]. !store64[@table+440|":load32[@protocol+24]"].
+ !store64[@table+448|"|:load64[@s+160]|16|0|0|0]"]. !store64[@table+456|"|:load64[@s+160]|0|16|0|0]"].
+ !store64[@table+464|"|@u|32|0|0|0]"]. !store64[@table+472|"|@u|0|32|0|0]"].
+ !store64[@table+480|"|@zm|22|0|0|0]"]. !store64[@table+488|"|@zm|0|22|0|0]"].
+ !store64[@table+496|"|@s|16|0|0|0]"]. !store64[@table+504|"|@s|0|16|0|0]"].
+ !store64[@table+512|":call[:load32[@services+32]|0|2|16|@s|0]"]. !store64[@table+520|"!store64[@s|0xffffffff]. :call[:load32[@services+32]|1|2|16|@s|0]"].
+ !store64[@table+528|":call[:load32[@services+32]|0|2|32|@s+8|0]"]. !store64[@table+536|"!store64[@s+8|0xffffffff]. :call[:load32[@services+32]|1|2|32|@s+8|0]"].
+ !store64[@table+544|":call[:load32[@services+32]|0|2|22|@s+16|0]"]. !store64[@table+552|"!store64[@s+16|0xffffffff]. :call[:load32[@services+32]|1|2|22|@s+16|0]"].
+ !store64[@table+560|":call[:load32[@services+32]|0|2|16|@s+160|0]"]. !store64[@table+568|"!store64[@s+160|0xffffffff]. :call[:load32[@services+32]|1|2|16|@s+160|0]"].
+ !store64[@table+576|"|:load64[@s+8]|32|0|0|0]"]. !store64[@table+584|"|:load64[@s+8]|0|32|0|0]"].
+ !store64[@table+592|"|:load64[@s]|16|0|0|0]"]. !store64[@table+600|"|:load64[@s]|0|16|0|0]"].
+ !store64[@table+608|":load64[@services+264]"]. !store64[@table+616|":load32[@services+144]"].
+ !store64[@table+624|":load64[:load64[@s+312]+@i*8]"]. !store64[@table+632|":load32[:load64[@s+312]+@i*4]"].
+ 40 -> @count.
+]
+0 -> @phase.
+?? @phase < @count [
+ :load64[@table+@phase*16] -> @a. :load64[@table+@phase*16+8] -> @b.
+ 0 -> @alen. 0 -> @blen.
+ ?? :load8[@a+@alen] [ @alen+1 -> @alen. ]
+ ?? :load8[@b+@blen] [ @blen+1 -> @blen. ]
+ 0 -> @i. 0 -> @outbytes. 0 -> @k.
+ ?? @i < @size [
+  0 -> @same.
+  ? @alen <= @size-@i [
+   1 -> @same. 0 -> @j.
+   ?? @same*(@j < @alen) [ ? :load8[@buffer+@i+@j] != :load8[@a+@j] [ 0 -> @same. ] @j+1 -> @j. ]
+  ]
+  ? @same [
+   @k+1 -> @k.
+   ? @outbytes+@blen > 1000000 [ !exit[65]. ]
+   0 -> @j. ?? @j < @blen [ !store8[@next+@outbytes+@j|:load8[@b+@j]]. @j+1 -> @j. ]
+   @outbytes+@blen -> @outbytes. @i+@alen -> @i.
+  ] ~ [
+   ? @outbytes >= 1000000 [ !exit[65]. ] !store8[@next+@outbytes|:load8[@buffer+@i]].
+   @outbytes+1 -> @outbytes. @i+1 -> @i.
+  ]
+ ]
+ ? (@k == 0)+((@phase == 0)*(@k != 1)) [ !exit[65]. ]
+ @buffer -> @part. @next -> @buffer. @part -> @next. @outbytes -> @size. @phase+1 -> @phase.
+]
+:fileopen[@dest|1] -> @fd. ? @fd == -1 [ !exit[73]. ]
+0 -> @got. ?? @got < @size [
+ :filewrite[@fd|@buffer+@got|@size-@got] -> @i.
+ ? (@i == 0)+(@i > @size-@got) [ 74 -> @error. @size -> @got. ] ~ [ @got+@i -> @got. ]
+]
+? :filesync[@fd] [ 74 -> @error. ] ? :fileclose[@fd] [ 74 -> @error. ]
+# A partial exclusively-created output is retained; no path-based cleanup can
+# remove a replacement created by another process after the handle closes.
+:hostfree[@mem|4194304] -> @status. !exit[@error].

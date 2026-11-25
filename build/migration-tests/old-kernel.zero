@@ -1,0 +1,870 @@
+# Own Zero kernel: visible terminal, PS/2/COM1 input and persistent ATA files.
+var memory = reserve(24576);
+var bank_a = memory;
+var bank_b = memory + 4608;
+var work = memory + 9216;
+var line = memory + 13824;
+var listing = memory + 14336;
+var echo_byte = memory + 16380;
+var state = 0;
+var current = 0;
+var message = 0;
+var pointer = 0;
+var character = 0;
+var i = 0;
+var j = 0;
+var k = 0;
+var temporary = 0;
+var status = 0;
+var timeout = 0;
+var ready = 0;
+var valid = 0;
+var done = 0;
+var io_lba = 0;
+var io_buffer = 0;
+var io_count = 0;
+var io_write = 0;
+var io_return = 0;
+var io_ok = 0;
+var sector_index = 0;
+var word_index = 0;
+var command_status = 0;
+var validate_ptr = 0;
+var validate_return = 0;
+var validate_good = 0;
+var checksum = 0;
+var good_a = 0;
+var good_b = 0;
+var active_bank = 0;
+var fs_ready = 0;
+var disk_ready = 0;
+var line_length = 0;
+var overflow = 0;
+var ignore_lf = 0;
+var arguments = 0;
+var command = 0;
+var operation = 0;
+var wanted = 0;
+var equal = 0;
+var name = 0;
+var text = 0;
+var name_length = 0;
+var file = 0;
+var free_file = 0;
+var text_length = 0;
+var slot = 0;
+var boot_information = arg0;
+var console = memory + 16384;
+# Original 5x7 ASCII glyph rows. Each character stores seven masks as 48+mask.
+var font = "00000004444404:::0000:O::O:04?D>5N4IJ248;C<BD8EB=44800002488842842224804E>E40044O4400000448000O0000000004122488@>ACEIA>4<4444>>A1248ON11611N26:BO22O@@N11N68@NAA>O124888>AA>AA>>AA?12<04004000400448124842100O0O00@84248@>A12404>AGEG@>>AAOAAANAANAAN?@@@@@?NAAAAANO@@N@@OO@@N@@@?@@GAA?AAAOAAA>44444>72222B<ABDHDBA@@@@@@OAKEEAAAAIIECCA>AAAAA>NAAN@@@>AAAEB=NAANDBA?@@>11NO444444AAAAAA>AAAAA:4AAAEEKAAA:4:AAAA:4444O1248@O>88888>@884221>22222>4:A0000000000O842000000>1?A?@@NAAAN00?@@@?11?AAA?00>AO@?698N8880?AA?1>@@NAAAA40<444>20622B<@@BDHDB<44444>00JEEEE00NAAAA00>AAA>0NAAN@@0?AA?1100FI@@@00?@>1N88N889600AAAA?00AAA:400AAEE:00A:4:A0AAA?1>00O248O34484434444444H44244H009F000";
+var c0 = 0;
+var c1 = 0;
+var c2 = 0;
+var c3 = 0;
+var c4 = 0;
+var c5 = 0;
+i = 0;
+while i < 24576 { store8(memory + i, 0); i = i + 1; }
+while 1 {
+ current = state;
+ if current == 0 {
+  # Copy only display fields from the firmware-neutral loader handoff.
+  if boot_information {
+   i = 0;
+   while i < 48 {
+    store64(console + i, load64(boot_information + 48 + i)); i = i + 8;
+   }
+  }
+  if load64(console) == 1 {
+   if load64(console + 8) != 0xb8000 { store64(console, 0); }
+  } else {
+   if load64(console) == 2 {
+    if load64(console + 8) == 0 { store64(console, 0); }
+    if load64(console + 16) < 640 { store64(console, 0); }
+    if load64(console + 24) < 400 { store64(console, 0); }
+    if load64(console + 16) > 8192 { store64(console, 0); }
+    if load64(console + 24) > 8192 { store64(console, 0); }
+    if load64(console + 32) < load64(console + 16) { store64(console, 0); }
+    if load64(console + 32) > 16384 { store64(console, 0); }
+    if load64(console + 40) > 1 { store64(console, 0); }
+   } else { store64(console, 0); }
+  }
+  store64(console + 120, 1);
+  # COM1 is optional. A missing or stalled UART must not stop visible output.
+  out8(0x3f9, 0); out8(0x3fb, 0x80); out8(0x3f8, 1);
+  out8(0x3f9, 0); out8(0x3fb, 3); out8(0x3fa, 7); out8(0x3fc, 3);
+  out8(0x3ff, 0x5a);
+  if in8(0x3ff) == 0x5a { store64(console + 80, 1); }
+  out8(0x3ff, 0);
+  # Own 8042 setup: disable both ports, set translation/no IRQs, enable port 1.
+  # Keyboard is set to scan set 2; the controller translates it to set 1.
+  if in8(0x64) != 255 { store64(console + 160, 1); }
+  c0 = 0;
+  while c0 < 32 {
+   c1 = in8(0x64);
+   while c1 >= 2 { c1 = c1 - 2; }
+   if c1 { c2 = in8(0x60); } else { c0 = 32; }
+   c0 = c0 + 1;
+  }
+  c0 = 0;
+  while c0 < 9 {
+   if load64(console + 160) {
+    c1 = 0x64; c2 = 0xad;
+    if c0 == 1 { c2 = 0xa7; }
+    if c0 == 2 { c2 = 0x60; }
+    if c0 == 3 { c1 = 0x60; c2 = 0x64; }
+    if c0 == 4 { c2 = 0xae; }
+    if c0 == 5 { c1 = 0x60; c2 = 0xf5; }
+    if c0 == 6 { c1 = 0x60; c2 = 0xf0; }
+    if c0 == 7 { c1 = 0x60; c2 = 2; }
+    if c0 == 8 { c1 = 0x60; c2 = 0xf4; }
+    ready = 0; timeout = 0;
+    while ready == 0 {
+     status = in8(0x64);
+     while status >= 4 { status = status - 4; }
+     if status < 2 { ready = 1; }
+     timeout = timeout + 1;
+     if timeout == 100000 { ready = 1; store64(console + 160, 0); }
+    }
+    if load64(console + 160) {
+     out8(c1, c2);
+     if c0 >= 5 {
+      ready = 0; timeout = 0;
+      while ready == 0 {
+       status = in8(0x64);
+       while status >= 2 { status = status - 2; }
+       if status {
+        c3 = in8(0x60); ready = 1;
+        if c3 != 0xfa { store64(console + 160, 0); }
+       }
+       timeout = timeout + 1;
+       if timeout == 100000 { ready = 1; store64(console + 160, 0); }
+      }
+     }
+    }
+   }
+   c0 = c0 + 1;
+  }
+  message = "\r\nZERO OS - own language kernel\r\nFirmware boot complete. Terminal ready.\r\n";
+  out8(0x3f6, 2);
+  state = 80;
+ }
+ if current == 1 {
+  io_lba = 0; io_buffer = bank_a; io_count = 9;
+  io_write = 0; io_return = 2; state = 90;
+ }
+ if current == 2 {
+  good_a = 0;
+  if io_ok { validate_ptr = bank_a; validate_return = 3; state = 50; }
+  else { state = 4; }
+ }
+ if current == 3 { good_a = validate_good; state = 4; }
+ if current == 4 {
+  io_lba = 9; io_buffer = bank_b; io_count = 9;
+  io_write = 0; io_return = 5; state = 90;
+ }
+ if current == 5 {
+  good_b = 0;
+  if io_ok { validate_ptr = bank_b; validate_return = 6; state = 50; }
+  else { state = 7; }
+ }
+ if current == 6 { good_b = validate_good; state = 7; }
+ if current == 7 {
+  fs_ready = 0; pointer = 0;
+  if good_a { pointer = bank_a; active_bank = 0; }
+  if good_b {
+   if good_a {
+    if load64(bank_b + 8) > load64(bank_a + 8) { pointer = bank_b; active_bank = 9; }
+   } else { pointer = bank_b; active_bank = 9; }
+  }
+  if pointer {
+   i = 0;
+   while i < 4608 { store8(work + i, load8(pointer + i)); i = i + 1; }
+   fs_ready = 1;
+   message = "ZeroFS mounted. Files survive restart. Type help.\r\n";
+  } else {
+   if disk_ready {
+    message = "No valid ZeroFS disk. Attach dedicated IDE data.img.\r\nUse format ZERO only to erase and initialize that disk. Type help.\r\n";
+   } else {
+    message = "No supported primary-master IDE disk. Filesystem unavailable.\r\nNeed an ATA LBA disk with 512-byte sectors and FLUSH CACHE. Type help.\r\n";
+   }
+  }
+  state = 9;
+ }
+ if current == 9 { line_length = 0; overflow = 0; message = "zero> "; state = 10; }
+ if current == 10 {
+  character = 0;
+  if load64(console + 80) {
+   status = in8(0x3fd);
+   if status == 255 { store64(console + 80, 0); }
+   else {
+    while status >= 2 { status = status - 2; }
+    if status { character = in8(0x3f8); }
+   }
+  }
+  if character == 0 {
+   if load64(console + 160) {
+    c0 = in8(0x64); c1 = c0;
+    while c1 >= 2 { c1 = c1 - 2; }
+    if c1 {
+     c1 = in8(0x60);
+     # Discard auxiliary-port bytes and controller parity/timeout errors.
+     if c0 < 32 {
+      c0 = c1;
+      if c0 == 0xe0 { store64(console + 112, 1); }
+      else {
+       if c0 == 0xe1 { store64(console + 168, 5); }
+       else {
+        if load64(console + 168) {
+         store64(console + 168, load64(console + 168) - 1);
+        } else {
+         if c0 >= 128 {
+          if c0 == 170 { store64(console + 88, 0); }
+          if c0 == 182 { store64(console + 96, 0); }
+          if c0 == 186 { store64(console + 176, 0); }
+          store64(console + 112, 0);
+         } else {
+          if c0 == 42 { store64(console + 88, 1); }
+          if c0 == 54 { store64(console + 96, 1); }
+          if c0 == 58 {
+           if load64(console + 176) == 0 {
+            store64(console + 104, 1 - load64(console + 104));
+            store64(console + 176, 1);
+           }
+          }
+          if load64(console + 112) {
+           if c0 == 28 { character = 13; }
+           store64(console + 112, 0);
+          } else {
+           c1 = 0; c2 = 0; c4 = 0;
+           c3 = (load64(console + 88) + load64(console + 96)) > 0;
+           if (c0 >= 2) * (c0 <= 13) {
+            c1 = "1234567890-="; c2 = "!@#$%^&*()_+"; c4 = c0 - 2;
+           }
+           if (c0 >= 16) * (c0 <= 27) {
+            c1 = "qwertyuiop[]"; c2 = "QWERTYUIOP{}"; c4 = c0 - 16;
+           }
+           if (c0 >= 30) * (c0 <= 41) {
+            c1 = "asdfghjkl;'`"; c2 = "ASDFGHJKL:\"~"; c4 = c0 - 30;
+           }
+           if (c0 >= 43) * (c0 <= 53) {
+            c1 = "\\zxcvbnm,./"; c2 = "|ZXCVBNM<>?"; c4 = c0 - 43;
+           }
+           if c1 {
+            character = load8(c1 + c4);
+            if (character >= 97) * (character <= 122) {
+             if c3 != load64(console + 104) { character = character - 32; }
+            } else { if c3 { character = load8(c2 + c4); } }
+           }
+           if c0 == 14 { character = 8; }
+           if c0 == 15 { character = 32; }
+           if c0 == 28 { character = 13; }
+           if c0 == 57 { character = 32; }
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+  if character {
+   valid = 1;
+   if character == 10 {
+    if ignore_lf { valid = 0; }
+    ignore_lf = 0;
+   } else { ignore_lf = 0; }
+   if valid {
+    if character == 13 { ignore_lf = 1; character = 10; }
+    if character == 127 { character = 8; }
+    if character == 10 {
+     store8(line + line_length, 0); message = "\r\n";
+     if overflow { state = 11; } else { state = 20; }
+    } else {
+     if character == 8 {
+      if line_length { line_length = line_length - 1; store8(echo_byte, 8); store8(echo_byte + 1, 32); store8(echo_byte + 2, 8); store8(echo_byte + 3, 0); message = echo_byte; }
+     } else {
+      if character >= 32 {
+       if character <= 126 {
+        if line_length < 480 {
+         store8(line + line_length, character); line_length = line_length + 1;
+         store8(echo_byte, character); store8(echo_byte + 1, 0); message = echo_byte;
+        } else { overflow = 1; }
+       }
+      }
+     }
+    }
+   }
+  }
+ }
+ if current == 11 { message = "Command too long; nothing changed.\r\n"; state = 9; }
+ if current == 20 {
+  command = line;
+  while load8(command) == 32 { command = command + 1; }
+  arguments = command;
+  while load8(arguments) > 32 { arguments = arguments + 1; }
+  if load8(arguments) == 32 {
+   store8(arguments, 0); arguments = arguments + 1;
+   while load8(arguments) == 32 { arguments = arguments + 1; }
+  }
+  operation = 0; k = 1;
+  while k < 11 {
+   if k == 1 { wanted = "help"; }
+   if k == 2 { wanted = "info"; }
+   if k == 3 { wanted = "clear"; }
+   if k == 4 { wanted = "write"; }
+   if k == 5 { wanted = "watch"; }
+   if k == 6 { wanted = "save"; }
+   if k == 7 { wanted = "read"; }
+   if k == 8 { wanted = "rm"; }
+   if k == 9 { wanted = "format"; }
+   if k == 10 { wanted = "create"; }
+   i = 0; equal = 1; done = 0;
+   while done == 0 {
+    character = load8(command + i);
+    if character != load8(wanted + i) { equal = 0; done = 1; }
+    if character == 0 { done = 1; }
+    i = i + 1;
+   }
+   if equal { operation = k; }
+   k = k + 1;
+  }
+  state = 9;
+  if load8(command) { if operation == 0 { message = "Unknown command. Type help.\r\n"; } }
+  if load8(arguments) {
+   if operation >= 1 {
+    if operation <= 3 { operation = 0; message = "This command takes no arguments. Type help.\r\n"; }
+   }
+   if operation == 5 { operation = 0; message = "This command takes no arguments. Type help.\r\n"; }
+  }
+  if operation == 1 {
+   message = "help | info | clear | write TEXT | watch\r\ncreate NAME      - create an empty disk file\r\nsave NAME TEXT   - create/replace a disk file\r\nread NAME        - read a disk file\r\nrm NAME          - delete a disk file\r\nformat ZERO      - erase/initialize dedicated IDE disk\r\n8 files, names 1..31 ASCII letters/digits/._-, text <=400 bytes.\r\n";
+  }
+  if operation == 2 {
+   message = "x86-64 monolithic kernel, entirely Zero.\r\nVisible console; PS/2 and optional COM1; own ATA PIO; two-copy ZeroFS.\r\nFiles are on IDE primary master. No background tasks or networking.\r\n";
+   if load64(boot_information + 104) == 32 {
+    message = "x86-32 monolithic kernel, entirely Zero.\r\nVisible console; PS/2 and optional COM1; own ATA PIO; two-copy ZeroFS.\r\nFiles are on IDE primary master. No background tasks or networking.\r\n";
+   }
+  }
+  if operation == 3 {
+   store64(console + 120, 1); store64(console + 128, 1);
+   store8(listing, 27); store8(listing + 1, 91); store8(listing + 2, 50);
+   store8(listing + 3, 74); store8(listing + 4, 27); store8(listing + 5, 91);
+   store8(listing + 6, 72); store8(listing + 7, 0); message = listing;
+  }
+  if operation == 4 { message = arguments; state = 12; }
+  if operation == 5 {
+   if fs_ready {
+    j = 0; slot = 0;
+    while slot < 8 {
+     file = work + 512 + slot * 512;
+     if load8(file) {
+      i = 0;
+      while load8(file + 1 + i) {
+       store8(listing + j, load8(file + 1 + i)); i = i + 1; j = j + 1;
+      }
+      store8(listing + j, 13); j = j + 1; store8(listing + j, 10); j = j + 1;
+     }
+     slot = slot + 1;
+    }
+    store8(listing + j, 0); message = listing;
+    if j == 0 { message = "No files.\r\n"; }
+   } else { message = "Filesystem unavailable.\r\n"; }
+  }
+  if operation >= 6 {
+   if operation <= 8 {
+    if fs_ready { state = 30; } else { message = "Filesystem unavailable.\r\n"; }
+   }
+  }
+  if operation == 9 {
+   wanted = "ZERO"; i = 0; equal = 1; done = 0;
+   while done == 0 {
+    character = load8(arguments + i);
+    if character != load8(wanted + i) { equal = 0; done = 1; }
+    if character == 0 { done = 1; }
+    i = i + 1;
+   }
+   if equal {
+    if disk_ready { state = 60; }
+    else { message = "No supported IDE disk; nothing changed.\r\n"; }
+   } else { message = "To erase the dedicated disk, type exactly: format ZERO\r\n"; }
+  }
+  if operation == 10 {
+   if fs_ready { state = 30; } else { message = "Filesystem unavailable.\r\n"; }
+  }
+ }
+ if current == 12 { message = "\r\n"; state = 9; }
+ if current == 30 {
+  name = arguments; text = name; name_length = 0; valid = 1;
+  while load8(text) > 32 {
+   character = load8(text); ready = 0;
+   if character >= 65 { if character <= 90 { ready = 1; } }
+   if character >= 97 { if character <= 122 { ready = 1; } }
+   if character >= 48 { if character <= 57 { ready = 1; } }
+   if character == 46 { ready = 1; }
+   if character == 95 { ready = 1; }
+   if character == 45 { ready = 1; }
+   if ready == 0 { valid = 0; }
+   name_length = name_length + 1; text = text + 1;
+  }
+  if load8(text) == 32 { store8(text, 0); text = text + 1; }
+  if name_length == 0 { valid = 0; }
+  if name_length > 31 { valid = 0; }
+  if operation != 6 { if load8(text) { valid = 0; } }
+  if valid {
+   file = 0; free_file = 0; slot = 0;
+   while slot < 8 {
+    pointer = work + 512 + slot * 512;
+    if load8(pointer) {
+     i = 0; equal = 1; done = 0;
+     while done == 0 {
+      character = load8(name + i);
+      if character != load8(pointer + 1 + i) { equal = 0; done = 1; }
+      if character == 0 { done = 1; }
+      i = i + 1;
+     }
+     if equal { file = pointer; }
+    } else { if free_file == 0 { free_file = pointer; } }
+    slot = slot + 1;
+   }
+   state = 31;
+  } else { message = "Invalid name or arguments. Type help.\r\n"; state = 9; }
+ }
+ if current == 31 {
+  state = 9;
+  if operation == 10 {
+   if file { message = "File already exists; nothing changed.\r\n"; }
+   else { operation = 6; }
+  }
+  if operation == 6 {
+   text_length = 0;
+   while load8(text + text_length) { text_length = text_length + 1; }
+   if text_length > 400 {
+    message = "File too large; maximum 400 bytes. Nothing changed.\r\n";
+   } else {
+    if file == 0 { file = free_file; }
+    if file == 0 { message = "Disk file table full (8 files). Nothing changed.\r\n"; }
+    else {
+     i = 0;
+     while i < 512 { store8(file + i, 0); i = i + 1; }
+     store8(file, 1);
+     i = 0;
+     while i < name_length { store8(file + 1 + i, load8(name + i)); i = i + 1; }
+     store16(file + 34, text_length);
+     i = 0;
+     while i < text_length { store8(file + 36 + i, load8(text + i)); i = i + 1; }
+     state = 70;
+    }
+   }
+  }
+  if operation == 7 {
+   if file { message = file + 36; state = 12; }
+   else { message = "File not found.\r\n"; }
+  }
+  if operation == 8 {
+   if file {
+    i = 0;
+    while i < 512 { store8(file + i, 0); i = i + 1; }
+    state = 70;
+   } else { message = "File not found.\r\n"; }
+  }
+ }
+ if current == 50 {
+  validate_good = 1;
+  if load64(validate_ptr) != 0x31303053464f525a { validate_good = 0; }
+  if load64(validate_ptr + 8) == 0 { validate_good = 0; }
+  checksum = load64(validate_ptr) + load64(validate_ptr + 8) + load64(validate_ptr + 16);
+  if checksum != load64(validate_ptr + 24) { validate_good = 0; }
+  checksum = 0; i = 512;
+  while i < 4608 {
+   checksum = checksum + load8(validate_ptr + i) * (i + 1); i = i + 1;
+  }
+  if checksum != load64(validate_ptr + 16) { validate_good = 0; }
+  slot = 0;
+  while slot < 8 {
+   pointer = validate_ptr + 512 + slot * 512;
+   if load8(pointer) {
+    if load8(pointer) != 1 { validate_good = 0; }
+    if load8(pointer + 1) == 0 { validate_good = 0; }
+    i = 0; done = 0;
+    while i < 32 {
+     character = load8(pointer + 1 + i);
+     if done == 0 {
+      if character == 0 { done = 1; }
+      else {
+       valid = 0;
+       if character >= 65 { if character <= 90 { valid = 1; } }
+       if character >= 97 { if character <= 122 { valid = 1; } }
+       if character >= 48 { if character <= 57 { valid = 1; } }
+       if character == 46 { valid = 1; }
+       if character == 95 { valid = 1; }
+       if character == 45 { valid = 1; }
+       if valid == 0 { validate_good = 0; }
+      }
+     }
+     i = i + 1;
+    }
+    if done == 0 { validate_good = 0; }
+    # Used names must be unique, or reads/deletes can select the wrong record.
+    j = 0;
+    while j < slot {
+     wanted = validate_ptr + 512 + j * 512;
+     if load8(wanted) == 1 {
+      i = 0; equal = 1; done = 0;
+      while i < 32 {
+       if done == 0 {
+        character = load8(pointer + 1 + i);
+        if character != load8(wanted + 1 + i) { equal = 0; done = 1; }
+        if character == 0 { done = 1; }
+       }
+       i = i + 1;
+      }
+      if equal { validate_good = 0; }
+     }
+     j = j + 1;
+    }
+    text_length = load16(pointer + 34);
+    if text_length > 400 { validate_good = 0; }
+    else {
+     if load8(pointer + 36 + text_length) != 0 { validate_good = 0; }
+     i = 0;
+     while i < text_length {
+      character = load8(pointer + 36 + i);
+      if character < 32 { validate_good = 0; }
+      if character > 126 { validate_good = 0; }
+      i = i + 1;
+     }
+    }
+   }
+   slot = slot + 1;
+  }
+  state = validate_return;
+ }
+ # Explicit format erases both snapshots before initializing a fresh one.
+ if current == 60 {
+  fs_ready = 0; i = 0;
+  while i < 4608 { store8(work + i, 0); i = i + 1; }
+  io_lba = 0; io_buffer = work; io_count = 9;
+  io_write = 1; io_return = 61; state = 90;
+ }
+ if current == 61 {
+  if io_ok {
+   io_lba = 9; io_buffer = work; io_count = 9;
+   io_write = 1; io_return = 62; state = 90;
+  } else { state = 79; }
+ }
+ if current == 62 {
+  if io_ok { io_write = 2; io_return = 63; state = 90; }
+  else { state = 79; }
+ }
+ if current == 63 {
+  if io_ok { active_bank = 9; state = 70; }
+  else { state = 79; }
+ }
+ # Commit: inactive data sectors, flush, inactive header, flush.
+ if current == 70 {
+  if load64(work + 8) == 18446744073709551615 {
+   fs_ready = 0;
+   message = "Generation limit reached. Filesystem locked; restart.\r\n"; state = 9;
+  } else {
+   store64(work, 0x31303053464f525a);
+   store64(work + 8, load64(work + 8) + 1);
+   checksum = 0; i = 512;
+   while i < 4608 { checksum = checksum + load8(work + i) * (i + 1); i = i + 1; }
+   store64(work + 16, checksum);
+   store64(work + 24, load64(work) + load64(work + 8) + checksum);
+   io_lba = 9 - active_bank + 1; io_buffer = work + 512; io_count = 8;
+   io_write = 1; io_return = 71; state = 90;
+  }
+ }
+ if current == 71 {
+  if io_ok { io_write = 2; io_return = 72; state = 90; }
+  else { state = 79; }
+ }
+ if current == 72 {
+  if io_ok {
+   io_lba = 9 - active_bank; io_buffer = work; io_count = 1;
+   io_write = 1; io_return = 73; state = 90;
+  } else { state = 79; }
+ }
+ if current == 73 {
+  if io_ok { io_write = 2; io_return = 74; state = 90; }
+  else { state = 79; }
+ }
+ if current == 74 {
+  if io_ok {
+   active_bank = 9 - active_bank; fs_ready = 1;
+   message = "Saved to disk.\r\n"; state = 9;
+  } else { state = 79; }
+ }
+ if current == 79 {
+  fs_ready = 0;
+  message = "Disk I/O failure. Last write uncertain; files locked until restart.\r\n";
+  state = 9;
+ }
+ # IDENTIFY is read-only. Reject incompatible disks before any sector access.
+ if current == 80 {
+  io_lba = 0; io_buffer = listing; io_count = 1;
+  io_write = 3; io_return = 81; state = 90;
+ }
+ if current == 81 {
+  disk_ready = io_ok;
+  if io_ok {
+   if load16(listing) >= 32768 { disk_ready = 0; }
+   temporary = load16(listing + 98);
+   while temporary >= 1024 { temporary = temporary - 1024; }
+   if temporary < 512 { disk_ready = 0; }
+   if load32(listing + 120) < 18 { disk_ready = 0; }
+   temporary = load16(listing + 166);
+   if temporary < 16384 { disk_ready = 0; }
+   else {
+    if temporary >= 32768 { disk_ready = 0; }
+    else {
+     temporary = temporary - 16384;
+     if temporary >= 8192 { temporary = temporary - 8192; }
+     if temporary < 4096 { disk_ready = 0; }
+    }
+   }
+   temporary = load16(listing + 212);
+   if temporary >= 16384 {
+    if temporary < 32768 {
+     temporary = temporary - 16384;
+     if temporary >= 8192 { temporary = temporary - 8192; }
+     if temporary >= 4096 { disk_ready = 0; }
+    }
+   }
+  }
+  state = 1;
+ }
+ # One synchronous ATA request: read/write count sectors or flush.
+ # LBA is bounded to our 18-sector volume; no partition discovery or guessing.
+ if current == 90 {
+  io_ok = 1;
+  if io_write != 3 { if disk_ready == 0 { io_ok = 0; } }
+  if io_write > 3 { io_ok = 0; }
+  if io_lba >= 18 { io_ok = 0; }
+  if io_count == 0 { io_ok = 0; }
+  if io_count > 9 { io_ok = 0; }
+  if io_write != 2 { if io_lba + io_count > 18 { io_ok = 0; } }
+  sector_index = 0;
+  if io_write == 2 { io_count = 1; }
+  while sector_index < io_count {
+   if io_ok {
+    if io_write == 3 { out8(0x1f6, 0xa0); }
+    else { out8(0x1f6, 0xe0); }
+    temporary = in8(0x3f6); temporary = in8(0x3f6);
+    temporary = in8(0x3f6); temporary = in8(0x3f6);
+    ready = 0; timeout = 0;
+    while ready == 0 {
+     status = in8(0x1f7);
+     if status == 0 { io_ok = 0; ready = 1; }
+     if status == 255 { io_ok = 0; ready = 1; }
+     if status < 128 {
+      command_status = status;
+      if command_status >= 64 { command_status = command_status - 64; }
+      if command_status >= 32 { command_status = command_status - 32; }
+      if command_status >= 16 { command_status = command_status - 16; }
+      if command_status < 8 { ready = 1; }
+     }
+     timeout = timeout + 1;
+     if timeout == 1000000 { io_ok = 0; ready = 1; }
+    }
+    if io_ok {
+     if io_write == 2 { out8(0x1f7, 0xe7); }
+     else {
+      if io_write == 3 {
+       out8(0x1f2, 0); out8(0x1f3, 0); out8(0x1f4, 0); out8(0x1f5, 0);
+       out8(0x1f7, 0xec);
+      } else {
+       out8(0x1f2, 1); out8(0x1f3, io_lba + sector_index);
+       out8(0x1f4, 0); out8(0x1f5, 0);
+       if io_write == 0 { out8(0x1f7, 0x20); }
+       else { out8(0x1f7, 0x30); }
+      }
+     }
+     temporary = in8(0x3f6); temporary = in8(0x3f6);
+     temporary = in8(0x3f6); temporary = in8(0x3f6);
+     ready = 0; timeout = 0;
+     while ready == 0 {
+      status = in8(0x1f7);
+      if status == 0 { io_ok = 0; ready = 1; }
+      if status == 255 { io_ok = 0; ready = 1; }
+      if status < 128 {
+       command_status = status;
+       if command_status >= 64 { command_status = command_status - 64; }
+       if command_status >= 32 { io_ok = 0; ready = 1; }
+       temporary = status;
+       while temporary >= 2 { temporary = temporary - 2; }
+       if temporary { io_ok = 0; ready = 1; }
+       if command_status >= 16 { command_status = command_status - 16; }
+       if io_write == 2 {
+        if command_status < 8 { ready = 1; }
+       } else {
+        if command_status >= 8 { ready = 1; }
+       }
+      }
+      timeout = timeout + 1;
+      if timeout == 1000000 { io_ok = 0; ready = 1; }
+     }
+     if io_ok {
+      if io_write != 2 {
+       word_index = 0;
+       while word_index < 256 {
+        pointer = io_buffer + sector_index * 512 + word_index * 2;
+        if io_write == 1 { out16(0x1f0, load16(pointer)); }
+        else { store16(pointer, in16(0x1f0)); }
+        word_index = word_index + 1;
+       }
+       temporary = in8(0x3f6); temporary = in8(0x3f6);
+       temporary = in8(0x3f6); temporary = in8(0x3f6);
+       ready = 0; timeout = 0;
+       while ready == 0 {
+        status = in8(0x1f7);
+        if status == 0 { io_ok = 0; ready = 1; }
+        if status == 255 { io_ok = 0; ready = 1; }
+        if status < 128 {
+         command_status = status;
+         if command_status >= 64 { command_status = command_status - 64; }
+         if command_status >= 32 { io_ok = 0; ready = 1; }
+         if command_status >= 16 { command_status = command_status - 16; }
+         if command_status < 8 { ready = 1; }
+         temporary = status;
+         while temporary >= 2 { temporary = temporary - 2; }
+         if temporary { io_ok = 0; ready = 1; }
+        }
+        timeout = timeout + 1;
+        if timeout == 1000000 { io_ok = 0; ready = 1; }
+       }
+      }
+     }
+    }
+   }
+   sector_index = sector_index + 1;
+  }
+  state = io_return;
+ }
+ # Visible output is owned by the kernel, with optional independent COM1 mirroring.
+ if load64(console + 120) {
+  if load64(console) == 1 {
+   c0 = 0;
+   while c0 < 2000 { store16(0xb8000 + c0 * 2, 0x0720); c0 = c0 + 1; }
+  }
+  if load64(console) == 2 {
+   c0 = load64(console + 32) * load64(console + 24);
+   c1 = load64(console + 8);
+   while c0 >= 2 {
+    store64(c1, 0x0010101000101010); c1 = c1 + 8; c0 = c0 - 2;
+   }
+   if c0 { store32(c1, 0x00101010); }
+  }
+  store64(console + 64, 0); store64(console + 72, 0);
+  store64(console + 120, 0);
+ }
+ if message {
+  pointer = message;
+  while load8(pointer) {
+   if load64(console + 80) {
+    ready = 0; timeout = 0;
+    while ready == 0 {
+     status = in8(0x3fd);
+     if status == 255 { ready = 1; store64(console + 80, 0); }
+     if status >= 128 { status = status - 128; }
+     if status >= 64 { status = status - 64; }
+     if status >= 32 { ready = 1; }
+     timeout = timeout + 1;
+     if timeout == 100000 { ready = 1; store64(console + 80, 0); }
+    }
+    if load64(console + 80) { out8(0x3f8, load8(pointer)); }
+   }
+   if load64(console) {
+    if load64(console + 128) == 0 {
+     c0 = load8(pointer);
+     if c0 == 13 { store64(console + 64, 0); }
+     if c0 == 10 { store64(console + 72, load64(console + 72) + 1); }
+     if c0 == 8 {
+      if load64(console + 64) { store64(console + 64, load64(console + 64) - 1); }
+      else {
+       if load64(console + 72) {
+        store64(console + 64, 79); store64(console + 72, load64(console + 72) - 1);
+       }
+      }
+     }
+     if (c0 >= 32) * (c0 <= 126) {
+      if load64(console + 64) >= 80 {
+       store64(console + 64, 0); store64(console + 72, load64(console + 72) + 1);
+      }
+     }
+     # Scroll the same 80x25 terminal area in either video representation.
+     if load64(console + 72) >= 25 {
+      if load64(console) == 1 {
+       c1 = 0;
+       while c1 < 1920 {
+        store16(0xb8000 + c1 * 2, load16(0xb8000 + (c1 + 80) * 2));
+        c1 = c1 + 1;
+       }
+       while c1 < 2000 { store16(0xb8000 + c1 * 2, 0x0720); c1 = c1 + 1; }
+      } else {
+       c1 = 0;
+       while c1 < 384 {
+        c2 = 0;
+        while c2 < 640 {
+         c3 = load64(console + 8) + (c1 * load64(console + 32) + c2) * 4;
+         store64(c3, load64(c3 + 16 * load64(console + 32) * 4));
+         c2 = c2 + 2;
+        }
+        c1 = c1 + 1;
+       }
+       while c1 < 400 {
+        c2 = 0;
+        while c2 < 640 {
+         c3 = load64(console + 8) + (c1 * load64(console + 32) + c2) * 4;
+         store64(c3, 0x0010101000101010); c2 = c2 + 2;
+        }
+        c1 = c1 + 1;
+       }
+      }
+      store64(console + 72, 24);
+     }
+     if (c0 >= 32) * (c0 <= 126) {
+      if load64(console) == 1 {
+       c1 = load64(console + 72) * 80 + load64(console + 64);
+       store16(0xb8000 + c1 * 2, 0x0700 + c0);
+      } else {
+       # 5x7 rows, one horizontal margin, doubled scan lines: an 8x16 cell.
+       c1 = 0;
+       while c1 < 8 {
+        c3 = 0;
+        if c1 < 7 { c3 = load8(font + (c0 - 32) * 7 + c1) - 48; }
+        c2 = 0;
+        while c2 < 8 {
+         c5 = 0x00101010;
+         if (c2 >= 1) * (c2 <= 5) {
+          if c3 >= 16 { c5 = 0x00e0e0e0; c3 = c3 - 16; }
+          c3 = c3 * 2;
+         }
+         c4 = load64(console + 8) + ((load64(console + 72) * 16 + c1 * 2) * load64(console + 32) + load64(console + 64) * 8 + c2) * 4;
+         store32(c4, c5); store32(c4 + load64(console + 32) * 4, c5);
+         c2 = c2 + 1;
+        }
+        c1 = c1 + 1;
+       }
+      }
+      store64(console + 64, load64(console + 64) + 1);
+     }
+    }
+   }
+   pointer = pointer + 1;
+  }
+  if load64(console) == 1 {
+   c0 = load64(console + 64);
+   if c0 >= 80 { c0 = 79; }
+   c0 = load64(console + 72) * 80 + c0; c1 = 0;
+   while c0 >= 256 { c0 = c0 - 256; c1 = c1 + 1; }
+   out8(0x3d4, 14); out8(0x3d5, c1);
+   out8(0x3d4, 15); out8(0x3d5, c0);
+  }
+  store64(console + 128, 0);
+  message = 0;
+ }
+}

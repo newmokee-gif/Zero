@@ -1,0 +1,2 @@
+arguments() => show
+size(arguments()) => show

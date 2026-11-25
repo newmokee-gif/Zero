@@ -1,0 +1,30 @@
+
+:load64[@console + 2000] -> @file.
+0 -> @i.
+?? @i < 128 [
+ ? :load8[@file + @i] != 90 [ !exit[77]. ]
+ ? :load8[@file + 1958528 + @i] != 90 [ !exit[78]. ]
+ @i + 1 -> @i.
+]
+@file + 128 -> @file.
+0 -> @j.
+?? @j < 600 [
+ 3200 -> @i.
+ ?? @i < 3264 [ ? :load8[@file + @j * 3264 + @i] != 90 [ !exit[79]. ] @i + 1 -> @i. ]
+ @j + 1 -> @j.
+]
+"P6\n800 600\n255\n" -> @message.
+:write[@message | 15] -> @i.
+0 -> @j.
+?? @j < 600 [
+ 0 -> @i.
+ ?? @i < 800 [
+  :load32[@file + (@j * 816 + @i) * 4] -> @c0.
+  ? :load64[@console + 40] [
+   !put[:shr[@c0 | 16]]. !put[:shr[@c0 | 8]]. !put[@c0].
+  ] ~ [ !put[@c0]. !put[:shr[@c0 | 8]]. !put[:shr[@c0 | 16]]. ]
+  @i + 1 -> @i.
+ ]
+ @j + 1 -> @j.
+]
+!exit[0].

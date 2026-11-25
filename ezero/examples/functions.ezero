@@ -1,0 +1,13 @@
+greet :: person [
+    Hello person => return
+]
+
+factorial :: n [
+    n == 0 => when [
+        1 => return
+    ]
+    n * factorial(n - 1) => return
+]
+
+greet(Mira) => show
+factorial(10) => show

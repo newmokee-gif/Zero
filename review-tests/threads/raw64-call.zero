@@ -1,0 +1,121 @@
+# Bare-metal thread regression; low-memory regions for our BIOS test loader.
+# Two workers have separate native stacks, cloned local slots and fresh arenas.
+:reserve[512] => @shared.
+:reserve[80] => @main_context.
+:reserve[80] => @first_context.
+:reserve[80] => @second_context.
+0x40000 => @first_stack.
+0x54000 => @second_stack.
+# Own firmware-ABI arithmetic stub, used only by this x64 bare-metal test.
+:reserve[32] => @stub.
+!store64[@stub | 0x014cd00148c88948].
+!store64[@stub + 8 | 0x24440348c8014cc0].
+!store16[@stub + 16 | 0xc328].
+:call[@stub | 1 | 2 | 3 | 4 | 5] => @call_result.
+? @call_result != 15 [ !out16[0xf4 | 47]. !halt. ]
+:reserve[0] => @main_cursor.
+0 => @role.
+0 => @iteration.
+0 => @index.
+0 => @allocation.
+0 => @previous.
+0 => @expected.
+0x1111222233334444 => @private.
+:arg0[] => @entry0.
+:arg1[] => @entry1.
+?? @index < 512 [ !store8[@shared + @index | 0]. @index + 1 -> @index. ]
+0 -> @index.
+?? @index < 64 [
+ !store8[@first_stack + @index | 0x5a].
+ !store8[@second_stack + @index | 0xa5].
+ @index + 1 -> @index.
+]
+
+# Both the pending multiplication and addition operands must be cloned.
+5 * (7 + :fork[@first_context | @first_stack | 81920]) -> @role.
+? @role == 40 [
+ ? :arg0[] != @entry0 [ !out16[0xf4 | 41]. !halt. ]
+ ? :arg1[] != @entry1 [ !out16[0xf4 | 42]. !halt. ]
+ ? @private != 0x1111222233334444 [ !out16[0xf4 | 11]. !halt. ]
+ :reserve[16] -> @previous.
+ ? @previous < @first_stack [ !out16[0xf4 | 12]. !halt. ]
+ ? @previous + 4096 >= @first_stack + 81920 [ !out16[0xf4 | 13]. !halt. ]
+ !store64[@shared | @previous].
+ 0 -> @iteration.
+ ?? @iteration < 128 [
+  :reserve[16] -> @allocation.
+  ? @allocation != @previous + 16 [ !out16[0xf4 | 14]. !halt. ]
+  @allocation -> @previous.
+  0xaaaabbbb00000000 + @iteration -> @expected.
+  !store64[@allocation | @expected].
+  @private + 1 -> @private.
+  @iteration + 1 -> @iteration.
+  !store64[@shared + 16 | @iteration].
+  !switch[@first_context | @main_context].
+  ? :load64[@allocation] != @expected [ !out16[0xf4 | 15]. !halt. ]
+  ? @private != 0x1111222233334444 + @iteration [ !out16[0xf4 | 16]. !halt. ]
+ ]
+ !store64[@shared + 32 | 1].
+ ?? 1 [ !switch[@first_context | @main_context]. ]
+]
+? @role != 35 [ !out16[0xf4 | 17]. !halt. ]
+? @private != 0x1111222233334444 [ !out16[0xf4 | 18]. !halt. ]
+0x2222333344445555 -> @private.
+
+3 * (11 + :fork[@second_context | @second_stack | 81920]) -> @role.
+? @role == 36 [
+ ? :arg0[] != @entry0 [ !out16[0xf4 | 43]. !halt. ]
+ ? :arg1[] != @entry1 [ !out16[0xf4 | 44]. !halt. ]
+ ? @private != 0x2222333344445555 [ !out16[0xf4 | 21]. !halt. ]
+ :reserve[16] -> @previous.
+ ? @previous < @second_stack [ !out16[0xf4 | 22]. !halt. ]
+ ? @previous + 4096 >= @second_stack + 81920 [ !out16[0xf4 | 23]. !halt. ]
+ !store64[@shared + 8 | @previous].
+ 0 -> @iteration.
+ ?? @iteration < 128 [
+  :reserve[16] -> @allocation.
+  ? @allocation != @previous + 16 [ !out16[0xf4 | 24]. !halt. ]
+  @allocation -> @previous.
+  0xccccdddd00000000 + @iteration -> @expected.
+  !store64[@allocation | @expected].
+  @private + 1 -> @private.
+  @iteration + 1 -> @iteration.
+  !store64[@shared + 24 | @iteration].
+  !switch[@second_context | @main_context].
+  ? :load64[@allocation] != @expected [ !out16[0xf4 | 25]. !halt. ]
+  ? @private != 0x2222333344445555 + @iteration [ !out16[0xf4 | 26]. !halt. ]
+ ]
+ !store64[@shared + 40 | 1].
+ ?? 1 [ !switch[@second_context | @main_context]. ]
+]
+? @role != 33 [ !out16[0xf4 | 27]. !halt. ]
+? @private != 0x2222333344445555 [ !out16[0xf4 | 28]. !halt. ]
+? :load64[@first_context + 72] == 0 [ !out16[0xf4 | 29]. !halt. ]
+? :load64[@second_context + 72] == 0 [ !out16[0xf4 | 30]. !halt. ]
+0x3333444455556666 -> @private.
+0 -> @iteration.
+?? @iteration < 128 [
+ !switch[@main_context | @first_context].
+ ? :load64[@shared + 16] != @iteration + 1 [ !out16[0xf4 | 31]. !halt. ]
+ !switch[@main_context | @second_context].
+ ? :arg0[] != @entry0 [ !out16[0xf4 | 45]. !halt. ]
+ ? :arg1[] != @entry1 [ !out16[0xf4 | 46]. !halt. ]
+ ? :load64[@shared + 24] != @iteration + 1 [ !out16[0xf4 | 32]. !halt. ]
+ ? @private != 0x3333444455556666 [ !out16[0xf4 | 33]. !halt. ]
+ ? :reserve[0] != @main_cursor [ !out16[0xf4 | 34]. !halt. ]
+ @iteration + 1 -> @iteration.
+]
+!switch[@main_context | @first_context].
+!switch[@main_context | @second_context].
+? :load64[@shared + 32] != 1 [ !out16[0xf4 | 35]. !halt. ]
+? :load64[@shared + 40] != 1 [ !out16[0xf4 | 36]. !halt. ]
+? :load64[@shared] == :load64[@shared + 8] [ !out16[0xf4 | 37]. !halt. ]
+0 -> @index.
+?? @index < 64 [
+ ? :load8[@first_stack + @index] != 0x5a [ !out16[0xf4 | 38]. !halt. ]
+ ? :load8[@second_stack + @index] != 0xa5 [ !out16[0xf4 | 39]. !halt. ]
+ @index + 1 -> @index.
+]
+!out8[0xe9 | 84]. !out8[0xe9 | 72]. !out8[0xe9 | 82]. !out8[0xe9 | 69]. !out8[0xe9 | 65].
+!out8[0xe9 | 68]. !out8[0xe9 | 83]. !out8[0xe9 | 32]. !out8[0xe9 | 79]. !out8[0xe9 | 75]. !out8[0xe9 | 10].
+!out16[0xf4 | 0]. !halt.

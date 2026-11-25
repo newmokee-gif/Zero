@@ -1,0 +1,90 @@
+# Host-only test adapter; the driver is concatenated unchanged below.
+:reserve[65536] => @memory.
+0 => @current.
+200 => @state.
+0 => @pointer.
+0 => @character.
+0 => @i.
+0 => @j.
+0 => @k.
+0 => @temporary.
+0 => @status.
+0 => @timeout.
+0 => @ready.
+0 => @valid.
+0 => @done.
+0 => @checksum.
+0 => @c0.
+0 => @c1.
+0 => @c2.
+0 => @c3.
+0 => @c4.
+0 => @c5.
+0 => @io_lba.
+0 => @io_buffer.
+0 => @io_count.
+0 => @io_write.
+0 => @io_return.
+0 => @io_ok.
+0 -> @i. ?? @i < 65536 [ !store8[@memory + @i| 0]. @i + 1 -> @i. ]
+# stdin: one ASCII operation digit, newline, name, newline, file text.
+0 -> @temporary. 0 -> @done.
+?? @done == 0 [
+ :read[@memory + 26368 + @temporary| 1024 - @temporary] -> @status.
+ ? @status > 1024 - @temporary [ !exit[70]. ]
+ ? @status == 0 [ 1 -> @done. ]
+ @temporary + @status -> @temporary.
+ ? @temporary == 1024 [ 1 -> @done. ]
+]
+? @temporary < 3 [ !exit[70]. ]
+? :load8[@memory + 26369] != 10 [ !exit[70]. ]
+:load8[@memory + 26368] - 48 -> @c0.
+? @c0 > 5 [ !exit[70]. ]
+!store64[@memory + 24576| @c0].
+!store64[@memory + 24584| @memory + 26370].
+2 -> @i.
+?? (@i < @temporary) * (:load8[@memory + 26368 + @i] != 10) [ @i + 1 -> @i. ]
+? @i == @temporary [ !exit[70]. ]
+!store64[@memory + 24592| @i - 2].
+!store64[@memory + 24600| @memory + 26368 + @i + 1].
+!store64[@memory + 24608| @temporary - @i - 1].
+!store64[@memory + 24616| @memory + 14336].
+!store64[@memory + 24624| 2044].
+!store64[@memory + 24648| 999].
+!store64[@memory + 24656| 0].
+!store64[@memory + 24664| 65536].
+# Optional FD4 contains little-endian u64 base LBA, sector count, failed-write
+# ordinal. This belongs only to the external test adapter, never to the driver.
+:pread[4| @memory + 28000| 24| 0] -> @status.
+? @status == 24 [
+ !store64[@memory + 24656| :load64[@memory + 28000]].
+ !store64[@memory + 24664| :load64[@memory + 28008]].
+]
+?? @state != 999 [
+ @state -> @current.
+ ? @current == 90 [
+  0 -> @io_ok.
+  1 -> @ready.
+  ? @io_write [
+   !store64[@memory + 28024| :load64[@memory + 28024] + 1].
+   ? :load64[@memory + 28016] [
+    ? :load64[@memory + 28024] >= :load64[@memory + 28016] [ 0 -> @ready. ]
+   ]
+  ]
+  ? @ready [
+   ? @io_write == 2 [
+    :fsync[3] -> @status. ? @status == 0 [ 1 -> @io_ok. ]
+   ] ~ [
+    ? (@io_count > 0) * (@io_count <= 32) * (@io_lba >= :load64[@memory + 24656]) * (@io_lba + @io_count <= :load64[@memory + 24656] + :load64[@memory + 24664]) [
+     ? @io_write == 0 [ :pread[3| @io_buffer| @io_count * 512| @io_lba * 512] -> @status. ]
+     ~ [ :pwrite[3| @io_buffer| @io_count * 512| @io_lba * 512] -> @status. ]
+     ? @status == @io_count * 512 [ 1 -> @io_ok. ]
+    ]
+   ]
+  ]
+  @io_return -> @state.
+  # Deliberately clobber every driver scratch value to model kernel I/O.
+  0 -> @i. 0 -> @j. 0 -> @k. 0 -> @c0. 0 -> @c1. 0 -> @c2.
+  0 -> @c3. 0 -> @c4. 0 -> @c5. 0 -> @pointer. 0 -> @character.
+  0 -> @valid. 0 -> @ready. 0 -> @done. 0 -> @temporary. 0 -> @checksum. 0 -> @timeout. 0 -> @status.
+ ]

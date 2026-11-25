@@ -1,0 +1,4 @@
+3   ripe	банана => purchase
+purchase => show
+size(purchase) => show
+purchase[2] => show

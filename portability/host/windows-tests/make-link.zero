@@ -1,0 +1,27 @@
+:reserve[16384] => @paths.
+0 => @i.
+0 => @j.
+0 => @pointer.
+0 => @value.
+0 => @base.
+0 => @made.
+"own-fixture" => @marker.
+:bitand[@marker | 18446744073709547520] -> @base.
+?? :load16[@base] != 0x5a4d [ @base - 4096 -> @base. ]
+? :load32[@base + :load32[@base + 60]] != 0x4550 [ !exit[2]. ]
+?? @j < 2 [
+ :argument[@j + 1] -> @pointer. 0 -> @i.
+ ?? :load8[@pointer + @i] [
+  :load8[@pointer + @i] -> @value. ? @value > 127 [ !exit[3]. ]
+  !store16[@paths + @j * 8192 + @i * 2 | @value]. @i + 1 -> @i.
+ ]
+ !store16[@paths + @j * 8192 + @i * 2 | 0]. @j + 1 -> @j.
+]
+:call[:load64[@base + 4536] | @paths | @paths + 8192 | 2 | 0 | 0] -> @made.
+? :bitand[@made | 255] == 0 [ !put[70]. !exit[:call[:load64[@base + 4392] | 0 | 0 | 0 | 0 | 0]]. ]
+!put[83].
+:call[:load64[@base + 4472] | @paths | 0 | 0 | 0 | 0] -> @value.
+? :bitand[@value | 4294967295] == 4294967295 [ !put[69]. !exit[4]. ]
+? :bitand[@value | 1024] [ !put[82]. ] ~ [ !put[78]. ]
+? :fileopen[:argument[1] | 0] == 18446744073709551615 [ !put[82]. ] ~ [ !put[70]. ]
+!put[10].

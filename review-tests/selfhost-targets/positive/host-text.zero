@@ -1,0 +1,5 @@
+"A\nB\tC\\\"" => @text.
+0 => @n.
+?? :load8[@text + @n] != 0 [ !put[:load8[@text + @n]]. @n + 1 -> @n. ]
+!put[10].
+!exit[0].

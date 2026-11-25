@@ -1,0 +1,10 @@
+x => part
+12 => repeat [
+part + part => part
+]
+[part | part | part | part] => items
+empty => temporary
+100 => repeat [
+join(items | /) => temporary
+]
+size(temporary) => show

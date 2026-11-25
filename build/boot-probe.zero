@@ -1,0 +1,1 @@
+var s="ZERO raw kernel entered!\r\n"; var i=0; while load8(s+i)!=0 {out8(0x3f8,load8(s+i)); i=i+1;} halt;

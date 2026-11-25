@@ -1,0 +1,2 @@
+join([Hello | мир | 🌍] | /) => show
+join([A | empty | B] | empty) => show

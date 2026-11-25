@@ -1,0 +1,19 @@
+0 => @op.0 => @path.0 => @data.0 => @len.0 => @cap.0 => @n.0 => @result.
+:reserve[65537] => @buffer.
+:load8[:argument[1]] -> @op.:argument[2] -> @path.:argument[3] -> @data.
+65536 -> @cap.
+? :argcount[] > 3 [ 0 -> @cap.0 -> @n.?? :load8[:argument[4]+@n] [ @cap*10+:load8[:argument[4]+@n]-48 -> @cap.@n+1 -> @n. ] ]
+? @data [ ?? :load8[@data+@len] [ @len+1 -> @len. ] ]
+-1 -> @result.
+? @op == 99 [ :create[@path] -> @result. ]
+? @op == 100 [ :del[@path] -> @result. ]
+? @op == 114 [ :readfile[@path|@buffer|@cap] -> @result. ]
+? @op == 115 [ :save[@path|@data|@len] -> @result. ]
+? @op == 119 [ :writefile[@path|@data|@len] -> @result. ]
+? @op == 108 [ :watch[@path|@buffer|@cap] -> @result. ]
+? @op == 102 [ :search[@path|@buffer|@cap] -> @result. ]
+? @op == 103 [ :go[@path] -> @result.? @result == 0 [ :watch["."|@buffer|@cap] -> @result. ] ]
+? @op == 118 [ :disks[@buffer|@cap] -> @result. ]
+? @result == -1 [ !exit[65]. ]
+? (@op == 114)+(@op == 108)+(@op == 102)+(@op == 103)+(@op == 118) [ ? :write[@buffer|@result] != @result [ !exit[74]. ] ] ~ [ !put[89]. ]
+!exit[0].

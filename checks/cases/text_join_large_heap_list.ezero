@@ -1,0 +1,5 @@
+[x] => values
+12 => repeat [
+values + values => values
+]
+size(join(values | empty)) => show

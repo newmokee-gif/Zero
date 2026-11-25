@@ -1,0 +1,90 @@
+ZTEXT001000015128819ef320000000
+ZERO BOOTABLE DISK PAYLOAD v1
+
+This payload is constructed directly from original Zero artifacts. It is not
+an ISO9660 filesystem or a renamed ISO. The distributable .zmedia container
+and its integrity checks are specified separately. A flash writer validates
+the container and writes this payload from byte zero of the selected device.
+
+Size:18874368 bytes, exactly36864 logical sectors of512 bytes.
+Devices exposing4096-byte logical sectors are unsupported.512-byte logical
+sectors on4096-byte physical storage are compatible with this layout.
+
+Sector ranges, inclusive:
+0             MBR with original Zero bootstrap and one ESP partition entry
+1..31         original Zero BIOS second stage, loaded to0000:7e00
+32..959       x64 kernel slot475136 bytes
+960..1951     IA32 kernel slot507904 bytes
+1952..3999    original compiler/tool bundle1048576 bytes
+4000..4095    zero padding
+4096..36863   FAT16 EFI system partition16777216 bytes
+
+The single MBR entry has active flag80, typeEF, startLBA4096 and32768 sectors.
+CHS values are saturated; LBA is authoritative. Disk signature5a4d0001 is
+deterministic and is not a per-installation identity. Firmware support uses
+the standard PC interfaces implemented by our code: BIOS EDD reads and UEFI
+removable-media paths EFI/BOOT/BOOTX64.EFI and EFI/BOOT/BOOTIA32.EFI.
+The ESP hidden-sector field is4096. FAT content is built by media/disk-fat.zero
+from the same original OS loaders, kernels and bundle used by the project,
+plus the new original Zero media menu and firmware flash application.
+
+UEFI presents a Zero menu:1 Start Zero OS,2 Flash Writer. Enter or a3-second
+timeout starts Zero. The menu builds a bounded full firmware device path,
+then uses UEFI LoadImage/StartImage to invoke the selected original program.
+StartImage runs on a separately allocated1MiB continuation stack. Each Zero
+firmware application reserves its own64KiB arena; this separation prevents
+nested applications from exhausting a small IA32 firmware-provided stack.
+Returned applications release their private stack and return to the menu.
+BIOS directly starts the existing kernel; the firmware flash application
+requires UEFI. The menu is source-authored in Zero for both pointer widths.
+Original OS loaders are stored as EFI/BOOT/OSX64.EFI and OSIA32.EFI. Default
+BOOTX64/BOOTIA32 paths contain the menus. Writer names are FLASHX64.EFI and
+FLASH32.EFI; the latter is the FAT8.3 alias for build artifact FLASHIA32.EFI.
+Menu slots are64KiB each; writer slots128KiB each. Added FAT clusters4228..4995
+follow the original tool bundle without changing the kernel or BIOS ranges.
+
+The writer loads root system.zmedia from a separate firmware-readable source
+filesystem. The boot ESP does not contain its own recursively nested image.
+Both the boot-utility device and actual source-image device are protected by
+the writer. Its source selection and raw-write rules are documented separately.
+
+BIOS startup is source-authored in Zero. disk-bootstrap.zero is compiled with
+--real. disk.zero checks the compiler header and final halt, retains the
+compiler-produced far-jump encoding, links its string-free body into the MBR,
+normalizes CS, and replaces its final halt with the second-stage entry jump.
+The linked code must end before the disk signature at byte440. The permitted
+compiled bootstrap size is580..946 bytes including its512-byte header; the
+current artifact is743 bytes. No assembler source or external linker is used.
+The bootstrap reads31 sectors fromLBA1 to7e00. It halts on read failure.
+
+disk-bios.zero retains the existing E820/EBDA checks, CPU architecture choice,
+VBE graphics negotiation, bundle loading, and protected/long-mode handoff.
+Its disk reads use64 sectors per32KiB block and32 for final16KiB kernel tails.
+This preserves the original low-memory safety bounds for both architectures.
+
+BUILD INTERFACE
+
+zero-disk RELEASE_DIR BOOTSTRAP_BINARY DISK_BIOS_BINARY NEW_DISK_IMAGE
+
+Inputs must be built from trusted original project sources. RELEASE_DIR holds
+BOOTX64.EFI, BOOTIA32.EFI, kernel.bin, kernel32.bin, tools.bin, MENU64.EFI,
+MENU32.EFI, FLASHX64.EFI, FLASHIA32.EFI and media-fat64.app.
+The native tool executes the validated original media-fat64.app in a bounded own
+memory-stream context. This is a trusted-code build step, not a sandbox for
+arbitrary executable inputs. Linux and Windows builds use identical source.
+
+Every input is size-bounded, read exactly, probed for excess bytes, and checked
+for size changes. All six EFI artifacts have architecture/header checks and
+raw-section bounds validated against their actual file length before padding;
+a header-only executable is refused. The destination is exclusively created; existing files are
+preserved. After writing, the tool flushes, closes, reopens and compares every
+byte, checks EOF and final size. Failed newly created outputs are retained
+with an explicit diagnostic. The builder never unlinks a path after closing
+its output handle, because another file could have replaced that path.
+This builder only creates regular files. It does not open physical devices;
+device selection, write confirmation and raw-device safety belong to the
+separate flash writer.
+
+No claim of a runtime USB driver in the current Zero kernel follows from
+firmware USB boot support. BIOS/UEFI read USB devices before transferring
+control to Zero; native kernel USB storage is a separate capability.

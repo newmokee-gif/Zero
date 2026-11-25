@@ -1,0 +1,84 @@
+# Original Zero builder for the native Zero/Ezero compiler bundle.
+:reserve[1048592] => @bundle.
+0 => @index.
+0 => @received.
+0 => @status.
+0 => @image.
+0 => @size.
+0 => @arch.
+0 => @kind.
+0 => @record.
+0 => @offset.
+0 => @limit.
+0 => @length.
+0 => @emitted.
+?? @index < 1048576 [ !store64[@bundle+@index|0]. @index+8 -> @index. ]
+?? @received < 1028096 [
+ :read[@bundle+4096+@received|1028096-@received] -> @status.
+ ? @status != -4 [
+  ? @status == 0 [ !exit[2]. ]
+  ? @status > 1028096-@received [ !exit[1]. ]
+  @received+@status -> @received.
+ ]
+]
+-4 -> @status.
+?? @status == -4 [ :read[@bundle+1048576|1] -> @status. ]
+? @status > 1 [ !exit[1]. ]
+? @status != 0 [ !exit[3]. ]
+!store64[@bundle|0x31304c444e42525a].
+!store64[@bundle+8|1]. !store64[@bundle+16|1048576].
+!store64[@bundle+24|8].
+0 -> @record.
+?? @record < 8 [
+ 4096+@record*159744 -> @offset. @bundle+@offset -> @image.
+ 64 -> @arch. @record+1 -> @kind.
+ ? @record >= 3 [ 32 -> @arch. @record-2 -> @kind. ]
+ 159744 -> @limit.
+ ? (@record == 2)+(@record == 5) [ 16384 -> @limit. ]
+ ? @record >= 6 [
+  339968 -> @offset. 64 -> @arch. 4 -> @kind. 143360 -> @limit.
+  ? @record == 7 [ 819200 -> @offset. 32 -> @arch. ]
+  @bundle+@offset -> @image.
+ ]
+ ? :load64[@image] != 0x315050414f52455a [ !exit[2]. ]
+ ? :load64[@image+8] != @arch [ !exit[2]. ]
+ :load64[@image+16] -> @size.
+ ? (@size <= 64) + (@size > @limit) [ !exit[2]. ]
+ ? :load64[@image+24] != 64 [ !exit[2]. ]
+ ? :load64[@image+32] != 4198400 [ !exit[2]. ]
+ ? :load64[@image+40] != 1 [ !exit[2]. ]
+ ? (:load64[@image+48] != 0) + (:load64[@image+56] != 0) [ !exit[2]. ]
+ @size -> @index.
+ ?? @index < @limit [
+  ? :load8[@image+@index] != 0 [ !exit[2]. ]
+  @index+1 -> @index.
+ ]
+ @bundle+128+@record*32 -> @image.
+ !store64[@image|@offset]. !store64[@image+8|@size].
+ !store64[@image+16|@arch]. !store64[@image+24|@kind].
+ @record+1 -> @record.
+]
+0 -> @record.
+?? @record < 2 [
+ 962560 -> @offset. 4096 -> @limit.
+ ? @record == 1 [ 966656 -> @offset. 65536 -> @limit. ]
+ 0 -> @length.
+ ?? (@length < @limit) * (:load8[@bundle+@offset+@length] != 0) [ @length+1 -> @length. ]
+ ? (@length == 0) + (@length >= @limit) [ !exit[2]. ]
+ @length -> @index.
+ ?? @index < @limit [
+  ? :load8[@bundle+@offset+@index] != 0 [ !exit[2]. ]
+  @index+1 -> @index.
+ ]
+ !store64[@bundle+32+@record*16|@offset].
+ !store64[@bundle+40+@record*16|@length].
+ @record+1 -> @record.
+]
+?? @emitted < 1048576 [
+ :write[@bundle+@emitted|1048576-@emitted] -> @status.
+ ? @status != -4 [
+  ? (@status == 0) + (@status > 1048576-@emitted) [ !exit[4]. ]
+  @emitted+@status -> @emitted.
+ ]
+]
+!exit[0].

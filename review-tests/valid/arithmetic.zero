@@ -1,0 +1,10 @@
+2 + 3 * 4 => @a.
+? @a == 14 [ !put[65]. ] ~ [ !put[88]. ]
+(2 + 3) * 4 -> @a.
+? @a == 20 [ !put[66]. ] ~ [ !put[88]. ]
+? 10 - 3 - 2 == 5 [ !put[67]. ] ~ [ !put[88]. ]
+? -1 == 0xffffffffffffffff [ !put[68]. ] ~ [ !put[88]. ]
+? 0xffffffffffffffff + 1 == 0 [ !put[69]. ] ~ [ !put[88]. ]
+? 0xffffffffffffffff * 2 == 0xfffffffffffffffe [ !put[70]. ] ~ [ !put[88]. ]
+!put[10].
+!exit[0].

@@ -1,0 +1,90 @@
+ZTEXT001000013c1620a89580000000
+Zero archive: original ZPACK001 indexed container
+
+Implementation: tools/archive.zero. Built from Zero by the original Zero compiler.
+No ZIP/TAR library, external archive program, compression codec or subprocess is
+used. The Linux tool is zero-archive; Windows uses zero-archive.exe.
+
+Commands:
+  zero-archive make MANIFEST.ztext NEW.zpack
+  zero-archive verify FILE.zpack
+  zero-archive list FILE.zpack
+  zero-archive read FILE.zpack NEW_DIRECTORY
+
+make reads listed regular files relative to the process working directory, not
+relative to the manifest's directory. Output is created exclusively; an existing
+file is preserved. Source files must stay unchanged during packing. Manifest
+paths can include nested directories and UTF-8 names. Empty files and arbitrary
+binary contents are preserved. The manifest order determines listing order.
+
+A manifest is a validated ZTEXT001 envelope containing one path per line.
+Ordinary lines describe data files. Prefix a line with x| to explicitly mark an
+executable file; the marker is not part of the archived path. For example:
+  README.ztext
+  tools/archive.zero
+  x|native/zero-archive
+
+The current manifest uses LF, accepts an optional CR before LF, and may omit the
+last newline. Empty manifests produce empty archives; blank lines are rejected.
+The x| marker is unambiguous because pipe is forbidden inside stored paths.
+Packing does not infer permissions from filename extensions or execute files.
+
+read extracts into a new single-component directory in the current directory.
+The directory must not already exist, even if empty. Every nested parent is
+created by this invocation, then every member is created exclusively. Linux data
+files use0600 and explicit executable files0700. Windows creates ordinary files;
+executability follows the host's normal file rules. The tool never runs members.
+Directories have no separate archive entries. Empty directories, timestamps,
+ownership, ACLs, symlinks and other special filesystem objects are not stored.
+
+Before extraction creates anything, the complete bounded archive is read and its
+header, index, every path, every offset, every size and all checksums are checked.
+Offsets must be contiguous in manifest order; gaps, overlap and trailing bytes
+are rejected. Output and extracted members are flushed, closed, reopened and
+compared byte for byte with the in-memory validated data, including exact EOF.
+On failure the tool attempts to remove only files and directories it created.
+If cleanup cannot complete, it reports that an incomplete owned folder remains.
+An existing archive, destination folder or destination symlink is never replaced.
+
+Stored paths are relative UTF-8 with forward-slash separators. Absolute paths,
+empty components, . or .. components, drive prefixes, backslashes, NUL, controls,
+Windows wildcard/stream punctuation, components with leading spaces or trailing
+spaces/dots, and reserved Windows device names are rejected. This includes the
+CON/PRN/AUX/NUL, COM/LPT1..9 and superscript1/2/3, CONIN$ and CONOUT$ aliases.
+Exact and ASCII-case duplicate paths, file/directory prefix conflicts and
+ASCII-case parent aliases are rejected. Unicode case/normalization comparison is
+not implemented. A Unicode alias accepted on Linux may collide on Windows;
+exclusive creation then fails and the owned extraction tree is cleaned up.
+
+There must be no concurrent writer changing the source tree, archive output or
+new extraction tree while the command runs. The host API does not provide an
+openat-style directory handle boundary. Initial destination ownership plus
+strict paths protect ordinary extraction, not hostile concurrent path swaps.
+The manifest is trusted to select source files: intermediate source-directory
+symlinks follow native host path resolution; final source symlinks are refused.
+
+Bounds:
+  64MiB maximum complete archive, including header and index.
+  4096 files; 255 UTF-8 bytes per stored path; 32 path components.
+  ZTEXT001 manifest payload at most1MiB; header adds32 bytes.
+  Bounded native workspace68165632 bytes. All file I/O uses <=65536-byte chunks.
+The in-memory design makes pre-extraction validation complete within these bounds.
+
+Binary format, version1; all integers unsigned little-endian64-bit:
+Header64 bytes:
+  offset0: ASCII ZPACK001
+  offset8: version1
+  offset16: file count
+  offset24: index byte count, exactly file count*288
+  offset32: complete archive byte count
+  offset40: FNV1a32 of the entire index, upper32 bits zero
+  offset48 and56: reserved zero
+Index starts at64, each entry288 bytes:
+  offset0..255: UTF-8 relative path, NUL terminated and zero padded
+  offset256: absolute payload offset within the archive
+  offset264: payload byte count
+  offset272: payload FNV1a32, upper32 bits zero
+  offset280: flags0 for data or1 for explicitly executable
+Payload follows the index, in entry order, with no padding between files.
+FNV1a32 starts2166136261; for each byte use ((hash XOR byte)*16777619) modulo2^32.
+Checksums detect accidental changes; they are not authentication or encryption.

@@ -1,0 +1,4 @@
+3 банана => purchase
+purchase => each part [
+ part => show
+]

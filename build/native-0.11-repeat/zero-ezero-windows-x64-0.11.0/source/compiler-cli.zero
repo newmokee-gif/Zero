@@ -1,0 +1,270 @@
+# Native Zero/Ezero compiler command. All parsing, loading and compilation is Zero.
+# The executable and lib/ companions may be relocated together, including spaces.
+0 => @language.
+0 => @argc.
+1 => @index.
+0 => @first.
+0 => @sourcepath.
+0 => @destpath.
+0 => @target.
+0 => @programname.
+0 => @baselen.
+0 => @path.
+0 => @work.
+0 => @code.
+0 => @context.
+0 => @stackbase.
+0 => @step.
+0 => @filename.
+0 => @buffer.
+0 => @capacity.
+0 => @size.
+-1 => @handle.
+0 => @count.
+0 => @n.
+0 => @i.
+0 => @j.
+0 => @c.
+0 => @status.
+0 => @error.
+0 => @message.
+0 => @detail.
+0 => @detailbytes.
+0 => @created.
+0 => @sourcebytes.
+0 => @packagebytes.
+0 => @initbytes.
+0 => @combinedbytes.
+0 => @outputbytes.
+0 => @inputptr.
+0 => @inputbytes.
+0 => @outputptr.
+0 => @outputcapacity.
+0 => @flag.
+0 => @temporary.
+0 => @cursor.
+0 => @hostkind.
+0 => @namedlanguage.
+:host[] -> @hostkind.
+:argcount[] -> @argc.
+:program[] -> @programname.
+:reserve[4096] -> @path.
+? @programname == 0 [ "Cannot locate the compiler executable.\n" -> @message. 1 -> @error. ]
+? @error == 0 [
+ 0 -> @i.
+ ?? :load8[@programname + @i] [
+  :load8[@programname + @i] -> @c.
+  ? (@c == 47) + (@c == 92) [ @i + 1 -> @baselen. ]
+  @i + 1 -> @i.
+ ]
+ ? @baselen == 0 [ "Compiler path has no parent directory.\n" -> @message. 1 -> @error. ]
+ ? @i - @baselen >= 4 [
+  @programname + @baselen -> @first.
+  ? :load8[@first] == 122 [ ? :load8[@first + 1] == 101 [ ? :load8[@first + 2] == 114 [
+   ? :load8[@first + 3] == 111 [
+    ? (:load8[@first + 4] == 0) + (:load8[@first + 4] == 46) [ 1 -> @namedlanguage. ]
+   ]
+  ] ] ]
+ ]
+ ? @i - @baselen >= 5 [
+  @programname + @baselen -> @first.
+  ? :load8[@first] == 101 [ ? :load8[@first + 1] == 122 [ ? :load8[@first + 2] == 101 [
+   ? :load8[@first + 3] == 114 [ ? :load8[@first + 4] == 111 [
+    ? (:load8[@first + 5] == 0) + (:load8[@first + 5] == 46) [ 1 -> @language. 1 -> @namedlanguage. ]
+   ] ]
+  ] ] ]
+ ]
+]
+? @argc > 0 [
+ :argument[1] -> @first.
+ "--help" -> @temporary. 0 -> @i. 1 -> @flag.
+ ?? :load8[@temporary + @i] [
+  ? :load8[@first + @i] != :load8[@temporary + @i] [ 0 -> @flag. ]
+  ? :load8[@first + @i] == 0 [ 0 -> @flag. ]
+  ? @flag == 0 [ 6 -> @i. ] ~ [ @i + 1 -> @i. ]
+ ]
+ ? @flag == 1 [ ? :load8[@first + 6] != 0 [ 0 -> @flag. ] ]
+ ? @flag == 1 [
+  "Usage: zero INPUT OUTPUT [TARGET]\n       ezero INPUT OUTPUT [TARGET]\nTargets: --host --windows --raw --raw32 --efi --efi32 --real --app64 --app32\nDefault target matches the host. Existing output files are never replaced.\n" -> @message.
+  2 -> @error.
+ ]
+ # Explicit language selection permits renamed copies of this same executable.
+ ? (@error == 0) * (@namedlanguage == 0) [
+  "zero" -> @temporary. 0 -> @i. 1 -> @flag.
+  ?? @i < 5 [
+   ? :load8[@first + @i] != :load8[@temporary + @i] [ 0 -> @flag. ]
+   ? :load8[@first + @i] == 0 [ 5 -> @i. ] ~ [ @i + 1 -> @i. ]
+  ]
+  ? @flag == 1 [ 0 -> @language. 2 -> @index. ]
+  "ezero" -> @temporary. 0 -> @i. 1 -> @flag.
+  ?? @i < 6 [
+   ? :load8[@first + @i] != :load8[@temporary + @i] [ 0 -> @flag. ]
+   ? :load8[@first + @i] == 0 [ 6 -> @i. ] ~ [ @i + 1 -> @i. ]
+  ]
+  ? @flag == 1 [ 1 -> @language. 2 -> @index. ]
+ ]
+]
+? @error == 0 [
+ ? (@argc < @index + 1) + (@argc > @index + 2) [
+  "Usage: zero INPUT OUTPUT [TARGET]\n       ezero INPUT OUTPUT [TARGET]\n" -> @message. 64 -> @error.
+ ]
+]
+? @error == 0 [
+ :argument[@index] -> @sourcepath. :argument[@index + 1] -> @destpath.
+ "--host" -> @target. ? @hostkind == 2 [ "--windows" -> @target. ]
+ ? @argc == @index + 2 [ :argument[@index + 2] -> @target. ]
+ ? (@hostkind != 1) * (@hostkind != 2) [ "This compiler command needs Linux or Windows.\n" -> @message. 1 -> @error. ]
+]
+? @error == 0 [
+ :hostalloc[8388608] -> @work. :hostalloc[1048576] -> @code.
+ ? (@work == 0) + (@code == 0) [ "Cannot allocate compiler workspace.\n" -> @message. 1 -> @error. ]
+ @work -> @context. @work + 2097152 -> @stackbase.
+]
+
+# Steps: input, frontend app, packer app, runtime prefix, runtime body, Zero app.
+?? (@step < 6) * (@error == 0) [
+ 0 -> @flag. 0 -> @filename. 0 -> @count.
+ ? @step == 0 [
+  @sourcepath -> @filename. @work + 4096 -> @buffer. 262144 -> @capacity.
+  ? @language == 1 [ 65536 -> @capacity. ]
+ ]
+ ? @step == 1 [ "lib/frontend64.app" -> @filename. 1 -> @flag. ]
+ ? @step == 2 [ "lib/pack64.app" -> @filename. 1 -> @flag. ]
+ ? @step == 3 [ "lib/runtime-prefix.zero.part" -> @filename. @work + 589824 -> @buffer. 4095 -> @capacity. ]
+ ? @step == 4 [ "lib/runtime.zero.part" -> @filename. @work + 589824 + @combinedbytes -> @buffer. 262144 - @combinedbytes -> @capacity. ]
+ ? @step == 5 [ "lib/zero64.app" -> @filename. 1 -> @flag. ]
+ ? @step != 0 [
+  0 -> @i.
+  ?? @i < @baselen [ !store8[@path + @i | :load8[@programname + @i]]. @i + 1 -> @i. ]
+  0 -> @j.
+  ?? :load8[@filename + @j] [
+   ? @i >= 4095 [ "Compiler companion path is too long.\n" -> @message. 1 -> @error. ]
+   ? @error == 0 [ !store8[@path + @i | :load8[@filename + @j]]. @i + 1 -> @i. ]
+   @j + 1 -> @j.
+  ]
+  ? @error == 0 [ !store8[@path + @i | 0]. @path -> @filename. ]
+ ]
+ ? @flag == 1 [
+  @code -> @buffer. 1048576 -> @capacity.
+  ? :hostprotect[@code | 1048576 | 0] != 0 [ "Cannot prepare compiler image memory.\n" -> @message. 1 -> @error. ]
+ ]
+ ? @error == 0 [
+  :fileopen[@filename | 0] -> @handle.
+  ? @handle == -1 [ "Cannot open source or compiler companion file.\n" -> @message. @filename -> @detail. 1 -> @error. ]
+ ]
+ ? @error == 0 [
+  :filesize[@handle] -> @size.
+  ? @size > @capacity [ "Source or compiler companion file exceeds its limit.\n" -> @message. 1 -> @error. ]
+ ]
+ ? @error == 0 [
+  1 -> @n.
+  ?? (@count < @capacity) * (@n != 0) * (@error == 0) [
+   :fileread[@handle | @buffer + @count | @capacity - @count] -> @n.
+   ? @n > @capacity - @count [ "Cannot read source or compiler companion file.\n" -> @message. 1 -> @error. ] ~ [ @count + @n -> @count. ]
+  ]
+  ? (@count == @capacity) * (@error == 0) [
+   :fileread[@handle | @work + 256 | 1] -> @n.
+   ? @n != 0 [ "Source or compiler companion file exceeds its limit or changed while reading.\n" -> @message. 1 -> @error. ]
+  ]
+ ]
+ ? @handle != -1 [
+  :fileclose[@handle] -> @status. -1 -> @handle.
+  ? (@status != 0) * (@error == 0) [ "Cannot close input file.\n" -> @message. 1 -> @error. ]
+ ]
+ ? @error == 0 [
+  ? @flag == 1 [
+   ? @count <= 64 [ 1 -> @error. ]
+   ? :load64[@code] != 0x315050414f52455a [ 1 -> @error. ]
+   ? :load64[@code + 8] != 64 [ 1 -> @error. ]
+   ? :load64[@code + 16] != @count [ 1 -> @error. ]
+   ? :load64[@code + 24] != 64 [ 1 -> @error. ]
+   ? :load64[@code + 32] != 4198400 [ 1 -> @error. ]
+   ? :load64[@code + 40] != 1 [ 1 -> @error. ]
+   ? :load64[@code + 48] != 0 [ 1 -> @error. ]
+   ? :load64[@code + 56] != 0 [ 1 -> @error. ]
+   ? @error != 0 [ "Invalid compiler application header.\n" -> @message. ]
+  ]
+ ]
+ ? (@error == 0) * (@flag == 1) [
+  ? :hostprotect[@code | 1048576 | 1] != 0 [ "Cannot protect compiler image for execution.\n" -> @message. 1 -> @error. ]
+ ]
+ ? @error == 0 [
+  ? @step == 0 [ @count -> @sourcebytes. ? @language == 0 [ 5 -> @step. ] ~ [ 1 -> @step. ] ] ~ [
+   ? @step == 3 [
+    ? @count + @initbytes > 262144 [ "Generated Ezero source exceeds its limit.\n" -> @message. 1 -> @error. ] ~ [
+     0 -> @i.
+     ?? @i < @initbytes [ !store8[@work + 589824 + @count + @i | :load8[@work + 393216 + @i]]. @i + 1 -> @i. ]
+     @count + @initbytes -> @combinedbytes. 4 -> @step.
+    ]
+   ] ~ [
+    ? @step == 4 [ @combinedbytes + @count -> @combinedbytes. 5 -> @step. ] ~ [
+     @work + 4096 -> @inputptr. @sourcebytes -> @inputbytes.
+     @work + 270336 -> @outputptr. 70000 -> @outputcapacity.
+     ? @step == 2 [ @work + 270336 -> @inputptr. @packagebytes -> @inputbytes. @work + 393216 -> @outputptr. 196608 -> @outputcapacity. ]
+     ? @step == 5 [
+      @work + 1048576 -> @outputptr. 491520 -> @outputcapacity.
+      ? @language == 1 [ @work + 589824 -> @inputptr. @combinedbytes -> @inputbytes. ]
+     ]
+     0 -> @i. ?? @i < 192 [ !store64[@context + @i | 0]. @i + 8 -> @i. ]
+     !store64[@context | 1]. !store64[@context + 8 | @work + 8388608].
+     !store64[@context + 16 | @inputptr]. !store64[@context + 24 | @inputbytes].
+     !store64[@context + 40 | @outputptr]. !store64[@context + 48 | @outputcapacity].
+     !store64[@context + 64 | 1]. !store64[@context + 72 | "zero-native"].
+     ? @step == 5 [ !store64[@context + 64 | 2]. !store64[@context + 80 | @target]. ]
+     !store64[@context + 168 | @stackbase]. !store64[@context + 176 | 6291456].
+     :call[@code + 64 | @context | 0 | 0 | 0 | 0] -> @status.
+     :load64[@context + 56] -> @n.
+     ? @n > @outputcapacity [ "Compiler application exceeded its output boundary.\n" -> @message. 1 -> @error. ]
+     ? :load64[@context + 32] > @inputbytes [ "Compiler application exceeded its input boundary.\n" -> @message. 1 -> @error. ]
+     ? (@status != 0) + (:load64[@context + 88] != 0) [
+      "Zero compilation failed; no output file was created.\n" -> @message. 1 -> @error.
+      ? @step == 1 [
+       "Ezero compilation failed:\n" -> @message.
+       ? @n <= @outputcapacity [ @outputptr -> @detail. @n -> @detailbytes. ]
+      ]
+      ? @step == 2 [ "Ezero package conversion failed; no output file was created.\n" -> @message. ]
+     ]
+     ? @error == 0 [
+      ? @step == 1 [ @n -> @packagebytes. 2 -> @step. ] ~ [
+       ? @step == 2 [ @n -> @initbytes. 3 -> @step. ] ~ [ @n -> @outputbytes. 6 -> @step. ]
+      ]
+     ]
+    ]
+   ]
+  ]
+ ]
+]
+
+# Publish only after every compilation stage succeeds. Existing paths are refused.
+? @error == 0 [
+ :fileopen[@destpath | 4] -> @handle.
+ ? @handle == -1 [ "Cannot create output; the path may already exist.\n" -> @message. @destpath -> @detail. 1 -> @error. ] ~ [ 1 -> @created. ]
+]
+? @error == 0 [
+ 0 -> @count.
+ ?? (@count < @outputbytes) * (@error == 0) [
+  :filewrite[@handle | @work + 1048576 + @count | @outputbytes - @count] -> @n.
+  ? (@n == 0) + (@n > @outputbytes - @count) [ "Cannot write output file.\n" -> @message. 1 -> @error. ] ~ [ @count + @n -> @count. ]
+ ]
+]
+? @handle != -1 [
+ :fileclose[@handle] -> @status. -1 -> @handle.
+ ? (@status != 0) * (@error == 0) [ "Cannot finish output file.\n" -> @message. 1 -> @error. ]
+]
+? (@created == 1) * (@error != 0) [
+ :filedelete[@destpath] -> @status.
+ ? @status != 0 [ "Output failed and its partial file could not be removed.\n" -> @message. @destpath -> @detail. 0 -> @detailbytes. ]
+]
+? @error == 0 [ "Built: " -> @message. @destpath -> @detail. ]
+? @message != 0 [
+ 0 -> @i. ?? :load8[@message + @i] [ !put[:load8[@message + @i]]. @i + 1 -> @i. ]
+]
+? @detail != 0 [
+ ? @detailbytes == 0 [ ?? :load8[@detail + @detailbytes] [ @detailbytes + 1 -> @detailbytes. ] ]
+ 0 -> @i. ?? @i < @detailbytes [ !put[:load8[@detail + @i]]. @i + 1 -> @i. ]
+ !put[10].
+]
+? @code != 0 [ :hostfree[@code | 1048576] -> @status. ]
+? @work != 0 [ :hostfree[@work | 8388608] -> @status. ]
+? @error == 2 [ !exit[0]. ]
+!exit[@error].

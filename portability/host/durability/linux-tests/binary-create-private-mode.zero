@@ -1,0 +1,8 @@
+
+:reserve[16] => @buffer. 0 => @h.
+!store32[@buffer | 0xff420041].
+:fileopen[:argument[1] | 1] -> @h.
+? @h == -1 [ !exit[1]. ]
+? :filewrite[@h | @buffer | 4] != 4 [ !exit[2]. ]
+? :filesize[@h] != 4 [ !exit[3]. ]
+? :fileclose[@h] != 0 [ !exit[4]. ] !exit[0].

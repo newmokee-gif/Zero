@@ -1,0 +1,84 @@
+ZTEXT0010000140e6ae98cf30000000
+Project principles - Zero OS
+
+Zero and Ezero have different priorities. Zero grows the capabilities needed
+by the system: explicit operations, device access, compiler targets and
+reusable system facilities. Ezero builds on Zero and prioritizes convenience:
+short programs, automatic value types and memory management, readable errors
+and one-based collection indices. The operating system also prioritizes
+simple defaults, automatic device setup and clear actions. These are design
+priorities, not claims that every planned feature already exists.
+
+Our own language is the foundation. Zero's data-first grammar has explicit
+@references, => declarations, -> updates, ?/?? control forms and :/! operation
+prefixes. Runtime sources use this grammar consistently. SYNTAX.ztext is the
+language's source contract; changing syntax also changes compilers, sources,
+documentation and meaningful regression tests together.
+
+All active compiler and system implementation is Zero source. compiler.zero
+compiles Zero, including its own source, and directly emits machine code for
+Linux and Windows hosts, x86-64/IA32 kernels and native guest apps, both UEFI
+ABIs and real-mode BIOS entry.
+BIOS/UEFI loaders, the shared monolithic kernel, device drivers, filesystem,
+terminal and system image builders are Zero source. Assembly and foreign
+compiler backends are not part of the current source build.
+
+Self-hosting is a reproducible build property: a Zero-built compiler compiles
+compiler.zero, its result compiles the same source, and the executables must
+match byte for byte. The executable seed has an explicit provenance. Our
+earlier assembly-origin compiler was used for the one-time transition; that
+history is retained honestly, not presented as an origin without assembly.
+
+We implement source ourselves and emit native machine code directly. There
+is no borrowed kernel, loader, driver implementation, arithmetic library,
+guest runtime or compiler backend. Hardware standards and BIOS/UEFI/ELF/PE/
+FAT/ISO9660/El Torito interfaces are external specifications, not inventions
+we claim as our own. The visible terminal uses VGA text memory or our own
+framebuffer renderer on a mode selected by VBE or GOP; PS/2, COM1 and ATA
+protocol logic remains in Zero. Terminal window sessions, tiled and scrolling
+layouts, labels and focus rendering are implemented by the kernel. No imported font or graphics library
+supplies the desktop.
+
+Multitasking has a concrete meaning in this release: terminal, graphics and
+computation have independent native stacks and saved continuations. They
+cooperate through explicit yields in our Zero scheduler. Their memory is
+shared, and only one CPU executes them. This does not provide preemption,
+process isolation, SMP or a guarantee against a worker that stops yielding.
+
+The same kernel source builds for 32-bit and 64-bit x86 without weakening its
+u64 disk-format semantics. BIOS chooses the appropriate mode from CPU
+features; IA32 and AMD64 UEFI use their matching loaders. A missing long-mode
+feature selects the 32-bit BIOS path. This release targets x86 PCs.
+
+Behavior, limits and failures must be explicit. Files persist on disk and
+writes are acknowledged only after flushing. Language tests, loader probes,
+complete emulated boot, native VirtualBox operation and physical hardware
+tests are separate forms of evidence. A VirtualBox firmware test under QEMU
+is not a native VirtualBox test. A configured target is not proof of a boot.
+
+System commands and diagnostics use English; the current desktop font and
+keyboard use ASCII. Ezero source and text values support UTF-8, independently
+of that desktop limitation. Human conversation language is independent of
+the system language. User-visible lists and task identifiers start at1.
+
+Disks have independent volume roots, assigned A: through Z:. GO selects a
+root and the vertical bar separates path components: A:|notes. A volume is
+not hidden as a directory inside another volume. Physical devices, partitions
+and filesystems are separate concepts with separately checked boundaries.
+Standard filesystems are compatibility formats, not code to import. Their
+drivers are implemented in Zero; unsupported features receive explicit errors.
+
+Build and validation boundary
+All authored implementation, integration, building and checking code in this
+project is Zero or Ezero. The original native builder performs compilation in
+process, verifies self-reproduction and creates the images. The original
+integrator composes source parts. The original verifier runs actual compiler,
+frontend/runtime and host filesystem checks. No foreign-language project
+program is renamed and presented as Zero.
+
+Text documentation and manifests use our ZTEXT001 format and our reader.
+Interoperability with existing hosts and firmware still requires their public
+executable and boot interfaces. This does not make those hosts our operating
+system. External virtual machines and independent inspectors provide testing
+evidence and are kept outside the authored project. They are not shipped as
+our implementation. A VM pass is not proof of physical hardware compatibility.

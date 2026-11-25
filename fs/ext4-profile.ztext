@@ -1,0 +1,66 @@
+ZTEXT001000010f2cf58a84e0000000
+Original Zero ext4 backend: bounded interoperable profile
+
+All guest implementation is new Zero source. Published format descriptions:
+https://www.kernel.org/doc/html/latest/filesystems/ext4/super.html
+https://www.kernel.org/doc/html/latest/filesystems/ext4/group_descr.html
+https://www.kernel.org/doc/html/latest/filesystems/ext4/inodes.html
+https://www.kernel.org/doc/html/latest/filesystems/ext4/ifork.html
+https://www.kernel.org/doc/html/latest/filesystems/ext4/directory.html
+
+Initial read/write profile: clean revision-1 ext4, one block group, 4096-byte
+blocks, 128- or 256-byte inodes, filetype required, extents optional, no journal,
+no checksums, no 64-bit descriptors, no uninitialized bitmaps. Compatible
+feature mask must be zero; incompatible mask 2 or 66; readonly-compatible mask
+0..3 (sparse_super and large_file accepted). A single block group avoids backup
+superblock and group-descriptor copies. All referenced metadata and data must
+lie inside the volume. Unrecognized profiles are rejected before disk writes.
+
+Root directory must be one ordinary 4096-byte directory block. Files are
+ordinary singly-linked regular files with at most one allocated 4096-byte block,
+at most 400 bytes of ASCII text, and names of 1..31 ASCII bytes (no slash, dot,
+dot-dot or whitespace). Direct mapping or one initialized depth-zero extent is
+supported. New files use extents when the volume advertises that feature.
+Subdirectories may be listed; directory operations and recursive paths are not
+implemented. A full root directory or exhausted single-group allocation space
+returns no space. External ACLs, immutable/append flags, indexed directories,
+sparse or unwritten extents and hardlinks are rejected for file operations.
+
+Before each write, an ownership audit reads only inode-table blocks containing
+allocated inodes. Every allocated regular-file/directory map must use up to 12
+direct blocks or up to four depth-zero extents, including initialized/unwritten
+runs in other files. Every referenced block must be marked allocated and avoid
+fixed metadata. Another inode must not reference the selected file's data block.
+This prevents overwriting/freeing another file's data, and prevents allocating a
+still-referenced block whose bitmap bit was incorrectly cleared. Reserved
+mode-zero inodes must have empty maps. Any unrelated symlink, device inode,
+external ACL, indirect/deep extent tree, or unsupported flag conservatively
+rejects mutation before the first write. Such inodes can therefore narrow the
+writable-volume profile even when the requested file itself is small/simple.
+Probe/watch/read use their earlier bounded checks. This audit is not full fsck:
+unrelated inode pairs sharing data are not diagnosed while operating on a new
+or different file. Selected-file ownership and new allocation are protected.
+
+Create/update/delete modify actual standard ext4 allocation bitmaps, inode
+records, directory entries, group counters and superblock counters. The volume
+is marked unclean and flushed before mutation; file data is flushed before
+publishing metadata; the final metadata is flushed before the clean bit is
+restored and flushed. An interrupted write may require e2fsck. This is not a
+journal, crash-atomic transaction, recovery implementation, or general ext4
+driver. No real user volume is formatted by this backend.
+
+The current filesystem ABI does not supply wall-clock time. Existing creation
+and modification timestamps are preserved; new inodes initialize timestamps
+from the volume's last-write timestamp. Accurate timestamp updates need a future
+clock service. Deletion records a nonzero deletion timestamp.
+
+Entry200 performs a fresh metadata load and validation for every operation, so
+switching drive letters needs no retained per-volume cache. The frozen common
+header at memory+24576 is used unchanged; private state is memory+25600..26111,
+and the two 16KiB I/O buffers are memory+32768 and memory+49152. Completion
+returns through header+72. Wrong format10, unsupported1, corrupt2, I/O3,
+missing4, exists5, capacity6, argument7, too-large8, recovery-required9 are
+distinct. Probe success sets filesystem ID1 and mounted+writable flags3.
+
+External e2fsprogs are only fixture generation and independent validation tools;
+they are not copied into the OS, called by guest code, or linked to the driver.

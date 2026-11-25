@@ -1,0 +1,6 @@
+
+:reserve[4190208] => @block. :reserve[0] => @before.
+? :program[] == 0 [ !exit[1]. ]
+? :reserve[0] != @before + 4096 [ !exit[2]. ]
+? :program[] != 0 [ !exit[3]. ]
+? :reserve[0] != @before + 4096 [ !exit[4]. ] !exit[0].

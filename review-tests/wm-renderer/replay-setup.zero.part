@@ -1,0 +1,27 @@
+
+:reserve[1958656] -> @file.
+!store64[@console + 2000 | @file].
+0 -> @i.
+?? @i < 1958656 [ !store32[@file + @i | 0x5a5a5a5a]. @i + 4 -> @i. ]
+!store64[@console | 2]. !store64[@console + 8 | @file + 128].
+!store64[@console + 16 | 800]. !store64[@console + 24 | 600].
+!store64[@console + 32 | 816]. !store64[@console + 40 | 1].
+:reserve[8192] -> @pointer.
+0 -> @i. ?? @i < 8192 [ !store8[@pointer + @i | 0]. @i + 1 -> @i. ]
+!store64[@console + 2048 | @pointer]. !store64[@console + 2056 | 1].
+!store64[@console + 2064 | 0]. !store64[@console + 2072 | 1].
+!store64[@console + 2080 | 0]. !store64[@console + 2088 | 1].
+
+!store64[@pointer | 1]. !store64[@pointer + 8 | 1]. !store64[@pointer + 64 | 1].
+:reserve[16384] -> @echo_byte. 0 -> @i. 0 -> @j.
+?? @j == 0 [
+ :read[@echo_byte + @i | 16384 - @i] -> @k.
+ ? @k == 0 [ 1 -> @j. ] ~ [ ? @k > 16384 - @i [ !exit[81]. ] @i + @k -> @i. ]
+]
+0 -> @j. 0 -> @k.
+?? @j < @i [
+ !store8[@pointer + 1024 + @k | :load8[@echo_byte + @j]].
+ @k + 1 -> @k. ? @k >= 7168 [ 0 -> @k. ]
+ @j + 1 -> @j.
+]
+!store64[@pointer + 16 | @k]. ? @i > 7168 [ 7168 -> @i. ] !store64[@pointer + 24 | @i].

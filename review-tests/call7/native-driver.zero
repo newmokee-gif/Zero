@@ -1,0 +1,17 @@
+# Original Zero native driver for an own raw64 firmware-call ABI probe.
+:hostalloc[262144] => @code.
+:hostalloc[4096] => @stub.
+0 => @size. 0 => @n. 0 => @i. 0 => @j. 0 => @digit. 0 => @byte.
+"4889114c8941084c894910488b44242848894118488b44243048894120488b442438488941284889e083e00f4889413048b81122334455667788488944240848894424104889442418488944242048b8f0debc9a78563412c34989c94889d64c89c2bf01000000b8010000000f054c89cfb83c0000000f050f0b" => @encoding.
+? (@code == 0)+(@stub == 0) [ !exit[70]. ]
+1 -> @n. ?? (@n != 0)*(@size < 262144) [ :read[@code+@size|262144-@size] -> @n. ? @n > 262144-@size [ !exit[74]. ] @size+@n -> @size. ]
+? (@size == 0)+(@size == 262144) [ !exit[65]. ]
+?? :load8[@encoding+@i] [
+ 0 -> @j. 0 -> @byte.
+ ?? @j < 2 [ :load8[@encoding+@i+@j] -> @digit. ? @digit < 58 [ @digit-48 -> @digit. ] ~ [ @digit-87 -> @digit. ] @byte*16+@digit -> @byte. @j+1 -> @j. ]
+ !store8[@stub+:shr[@i|1]|@byte]. @i+2 -> @i.
+]
+? :hostprotect[@code|262144|1] != 0 [ !exit[71]. ]
+? :hostprotect[@stub|4096|1] != 0 [ !exit[72]. ]
+:call[@code|@stub|@stub+89|0|0|0] -> @n.
+!exit[73].

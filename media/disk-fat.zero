@@ -1,0 +1,223 @@
+# Own streaming FAT16 builder for the Zero media launcher and flash writer.
+# Input slots: EFI64 64 KiB, EFI32 64 KiB, kernel64 464 KiB, kernel32 496 KiB.
+# Fifth slot:TOOLS.BIN1MiB. Then MENU64/MENU32 each64KiB and FLASHX64/IA32
+# each128KiB. Output16MiB FAT16; original OS loaders retain separate names.
+:reserve[512] => @sector.
+0 => @status.
+0 => @received.
+0 => @emitted.
+0 => @number.
+0 => @index.
+0 => @cluster.
+0 => @value.
+0 => @text.
+0 => @records.
+0 => @record.
+0 => @destination.
+0 => @attributes.
+0 => @firstCluster.
+0 => @fileSize.
+0 => @fatStart.
+0 => @pe.
+0 => @optionalSize.
+0 => @sections.
+0 => @firstEnd.
+0 => @lastEnd.
+
+?? @number < 32768 [
+    0 -> @index.
+    ?? @index < 512 [ !store64[@sector + @index| 0]. @index + 8 -> @index. ]
+    ? @number == 0 [
+        # Metadata only: BIOS optical boot uses the separate bios.zero image.
+        !store8[@sector| 0xeb].
+        !store8[@sector + 1| 0x3c].
+        !store8[@sector + 2| 0x90].
+        "ZERO    " -> @text.
+        0 -> @index.
+        ?? @index < 8 [ !store8[@sector + 3 + @index| :load8[@text + @index]]. @index + 1 -> @index. ]
+        !store16[@sector + 11| 512].
+        !store8[@sector + 13| 1].
+        !store16[@sector + 14| 1].
+        !store8[@sector + 16| 2].
+        !store16[@sector + 17| 512].
+        !store16[@sector + 19| 32768].
+        !store8[@sector + 21| 0xf8].
+        !store16[@sector + 22| 128].
+        !store16[@sector + 24| 63].
+        !store16[@sector + 26| 255].
+        !store8[@sector + 36| 0x80].
+        !store8[@sector + 38| 0x29].
+        !store32[@sector + 39| 0x5a45524f].
+        "ZERO SYSTEM" -> @text.
+        0 -> @index.
+        ?? @index < 11 [ !store8[@sector + 43 + @index| :load8[@text + @index]]. @index + 1 -> @index. ]
+        "FAT16   " -> @text.
+        0 -> @index.
+        ?? @index < 8 [ !store8[@sector + 54 + @index| :load8[@text + @index]]. @index + 1 -> @index. ]
+        !store16[@sector + 510| 0xaa55].
+    ]
+    ? (@number >= 1) * (@number <= 256) [
+        1 -> @fatStart.
+        ? @number >= 129 [ 129 -> @fatStart. ]
+        0 -> @index.
+        ?? @index < 256 [
+            (@number - @fatStart) * 256 + @index -> @cluster.
+            0 -> @value.
+            ? @cluster == 0 [ 0xfff8 -> @value. ]
+            ? (@cluster >= 1) * (@cluster <= 3) [ 0xffff -> @value. ]
+            ? (@cluster >= 4) * (@cluster <= 4995) [ @cluster + 1 -> @value. ]
+            ? @cluster == 131 [ 0xffff -> @value. ]
+            ? @cluster == 259 [ 0xffff -> @value. ]
+            ? @cluster == 1187 [ 0xffff -> @value. ]
+            ? @cluster == 2179 [ 0xffff -> @value. ]
+            ? @cluster == 4227 [ 0xffff -> @value. ]
+            ? @cluster == 4355 [ 0xffff -> @value. ]
+            ? @cluster == 4483 [ 0xffff -> @value. ]
+            ? @cluster == 4739 [ 0xffff -> @value. ]
+            ? @cluster == 4995 [ 0xffff -> @value. ]
+            !store16[@sector + @index * 2| @value].
+            @index + 1 -> @index.
+        ]
+    ]
+
+    # The three directory sectors share a small record emitter.
+    0 -> @records.
+    ? @number == 257 [ 5 -> @records. ]
+    ? @number == 289 [ 3 -> @records. ]
+    ? @number == 290 [ 8 -> @records. ]
+    0 -> @record.
+    ?? @record < @records [
+        ".          " -> @text.
+        0x10 -> @attributes.
+        2 -> @firstCluster.
+        0 -> @fileSize.
+        ? @number == 257 [
+            ? @record == 0 [ "EFI        " -> @text. ]
+            ? @record == 1 [
+                "KERNEL  BIN" -> @text. 0x20 -> @attributes.
+                260 -> @firstCluster. 475136 -> @fileSize.
+            ]
+            ? @record == 2 [
+                "KERNEL32BIN" -> @text. 0x20 -> @attributes.
+                1188 -> @firstCluster. 507904 -> @fileSize.
+            ]
+            ? @record == 3 [
+                "TOOLS   BIN" -> @text. 0x20 -> @attributes.
+                2180 -> @firstCluster. 1048576 -> @fileSize.
+            ]
+            ? @record == 4 [
+                "ZERO SYSTEM" -> @text. 8 -> @attributes. 0 -> @firstCluster.
+            ]
+        ]
+        ? @number == 289 [
+            ? @record == 1 [ "..         " -> @text. 0 -> @firstCluster. ]
+            ? @record == 2 [ "BOOT       " -> @text. 3 -> @firstCluster. ]
+        ]
+        ? @number == 290 [
+            3 -> @firstCluster.
+            ? @record == 1 [ "..         " -> @text. 2 -> @firstCluster. ]
+            ? @record == 2 [
+                "OSX64   EFI" -> @text. 0x20 -> @attributes.
+                4 -> @firstCluster. 65536 -> @fileSize.
+            ]
+            ? @record == 3 [
+                "OSIA32  EFI" -> @text. 0x20 -> @attributes.
+                132 -> @firstCluster. 65536 -> @fileSize.
+            ]
+            ? @record == 4 [
+                "BOOTX64 EFI" -> @text. 0x20 -> @attributes.
+                4228 -> @firstCluster. 65536 -> @fileSize.
+            ]
+            ? @record == 5 [
+                "BOOTIA32EFI" -> @text. 0x20 -> @attributes.
+                4356 -> @firstCluster. 65536 -> @fileSize.
+            ]
+            ? @record == 6 [
+                "FLASHX64EFI" -> @text. 0x20 -> @attributes.
+                4484 -> @firstCluster. 131072 -> @fileSize.
+            ]
+            ? @record == 7 [
+                "FLASH32 EFI" -> @text. 0x20 -> @attributes.
+                4740 -> @firstCluster. 131072 -> @fileSize.
+            ]
+        ]
+        @sector + @record * 32 -> @destination.
+        0 -> @index.
+        ?? @index < 11 [ !store8[@destination + @index| :load8[@text + @index]]. @index + 1 -> @index. ]
+        !store8[@destination + 11| @attributes].
+        !store16[@destination + 16| 0x0021].
+        !store16[@destination + 18| 0x0021].
+        !store16[@destination + 24| 0x0021].
+        !store16[@destination + 26| @firstCluster].
+        !store32[@destination + 28| @fileSize].
+        @record + 1 -> @record.
+    ]
+
+    ? (@number >= 291) * (@number <= 5282) [
+        0 -> @received.
+        ?? @received < 512 [
+            :read[@sector + @received| 512 - @received] -> @status.
+            ? @status != -4 [
+                ? @status == 0 [ !exit[2]. ]
+                ? @status > 512 - @received [ !exit[1]. ]
+                @received + @status -> @received.
+            ]
+        ]
+        ? @number == 2467 [
+            ? :load64[@sector] != 0x31304c444e42525a [ !exit[2]. ]
+            ? :load64[@sector+8] != 1 [ !exit[2]. ]
+            ? :load64[@sector+16] != 1048576 [ !exit[2]. ]
+            ? :load64[@sector+24] != 8 [ !exit[2]. ]
+        ]
+        ? (@number == 291) + (@number == 419) + (@number == 4515) + (@number == 4643) + (@number == 4771) + (@number == 5027) [
+            # The two compiler-generated PE headers and section tables fit
+            # in their first sector. Padding bytes are copied unchanged.
+            ? :load16[@sector] != 0x5a4d [ !exit[2]. ]
+            :load32[@sector + 60] -> @pe.
+            ? @pe > 168 [ !exit[2]. ]
+            ? :load32[@sector + @pe] != 0x00004550 [ !exit[2]. ]
+            ? :load16[@sector + @pe + 6] != 2 [ !exit[2]. ]
+            240 -> @optionalSize.
+            ? (@number == 291)+(@number == 4515)+(@number == 4771) [
+                ? :load16[@sector + @pe + 4] != 0x8664 [ !exit[2]. ]
+                ? :load16[@sector + @pe + 24] != 0x20b [ !exit[2]. ]
+            ] ~ [
+                224 -> @optionalSize.
+                ? :load16[@sector + @pe + 4] != 0x014c [ !exit[2]. ]
+                ? :load16[@sector + @pe + 24] != 0x010b [ !exit[2]. ]
+            ]
+            ? :load16[@sector + @pe + 20] != @optionalSize [ !exit[2]. ]
+            ? :load32[@sector + @pe + 56] != 4096 [ !exit[2]. ]
+            ? :load32[@sector + @pe + 60] != 512 [ !exit[2]. ]
+            ? :load32[@sector + @pe + 84] != 512 [ !exit[2]. ]
+            ? :load16[@sector + @pe + 92] != 10 [ !exit[2]. ]
+            @pe + 24 + @optionalSize -> @sections.
+            ? :load32[@sector + @sections + 20] < 512 [ !exit[2]. ]
+            :load32[@sector + @sections + 20] + :load32[@sector + @sections + 16] -> @firstEnd.
+            :load32[@sector + @sections + 60] + :load32[@sector + @sections + 56] -> @lastEnd.
+            ? :load32[@sector + @sections + 16] == 0 [ !exit[2]. ]
+            ? :load32[@sector + @sections + 56] == 0 [ !exit[2]. ]
+            ? :load32[@sector + @sections + 60] < @firstEnd [ !exit[2]. ]
+            ? @number < 4771 [ ? @lastEnd > 65536 [ !exit[2]. ] ]
+            ? @number >= 4771 [ ? @lastEnd > 131072 [ !exit[2]. ] ]
+        ]
+    ]
+    ? @number == 5283 [
+        # Reject excess input before emitting the unused trailing disk area.
+        -4 -> @status.
+        ?? @status == -4 [ :read[@sector| 1] -> @status. ]
+        ? @status > 1 [ !exit[1]. ]
+        ? @status != 0 [ !exit[3]. ]
+    ]
+    0 -> @emitted.
+    ?? @emitted < 512 [
+        :write[@sector + @emitted| 512 - @emitted] -> @status.
+        ? @status != -4 [
+            ? @status == 0 [ !exit[4]. ]
+            ? @status > 512 - @emitted [ !exit[4]. ]
+            @emitted + @status -> @emitted.
+        ]
+    ]
+    @number + 1 -> @number.
+]
+!exit[0].

@@ -1,0 +1,5 @@
+
+    :reserve[8192] => @b.
+    ? :filewrite[4 | @b | 8192] != 4096 [ !exit[1]. ]
+    ? :filewrite[4 | @b | 1] != -1 [ !exit[2]. ] !exit[0].
+    

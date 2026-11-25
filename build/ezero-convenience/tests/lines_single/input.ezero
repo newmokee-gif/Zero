@@ -1,0 +1,2 @@
+lines(Hello)[1] => show
+size(lines(Hello)) => show

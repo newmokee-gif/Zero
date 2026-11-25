@@ -1,0 +1,113 @@
+0 => @status.
+0 => @step.
+0 => @text.
+0 => @index.
+0 => @checksum.
+0 => @recordOffset.
+0 => @done.
+0 => @record.
+0 => @recordBytes.
+0 => @nameBytes.
+0 => @match.
+0 => @kernelSeen.
+0 => @toolsSeen.
+0 => @received.
+0 => @need.
+0 => @ch.
+:reserve[16384] => @isoHead. @isoHead => @input. 16384 -> @need.
+0 -> @received.
+?? @received < @need [
+ :read[@input+@received|@need-@received] -> @ch.
+ ? @ch == 0 [ !exit[70]. ]
+ ? @ch > @need-@received [ !exit[71]. ]
+ @received+@ch -> @received.
+]
+? @status == 0 [
+    7 -> @step.
+    # Current Zero ISO identity, volume length, paired-endian blocks and root.
+    ? :load64[@isoHead] != 0x0001313030444301 [ 0x8000000000000001 -> @status. ]
+    "ZERO_SYSTEM" -> @text. 0 -> @index.
+    ?? @index < 11 [
+        ? :load8[@isoHead+40+@index] != :load8[@text+@index] [ 0x8000000000000001 -> @status. ]
+        @index+1 -> @index.
+    ]
+    ? :load32[@isoHead+80] != 9224 [ 0x8000000000000001 -> @status. ]
+    ? :load32[@isoHead+84] != 0x08240000 [ 0x8000000000000001 -> @status. ]
+    ? :load32[@isoHead+128] != 0x00080800 [ 0x8000000000000001 -> @status. ]
+    ? :load8[@isoHead+156] != 34 [ 0x8000000000000001 -> @status. ]
+    ? :load32[@isoHead+158] != 20 [ 0x8000000000000001 -> @status. ]
+    ? :load32[@isoHead+162] != 0x14000000 [ 0x8000000000000001 -> @status. ]
+    ? :load32[@isoHead+166] != 2048 [ 0x8000000000000001 -> @status. ]
+    ? :load32[@isoHead+170] != 0x00080000 [ 0x8000000000000001 -> @status. ]
+    ? :load8[@isoHead+181] != 2 [ 0x8000000000000001 -> @status. ]
+    ? :load64[@isoHead+2048] != 0x4501313030444300 [ 0x8000000000000001 -> @status. ]
+    ? :load32[@isoHead+2048+71] != 23 [ 0x8000000000000001 -> @status. ]
+    ? :load64[@isoHead+4096] != 0x00013130304443ff [ 0x8000000000000001 -> @status. ]
+    # El Torito validation checksum and BIOS/UEFI entries remain consistent.
+    0 -> @checksum. 0 -> @index.
+    ?? @index < 32 [
+        @checksum+:load16[@isoHead+14336+@index] -> @checksum.
+        @index+2 -> @index.
+    ]
+    ? :bitand[@checksum|65535] != 0 [ 0x8000000000000001 -> @status. ]
+    ? :load16[@isoHead+14336] != 1 [ 0x8000000000000001 -> @status. ]
+    ? :load16[@isoHead+14336+30] != 0xaa55 [ 0x8000000000000001 -> @status. ]
+    ? :load16[@isoHead+14336+32] != 0x88 [ 0x8000000000000001 -> @status. ]
+    ? :load16[@isoHead+14336+38] != 32 [ 0x8000000000000001 -> @status. ]
+    ? :load32[@isoHead+14336+40] != 32 [ 0x8000000000000001 -> @status. ]
+    ? :load32[@isoHead+14336+64] != 0x0001ef91 [ 0x8000000000000001 -> @status. ]
+    ? :load16[@isoHead+14336+96] != 0x88 [ 0x8000000000000001 -> @status. ]
+    ? :load16[@isoHead+14336+102] != 32768 [ 0x8000000000000001 -> @status. ]
+    ? :load32[@isoHead+14336+104] != 520 [ 0x8000000000000001 -> @status. ]
+    # Resolve and validate the two records, including each dual-endian extent.
+    # Extents are pinned to this versioned format; malformed roots cannot
+    # redirect execution to an unrelated ISO member or outside the file.
+    0 -> @recordOffset. 0 -> @done.
+    ?? (@done == 0) * (@status == 0) [
+        ? @recordOffset >= 2048 [ 1 -> @done. ] ~ [
+            @isoHead+8192+@recordOffset -> @record.
+            :load8[@record] -> @recordBytes.
+            ? @recordBytes == 0 [ 1 -> @done. ] ~ [
+                ? @recordBytes < 34 [ 0x8000000000000001 -> @status. ]
+                ? @recordBytes > 2048-@recordOffset [ 0x8000000000000001 -> @status. ]
+                ? @status == 0 [
+                    :load8[@record+32] -> @nameBytes.
+                    ? @nameBytes > @recordBytes-33 [ 0x8000000000000001 -> @status. ]
+                    0 -> @match.
+                    ? @nameBytes == 12 [ "KERNEL.BIN;1" -> @text. 1 -> @match. ]
+                    ? @nameBytes == 11 [ "TOOLS.BIN;1" -> @text. 2 -> @match. ]
+                    0 -> @index.
+                    ?? (@index < @nameBytes) * (@match != 0) * (@status == 0) [
+                        ? :load8[@record+33+@index] != :load8[@text+@index] [ 0 -> @match. ]
+                        @index+1 -> @index.
+                    ]
+                    ? @match != 0 [
+                        ? :load8[@record+1] != 0 [ 0x8000000000000001 -> @status. ]
+                        ? :load8[@record+25] != 0 [ 0x8000000000000001 -> @status. ]
+                        ? :load16[@record+26] != 0 [ 0x8000000000000001 -> @status. ]
+                        ? :load32[@record+28] != 0x01000001 [ 0x8000000000000001 -> @status. ]
+                    ]
+                    ? @match == 1 [
+                        @kernelSeen+1 -> @kernelSeen.
+                        ? :load32[@record+2] != 40 [ 0x8000000000000001 -> @status. ]
+                        ? :load32[@record+6] != 0x28000000 [ 0x8000000000000001 -> @status. ]
+                        ? (:load32[@record+10] != 475136)*(:load32[@record+10] != 491520) [ 0x8000000000000001 -> @status. ]
+                        ? (:load32[@record+10] == 475136)*(:load32[@record+14] != 0x00400700) [ 0x8000000000000001 -> @status. ]
+                        ? (:load32[@record+10] == 491520)*(:load32[@record+14] != 0x00800700) [ 0x8000000000000001 -> @status. ]
+                    ]
+                    ? @match == 2 [
+                        @toolsSeen+1 -> @toolsSeen.
+                        ? :load32[@record+2] != 8712 [ 0x8000000000000001 -> @status. ]
+                        ? :load32[@record+6] != 0x08220000 [ 0x8000000000000001 -> @status. ]
+                        ? :load32[@record+10] != 1048576 [ 0x8000000000000001 -> @status. ]
+                        ? :load32[@record+14] != 0x00001000 [ 0x8000000000000001 -> @status. ]
+                    ]
+                ]
+                @recordOffset+@recordBytes -> @recordOffset.
+            ]
+        ]
+    ]
+    ? @kernelSeen != 1 [ 0x8000000000000001 -> @status. ]
+    ? @toolsSeen != 1 [ 0x8000000000000001 -> @status. ]
+]
+? @status == 0 [ !put[1]. ] ~ [ !put[0]. ]

@@ -1,0 +1,6 @@
+ZTEXT001000000ee3df1f1bb0000000
+READY FOR ROOT MERGE, NOT PUBLISHED
+Own capacity-only candidate fixed point passed.
+36 boundary/parity assertions passed.
+Applyscript, sourcecandidate and hashes are in README.ztext.
+No live compiler/source/bootstrap change by this task.

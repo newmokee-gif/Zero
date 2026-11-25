@@ -1,0 +1,83 @@
+0 => @memory.
+0 => @source.
+0 => @tokens.
+0 => @constants.
+0 => @code.
+0 => @functions.
+0 => @symbols.
+0 => @actions.
+0 => @blocks.
+0 => @output.
+0 => @scratch.
+0 => @n.
+0 => @nt.
+0 => @nc.
+0 => @ni.
+0 => @nf.
+0 => @scope.
+0 => @line.
+0 => @fail.
+0 => @errline.
+0 => @p.
+0 => @c.
+0 => @d.
+0 => @v.
+0 => @start.
+0 => @length.
+0 => @kind.
+0 => @i.
+0 => @j.
+0 => @x.
+0 => @y.
+0 => @tmp.
+0 => @ok.
+0 => @state.
+0 => @pos.
+0 => @sp.
+0 => @bp.
+0 => @ed.
+0 => @frame.
+0 => @a.
+0 => @b.
+0 => @q.
+0 => @r.
+0 => @t.
+0 => @u.
+0 => @w.
+0 => @name.
+0 => @nlen.
+0 => @id.
+0 => @slot.
+0 => @count.
+0 => @op.
+0 => @arg.
+0 => @argb.
+0 => @emitline.
+0 => @returnstate.
+# Ezero frontend: original Zero tokenizer and explicit parser continuation stack.
+:reserve[2850000] -> @memory.
+@memory -> @source.
+@memory + 65552 -> @tokens.
+@memory + 2162752 -> @constants.
+@memory + 2179136 -> @code.
+@memory + 2228288 -> @functions.
+@memory + 2232384 -> @symbols.
+@memory + 2756672 -> @actions.
+@memory + 2773056 -> @blocks.
+@memory + 2775104 -> @output.
+@memory + 2845120 -> @scratch.
+# Symbols and function records are initialized before any name lookup.
+0 -> @i. ?? @i < 528384 [ !store64[@functions + @i | 0]. @i + 8 -> @i. ]
+1 -> @nf. 1 -> @line. 1 -> @errline.
+0 -> @ok.
+?? (@ok == 0) * (@fail == 0) [
+ :read[@source + @n | 65537 - @n] -> @v.
+ ? @v == 0 [ 1 -> @ok. ] ~ [
+  ? @v != -4 [
+   ? @v > 65537 - @n [ "cannot read source" -> @fail. ] ~ [
+    @n + @v -> @n.
+    ? @n > 65536 [ "source exceeds 65536 bytes" -> @fail. ]
+   ]
+  ]
+ ]
+]

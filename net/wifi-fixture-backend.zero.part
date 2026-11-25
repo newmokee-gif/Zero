@@ -1,0 +1,21 @@
+# TEST ONLY. No port access, packets, radio, firmware or authentication.
+# Invoked explicitly by fixture tick, never included in the kernel.
+:load64[@console + 2408] -> @c0.
+? :load64[@c0 + 24] == 1 [
+ ? :load64[@c0 + 64] == 1 [
+  0 -> @i. ?? @i < 512 [ !store8[@c0 + 512 + @i| 0]. @i + 1 -> @i. ]
+  "Fixture Lab" -> @pointer. 0 -> @i.
+  ?? :load8[@pointer + @i] [ !store8[@c0 + 512 + @i| :load8[@pointer + @i]]. @i + 1 -> @i. ]
+  !store64[@c0 + 552| 1]. !store64[@c0 + 560| 83].
+  "Fixture Guest" -> @pointer. 0 -> @i.
+  ?? :load8[@pointer + @i] [ !store8[@c0 + 576 + @i| :load8[@pointer + @i]]. @i + 1 -> @i. ]
+  !store64[@c0 + 616| 0]. !store64[@c0 + 624| 61].
+  !store64[@c0 + 40| 2]. !store64[@c0 + 112| 1].
+  !store64[@c0 + 104| :load64[@c0 + 96]].
+ ]
+ ? :load64[@c0 + 64] == 2 [
+  !store64[@c0 + 112| 1].
+  ? :load64[@c0 + 200] [ !store64[@c0 + 112| 5]. ]
+  !store64[@c0 + 104| :load64[@c0 + 96]].
+ ]
+]

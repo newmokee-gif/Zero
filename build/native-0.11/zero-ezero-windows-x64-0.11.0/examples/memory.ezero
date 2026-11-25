@@ -1,0 +1,12 @@
+Still alive => retained
+[retained | [1 | 2 | 3]] => values
+0 => counter
+empty => temporary
+
+10000 => repeat [
+    Temporary value counter => temporary
+    counter + 1 => counter
+]
+
+values => show
+temporary => show

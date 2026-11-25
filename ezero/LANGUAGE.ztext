@@ -1,0 +1,241 @@
+ZTEXT001000030dc8454ec6d0000000
+Ezero language guide
+
+Ezero source is UTF-8. The frontend validates the complete input, including
+comments and optional quoted text, and rejects malformed UTF-8 and embedded
+NUL. A newline ends an ordinary statement. Blank lines are allowed; # starts
+a comment through the end of the line. Indentation is for readability.
+Square brackets delimit blocks and lists; | separates list items and arguments.
+There are no required type annotations, @ prefixes or statement-ending dots.
+
+Values and bindings
+    10 => count
+    count + 5 => count
+    count => show
+
+=> creates a binding on first assignment and updates it on later assignments.
+Types follow the stored values automatically; a binding can later hold another
+value kind. Ezero exposes four runtime value kinds:
+- Number: an unsigned integer from 0 through 18446744073709551615.
+- Text: immutable UTF-8 bytes.
+- List: an ordered immutable collection, including mixed or nested values.
+- Phrase: ordered typed parts displayed with spaces instead of list brackets.
+
+true and false are numeric 1 and 0. empty is empty text. No pointer arithmetic,
+manual allocation or manual free operation is exposed.
+
+Text and typed phrases
+    Mira => name
+    Hello name => show
+    3 yellow bananas => purchase
+    purchase[1] + 2 => show
+    purchase[2] => show
+
+An unbound bare word is literal text. An already-known binding name reads its
+value. Consecutive unbound literal words become one text segment with a single
+space between words. Adjacent values form a phrase without turning numbers
+into text. purchase above has two parts: number 3 and text yellow bananas.
+The last two lines print 5 and yellow bananas.
+
+Names used for bindings, parameters and functions are case-sensitive ASCII:
+1..31 characters, starting with a letter or underscore, then letters, digits
+or underscores. Other UTF-8 words are text. Unknown bare words intentionally
+become text, so a misspelled binding name can become literal text too.
+A binding introduced by a later statement is not known at an earlier use.
+A known binding whose assignment did not run produces an uninitialized-value
+error when read; for example a binding introduced in a false when branch.
+
+Phrases preserve separate values, including separate bound text values. The
+compiler only merges consecutive literal words. Thus literal Hello Mira is
+one text value, while Hello name is a phrase containing text Hello and the
+value of name. Both can print Hello Mira, but size and indexing differ.
+Text can be written without quotes in ordinary examples. Optional double
+quotes provide literal text when an exact binding name, reserved word,
+operator character, repeated whitespace or escaped newline is needed.
+Supported escapes are \n, \r, \t, \\ and \". A quoted numeric spelling remains
+text; an ordinary numeric token remains a number, including inside a phrase.
+
+Reserved words
+show return repeat when each size true false empty
+readfile writefile fileexists arguments host lines join
+read save create del rm watch search go disks
+These words cannot be binding/function/parameter names. Operator punctuation
+such as + - * => == brackets and parentheses also has syntax meaning. Bare
+punctuation outside those operators, for example Hello!, can remain text.
+A leading ASCII drive letter followed by :| is kept inside a bare path word:
+A:|note and B:| are text without required quotes. Elsewhere | still separates
+arguments and list items. Wildcards * and ? inside paths use optional quotes
+or text bindings because * is also an arithmetic operator.
+
+Lists, phrases and one-based indexing
+    [10 | 20 | 30] => numbers
+    numbers[1] => show
+    size(numbers) => show
+    numbers => each number [
+        number * 2 => show
+    ]
+
+The first two outputs are 10 and 3. each then prints 20, 40, 60. It evaluates the
+collection once and visits elements in order. It accepts lists and phrases.
+Indices must be numbers from 1 through size(collection). Zero, an out-of-range
+index and a nonnumeric index are errors. Text indexing is not implemented.
+size(text) counts Unicode scalar values, not UTF-8 bytes or grapheme clusters.
+For example size(банана) is 6. size(list) and size(phrase) count elements.
+Nested lists are valid, for example [[1 | 2] | [3 | 4]]. Each selected inner
+list can be indexed again. Empty lists are written []. Collections are
+immutable; assigning a new value changes a binding, not an existing object.
+
+Lines and joining text
+    [First | Second | Third] => names
+    join(names | /) => show
+    lines("First\nSecond\r\nThird")[2] => show
+
+The outputs are First/Second/Third and Second. join(list | separator) joins
+an ordered list of text values into one text value. It inserts the separator
+only between items. The separator must be text even for an empty list; every
+item must also be text. Numbers, phrases and nested lists are explicit errors,
+not implicit string conversions. join([] | /) returns empty text; an empty
+separator concatenates the items without extra bytes.
+
+lines(text) splits at LF or CRLF and returns a one-based list of text values.
+Empty input returns []; blank lines and the empty final line after a trailing
+newline are retained. A standalone CR remains ordinary text. A CR immediately
+before LF is removed with that separator; no other whitespace is trimmed.
+Unicode bytes are preserved. At most 2048 resulting lines are allowed; more
+report a source-line error. join has no 2048-item input limit: it accepts any
+managed text list whose complete result fits the existing managed heap.
+Both operations allocate immutable results and work in Zero OS as well as on
+Linux and Windows. They do not access the filesystem. To process a host file,
+compose lines(readfile(path)); creating a new text file can use
+writefile(newpath | join(items | "\n")). Existing files remain protected by
+writefile's exclusive-create contract.
+
+Arithmetic and comparisons
+Precedence, highest first: calls/indexing/grouping, multiplication, addition
+and subtraction, one comparison, adjacent phrase parts. Parentheses group an
+expression. Function arguments, list items and grouped expressions can span
+lines. Chained comparisons require explicit grouping.
+
++ adds numbers with overflow checking; joins text without adding a space;
+joins text and a number after decimal formatting; or concatenates two lists.
+Thus 3 bananas preserves a numeric phrase part, while 3+bananas produces text
+3bananas. Phrase concatenation with + is not supported.
+- and * require numbers. Negative subtraction and multiplication overflow
+are reported errors. There is no unary minus, division, floating point or
+implicit arithmetic wraparound.
+
+== and != compare numbers or text by content. A number and text are different
+value kinds and compare unequal. Text equality uses its UTF-8 bytes without
+normalization. List and phrase equality are rejected in this version.
+< <= > >= require numbers. Comparisons produce numeric 0 or 1.
+
+Output and controls
+value => show prints a number in decimal, text directly, a list with [ ] and
+' | ' separators, or a phrase with spaces. It adds a newline.
+
+    3 => repeat [
+        Hello => show
+    ]
+
+repeat evaluates its count once. The count must be a number; zero performs no
+iterations. Its internal counter is separate from user bindings.
+
+    count > 10 => when [
+        More than ten => show
+    ] ~ [
+        Ten or less => show
+    ]
+
+when requires a number: zero chooses the optional ~ branch, any nonzero value
+chooses the first branch. A newline can precede ~. Blocks may contain other
+controls. Each ordinary statement ends at a newline or the block's closing ].
+
+Functions
+    double :: value [
+        value * 2 => return
+    ]
+    double(21) => show
+
+    describe :: amount | item [
+        amount item => return
+    ]
+    describe(3 | bananas) => show
+
+Functions are defined at top level before use. A function can call itself;
+recursion is supported. Definitions can have zero parameters. Calls pass
+arguments left to right with | separators and require the exact parameter
+count. return supplies one result. Reaching the end returns numeric zero.
+return outside a function is a compile error.
+
+Parameters and assignments inside a function are local to that call. Reads
+first resolve known local bindings, then globals declared before the function
+was compiled. A local assignment can shadow a global; it does not update that
+global. Callers retain their local values and pending expression values during
+nested calls and collection. There are no closures, nested definitions,
+imports, first-class function values or automatic forward declarations.
+
+Automatic memory and limits
+Text, lists and phrases use a bounded copying garbage collector. Live values
+in globals, active function frames and the evaluation stack remain reachable.
+Dead heap objects are reclaimed automatically. Each heap semispace is 262144
+bytes (256 KiB); live objects plus the next allocation must fit one semispace.
+Object headers and alignment consume part of that capacity. Exhaustion is an
+explicit error, not unlimited growth or a raw invalid memory access.
+
+Current fixed capacities:
+- Source: 65536 bytes; decoded text segment: 4096 bytes.
+- All text constants: 16384 bytes; generated instructions: 1536.
+- Functions: 64 including the main program; parameters: 16 per function.
+- Bindings: 256 per scope, including hidden loop slots.
+- Expression and block nesting: 32 levels.
+- Evaluation values: 2048; active function calls: 64.
+Further details, including exact runtime layout, are in MEMORY.ztext and ABI.ztext.
+
+Diagnostics and execution boundary
+Compilation errors report the Ezero source line. The native compiler command
+reports these diagnostics and creates output only after compilation succeeds.
+Runtime errors report a source line and exit 65; earlier output can remain. Runtime diagnostic
+output currently uses stdout through Zero's existing host-I/O interface.
+Output I/O failures retain the existing Zero exit 74 behavior.
+
+The frontend, packer and interpreter/runtime are written in original Zero.
+The frontend produces bounded instructions; the packer emits their Zero
+initialization. That initialization and runtime are compiled together by our
+existing Zero compiler into a standalone Linux ELF, Windows PE or Zero OS
+native application. Instructions
+are interpreted by the embedded original runtime; direct native emission for
+each Ezero expression is not implemented. No external runtime library is
+required by the generated executable. Native compiler commands and the
+original Zero build/check tools perform the pipeline in-process. Zero OS includes its own guest loader and
+compiler bundle; its terminal accepts bounded inline source.
+
+Files and volumes
+read(path) and readfile(path) return strict UTF-8 text. save(path | text)
+creates or replaces content; writefile(path | text) exclusively creates a new
+file and preserves an existing destination. Both return written byte counts.
+create(path) creates an empty file or preserves an existing regular file.
+del(path), also spelled rm(path), deletes an existing regular file.
+watch(root) and search(patternpath) return one-based lists of regular filenames.
+search accepts * and ? in its last component; no wildcard means exact match.
+go(root) changes the selected directory/volume; disks() returns available
+volume roots. create, del and go return 1 on success; errors include the source
+line. fileexists(path) is 1 for a readable regular file and 0 otherwise.
+
+  create(notes) => ready
+  save(notes | Three bananas) => bytes
+  read(notes) => show
+  search("note*") => each name [ name => show ]
+
+These operations call native platform adapters or the Zero OS kernel service.
+These are raw-content operations; they do not implicitly encode or decode
+ZTEXT001. The separate original zero-text command manages that checked format.
+Native files allow up to 65536 UTF-8 bytes; the current writable ZeroFS guest
+profile has flat names up to 31 ASCII bytes and files up to 400 printable ASCII
+bytes. Unavailable operations and unsupported content report errors. save is
+explicit replacement, not an atomic transaction. See HOST.ztext for guarantees,
+listing limits, glob behavior and precise platform differences.
+
+arguments() returns native user arguments as a one-based list; it is not
+available in Zero OS. host() returns 1 for Linux, 2 for Windows, 0 for Zero OS.
+File APIs need no blanket native-host guard. Builtin names are reserved words;
+use optional literal quotes when one must occur as plain text.

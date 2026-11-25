@@ -1,0 +1,49 @@
+# Original Zero source composer for Zmedia codec and self-checker.
+# PROJECT_DIRECTORY NEW_SOURCE.zero [--check]
+0 => @memory. 0 => @path. 0 => @output. 0 => @rootpath. 0 => @dest.
+0 => @list. 0 => @base. 0 => @i. 0 => @j. 0 => @p. 0 => @n.
+0 => @length. 0 => @size. 0 => @count. 0 => @error. 0 => @mode.
+0 => @option. 0 => @literal. 0 => @status.
+-1 => @handle.
+? (:argcount[] < 2)+(:argcount[] > 3) [ !exit[64]. ]
+:argument[1] -> @rootpath. :argument[2] -> @dest.
+? :argcount[] == 3 [
+ :argument[3] -> @option. "--check" -> @literal. 0 -> @i.
+ ?? @i < 8 [ ? :load8[@option+@i] != :load8[@literal+@i] [ !exit[64]. ] @i+1 -> @i. ]
+ 1 -> @mode.
+]
+:reserve[532480] -> @memory. @memory -> @path. @memory+8192 -> @output.
+?? (:load8[@rootpath+@base] != 0)*(@base < 3800) [ !store8[@path+@base|:load8[@rootpath+@base]]. @base+1 -> @base. ]
+? (@base == 0)+(@base >= 3800) [ !exit[65]. ]
+"/media/" -> @list. 0 -> @i.
+?? :load8[@list+@i] [ !store8[@path+@base|:load8[@list+@i]]. @base+1 -> @base. @i+1 -> @i. ]
+"format-declarations.zero.part|codec-declarations.zero.part|codec-init.zero.part|format-worker.zero.part|codec-main.zero.part|" -> @list.
+? @mode [ "format-declarations.zero.part|check-declarations.zero.part|format-worker.zero.part|check-main.zero.part|" -> @list. ]
+?? (:load8[@list+@p] != 0)*(@error == 0) [
+ @base -> @j.
+ ?? (:load8[@list+@p] != 0)*(:load8[@list+@p] != 124) [ !store8[@path+@j|:load8[@list+@p]]. @j+1 -> @j. @p+1 -> @p. ]
+ @p+1 -> @p. !store8[@path+@j|0].
+ :fileopen[@path|0] -> @handle.
+ ? @handle == -1 [ 66 -> @error. ] ~ [
+  :filesize[@handle] -> @size. ? @size > 524288-@length [ 65 -> @error. ]
+  0 -> @count.
+  ?? (@count < @size)*(@error == 0) [
+   :fileread[@handle|@output+@length+@count|@size-@count] -> @n.
+   ? (@n == 0)+(@n > @size-@count) [ 74 -> @error. ] ~ [ @count+@n -> @count. ]
+  ]
+  ? @error == 0 [ ? :filesize[@handle] != @size [ 74 -> @error. ] ? :fileread[@handle|@memory+4096|1] != 0 [ 74 -> @error. ] ]
+  ? :fileclose[@handle] != 0 [ 74 -> @error. ] -1 -> @handle. @length+@count -> @length.
+ ]
+]
+? @error == 0 [
+ :fileopen[@dest|1] -> @handle. ? @handle == -1 [ 73 -> @error. ] ~ [
+  0 -> @count.
+  ?? (@count < @length)*(@error == 0) [
+   :filewrite[@handle|@output+@count|@length-@count] -> @n.
+   ? (@n == 0)+(@n > @length-@count) [ 74 -> @error. ] ~ [ @count+@n -> @count. ]
+  ]
+  ? :filesync[@handle] != 0 [ 74 -> @error. ]
+  ? :fileclose[@handle] != 0 [ 74 -> @error. ]
+ ]
+]
+!exit[@error].

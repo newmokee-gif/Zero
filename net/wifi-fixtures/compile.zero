@@ -1,0 +1,291 @@
+:reserve[16384] => @memory.
+@memory => @console.
+0 => @c0.
+0 => @c1.
+0 => @c2.
+0 => @c3.
+0 => @c4.
+0 => @c5.
+0 => @i.
+0 => @j.
+0 => @k.
+0 => @pointer.
+0 => @character.
+0 => @message.
+!store64[@console + 2408| @memory + 8192].
+# Original Zero WiFi modal initialization. Discovery rows remain owned by PCI.
+:load64[@console + 2408] -> @c0.
+? @c0 [
+ !store64[@c0 + 16| 7]. !store64[@c0 + 32| 1].
+ !store64[@c0 + 40| 0]. !store64[@c0 + 48| 1].
+ !store64[@c0 + 56| 0]. !store64[@c0 + 64| 0].
+ !store64[@c0 + 72| 1]. !store64[@c0 + 88| 0].
+ !store64[@c0 + 96| :load64[@c0 + 96] + 1].
+ !store64[@c0 + 104| 0]. !store64[@c0 + 112| 0].
+ 0 -> @i. ?? @i < 64 [ !store8[@c0 + 128 + @i| 0]. @i + 1 -> @i. ]
+]
+
+# Event: ASCII, 256 up,257 down, zero poll. All events consumed without echo.
+# Backend requests:1 scan,2 connect; replies carry matching generation.
+:load64[@console + 2408] -> @c0. @character -> @c1. 0 -> @character.
+? @c0 [
+ :load64[@c0 + 16] -> @c2.
+ ? @c2 [
+  ? @c1 == 27 [
+   0 -> @i. ?? @i < 64 [ !store8[@c0 + 128 + @i| 0]. @i + 1 -> @i. ]
+   !store64[@c0 + 56| 0]. !store64[@c0 + 64| 0].
+   !store64[@c0 + 16| 0]. !store64[@c0 + 72| 1].
+   !store64[@c0 + 96| :load64[@c0 + 96] + 1].
+   !store64[@c0 + 104| 0]. !store64[@c0 + 112| 0].
+  ] ~ [
+   ? @c2 == 7 [
+    ? :load64[@c0 + 8] == 0 [
+     !store64[@c0 + 72| 1].
+     ? :load64[@c0] == 0 [ !store64[@c0 + 16| 6]. !store64[@c0 + 88| 2]. ]
+     ~ [
+      !store64[@c0 + 16| 1].
+      ? :load64[@c0] == 1 [ 1 -> @c2. 13 -> @c1. ]
+     ]
+    ]
+   ]
+   ? @c2 == 1 [
+    :load64[@c0 + 32] -> @c3.
+    ? (@c1 == 256) * (@c3 > 1) [ @c3 - 1 -> @c3. !store64[@c0 + 72| 1]. ]
+    ? (@c1 == 257) * (@c3 < :load64[@c0]) * (@c3 < 4) [ @c3 + 1 -> @c3. !store64[@c0 + 72| 1]. ]
+    !store64[@c0 + 32| @c3].
+    ? (@c1 == 13) + (@c1 == 10) [
+     ? (@c3 >= 1) * (@c3 <= :load64[@c0]) * (@c3 <= 4) [
+      !store64[@c0 + 72| 1].
+      ? :load64[@c0 + 256 + (@c3 - 1) * 64 + 24] == 1 [
+       !store64[@c0 + 16| 2]. !store64[@c0 + 40| 0].
+       !store64[@c0 + 88| 0]. !store64[@c0 + 64| 1].
+       !store64[@c0 + 96| :load64[@c0 + 96] + 1].
+      ] ~ [ !store64[@c0 + 16| 6]. !store64[@c0 + 88| 3]. ]
+     ]
+    ]
+   ]
+   ? @c2 == 3 [
+    :load64[@c0 + 48] -> @c3.
+    ? (@c1 == 256) * (@c3 > 1) [ @c3 - 1 -> @c3. !store64[@c0 + 72| 1]. ]
+    ? (@c1 == 257) * (@c3 < :load64[@c0 + 40]) * (@c3 < 8) [ @c3 + 1 -> @c3. !store64[@c0 + 72| 1]. ]
+    !store64[@c0 + 48| @c3].
+    ? (@c1 == 13) + (@c1 == 10) [
+     ? (@c3 >= 1) * (@c3 <= :load64[@c0 + 40]) * (@c3 <= 8) [
+      0 -> @i. ?? @i < 64 [ !store8[@c0 + 128 + @i| 0]. @i + 1 -> @i. ]
+      !store64[@c0 + 56| 0]. !store64[@c0 + 88| 0]. !store64[@c0 + 72| 1].
+      ? :load64[@c0 + 512 + (@c3 - 1) * 64 + 40] == 0 [
+       !store64[@c0 + 16| 5]. !store64[@c0 + 64| 2].
+       !store64[@c0 + 96| :load64[@c0 + 96] + 1].
+      ] ~ [ !store64[@c0 + 16| 4]. ]
+     ]
+    ]
+   ]
+   ? @c2 == 4 [
+    :load64[@c0 + 56] -> @c3.
+    ? (@c1 >= 32) * (@c1 <= 126) * (@c3 < 63) [
+     !store8[@c0 + 128 + @c3| @c1]. @c3 + 1 -> @c3.
+     !store8[@c0 + 128 + @c3| 0]. !store64[@c0 + 56| @c3].
+     !store64[@c0 + 88| 0]. !store64[@c0 + 72| 1].
+    ]
+    ? (@c1 == 8) + (@c1 == 127) [
+     ? @c3 [ @c3 - 1 -> @c3. !store8[@c0 + 128 + @c3| 0]. !store64[@c0 + 56| @c3]. ]
+     !store64[@c0 + 88| 0]. !store64[@c0 + 72| 1].
+    ]
+    ? (@c1 == 13) + (@c1 == 10) [
+     !store64[@c0 + 72| 1].
+     ? (@c3 >= 8) * (@c3 <= 63) [
+      !store64[@c0 + 16| 5]. !store64[@c0 + 64| 2].
+      !store64[@c0 + 88| 0]. !store64[@c0 + 96| :load64[@c0 + 96] + 1].
+     ] ~ [ !store64[@c0 + 88| 8]. ]
+    ]
+   ]
+   ? (@c2 == 2) + (@c2 == 5) [
+    ? (:load64[@c0 + 96] != 0) * (:load64[@c0 + 104] == :load64[@c0 + 96]) [
+     :load64[@c0 + 112] -> @c3.
+     !store64[@c0 + 64| 0]. !store64[@c0 + 72| 1].
+     ? @c2 == 2 [
+      ? (@c3 == 1) * (:load64[@c0 + 40] > 0) * (:load64[@c0 + 40] <= 8) [
+       !store64[@c0 + 48| 1]. !store64[@c0 + 16| 3].
+      ] ~ [
+       !store64[@c0 + 16| 6]. !store64[@c0 + 88| 6].
+       ? (@c3 == 1) * (:load64[@c0 + 40] == 0) [ !store64[@c0 + 88| 4]. ]
+      ]
+     ] ~ [
+      0 -> @i. ?? @i < 64 [ !store8[@c0 + 128 + @i| 0]. @i + 1 -> @i. ]
+      !store64[@c0 + 56| 0]. !store64[@c0 + 16| 6]. !store64[@c0 + 88| 7].
+      ? (@c3 == 1) + (@c3 == 5) [ !store64[@c0 + 88| @c3]. ]
+     ]
+    ]
+   ]
+  ]
+ ]
+]
+
+# Original Zero bounded ASCII renderer:45 columns x12 rows, LF, final NUL.
+# All secret bytes are ignored; the password field derives only its length.
+:load64[@console + 2408] -> @c0.
+? @c0 [
+ :load64[@c0 + 16] -> @c2.
+ 0 -> @i.
+ ?? @i < 12 [
+  @c0 + 4096 + @i * 46 -> @c5.
+  0 -> @j. ?? @j < 45 [ !store8[@c5 + @j| 32]. @j + 1 -> @j. ]
+  !store8[@c5| 124]. !store8[@c5 + 44| 124]. !store8[@c5 + 45| 10].
+  ? (@i == 0) + (@i == 11) [
+   !store8[@c5| 43]. !store8[@c5 + 44| 43].
+   1 -> @j. ?? @j < 44 [ !store8[@c5 + @j| 45]. @j + 1 -> @j. ]
+  ] ~ [
+   @c5 + 2 -> @c5. "" -> @c3.
+   ? @i == 1 [
+    "ZERO WIFI / STATUS" -> @c3.
+    ? @c2 == 1 [ "ZERO WIFI / SELECT ADAPTER" -> @c3. ]
+    ? @c2 == 2 [ "ZERO WIFI / SCANNING" -> @c3. ]
+    ? @c2 == 3 [ "ZERO WIFI / SELECT NETWORK" -> @c3. ]
+    ? @c2 == 4 [ "ZERO WIFI / PASSWORD" -> @c3. ]
+    ? @c2 == 5 [ "ZERO WIFI / CONNECTING" -> @c3. ]
+    ? @c2 == 7 [ "ZERO WIFI / AUTOMATIC DETECTION" -> @c3. ]
+   ]
+   ? @i == 2 [
+    "Wireless connection setup" -> @c3.
+    ? :load64[@c0 + 24] [ "SIMULATION / NO RADIO / NO PACKETS" -> @c3. ]
+   ]
+   ? @i == 10 [ "Esc close" -> @c3. ]
+   ? @c2 == 7 [
+    ? @i == 4 [ "Looking for wireless adapters..." -> @c3. ]
+    ? @i == 6 [ "Checking your computer's hardware." -> @c3. ]
+   ]
+   ? @c2 == 1 [
+    ? @i == 3 [ "Choose a wireless adapter:" -> @c3. ]
+    ? (@i >= 4) * (@i <= 7) [
+     ? @i - 3 <= :load64[@c0] [ "  1 PCI 0000:0000  unsupported" -> @c3. ]
+    ]
+    ? @i == 9 [ "Up/Down choose   Enter select" -> @c3. ]
+   ]
+   ? @c2 == 2 [
+    ? @i == 4 [ "Looking for nearby networks..." -> @c3. ]
+    ? @i == 6 [ "Waiting for your wireless adapter." -> @c3. ]
+    ? @i == 10 [ "Esc cancel" -> @c3. ]
+   ]
+   ? @c2 == 3 [
+    ? @i == 3 [ "Choose a network:" -> @c3. ]
+    ? @i == 9 [ "Up/Down choose   Enter select" -> @c3. ]
+   ]
+   ? @c2 == 4 [
+    ? @i == 3 [ "Network:" -> @c3. ]
+    ? @i == 5 [ "Password: " -> @c3. ]
+    ? @i == 7 [ "Characters: 00 / 63" -> @c3. ]
+    ? @i == 8 [
+     "Use 8-63 letters, numbers or symbols." -> @c3.
+     ? :load64[@c0 + 88] == 8 [ "Too short: enter at least 8 characters." -> @c3. ]
+    ]
+    ? @i == 9 [ "Enter connect   Backspace edit" -> @c3. ]
+    ? @i == 10 [ "Esc cancels and erases the password" -> @c3. ]
+   ]
+   ? @c2 == 5 [
+    ? @i == 4 [ "Connecting to the selected network..." -> @c3. ]
+    ? @i == 6 [ "Waiting for the network to respond." -> @c3. ]
+    ? @i == 8 [ "The password is hidden." -> @c3. ]
+    ? @i == 10 [ "Esc cancels and erases the password" -> @c3. ]
+   ]
+   ? @c2 == 6 [
+    :load64[@c0 + 88] -> @c4.
+    ? @c4 == 1 [
+     ? @i == 4 [ "Connected to the selected network." -> @c3. ]
+     ? @i == 6 [ "Internet access has not been checked." -> @c3. ]
+     ? :load64[@c0 + 24] [
+      ? @i == 4 [ "SIMULATED connection accepted." -> @c3. ]
+      ? @i == 6 [ "No radio used. No network packets sent." -> @c3. ]
+     ]
+    ]
+    ? @c4 == 2 [
+     ? @i == 4 [ "No PCI wireless adapter detected." -> @c3. ]
+     ? @i == 6 [ "USB/SDIO adapters are not supported yet." -> @c3. ]
+     ? @i == 8 [ "Host WiFi sharing appears as wired." -> @c3. ]
+    ]
+    ? @c4 == 3 [
+     ? @i == 4 [ "Wireless adapter detected." -> @c3. ]
+     ? @i == 6 [ "No driver for this wireless adapter." -> @c3. ]
+     ? @i == 8 [ "Scanning and connection are unavailable." -> @c3. ]
+    ]
+    ? @c4 == 4 [ ? @i == 4 [ "No nearby networks were found." -> @c3. ] ]
+    ? @c4 == 5 [
+     ? @i == 4 [ "Authentication was rejected." -> @c3. ]
+     ? @i == 6 [ "Password erased. Reopen wifi to retry." -> @c3. ]
+    ]
+    ? @c4 == 6 [ ? @i == 4 [ "Could not search for nearby networks." -> @c3. ] ]
+    ? @c4 == 7 [
+     ? @i == 4 [ "The connection failed." -> @c3. ]
+     ? @i == 6 [ "Password erased. Reopen wifi to retry." -> @c3. ]
+    ]
+   ]
+   0 -> @j.
+   ?? (@j < 41) * (:load8[@c3 + @j] != 0) [ !store8[@c5 + @j| :load8[@c3 + @j]]. @j + 1 -> @j. ]
+   ? (@c2 == 1) * (@i >= 4) * (@i <= 7) [
+    @i - 4 -> @c4.
+    ? @c4 < :load64[@c0] [
+     ? @c4 + 1 == :load64[@c0 + 32] [ !store8[@c5| 62]. ]
+     !store8[@c5 + 2| 49 + @c4].
+     :load64[@c0 + 256 + @c4 * 64 + 8] -> @c3. "0123456789abcdef" -> @pointer.
+     0 -> @k. ?? @k < 4 [
+      !store8[@c5 + 8 + @k| :load8[@pointer + :bitand[:shr[@c3| 12 - @k * 4]| 15]]].
+      !store8[@c5 + 13 + @k| :load8[@pointer + :bitand[:shr[@c3| 28 - @k * 4]| 15]]].
+      @k + 1 -> @k.
+     ]
+     ? :load64[@c0 + 256 + @c4 * 64 + 24] == 1 [
+      "ready       " -> @pointer. 0 -> @j.
+      ?? @j < 12 [ !store8[@c5 + 18 + @j| :load8[@pointer + @j]]. @j + 1 -> @j. ]
+     ]
+    ]
+   ]
+   ? (@c2 == 3) * (@i >= 4) * (@i <= 7) [
+    @i - 4 -> @c4.
+    ? :load64[@c0 + 48] > 4 [ @c4 + :load64[@c0 + 48] - 4 -> @c4. ]
+    ? (@c4 < :load64[@c0 + 40]) * (@c4 < 8) [
+     ? @c4 + 1 == :load64[@c0 + 48] [ !store8[@c5| 62]. ]
+     !store8[@c5 + 2| 49 + @c4]. 0 -> @j.
+     ?? (@j < 24) * (:load8[@c0 + 512 + @c4 * 64 + @j] != 0) [
+      :load8[@c0 + 512 + @c4 * 64 + @j] -> @k.
+      ? (@k < 32) + (@k > 126) [ 63 -> @k. ]
+      !store8[@c5 + 4 + @j| @k]. @j + 1 -> @j.
+     ]
+     "WPA2" -> @pointer. ? :load64[@c0 + 512 + @c4 * 64 + 40] == 0 [ "OPEN" -> @pointer. ]
+     0 -> @j. ?? @j < 4 [ !store8[@c5 + 30 + @j| :load8[@pointer + @j]]. @j + 1 -> @j. ]
+    ]
+   ]
+   ? @c2 == 4 [
+    ? @i == 3 [
+     :load64[@c0 + 48] -> @c4.
+     ? (@c4 >= 1) * (@c4 <= 8) [
+      0 -> @j. ?? (@j < 32) * (:load8[@c0 + 512 + (@c4 - 1) * 64 + @j] != 0) [
+       :load8[@c0 + 512 + (@c4 - 1) * 64 + @j] -> @k.
+       ? (@k < 32) + (@k > 126) [ 63 -> @k. ]
+       !store8[@c5 + 9 + @j| @k]. @j + 1 -> @j.
+      ]
+     ]
+    ]
+    ? @i == 5 [
+     0 -> @j. ?? (@j < :load64[@c0 + 56]) * (@j < 30) [ !store8[@c5 + 10 + @j| 42]. @j + 1 -> @j. ]
+    ]
+    ? @i == 7 [
+     :load64[@c0 + 56] -> @j. 0 -> @k.
+     ?? @j >= 10 [ @j - 10 -> @j. @k + 1 -> @k. ]
+     !store8[@c5 + 12| 48 + @k]. !store8[@c5 + 13| 48 + @j].
+    ]
+   ]
+  ]
+  @i + 1 -> @i.
+ ]
+ !store8[@c0 + 4096 + 552| 0]. @c0 + 4096 -> @message.
+ !store64[@c0 + 72| 0].
+]
+
+# Close/cancel invalidates an outstanding reply and erases the whole secret.
+:load64[@console + 2408] -> @c0.
+? @c0 [
+ 0 -> @i. ?? @i < 64 [ !store8[@c0 + 128 + @i| 0]. @i + 1 -> @i. ]
+ !store64[@c0 + 56| 0]. !store64[@c0 + 64| 0].
+ !store64[@c0 + 16| 0]. !store64[@c0 + 72| 1].
+ !store64[@c0 + 96| :load64[@c0 + 96] + 1].
+ !store64[@c0 + 104| 0]. !store64[@c0 + 112| 0].
+]
+0 -> @character.

@@ -1,0 +1,35 @@
+ZTEXT0010000081b8a1b45d50000000
+Original Zero Ezero lines/join extension, 2026-11-17
+
+All listed checks passed on the frozen 0.10 own Zero compiler seed, SHA256
+911f6d67361300755c13bbf5f3d231d54ceae5736f1ec5e60dde5d6e4095ed3a.
+This isolates the language changes while the shared compiler is extended
+separately. Final integrated OS/packaged-tool checks belong to the root release.
+
+127 native Linux behavior checks: 85 existing plus 42 text extension cases.
+42 actual native guest app64 pipeline/behavior checks; frontend, packer,
+Zero compilation and resulting program all execute as native ZEROAPP1 code.
+13 Windows native PE program cases executed under Wine, not native Windows.
+528 frontend capacity/structure/malformed-input checks.
+12 malformed-package execution checks (unknown opcode, reserved operands,
+stack underflow, value types and line-result bounds).
+5 real-file composition checks: UTF-8 CRLF normalization into a new file,
+existing destination preservation, 65536-byte text, line limit and GC roots.
+The shared native app64 adapter's 13 existing checks passed as well.
+
+Production sources are listed in sources.ztext. Frontend47865 bytes;
+runtime36997 bytes; 64 runtime variables including prefix. Guest frontend
+app32 is105720 bytes and app64 is71812, both below the131072-byte bundle slot.
+No kernel, bootloader, compiler seed or release package was edited here.
+
+lines(text): LF/CRLF split; bare CR preserved; empty input=>[]; blank/trailing
+lines retained; one-based result; maximum2048 result items.
+join(list|separator): strict text items and separator, empty list=>empty text;
+no2048-item input bound beyond existing managed-heap capacity.
+New keywords lines/join are reserved and need optional quotes as literal words.
+Both operations are host-independent; host file APIs retain their old limits.
+
+Root owns the four-mode QEMU full-OS validation. The separate text VM fixture
+was not launched to avoid duplicate four-mode runs. This historical component
+report does not claim a full-OS VM execution. The old external orchestration
+files are not part of the current product source.

@@ -1,0 +1,2 @@
+join([A | B | C] | 🌍) => show
+join([A | B] | "\n") => show

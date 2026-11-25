@@ -1,0 +1,18 @@
+ZTEXT001000003d187f040170000000
+Ezero frontend source status
+
+Canonical original Zero source: ezero/compiler.zero, composed in order from
+head, lexer, parser, expression and finish.zero.part. The compiled frontend
+validates UTF-8, emits typed phrases, checked expressions, one-based list
+operations, control flow, functions and source-line diagnostics.
+
+The file extension adds create/del/watch/search/save/go/disks, read/rm aliases
+and bare Zero drive paths such as A:|note. The current source is 49133 bytes.
+Native file validation includes successful compilation of bare paths, aliases,
+normal list separators, and rejection of wrong builtin arities.
+See ../tests/files-verification.ztext for completed current results.
+
+Historical pre-extension validation covered 522 structural/capacity/malformed
+inputs and the integrated behavioral suite. Those historical results do not
+certify subsequent source changes. Product checks now use the original Zero
+verifier in tools/check.zero and its checks/ fixtures.

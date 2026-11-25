@@ -1,0 +1,11 @@
+# Original Zero WiFi modal initialization. Discovery rows remain owned by PCI.
+:load64[@console + 2408] -> @c0.
+? @c0 [
+ !store64[@c0 + 16| 7]. !store64[@c0 + 32| 1].
+ !store64[@c0 + 40| 0]. !store64[@c0 + 48| 1].
+ !store64[@c0 + 56| 0]. !store64[@c0 + 64| 0].
+ !store64[@c0 + 72| 1]. !store64[@c0 + 88| 0].
+ !store64[@c0 + 96| :load64[@c0 + 96] + 1].
+ !store64[@c0 + 104| 0]. !store64[@c0 + 112| 0].
+ 0 -> @i. ?? @i < 64 [ !store8[@c0 + 128 + @i| 0]. @i + 1 -> @i. ]
+]

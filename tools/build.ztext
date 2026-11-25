@@ -1,0 +1,88 @@
+ZTEXT00100001579af3d75550000000
+ZERO NATIVE PROJECT BUILDER
+
+tools/build.zero is the complete original Zero implementation. The native
+zero-build or zero-build.exe program does not launch a shell, another process,
+an external compiler, assembler, linker or language runtime. It uses the own
+Zero compiler application and original image/ISO generators in process.
+
+Usage:
+  zero-build PROJECT_DIRECTORY NEW_OUTPUT_DIRECTORY [KERNEL_SOURCE]
+
+The project supplies bootstrap/zero64.zapp, its own position-independent x64
+compiler seed. The builder validates its ZEROAPP1 header and gives each call
+a separate bounded stack, input and output. It compiles compiler.zero twice
+to app64 and requires byte-for-byte equality of those two generations before
+using that compiler for the system. Generated application mappings change
+from RW to RX before execution. No RWX allocation is requested.
+
+The optional third argument names an already composed kernel source. Without
+it, PROJECT_DIRECTORY/kernel.zero is used. Kernel source may contain up to
+524288 bytes: original Zero code compacts whitespace/comments outside quoted
+strings, preserving separators and every quoted byte, then enforces the own
+compiler's 524288-byte input limit. This is source composition, not translation
+to another programming language. Kernel binary slot bounds remain explicit.
+
+The complete build produces72artifacts in76stages: the two native compiler targets, BIOS, IA32/AMD64
+UEFI loaders, the folder loader, both kernels, the six guest compiler apps,
+the compiler bundle, and a real BIOS/UEFI optical zero.iso. It also builds
+native Linux/Windows variants of the build, composition, checking, compiler
+CLI, installer, updater, SHA256, text-container, picture and archive tools,
+plus Zero Studio and the own web-document reader. The0.14media addition builds
+Linux/Windows editions of zero-media, zero-flash, zero-drives, zero-disk and
+zero-media-check, the disk BIOS stages, both UEFI flash writers, both UEFI
+media menus, and the media FAT generator. The0.15preview adds native Linux and
+Windows zero-web, zero-web-compose and zero-web-check. This new local browser
+engine is separate from the existing guest HTTP reader; the OS image itself
+has not acquired full CSS/JavaScript or HTTPS support. Source files are never
+overwritten. See browser/engine/README.ztext and VERIFICATION.ztext.
+
+The builder emits the components and tools for the custom disk format. To
+produce a distributable .zmedia after the build, use its own zero-disk with
+the build directory and its disk-bootstrap.bin/disk-bios.bin paths, then
+zero-media make DISK_PAYLOAD NEW.zmedia. See media/README.ztext. The flash
+program validates ZMEDIA01 and writes its whole-disk payload; this container
+is distinct from the compatibility zero.iso optical image.
+App/compiler output limits, ELF/PE targets and firmware constraints are the
+same as the normal Zero compiler. The ISO embeds the original image builders'
+FAT16 payload. Padded slots and that intermediate filesystem image exist only
+in owned memory; no .img or other intermediate disk image is written.
+
+Current layout: kernel64 slot 475136 bytes, kernel32 slot 507904 bytes; together
+they remain 983040 bytes. The 1 MiB bundle contains eight application records:
+six original compiler/frontend/packer images and two HTML reader images.
+Original app offsets are unchanged; each packer now has a 16384-byte slot.
+The remaining 143360 bytes of each former packer slot hold the matching reader
+at offsets339968 and819200. Compiler/frontend slots remain159744 bytes.
+The runtime prefix/body slots remain 4096/65536 bytes. The final ISO is 18890752
+bytes. The original builders validate their own generated container inputs.
+
+The output directory must not exist. Each completed artifact is created
+exclusively, fully written and filesync'd. A failing current write removes
+only its own partial artifact. Earlier completed artifacts remain in the new
+directory for inspection; a nonzero exit means the directory is incomplete.
+Existing directories, files, source and user data disks are never replaced.
+File flush does not establish directory-metadata power-loss durability.
+
+Build the builder from included source with our packaged native compiler CLI:
+  zero tools/build.zero zero-build
+On Windows use zero.exe and an output name ending in .exe. The release can
+also provide the already compiled own builder in bootstrap/.
+The raw compiler named zero in build output accepts source on standard input;
+the packaged zero/ezero command includes the separate companion lib directory.
+
+Native source regeneration and checking are separate own programs:
+  zero-integrate PROJECT_DIRECTORY NEW_KERNEL.zero
+  zero-integrate PROJECT_DIRECTORY NEW_FRONTEND.zero --ezero
+  zero-integrate PROJECT_DIRECTORY NEW_PICTURE.zero --picture
+  zero-integrate PROJECT_DIRECTORY NEW_PICTURE_CHECK.zero --picture-check
+  zero-integrate PROJECT_DIRECTORY NEW_READER.zero --browser
+  zero-integrate PROJECT_DIRECTORY NEW_READER_CHECK.zero --browser-check
+  zero-check PROJECT_DIRECTORY NEW_TEST_DIRECTORY
+See tools/integrate.ztext and checks/README.ztext for their exact contracts.
+
+Memory use is a 64 MiB native allocation plus the native process stack. Inputs
+must come from a trusted original project: executing a compiler seed and
+compiling arbitrary unsafe Zero source is not a sandbox. Do not edit inputs
+concurrently during a build. Bounded reads detect size changes and short I/O;
+they do not provide an atomic snapshot of the entire project directory.

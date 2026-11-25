@@ -1,0 +1,2 @@
+ZTEXT001000001bdb09f43190000000
+All four VMs stopped and hashes remained unchanged. The external PS/2 helper lacked a tilde key mapping, so the guarded Ezero branch source was typed without its tilde. Echo verification failed before execution of that command. Earlier baseline, networking, native compiler and host-unavailable checks passed. Product code was not modified; the helper now maps tilde to Shift+grave_accent. Final evidence is in the parent directory after rerun.

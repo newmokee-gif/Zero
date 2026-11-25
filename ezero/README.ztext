@@ -1,0 +1,93 @@
+ZTEXT0010000104b125f2bd00000000
+Ezero - an easy language built on Zero
+
+Documentation uses the original ZTEXT001 container with a length and checksum.
+Read this document with: zero-text read ezero/README.ztext
+
+Zero is the system language. Ezero adds automatically managed values, text
+without required quotes, typed phrases, lists, functions and simple control
+actions. Its frontend, package writer and runtime are original Zero code,
+built by the self-hosted Zero compiler. No external language engine, compiler
+backend or runtime library is used.
+
+Native compiler commands
+The native toolkit supplies zero/ezero on Linux and zero.exe/ezero.exe on
+Windows. Place the command and its lib directory together, then compile:
+
+    ezero examples/hello.ezero hello
+
+Run the resulting hello executable normally on its target system. An existing
+output is preserved; choose a new output filename for each compilation. The
+commands perform the complete compilation pipeline in-process. See
+../tools/compiler-cli.ztext for targets and ../tools/build.ztext for the original
+Zero source-build command. Examples below use Ezero's own syntax.
+
+A first program
+    Mira => name
+    Hello name => show
+
+Mira is unquoted text. name becomes a binding and later reads its stored value.
+Hello name is a phrase that prints Hello Mira.
+
+Numbers remain numbers inside phrases
+    3 bananas => purchase
+    purchase => show
+    purchase[1] + 2 => show
+    purchase[2] => show
+
+This prints 3 bananas, 5, and bananas. The first part remains the number 3.
+Indices start at 1; zero and indices beyond size are errors. UTF-8 text is
+supported without imposing a language on the system interface.
+
+Two languages, the same result
+Ezero:
+    3 => repeat [ Hello => show ]
+
+Zero:
+    0 => @count.
+    0 => @position.
+    "Hello\n" => @message.
+    ?? @count < 3 [
+        0 -> @position.
+        ?? :load8[@message + @position] != 0 [
+            !put[:load8[@message + @position]].
+            @position + 1 -> @position.
+        ]
+        @count + 1 -> @count.
+    ]
+
+Both print Hello three times. Ezero manages traversal, formatting and storage.
+See LANGUAGE.ztext and examples/README.ztext for complete examples.
+
+Files and volumes
+read/readfile, save, writefile, create, del/rm, watch, search, go, disks and
+fileexists use the original Zero native adapters or Zero OS kernel service.
+watch/search/disks return ordinary one-based lists. save replaces content;
+writefile exclusively creates a new file. These APIs use raw file contents;
+they do not implicitly encode the ZTEXT001 document format. HOST.ztext states the exact native
+and guest limits, error behavior and preservation guarantees. arguments() is
+native-only; host() distinguishes Linux, Windows and Zero OS.
+
+lines(text) splits LF/CRLF text; join(list | separator) joins text items.
+They compose with file reads and writes, and run on every supported target.
+
+Implementation and current scope
+The frontend produces bounded instructions and data. pack.zero emits their
+initialization as Zero source. The original Zero runtime and initialization
+are compiled into a standalone Linux ELF, Windows PE or Zero OS application.
+The executable interprets its embedded instruction package; Ezero does not yet
+emit native instructions for every expression. It needs no separately installed
+language runtime. The Zero OS compiler bundle contains native 32-bit and 64-bit
+applications and supports bounded inline source. Guest applications share
+kernel memory; this is not protected process isolation.
+
+Immutable text, lists and phrases use two 262144-byte copying heap semispaces.
+Live objects plus the next allocation must fit one space. MEMORY.ztext documents
+frames, stacks, garbage collection and limits. Exhaustion is a reported error.
+Ezero currently has no modules, closures, classes, exceptions, threads,
+floating-point numbers, signed numbers, division or window/network APIs.
+
+Own-language checks are documented in tests/README.ztext. Completed verification
+reports state their actual scope; a passing finite suite does not prove the
+absence of every defect. Existing Zero and Zero OS remain the foundation;
+Ezero does not replace or rename their language or compiler.

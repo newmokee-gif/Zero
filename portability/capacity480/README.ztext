@@ -1,0 +1,73 @@
+ZTEXT00100000e40eba684020000000
+Current original Zero workflow (0.12)
+
+Use the native tools on Linux or their .exe versions on Windows:
+  zero-integrate PROJECT_DIRECTORY NEW_KERNEL.zero
+  zero-build PROJECT_DIRECTORY NEW_OUTPUT_DIRECTORY NEW_KERNEL.zero
+  zero-check PROJECT_DIRECTORY NEW_TEST_DIRECTORY
+All destination paths must be new. The integrator preserves authored sources;
+the builder checks its compiler fixed point and builds the original targets;
+the verifier checks language behavior and host file operations in process.
+See tools/integrate.ztext, tools/build.ztext and checks/README.ztext.
+Read these documents with zero-text read FILE.
+
+The notes below preserve earlier implementation and test history. Any old
+shell/Python runner names, generated artifacts, JSON reports or commands are
+historical references: they were removed from the active project and are not
+current runnable instructions or current-release validation. Native host
+checks do not replace BIOS/UEFI, persistence or physical-hardware testing.
+
+Historical implementation notes
+
+Original Zero compiler480KiB output-capacity candidate
+
+Apply to the current448KiB source before composing the Windows, guest and
+biosmove patches:
+python3 portability/capacity480/apply.py INPUT.zero OUTPUT.zero
+
+The output limit grows458752 ->491520. The same32768-byte delta moves the
+following compiler-owned workspaces; source/token buffers and all generated
+program prologues are unchanged. No guest allocator size or native encoding
+changes here. The allocation remains inside the existing4MiB hosted arena.
+
+Reservation:3965536 ->3998304 bytes
+source:0 (unchanged)
+tokens:262160 (unchanged)
+output:3407904 (unchanged), capacity491520
+stack:3899440 (32768 bytes)
+symbols:3932224 (2048 bytes)
+templates:3934272 (6144 bytes)
+decoded:3940416 (8192 bytes)
+scratch:3948608 (4096 bytes)
+metadata:3953304 (currently56 or57 records of24 bytes after composition)
+
+The exact output end is3899424, leaving the existing16-byte gap before the
+parser stack. The new reservation3998304 remains below4194304. The REAL
+output limit remains16384; current source/token/expression limits are unchanged.
+The larger compiler output ceiling alone does not enlarge the OS boot slots;
+BIOS/UEFI/load-image integration is owned and tested separately.
+
+Prepared unmerged candidate:
+build/capacity480/compiler.zero,57573 bytes,SHA256:
+96820394d1e96088dc08eb38781b155c30ca409b0782425c07761d7c3fe401c3
+build/capacity480/stage2,63027 bytes,SHA256:
+b2c158b3796a290ff3fe7800d89a197ac128eac5bb31d539f853a8eed78ffd39
+Own generations1/2 are byte-identical. These are capacity-only candidate
+hashes, not the final Windows/guest/biosmove merged compiler hashes.
+No live compiler or bootstrap seed is published by this patch task.
+
+Reproduce bounded checks:
+python3 portability/capacity480/check.py CANDIDATE PREVIOUS_448_COMPILER
+
+Thirty boundary checks cover exact491520 acceptance/exact491521 rejection
+for bothELF and bothraw targets, finalEFI header/padding limits and previous
+limit refusal. Six parity checks require byte-identical old-program outputs
+across hosted, raw, EFI and real targets. Compact Zero source spelling keeps
+the exact-boundary generators below the unchanged262144-byte source ceiling.
+No generated boundary executable is run; no VM or user disk is touched.
+Evidence:verification/compiler-capacity480/results.ztext.
+
+After root composes the final compiler, regenerate compiler-head.zero.part
+from its actual header; update current capacity/layout text in LANGUAGE.ztext,
+SELFHOST.ztext and selfhost/CORE.ztext. Keep earlier448KiB reports marked as
+historical evidence, and record the final merged source/executable hashes.

@@ -1,0 +1,136 @@
+# Original Zero host interoperability. All mutable scratch is outside GC heaps.
+# Paths1311360/1315456; external text1323008; metadata1311040; arg lengths1392640.
+? (@ez_error == 0) * (@ez_op >= 27) * (@ez_op <= 30) [
+ ? :host[] == 0 [ 13 -> @ez_error. ]
+ ? (@ez_error == 0) * (@ez_op <= 29) [
+  1 -> @ez_n. ? @ez_op == 28 [ 2 -> @ez_n. ]
+  :load64[@ez_stack + (@ez_sp - @ez_n) * 16] -> @ez_ta.
+  :load64[@ez_stack + (@ez_sp - @ez_n) * 16 + 8] -> @ez_va.
+  ? @ez_ta != 2 [ 14 -> @ez_error. ] ~ [
+   :load64[@ez_va + 8] -> @ez_limit.
+   ? (@ez_limit == 0) + (@ez_limit > 4095) [ 14 -> @ez_error. ]
+   ? @ez_error == 0 [
+    @ez_va + 16 -> @ez_src.
+    # INCLUDE UTF8
+    0 -> @ez_i.
+    ?? (@ez_i < @ez_limit) * (@ez_error == 0) [
+     !store8[@ez_mem + 1311360 + @ez_i | :load8[@ez_src + @ez_i]]. @ez_i + 1 -> @ez_i.
+    ]
+    !store8[@ez_mem + 1311360 + @ez_i | 0].
+    !store64[@ez_mem + 1311096 | @ez_limit].
+   ]
+  ]
+ ]
+ ? (@ez_error == 0) * (@ez_op == 27) [
+  :fileopen[@ez_mem + 1311360 | 0] -> @ez_ret.
+  ? @ez_ret == -1 [ 15 -> @ez_error. ] ~ [
+   :filesize[@ez_ret] -> @ez_n.
+   ? @ez_n == -1 [ 17 -> @ez_error. ] ~ [ ? @ez_n > 65536 [ 16 -> @ez_error. ] ]
+   0 -> @ez_n. 0 -> @ez_tmp.
+   ?? (@ez_tmp == 0) * (@ez_error == 0) [
+    :fileread[@ez_ret | @ez_mem + 1323008 + @ez_n | 65537 - @ez_n] -> @ez_x.
+    ? @ez_x > 65537 - @ez_n [ 17 -> @ez_error. ] ~ [
+     ? @ez_x == 0 [ 1 -> @ez_tmp. ] ~ [
+      @ez_n + @ez_x -> @ez_n. ? @ez_n > 65536 [ 16 -> @ez_error. ]
+     ]
+    ]
+   ]
+   :fileclose[@ez_ret] -> @ez_x.
+   ? (@ez_error == 0) * (@ez_x != 0) [ 17 -> @ez_error. ]
+   ? @ez_error == 0 [
+    !store64[@ez_mem + 1311040 | @ez_n].
+    @ez_mem + 1323008 -> @ez_src. @ez_n -> @ez_limit.
+    # INCLUDE UTF8
+    16 + :shr[@ez_n + 15 | 4] * 16 -> @ez_need.
+   ]
+  ]
+ ]
+ ? (@ez_error == 0) * (@ez_op == 28) [
+  :load64[@ez_stack + (@ez_sp - 1) * 16] -> @ez_tb.
+  :load64[@ez_stack + (@ez_sp - 1) * 16 + 8] -> @ez_vb.
+  ? @ez_tb != 2 [ 22 -> @ez_error. ] ~ [
+   :load64[@ez_vb + 8] -> @ez_limit.
+   ? @ez_limit > 65536 [ 16 -> @ez_error. ] ~ [
+    @ez_vb + 16 -> @ez_src.
+    # INCLUDE UTF8
+   ]
+  ]
+  ? @ez_error == 0 [
+   # Sibling temporary file, exclusive creation, then atomic NOREPLACE publish.
+   # Find the parent prefix; a drive-relative Windows path retains its drive.
+   0 -> @ez_k. 0 -> @ez_i.
+   ? :host[] == 2 [
+    ? (:load64[@ez_mem + 1311096] >= 2) * (:load8[@ez_mem + 1311361] == 58) [ 2 -> @ez_k. ]
+   ]
+   ?? @ez_i < :load64[@ez_mem + 1311096] [
+    :load8[@ez_mem + 1311360 + @ez_i] -> @ez_x.
+    ? (@ez_x == 47) + ((:host[] == 2) * (@ez_x == 92)) [ @ez_i + 1 -> @ez_k. ]
+    @ez_i + 1 -> @ez_i.
+   ]
+   ? @ez_k > 4064 [ 23 -> @ez_error. ] ~ [
+    0 -> @ez_i.
+    ?? @ez_i < @ez_k [
+     !store8[@ez_mem + 1315456 + @ez_i | :load8[@ez_mem + 1311360 + @ez_i]]. @ez_i + 1 -> @ez_i.
+    ]
+    ".ezero-tmp-" -> @ez_src. 0 -> @ez_i.
+    ?? @ez_i < 11 [ !store8[@ez_mem + 1315456 + @ez_k + @ez_i | :load8[@ez_src + @ez_i]]. @ez_i + 1 -> @ez_i. ]
+    ".tmp" -> @ez_src. 0 -> @ez_i.
+    ?? @ez_i < 5 [ !store8[@ez_mem + 1315456 + @ez_k + 27 + @ez_i | :load8[@ez_src + @ez_i]]. @ez_i + 1 -> @ez_i. ]
+    0 -> @ez_tmp. -1 -> @ez_ret.
+    ?? (@ez_tmp < 64) * (@ez_ret == -1) [
+     :load64[@ez_mem + 1311056] + 1 -> @ez_x. !store64[@ez_mem + 1311056 | @ez_x].
+     "0123456789abcdef" -> @ez_src. 0 -> @ez_i.
+     ?? @ez_i < 16 [
+      !store8[@ez_mem + 1315456 + @ez_k + 11 + @ez_i | :load8[@ez_src + :bitand[:shr[@ez_x | 60 - @ez_i * 4] | 15]]].
+      @ez_i + 1 -> @ez_i.
+     ]
+     :fileopen[@ez_mem + 1315456 | 1] -> @ez_ret. @ez_tmp + 1 -> @ez_tmp.
+    ]
+    ? @ez_ret == -1 [ 19 -> @ez_error. ] ~ [
+     0 -> @ez_n.
+     ?? (@ez_n < :load64[@ez_vb + 8]) * (@ez_error == 0) [
+      :filewrite[@ez_ret | @ez_vb + 16 + @ez_n | :load64[@ez_vb + 8] - @ez_n] -> @ez_x.
+      ? (@ez_x == 0) + (@ez_x > :load64[@ez_vb + 8] - @ez_n) [ 17 -> @ez_error. ] ~ [ @ez_n + @ez_x -> @ez_n. ]
+     ]
+     :fileclose[@ez_ret] -> @ez_x.
+     ? (@ez_error == 0) * (@ez_x != 0) [ 17 -> @ez_error. ]
+     ? @ez_error == 0 [
+      :filemove[@ez_mem + 1315456 | @ez_mem + 1311360] -> @ez_x.
+      ? @ez_x != 0 [ 20 -> @ez_error. ]
+     ]
+     ? @ez_error [ :filedelete[@ez_mem + 1315456] -> @ez_x. ]
+     !store64[@ez_mem + 1311048 | @ez_n].
+    ]
+   ]
+  ]
+ ]
+ ? (@ez_error == 0) * (@ez_op == 29) [
+  !store64[@ez_mem + 1311048 | 0].
+  :fileopen[@ez_mem + 1311360 | 0] -> @ez_ret.
+  ? @ez_ret != -1 [
+   !store64[@ez_mem + 1311048 | 1].
+   ? :fileclose[@ez_ret] != 0 [ 17 -> @ez_error. ]
+  ]
+ ]
+ ? (@ez_error == 0) * (@ez_op == 30) [
+  :argcount[] -> @ez_n.
+  ? @ez_n > 63 [ 21 -> @ez_error. ] ~ [
+   !store64[@ez_mem + 1311072 | @ez_n]. !store64[@ez_mem + 1311080 | 0].
+   16 + @ez_n * 16 -> @ez_need. 1 -> @ez_k.
+   ?? (@ez_k <= :load64[@ez_mem + 1311072]) * (@ez_error == 0) [
+    :argument[@ez_k] -> @ez_src. 0 -> @ez_limit.
+    ? @ez_src == 0 [ 21 -> @ez_error. ] ~ [
+     ?? (@ez_limit < 4096) * (:load8[@ez_src + @ez_limit] != 0) [ @ez_limit + 1 -> @ez_limit. ]
+     ? @ez_limit > 4095 [ 21 -> @ez_error. ] ~ [
+      !store64[@ez_mem + 1392640 + (@ez_k - 1) * 8 | @ez_limit].
+      !store64[@ez_mem + 1311080 | :load64[@ez_mem + 1311080] + @ez_limit].
+      ? :load64[@ez_mem + 1311080] > 65536 [ 21 -> @ez_error. ]
+      # INCLUDE UTF8
+      @ez_need + 16 + :shr[@ez_limit + 15 | 4] * 16 -> @ez_need.
+     ]
+    ]
+    @ez_k + 1 -> @ez_k.
+   ]
+  ]
+ ]
+]

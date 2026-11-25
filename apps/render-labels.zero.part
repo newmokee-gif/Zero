@@ -1,0 +1,58 @@
+# Original keyboard applications share only the bounded45x12 frame renderer.
+? :load64[@console+2472] [
+ "" -> @c3.
+ ? @i == 1 [
+  "ZERO / APPLICATIONS" -> @c3.
+  ? :load64[@console+2472] == 2 [ "ZERO / SYSTEM MONITOR" -> @c3. ]
+  ? :load64[@console+2472] == 3 [ "ZERO / STORAGE" -> @c3. ]
+  ? :load64[@console+2472] == 4 [ "ZERO / NETWORK" -> @c3. ]
+ ]
+ ? @i == 2 [ "Live system information" -> @c3. ]
+ ? @i == 10 [ "Esc close   Backspace applications" -> @c3. ]
+ ? :load64[@console+2472] == 1 [
+  ? @i == 3 [ "Choose an application:" -> @c3. ]
+  ? @i == 4 [ "  1 System monitor" -> @c3. ]
+  ? @i == 5 [ "  2 Storage and volume selection" -> @c3. ]
+  ? @i == 6 [ "  3 Wired network status" -> @c3. ]
+  ? @i == 7 [ "  4 WiFi setup" -> @c3. ]
+  ? @i == 9 [ "Up/Down choose   Enter open" -> @c3. ]
+ ]
+ ? :load64[@console+2472] == 2 [
+  ? @i == 3 [ "1 Terminal: always running" -> @c3. ]
+  ? @i == 4 [ "  2 Graphics: running" -> @c3. ? :load64[@console+264] == 2 [ "  2 Graphics: paused" -> @c3. ] ]
+  ? @i == 5 [ "  3 Computation: running" -> @c3. ? :load64[@console+272] == 2 [ "  3 Computation: paused" -> @c3. ] ]
+  ? @i == 7 [ "Network polling continues while paused." -> @c3. ]
+  ? @i == 9 [ "Enter pause/resume computation" -> @c3. ]
+ ]
+ ? :load64[@console+2472] == 3 [
+  ? @i == 3 [ "Select the terminal's volume root:" -> @c3. ]
+  ? (@i >= 4)*(@i <= 7) [
+   @i-3 -> @c4. ? :load64[@console+2480] > 4 [ @c4+:load64[@console+2480]-4 -> @c4. ]
+   ? @c4 <= :load64[@memory+24704] [
+    "  A:| Unknown filesystem" -> @c3.
+    :load8[@memory+24832+(@c4-1)*24+17] -> @k.
+    ? @k == 1 [ "  A:| ext4" -> @c3. ]
+    ? @k == 2 [ "  A:| NTFS" -> @c3. ]
+    ? @k == 3 [ "  A:| Btrfs" -> @c3. ]
+    ? @k == 4 [ "  A:| ZeroFS" -> @c3. ]
+   ]
+  ]
+  ? (@i == 4)*(:load64[@memory+24704] == 0) [ "No writable volumes detected." -> @c3. ]
+  ? @i == 9 [ "Up/Down choose   Enter use root" -> @c3. ]
+ ]
+ ? :load64[@console+2472] == 4 [
+  ? @i == 3 [
+   "Ethernet: detecting" -> @c3. :load64[:load64[@console+2400]+32] -> @k.
+   ? @k == 1 [ "Ethernet: no supported adapter" -> @c3. ]
+   ? @k == 2 [ "Ethernet: cable disconnected" -> @c3. ]
+   ? @k == 3 [ "Ethernet: automatic DHCP" -> @c3. ]
+   ? @k == 4 [ "Ethernet: connected" -> @c3. ]
+   ? @k == 5 [ "Ethernet: retrying after error" -> @c3. ]
+  ]
+  ? @i == 4 [ "IP: " -> @c3. ]
+  ? @i == 5 [ "Mask: " -> @c3. ]
+  ? @i == 6 [ "Gateway: " -> @c3. ]
+  ? @i == 7 [ "DNS: " -> @c3. ]
+  ? @i == 9 [ "Automatic connection   Enter WiFi" -> @c3. ]
+ ]
+]

@@ -1,0 +1,51 @@
+# Original Zero composer for the portable native flash application.
+# PROJECT_DIRECTORY NEW_SOURCE.zero [--drives|--host-open|--host-io-check].
+# Existing files are never replaced.
+0 => @memory. 0 => @path. 0 => @output. 0 => @rootpath. 0 => @dest.
+0 => @list. 0 => @base. 0 => @i. 0 => @j. 0 => @p. 0 => @n.
+0 => @length. 0 => @size. 0 => @count. 0 => @error. -1 => @handle.
+? (:argcount[] != 2) * (:argcount[] != 3) [ !exit[64]. ]
+:argument[1] -> @rootpath. :argument[2] -> @dest.
+:reserve[532480] -> @memory. @memory -> @path. @memory+8192 -> @output.
+?? (:load8[@rootpath+@base] != 0) * (@base < 4000) [ !store8[@path+@base|:load8[@rootpath+@base]]. @base+1 -> @base. ]
+? (@base == 0) + (@base >= 4000) [ !exit[65]. ]
+"/media/" -> @list. 0 -> @i. ?? :load8[@list+@i] [ !store8[@path+@base|:load8[@list+@i]]. @base+1 -> @base. @i+1 -> @i. ]
+"flash-declarations.zero.part|format-declarations.zero.part|host-declarations.zero.part|flash-init.zero.part|format-worker.zero.part|flash-host-begin.zero.part|host-open.zero.part|flash-host-io.zero.part|host-io.zero.part|flash-host-close.zero.part|host-close.zero.part|flash-host-end.zero.part|flash-main.zero.part|" -> @list.
+? :argcount[] == 3 [
+ :argument[3] -> @dest. 0 -> @i.
+ "--drives" -> @rootpath. 1 -> @n.
+ ?? (:load8[@rootpath+@i] != 0) * @n [ ? :load8[@dest+@i] != :load8[@rootpath+@i] [ 0 -> @n. ] ~ [ @i+1 -> @i. ] ]
+ ? @n [ ? :load8[@dest+@i] == 0 [ "host-declarations.zero.part|drives-head.zero.part|host-open.zero.part|drives-between.zero.part|host-close.zero.part|drives-main.zero.part|" -> @list. 1 -> @count. ] ]
+ "--host-open" -> @rootpath. 0 -> @i. 1 -> @n.
+ ?? (:load8[@rootpath+@i] != 0) * @n [ ? :load8[@dest+@i] != :load8[@rootpath+@i] [ 0 -> @n. ] ~ [ @i+1 -> @i. ] ]
+ ? @n [ ? :load8[@dest+@i] == 0 [ "host-open-head.zero.part|host-open-linux.zero.part|host-open-windows.zero.part|host-open-tail.zero.part|" -> @list. 1 -> @count. ] ]
+ "--host-io-check" -> @rootpath. 0 -> @i. 1 -> @n.
+ ?? (:load8[@rootpath+@i] != 0) * @n [ ? :load8[@dest+@i] != :load8[@rootpath+@i] [ 0 -> @n. ] ~ [ @i+1 -> @i. ] ]
+ ? @n [ ? :load8[@dest+@i] == 0 [ "host-declarations.zero.part|host-io-check-head.zero.part|host-io.zero.part|host-io-check-tail.zero.part|host-close.zero.part|host-io-check-end.zero.part|" -> @list. 1 -> @count. ] ]
+ ? @count != 1 [ !exit[64]. ]
+ :argument[2] -> @dest.
+]
+?? (:load8[@list+@p] != 0) * (@error == 0) [
+ @base -> @j.
+ ?? (:load8[@list+@p] != 0) * (:load8[@list+@p] != 124) [ !store8[@path+@j|:load8[@list+@p]]. @j+1 -> @j. @p+1 -> @p. ]
+ @p+1 -> @p. !store8[@path+@j|0].
+ :fileopen[@path|0] -> @handle.
+ ? @handle == -1 [ 66 -> @error. ] ~ [
+  :filesize[@handle] -> @size. ? @size > 524288-@length [ 65 -> @error. ]
+  0 -> @count. ?? (@count < @size) * (@error == 0) [
+   :fileread[@handle|@output+@length+@count|@size-@count] -> @n.
+   ? (@n == 0) + (@n > @size-@count) [ 74 -> @error. ] ~ [ @count+@n -> @count. ]
+  ]
+  ? :fileclose[@handle] != 0 [ 74 -> @error. ] -1 -> @handle. @length+@count -> @length.
+ ]
+]
+? @error == 0 [
+ :fileopen[@dest|1] -> @handle. ? @handle == -1 [ 73 -> @error. ] ~ [
+  0 -> @count. ?? (@count < @length) * (@error == 0) [
+   :filewrite[@handle|@output+@count|@length-@count] -> @n.
+   ? (@n == 0) + (@n > @length-@count) [ 74 -> @error. ] ~ [ @count+@n -> @count. ]
+  ]
+  ? :filesync[@handle] != 0 [ 74 -> @error. ] ? :fileclose[@handle] != 0 [ 74 -> @error. ]
+ ]
+]
+!exit[@error].

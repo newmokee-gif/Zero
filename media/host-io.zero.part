@@ -1,0 +1,49 @@
+# Aligned positioned transfer, restricted to the pinned validated device.
+# io1=read,2=write,3=flush. The caller compares every readback byte itself.
+!store64[@mh+88|0].
+? :load64[@mh+40] == 0 [
+ :load64[@mh+56] -> @mh0. :load64[@mh+16] -> @mh4.
+ ? (@mh0 < 1) + (@mh0 > 3) + (@mh4 == -1) [ !store64[@mh+40|64]. ]
+ ? (:load64[@mh+96] != 1) * (:load64[@mh+96] != 2) [ !store64[@mh+40|69]. ]
+ ? (@mh0 == 2) * (:load64[@mh+112] != 1) [ !store64[@mh+40|73]. ]
+ ? @mh0 < 3 [
+  ? (:load64[@mh+64] == 0) + (:load64[@mh+72] == 0) + (:load64[@mh+72] > 1048576) + (:bitand[:load64[@mh+72]|511] != 0) + (:bitand[:load64[@mh+80]|511] != 0) [ !store64[@mh+40|64]. ]
+  ? :load64[@mh+80] > :load64[@mh+24] [ !store64[@mh+40|65]. ] ~ [
+   ? :load64[@mh+72] > :load64[@mh+24]-:load64[@mh+80] [ !store64[@mh+40|65]. ]
+  ]
+ ]
+ !store64[@mh+48|"Invalid, out-of-bounds or unconfirmed USB transfer.\n"].
+ ? (:load64[@mh+40] == 0) * (:load64[@mh+96] == 1) [
+  ? @mh0 == 3 [
+   :hostsyscall[74|@mh4|0|0|0|0|0] -> @mh1.
+   ? @mh1 != 0 [ !store64[@mh+40|74]. ]
+  ] ~ [
+   17 -> @mh2. ? @mh0 == 2 [ 18 -> @mh2. ]
+   ?? (:load64[@mh+88] < :load64[@mh+72]) * (:load64[@mh+40] == 0) [
+    :load64[@mh+72]-:load64[@mh+88] -> @mh3.
+    :hostsyscall[@mh2|@mh4|:load64[@mh+64]+:load64[@mh+88]|@mh3|:load64[@mh+80]+:load64[@mh+88]|0|0] -> @mh1.
+    ? @mh1 != -4 [
+     ? (@mh1 == 0) + (@mh1 > @mh3) + (:bitand[@mh1|511] != 0) [ !store64[@mh+40|74]. ] ~ [ !store64[@mh+88|:load64[@mh+88]+@mh1]. ]
+    ]
+   ]
+  ]
+  !store64[@mh+48|"USB read, write or cache flush failed. The device may contain an incomplete image.\n"].
+ ]
+ ? (:load64[@mh+40] == 0) * (:load64[@mh+96] == 2) [
+  ? @mh0 == 3 [
+   :hostcall12[:load64[@mh+344]|@mh4|0|0|0|0|0|0|0|0|0|0|0] -> @mh1.
+   ? @mh1 == 0 [ !store64[@mh+40|74]. ]
+  ] ~ [
+   :hostcall12[:load64[@mh+336]|@mh4|:load64[@mh+80]|0|0|0|0|0|0|0|0|0|0] -> @mh1.
+   ? @mh1 == 0 [ !store64[@mh+40|74]. ]
+   320 -> @mh2. ? @mh0 == 2 [ 328 -> @mh2. ]
+   ?? (:load64[@mh+88] < :load64[@mh+72]) * (:load64[@mh+40] == 0) [
+    :load64[@mh+72]-:load64[@mh+88] -> @mh3. !store64[@mh+512|0].
+    :hostcall12[:load64[@mh+@mh2]|@mh4|:load64[@mh+64]+:load64[@mh+88]|@mh3|@mh+512|0|0|0|0|0|0|0|0] -> @mh1.
+    :load32[@mh+512] -> @mh5.
+    ? (@mh1 == 0) + (@mh5 == 0) + (@mh5 > @mh3) + (:bitand[@mh5|511] != 0) [ !store64[@mh+40|74]. ] ~ [ !store64[@mh+88|:load64[@mh+88]+@mh5]. ]
+   ]
+  ]
+  !store64[@mh+48|"USB read, write or cache flush failed. The device may contain an incomplete image.\n"].
+ ]
+]

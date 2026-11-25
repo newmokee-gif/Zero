@@ -1,0 +1,78 @@
+ZTEXT00100001067f476d2470000000
+Current original Zero workflow (0.12)
+
+Use the native tools on Linux or their .exe versions on Windows:
+  zero-integrate PROJECT_DIRECTORY NEW_KERNEL.zero
+  zero-build PROJECT_DIRECTORY NEW_OUTPUT_DIRECTORY NEW_KERNEL.zero
+  zero-check PROJECT_DIRECTORY NEW_TEST_DIRECTORY
+All destination paths must be new. The integrator preserves authored sources;
+the builder checks its compiler fixed point and builds the original targets;
+the verifier checks language behavior and host file operations in process.
+See tools/integrate.ztext, tools/build.ztext and checks/README.ztext.
+Read these documents with zero-text read FILE.
+
+The notes below preserve earlier implementation and test history. Any old
+shell/Python runner names, generated artifacts, JSON reports or commands are
+historical references: they were removed from the active project and are not
+current runnable instructions or current-release validation. Native host
+checks do not replace BIOS/UEFI, persistence or physical-hardware testing.
+
+Historical implementation notes
+
+WINDOWS X64 TARGET: RELEASE 0.9.0
+
+The final merged compiler includes original Windows mode7 (--windows),
+Zero OS app modes8/9 and the real-mode biosmove primitive. The Windows target
+emits native console PE64 files with KERNEL32 binary stdin/stdout and exit,
+an original bounded argc/argv parser, a 4 MiB Zero arena and 16 MiB committed
+stack. Product implementation is original Zero and original emitted x64 code.
+No Linux, CRT, foreign-language runtime, external compiler or assembler is
+required by the Windows distribution.
+
+Final live compiler source SHA256:
+01ee47113ab98da6ea4d84c042e570d4080a7ab69473acc205923bd6ba7839fc
+Final Linux bootstrap/build compiler SHA256:
+7a24c5e3d23bbeb6df6b25a30f99efe26e82aa9f9c835d4aba45000a61d75cb6
+
+Verification host: Debian GNU/Linux 13 x86-64. External Wine 10.0, Debian
+10.0~repack-6, extracted outside the product under /workspace/wine-local.
+Wine server data paths were relocated to that extracted directory and Wine's
+official libz-mingw-w64 dependency supplied for Wine's own UI DLL loading.
+No Wine/package code is included in the Windows distribution.
+No native Microsoft Windows machine run has been performed.
+
+PASS: 25/25 ABI and PE tests, including byte-identical native Windows compiler
+self-compilation under Wine; byte-identical Linux/raw/raw32/EFI/EFI32/real/
+app64/app32 cross-target output; a 512 KiB binary pipe round-trip; EOF/count
+limits/statuses; broken-pipe put exits74; quoted executable paths; explicit
+hardware/BIOSmove/Unix primitive rejection; existing cooperative contexts
+with128 rounds per worker; no writable/executable PE section; KERNEL32 only.
+PASS: 85/85 Ezero behavioral cases using the Windows PE frontend, packer,
+backend and generated executable under Wine. Covers UTF-8 phrases, one-based
+collections, functions, recursion, automatic collection, errors and capacities.
+PASS: 12/12 Windows wrapper/checker cases, including paths with spaces,
+ezero-run, source/output alias rejection, preserving existing output on
+syntax error, complete rebuild.cmd self-reproduction and negative cases for
+the included original Zero binary comparison helper.
+
+Evidence outside build:
+  verification/windows-0.9.0/SUMMARY.ztext
+  verification/windows-0.9.0/manifest.json
+  verification/windows-0.9.0/native-verification/results.json
+  verification/windows-0.9.0/verification/results.json
+  verification/windows-0.9.0/package-check/wrapper-results.json
+
+Clean distributable:
+  build/zero-ezero-windows-x64/
+  build/zero-ezero-windows-x64.zip
+
+Source integration parts are retained for review:
+  x64-windows.zero.part overrides70 and41..45 only in mode7, with no new IDs.
+  finalize-windows.zero.part emits PE64/import/section structures in Zero.
+  apply.py is host-only source integration, not a language implementation.
+  compiler-windows.zero retains the earlier standalone integration candidate;
+  the release builds from the final root compiler.zero, not this candidate.
+
+portability/windows/build.sh packages from merged build/zero/compiler.zero.
+Product wrappers use native Windows .cmd, and rebuild all executables using
+Zero. Python/shell verification scripts only orchestrate tests/packaging.

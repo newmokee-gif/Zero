@@ -1,0 +1,35 @@
+ZTEXT0010000091b7488a8710000000
+FROZEN Zero 0.11 native local updater: 126 meaningful checks PASS.
+52 native Linux lifecycle/SHA checks; 16 baseline native PE checks under Wine;
+9 maximal counter/journal boundary checks; 28 Linux recovery/watch/fault tests;
+21 native PE recovery/watch checks under Wine. No arbitrary repetition.
+
+New: flush payloads and journal before successful publication, inspect a valid
+complete journal prefix, recover a verified snapshot into a new exclusive
+store without changing source, and native foreground local-inbox watch.
+Watch detects releases arriving during sleep, uses native wait, stops on error
+and holds no update lock while sleeping. No startup scheduler is registered.
+Recovery preserves complete selection history/high-water and current/previous
+payloads. It reports omitted partial tail bytes and rejects whole bad records.
+Source lock, original journal, payloads and unrelated files remain untouched.
+
+Source update.zero SHA256 f06dbaafd26f9bec16250f79c570773d0f327f827eae3980dae46be33a685581
+ELF zero-update SHA256 b6c3415f759a01b95d32d2450e6e0d95ad999eb287879e35e1365908a8467a5b
+PE zero-update.exe SHA256 d2bb3a320944777e2631e7a5da279c48714288b428ceab1292494a0b5eb2b8af
+Compiler SHA256 d89762ea95d3591d95e7f9a66e1015d8124bf87f702dac65ce25547f2ec4ed3f
+All four final binaries rebuild byte-for-byte from the final sources.
+The exact files above were used for all five final suites. Tests use frozen
+0.10 compatible ISO fixtures while root rebuilds 0.11; original user disks are
+unchanged. No product code uses Python/shell/CMD/PowerShell at runtime.
+
+Independent source review found no blocker within the documented contract.
+A focused partial-write test found an I/O error masked by a later incomplete
+hash comparison; fixed by comparing digests only after successful copy I/O.
+Linux additionally injects payload/journal fsync failures, native wait failure,
+and a concurrent source-journal change. Full records are never dropped during
+recovery, including a fully valid latest record whose earlier flush failed.
+
+There is no network fetch/TLS/signature, remote update server, boot activation
+or full power-loss guarantee. File fsync/FlushFileBuffers does not synchronize
+parent directories or guarantee rename durability. Windows tests use Wine,
+not native Windows. See README.txt, FORMAT.txt and summary-0.11.json.

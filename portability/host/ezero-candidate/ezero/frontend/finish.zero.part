@@ -1,0 +1,49 @@
+# Publish a complete binary package only after successful source validation.
+? @fail [
+ "Ezero compile error on line " -> @name. 0 -> @i.
+ ?? :load8[@name + @i] [ !put[:load8[@name + @i]]. @i + 1 -> @i. ]
+ @errline -> @x. 100000 -> @q. 0 -> @ok.
+ ?? @q > 0 [
+  0 -> @v. ?? @x >= @q [ @x - @q -> @x. @v + 1 -> @v. ]
+  ? (@v > 0) + @ok + (@q == 1) [ !put[48 + @v]. 1 -> @ok. ]
+  # q is one of100000,10000,...,1; decimal division by10 via fixed mapping.
+  ? @q == 1 [ 0 -> @q. ]
+  ? @q == 10 [ 1 -> @q. ]
+  ? @q == 100 [ 10 -> @q. ]
+  ? @q == 1000 [ 100 -> @q. ]
+  ? @q == 10000 [ 1000 -> @q. ]
+  ? @q == 100000 [ 10000 -> @q. ]
+ ]
+ !put[58]. !put[32]. 0 -> @i.
+ ?? :load8[@fail + @i] [ !put[:load8[@fail + @i]]. @i + 1 -> @i. ]
+ !put[10]. !exit[1].
+]
+64 + @nf * 32 + @ni * 32 + @nc -> @length.
+!store64[@output | 0x31564d4f52455a45].
+!store64[@output + 8 | @length].
+!store64[@output + 16 | @ni]. !store64[@output + 24 | @nf].
+!store64[@output + 32 | :load64[@functions + 48]].
+!store64[@output + 40 | @nc]. !store64[@output + 48 | 1].
+!store64[@output + 56 | 0].
+0 -> @i.
+?? @i < @nf [
+ !store64[@output + 64 + @i * 32 | :load64[@functions + @i * 64 + 32]].
+ !store64[@output + 72 + @i * 32 | :load64[@functions + @i * 64 + 40]].
+ 0 -> @v. ? @i [ :load64[@functions + @i * 64 + 48] -> @v. ]
+ !store64[@output + 80 + @i * 32 | @v].
+ !store64[@output + 88 + @i * 32 | 0]. @i + 1 -> @i.
+]
+0 -> @i. ?? @i < @ni * 32 [
+ !store64[@output + 64 + @nf * 32 + @i | :load64[@code + @i]]. @i + 8 -> @i.
+]
+0 -> @i. ?? @i < @nc [
+ !store8[@output + 64 + @nf * 32 + @ni * 32 + @i | :load8[@constants + @i]]. @i + 1 -> @i.
+]
+0 -> @i.
+?? @i < @length [
+ :write[@output + @i | @length - @i] -> @v.
+ ? @v != -4 [
+  ? (@v == 0) + (@v > @length - @i) [ !exit[74]. ]
+  @i + @v -> @i.
+ ]
+]

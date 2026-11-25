@@ -1,0 +1,45 @@
+ZTEXT0010000095d252e67c20000000
+ZERO 0.13 NATIVE KIT VERIFICATION
+
+Both kits contain exactly 20 files: original Zero-built executables, five original
+compiler/runtime companions, and README.ztext. No external test harness, foreign
+runtime, third-party GUI library, user source, screenshot or temporary file is
+included. Archives were created and verified by the original zero-archive tool.
+README and archive manifests were created by the original zero-text tool.
+
+Native executables and compiler apps match integration/build-release byte for
+byte. Ezero runtime parts match the frozen original source. The two archives were
+extracted into independent directories whose full paths contain spaces. Contents
+match staging byte for byte; Linux owner-execute flags were restored correctly.
+Own zero-sha256 results also agree with the independent host hash calculation.
+
+PASS: relocated Linux Zero and Ezero CLI compile and run original hello examples.
+PASS: relocated Windows Zero and Ezero CLI compile and run under Wine.
+PASS: Linux and Windows HTML-reader outputs are identical for the same HTML input.
+PASS: original Windows archive reader verifies and extracts its Windows kit under
+Wine; all extracted bytes match the staged kit.
+
+PASS: Linux editor with Zero and Ezero sources, and Windows editor under Wine with
+Zero and Ezero sources. Each of these four runs exercised keyboard input, save,
+F5 compilation, execution of the generated program, mouse positioning, editing,
+save/reopen, missing-file preservation and the unsaved-close guard.
+Each run also checked deterministic successful F5 rebuild and a syntax-error
+build leaving the previously generated executable byte-identical.
+After the tests, the extracted toolkit directories still match staging exactly.
+
+The GUI tests used the native Linux X11 implementation and the native Windows
+Win32 implementation under Wine. This is not a separate physical Windows,
+Debian, Arch or native Wayland certification. No Drive publication was performed.
+
+zero-linux-x64-0.13.zpack
+Bytes: 633850
+SHA256: 67dfb8704f125fa1c0de4f003c5ca91fe36ecac20b3c41a8c666d43773d6ea6e
+
+zero-windows-x64-0.13.zpack
+Bytes: 749746
+SHA256: dab7c21498fe94d35c4e3553a181281a5c5efc67d02cd237c73e8e84f73d7b9d
+
+Editor Linux executable SHA256:
+38baf2e146da5825356613bac6f138f51752b2d2e03978d3488b9aa4b11410d2
+Editor Windows executable SHA256:
+6f59b37aff2dd5bf0b1613aa71ca6dfea6cc67f763d34eadc047924081919c4a

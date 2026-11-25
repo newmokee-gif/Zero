@@ -1,0 +1,126 @@
+!switch[@web+1024|@web+1280].
+1 -> @t_case. 0x1234abcd -> @t_seed.
+?? @t_case <= 151 [
+ 0 -> @t_i. ?? @t_i < 1024 [ !store8[@web+@t_i|0]. @t_i+1 -> @t_i. ]
+ 0 -> @t_i. ?? @t_i < 4096 [ !store8[@web+4096+@t_i|0]. @t_i+1 -> @t_i. ]
+ !store64[@web|@web+1507328]. !store64[@web+32|4].
+ !store64[@web+4096+8|1]. !store32[@web+4096+16|0x79646f62].
+ !store64[@web+5120|1]. !store64[@web+5120+8|1].
+ !store64[@web+6144|2]. !store64[@web+6144+8|2].
+ !store64[@web+7168+8|3]. !store64[@web+7168+480|@web+1507328].
+ "div" -> @t_tag. "main" -> @t_id. "one chosen two" -> @t_class.
+ "" -> @t_css. "" -> @t_inline. 0x1f2937 -> @t_color. -1 -> @t_bg.
+ 16 -> @t_font. 1 -> @t_display. 0 -> @t_padding. 0 -> @t_margin.
+ 0 -> @t_width. 0 -> @t_warning. 0 -> @t_error.
+ ? @t_case == 2 [ "div { color: red; }" -> @t_css. 0xff0000 -> @t_color. ]
+ ? @t_case == 3 [ "DIV { COLOR: #AbC; }" -> @t_css. 0xaabbcc -> @t_color. ]
+ ? @t_case == 4 [ "div{color:#a1B2c3}" -> @t_css. 0xa1b2c3 -> @t_color. ]
+ ? @t_case == 5 [ ".chosen{color:blue}" -> @t_css. 0x0000ff -> @t_color. ]
+ ? @t_case == 6 [ "#main{color:green}" -> @t_css. 0x008000 -> @t_color. ]
+ ? @t_case == 7 [ "*{color:gray}" -> @t_css. 0x808080 -> @t_color. ]
+ ? @t_case == 8 [ "#main{color:blue}.chosen{color:red}div{color:green}" -> @t_css. 0x0000ff -> @t_color. ]
+ ? @t_case == 9 [ ".chosen{color:red}.one{color:blue}" -> @t_css. 0x0000ff -> @t_color. ]
+ ? @t_case == 10 [ "#main{color:red}" -> @t_css. "color:blue" -> @t_inline. 0x0000ff -> @t_color. ]
+ ? @t_case == 11 [ "div{color:red;color:green;color:#ggg}" -> @t_css. 0x008000 -> @t_color. 2 -> @t_warning. ]
+ ? @t_case == 12 [ "body{color:purple;font-size:24px}" -> @t_css. 0x800080 -> @t_color. 24 -> @t_font. ]
+ ? @t_case == 13 [ "div{background-color:#123456;padding:12px;margin:8px;width:300px;font-size:32px}" -> @t_css. 0x123456 -> @t_bg. 12 -> @t_padding. 8 -> @t_margin. 300 -> @t_width. 32 -> @t_font. ]
+ ? @t_case == 14 [ "div{display:none}" -> @t_css. 0 -> @t_display. ]
+ ? @t_case == 15 [ "body{display:none}div{display:block}" -> @t_css. 0 -> @t_display. ]
+ ? @t_case == 16 [ "div{display:inline}" -> @t_css. 2 -> @t_display. ]
+ ? @t_case == 17 [ "/* A */ div /*B*/ { color: /*C*/ blue; }" -> @t_css. 0x0000ff -> @t_color. ]
+ ? @t_case == 18 [ "div{font-family:'; } /* not a comment */';color:red}" -> @t_css. 0xff0000 -> @t_color. 2 -> @t_warning. ]
+ ? @t_case == 19 [ "@media x { div { color:red } } div {color:blue}" -> @t_css. 0x0000ff -> @t_color. 2 -> @t_warning. ]
+ ? @t_case == 20 [ "@import 'x'; div{color:blue}" -> @t_css. 0x0000ff -> @t_color. 2 -> @t_warning. ]
+ ? @t_case == 21 [ "div p {color:red}div{color:blue}" -> @t_css. 0x0000ff -> @t_color. 2 -> @t_warning. ]
+ ? @t_case == 22 [ "div{color:red!important}" -> @t_css. 2 -> @t_warning. ]
+ ? @t_case == 23 [ "div{color:rgb(1,2,3)}" -> @t_css. 2 -> @t_warning. ]
+ ? @t_case == 24 [ "div{padding:999999999999999999999999px;color:blue}" -> @t_css. 0x0000ff -> @t_color. 2 -> @t_warning. ]
+ ? @t_case == 25 [ "div{padding:0;margin:0;width:0}" -> @t_css. ]
+ ? @t_case == 26 [ "div{padding:-1px;margin:1;width:100%;font-size:0}" -> @t_css. 2 -> @t_warning. ]
+ ? @t_case == 27 [ "div{color:red" -> @t_css. 2 -> @t_warning. ]
+ ? @t_case == 28 [ "div{color:red}/*never closed" -> @t_css. 0xff0000 -> @t_color. 2 -> @t_warning. ]
+ ? @t_case == 29 [ ".Chosen{color:red}#Main{color:green}DIV{color:blue}" -> @t_css. 0x0000ff -> @t_color. ]
+ ? @t_case == 30 [ "span" -> @t_tag. 2 -> @t_display. "span{color:red}" -> @t_css. 0xff0000 -> @t_color. ]
+ ? @t_case == 31 [ "head" -> @t_tag. 0 -> @t_display. ]
+ ? @t_case == 32 [ "div{color:red;font-size:18PX;padding:4096px;width:4096px}" -> @t_css. 0xff0000 -> @t_color. 18 -> @t_font. 4096 -> @t_padding. 4096 -> @t_width. ]
+ ? @t_case == 33 [ "div{color:REBECCAPURPLE;background-color:grey}" -> @t_css. 0x663399 -> @t_color. 0x808080 -> @t_bg. ]
+ ? @t_case == 34 [ "div{color:#12;color:#1234;color:#12345;color:#1234567}" -> @t_css. 2 -> @t_warning. ]
+ ? @t_case == 35 [ "div{unknown:foo(a;b;c);color:red}" -> @t_css. 0xff0000 -> @t_color. 2 -> @t_warning. ]
+ ? @t_case == 36 [ "div{color:blue;}" -> @t_css. "background-color:black;font-size:20px;display:inline;padding:3px;margin:5px;width:200px" -> @t_inline. 0x0000ff -> @t_color. 0 -> @t_bg. 20 -> @t_font. 2 -> @t_display. 3 -> @t_padding. 5 -> @t_margin. 200 -> @t_width. ]
+ ? @t_case == 37 [ "div{color:red}" -> @t_css. !store64[@web+5120|2]. 70 -> @t_error. ]
+ ? @t_case == 38 [ !store64[@web+32|513]. 70 -> @t_error. ]
+ ? @t_case == 39 [ !store64[@web+16|65]. 65 -> @t_error. ]
+ ? @t_case == 40 [ !store64[@web+7168+480|-16]. ]
+ 0 -> @t_i. ?? :load8[@t_tag+@t_i] [ !store8[@web+5120+16+@t_i|:load8[@t_tag+@t_i]]. @t_i+1 -> @t_i. ]
+ 0 -> @t_i. ?? :load8[@t_id+@t_i] [ !store8[@web+5120+32+@t_i|:load8[@t_id+@t_i]]. @t_i+1 -> @t_i. ]
+ 0 -> @t_i. ?? :load8[@t_class+@t_i] [ !store8[@web+5120+96+@t_i|:load8[@t_class+@t_i]]. @t_i+1 -> @t_i. ]
+ 0 -> @t_i. ?? :load8[@t_inline+@t_i] [ !store8[@web+5120+224+@t_i|:load8[@t_inline+@t_i]]. @t_i+1 -> @t_i. ]
+ 0 -> @t_n. ?? :load8[@t_css+@t_n] [ !store8[@web+1507328+@t_n|:load8[@t_css+@t_n]]. @t_n+1 -> @t_n. ]
+ ? @t_case == 40 [ !store8[@web+1507328|120]. 1 -> @t_n. 70 -> @t_error. ]
+ ? (@t_case == 41)+(@t_case == 42) [
+  "div{color:red}" -> @t_css. 128 -> @t_count. ? @t_case == 42 [ 129 -> @t_count. 28 -> @t_error. ]
+  0 -> @t_n. 0 -> @t_j. ?? @t_j < @t_count [ 0 -> @t_i. ?? :load8[@t_css+@t_i] [ !store8[@web+1507328+@t_n|:load8[@t_css+@t_i]]. @t_n+1 -> @t_n. @t_i+1 -> @t_i. ] @t_j+1 -> @t_j. ] 0xff0000 -> @t_color.
+ ]
+ ? @t_case == 43 [ "div{color:red;background-color:transparent}" -> @t_css. 0xff0000 -> @t_color. ]
+ ? @t_case == 44 [ "div{color:transparent}" -> @t_css. 2 -> @t_warning. ]
+ ? @t_case == 45 [ "div{color:red;}" -> @t_css. !store64[@web+7168+480|@web+1507327]. 70 -> @t_error. ]
+ ? @t_case == 46 [ "div{color:red;}" -> @t_css. !store64[@web+7168+480|@web+1572864]. 70 -> @t_error. ]
+ ? @t_case == 47 [ "* { color:red } div,span { color:blue }" -> @t_css. 0xff0000 -> @t_color. 2 -> @t_warning. ]
+ ? @t_case == 48 [ "div{color:purple}*{color:red}" -> @t_css. 0x800080 -> @t_color. ]
+ ? @t_case == 49 [ "div{font-size:96px;padding:4097px;width:4.5px;margin:12em}" -> @t_css. 96 -> @t_font. 2 -> @t_warning. ]
+ ? @t_case == 50 [ "div{font-size:97px}" -> @t_css. 2 -> @t_warning. ]
+ ? @t_case == 51 [ ".1{color:red}#-1{color:blue}123{color:green}div{color:purple}" -> @t_css. 0x800080 -> @t_color. 2 -> @t_warning. ]
+ ? (@t_case >= 43)*(@t_case <= 51) [
+  0 -> @t_n. ?? :load8[@t_css+@t_n] [ !store8[@web+1507328+@t_n|:load8[@t_css+@t_n]]. @t_n+1 -> @t_n. ]
+ ]
+ ? @t_case > 51 [
+  "{}:;/*'\" abcdefghijklmnopqrstuvwxyz0123456789#.-()" -> @t_css.
+  0 -> @t_count. ?? :load8[@t_css+@t_count] [ @t_count+1 -> @t_count. ]
+  0 -> @t_n. ?? @t_n < 512 [
+   :bitand[@t_seed*1664525+1013904223|0xffffffff] -> @t_seed. :bitand[:shr[@t_seed|16]|255] -> @t_i.
+   ?? @t_i >= @t_count [ @t_i-@t_count -> @t_i. ]
+   !store8[@web+1507328+@t_n|:load8[@t_css+@t_i]]. @t_n+1 -> @t_n.
+  ]
+ ]
+ !store64[@web+8|@t_n]. !store64[@web+7168+488|@t_n].
+ 0 -> @t_k. ?? @t_k < 4 [
+  540656 -> @t_guard. ? @t_k == 1 [ 573440 -> @t_guard. ] ? @t_k == 2 [ 639984 -> @t_guard. ] ? @t_k == 3 [ 740000 -> @t_guard. ]
+  0 -> @t_i. ?? @t_i < 16 [ !store8[@web+@t_guard+@t_i|165]. @t_i+1 -> @t_i. ] @t_k+1 -> @t_k.
+ ]
+ 2166136261 -> @t_hash. 0 -> @t_i. ?? @t_i < @t_n [ :bitand[(@t_hash*16777619)+:load8[@web+1507328+@t_i]|0xffffffff] -> @t_hash. @t_i+1 -> @t_i. ]
+ !switch[@web+1024|@web+1280].
+ 0 -> @t_j.
+ ? :load64[@web+16] != @t_error [ 1 -> @t_j. ]
+ ? (@t_error == 0)*(@t_case <= 51) [
+  @web+540736 -> @t_p.
+  ? :load64[@t_p] != @t_color [ 1 -> @t_j. ]
+  ? :load64[@t_p+8] != @t_bg [ 1 -> @t_j. ]
+  ? :load64[@t_p+16] != @t_font [ 1 -> @t_j. ]
+  ? :load64[@t_p+24] != @t_display [ 1 -> @t_j. ]
+  ? :load64[@t_p+32] != @t_padding [ 1 -> @t_j. ]
+  ? :load64[@t_p+40] != @t_margin [ 1 -> @t_j. ]
+  ? :load64[@t_p+48] != @t_width [ 1 -> @t_j. ]
+  ? :load64[@web+24] != @t_warning [ 1 -> @t_j. ]
+  ? (:load64[@t_p+64] != @t_color)+(:load64[@t_p+64+16] != @t_font) [ 1 -> @t_j. ]
+  ? (:load64[@t_p+64+24] == 0) != (@t_display == 0) [ 1 -> @t_j. ]
+ ]
+ 0 -> @t_i. ?? @t_i < 64 [
+  ? (:load8[@web-64+@t_i] != 165)+(:load8[@web+4194304+@t_i] != 165) [ 1 -> @t_j. ] @t_i+1 -> @t_i.
+ ]
+ 0 -> @t_k. ?? @t_k < 4 [
+  540656 -> @t_guard. ? @t_k == 1 [ 573440 -> @t_guard. ] ? @t_k == 2 [ 639984 -> @t_guard. ] ? @t_k == 3 [ 740000 -> @t_guard. ]
+  0 -> @t_i. ?? @t_i < 16 [ ? :load8[@web+@t_guard+@t_i] != 165 [ 1 -> @t_j. ] @t_i+1 -> @t_i. ] @t_k+1 -> @t_k.
+ ]
+ 2166136261 -> @t_after. 0 -> @t_i. ?? @t_i < @t_n [ :bitand[(@t_after*16777619)+:load8[@web+1507328+@t_i]|0xffffffff] -> @t_after. @t_i+1 -> @t_i. ]
+ ? @t_after != @t_hash [ 1 -> @t_j. ]
+ ? @t_j [
+  "CSS check failed: " -> @t_css. 0 -> @t_i. ?? :load8[@t_css+@t_i] [ !put[:load8[@t_css+@t_i]]. @t_i+1 -> @t_i. ]
+  @t_case -> @t_n. 0 -> @t_i. ?? @t_n >= 100 [ @t_n-100 -> @t_n. @t_i+1 -> @t_i. ] !put[48+@t_i].
+  0 -> @t_i. ?? @t_n >= 10 [ @t_n-10 -> @t_n. @t_i+1 -> @t_i. ] !put[48+@t_i]. !put[48+@t_n]. !put[10].
+  @t_fail+1 -> @t_fail.
+ ] ~ [ @t_pass+1 -> @t_pass. ]
+ @t_case+1 -> @t_case.
+]
+? @t_fail [ !exit[1]. ]
+"PASS 51 CSS semantic/boundary cases and 100 malformed probes; guards and immutable input checked.\n" -> @t_css.
+0 -> @t_i. ?? :load8[@t_css+@t_i] [ !put[:load8[@t_css+@t_i]]. @t_i+1 -> @t_i. ] !exit[0].

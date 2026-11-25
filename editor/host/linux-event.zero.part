@@ -1,0 +1,37 @@
+? @platform == 1 [
+ :load64[@e + 16] -> @n.
+ :hostsyscall[45 | @sock | @message + @n | 32 - @n | 64 | 0 | 0] -> @c.
+ ? @c <= 32 - @n [
+  ? @c == 0 [ 0 -> @running. 1 -> @failed. "X11 display disconnected." -> @status. ] ~ [ @n + @c -> @n. ]
+ ] ~ [ ? (@c != -11) * (@c != -4) [ 0 -> @running. 1 -> @failed. "X11 event read failed." -> @status. ] ]
+ !store64[@e + 16 | @n].
+ ? @n == 32 [
+  !store64[@e + 16 | 0]. :bitand[:load8[@message] | 127] -> @b.
+  ? @b == 0 [ "X11 rejected a drawing request." -> @status. 0 -> @running. 1 -> @failed. ]
+  ? @b == 12 [ 1 -> @dirty. ]
+  ? @b == 17 [ 1004 -> @key. ]
+  ? @b == 33 [ ? :load32[@message + 12] == :load64[@e + 312] [ 1004 -> @key. ] ]
+  ? @b == 4 [
+   :load8[@message + 1] -> @c.
+   ? @c == 1 [ :load16[@message + 24] -> @mousex. :load16[@message + 26] -> @mousey. 2 -> @event. ]
+   ? @c == 4 [ 7 -> @key. ] ? @c == 5 [ 8 -> @key. ]
+  ]
+  ? @b == 2 [
+   :load8[@message + 1] -> @c. :load16[@message + 28] -> @mod.
+   ? (@c >= :load64[@e + 288]) * (@c < :load64[@e + 288] + :load64[@e + 296]) [
+    @keys + (@c - :load64[@e + 288]) * @keycols * 4 -> @a.
+    :load32[@a] -> @c.
+    ? :bitand[@mod | 1] [ ? @keycols > 1 [ :load32[@a + 4] -> @c. ? @c == 0 [ :load32[@a] -> @c. ] ] ]
+    ? :bitand[@mod | 2] [ ? (@c >= 97) * (@c <= 122) [ @c - 32 -> @c. ] ~ [ ? (@c >= 65) * (@c <= 90) [ @c + 32 -> @c. ] ] ]
+    ? (@c >= 32) * (@c <= 126) [ @c -> @key. ]
+    ? @c == 65361 [ 1 -> @key. ] ? @c == 65363 [ 2 -> @key. ] ? @c == 65362 [ 3 -> @key. ] ? @c == 65364 [ 4 -> @key. ]
+    ? @c == 65360 [ 5 -> @key. ] ? @c == 65367 [ 6 -> @key. ] ? @c == 65365 [ 7 -> @key. ] ? @c == 65366 [ 8 -> @key. ]
+    ? @c == 65535 [ 9 -> @key. ] ? @c == 65288 [ 10 -> @key. ] ? @c == 65293 [ 11 -> @key. ] ? @c == 65289 [ 12 -> @key. ]
+    ? @c == 65307 [ 1006 -> @key. ] ? @c == 65474 [ 1003 -> @key. ]
+    ? :bitand[@mod | 4] [
+     0 -> @key. ? (@c == 111) + (@c == 79) [ 1001 -> @key. ] ? (@c == 115) + (@c == 83) [ 1002 -> @key. ] ? (@c == 113) + (@c == 81) [ 1004 -> @key. ]
+    ]
+   ]
+  ]
+ ]
+]

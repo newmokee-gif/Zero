@@ -1,0 +1,98 @@
+ZTEXT00100001581b4a44a870000000
+ZERO MEDIA 0.14 - VERIFICATION RECORD
+2026-11-20
+
+Implementation: original Zero only. Validation infrastructure and platform
+firmware are external to the delivered implementation. No physical disk
+was written by these checks. User data files remained unchanged.
+
+FINAL SYSTEM IMAGE
+Container: system.zmedia, 18878464 bytes.
+Container SHA256:
+cff6bdf74fc41545c6cbc3087bbb02d8defcdc61bda0bb436b18c5d03adf3325
+Disk payload:18874368 bytes, 512-byte logical sectors.
+Payload SHA256:
+006703b31f8d9a3a3302066da43fce2c07551eba4f87f4bb935165453d75eec6
+The custom ZMEDIA01 header is separate from the MBR/ESP disk payload.
+The image was generated from our compiled artifacts without reading an ISO.
+
+OWN COMPILER AND COMPLETE BUILD
+The updated original compiler rebuilds to identical bytes.
+182 existing compiler checks pass, plus32 call7 target/argument checks.
+The new x64 raw/EFI call7 ABI passed128 rounds with seven arguments,
+nested calls, stack alignment, shadow space writes and arena preservation.
+A BIOS64 coroutine/arena test passed. Actual UEFI menu launches cover
+LoadImage/StartImage. IA32 call7 code and target behavior are unchanged.
+tools/build.zero produces66artifacts in70stages. All fixed-slot limits pass.
+Compiler IA32 app is141673 bytes, below159744. The final full build is
+outside the product source at validation-0.14/build-release.
+
+DISK BUILDER AND REAL EMULATED USB BOOT
+97 checks passed for the final payload:58 actual USB boot checks across
+BIOS64, BIOS32, UEFI64 and UEFI32;6 menu/writer-return checks;29 structural
+and malformed-input checks;4 boundary and readback-race regressions.
+Each boot uses QEMU USB mass storage, not an attached CD image. The system
+reaches its terminal, runs both built-in language compilers and verifies
+private ATA data persistence across a cold restart. Both UEFI menus launch
+the real firmware writer and can return and start the OS afterward.
+Linux and Windows/Wine zero-disk builders produce identical disk bytes.
+See disk-verification.ztext for the independent detail.
+
+FORMAT AND SHA256
+The original Zero format self-check passes8712 cases on Linux and again
+on Windows/Wine: known hashes, every header-byte mutation, every truncated
+length of a minimal image, appended data, changed payload and invalid mode.
+Independent external checks:166 Linux codec cases,162 Windows/Wine cases,
+and145 SHA256 vectors including block boundaries and the million-a vector.
+See FORMAT-VERIFICATION.ztext and REVIEW.ztext.
+
+NATIVE FLASH WRITER
+Independent CLI checks:63 Linux and61 Windows/Wine, covering full source
+validation, regular-file output, nonreplacement, corrupt images and
+rejection of invalid targets before any destructive operation.
+The exact raw-I/O backend passes18 transfer/failure cases plus cleanup on
+each host using private regular files. Guard bytes remain unchanged.
+The production coordinator passes32 additional cases on each host with
+private-file device discovery: confirmations, capacity boundaries, all
+short backup-GPT tails, identity changes, flush failures, corrupt readback
+and read-only comparisons. Mock discovery does not certify USB discovery.
+The final18MiB image was written, flushed and read back by both final native
+executables; both results match the final disk payload byte for byte.
+Actual removable-device hardware on Linux or Windows remains untested.
+
+FIRMWARE FLASH WRITER
+25 actual firmware scenarios pass across the two UEFI editions. The final
+integrated flow passes on both: boot the exact published USB payload, open
+Flash Writer from its menu, select the final image on another source volume,
+write a third USB device, verify it, return to the menu and start Zero OS.
+Both final UEFI editions perform real emulated USB writes, flushes and
+full readback. The source and boot disks are excluded from selection.
+Bounds and failures include cancellation, read-only/nonremovable targets,
+bad image hashes, USB removal, exact-size and one-extra-sector disks.
+An IA32 sparse USB disk larger than2TiB verifies both LBA words and correct
+backup-GPT tail location while preserving the low-address alias guard.
+IA32 allocations are constrained below4GiB. Device discovery connects
+firmware-supported controllers before scanning other source/target ports.
+The final detailed VM matrix is in firmware-verification.ztext.
+Firmware binaries from the complete build match the tested binaries:
+FLASHX64.EFI:
+247ebf6ac7acffdca7d72f3d732161add99492f87a42e357f97baa029b9141cb
+FLASHIA32.EFI:
+51da3735757de1738ec239209498df12e4a65385ef16d772b81246a6e090d263
+
+LIMITS
+The firmware program runs before ExitBootServices, not inside the running
+Zero kernel. The kernel has no runtime USB mass-storage driver yet.
+The writer requires UEFI; BIOS remains supported for booting the system.
+Native4Kn devices, unidentified/nonremovable USB devices and mounted/busy
+native targets are rejected. Host programs are x86-64. Windows testing uses
+Wine; QEMU/OVMF checks do not certify physical hardware or VirtualBox.
+SHA256 supplies integrity, not publisher authentication. A write interrupted
+by failure is not rolled back, and unused drive space is not securely wiped.
+
+SOURCE AND DISTRIBUTION
+Source composition, compilation, text encoding and archive packaging use
+our Zero programs. Source archives exclude user data and screenshots.
+A separate package receipt records extraction comparisons and a complete
+rebuild from the frozen source archive. That receipt stays outside the
+source archive to avoid a self-referential package checksum.

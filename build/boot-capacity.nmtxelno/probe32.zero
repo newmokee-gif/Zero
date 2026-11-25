@@ -1,0 +1,53 @@
+# Own full-slot loading probe. The test driver substitutes the compiled
+# string's file offset for ANCHOR_OFFSET before the second compilation.
+:arg0[] => @boot.
+"ZERO448K_UNIQUE_ANCHOR" => @anchor.
+@anchor-74 => @base.
+:reserve[65536] => @arena.
+:load64[@boot+112] => @pool.
+:load64[@boot+120] => @poolBytes.
+1 => @good.
+0 => @index.
+0 => @wait.
+0 => @status.
+"BOOT448 TAIL/ARENA/POOL FAIL\r\n" => @message.
+? :load64[@boot+24] != 112 [ 0 -> @good. ]
+? :load64[@boot+96] == 1 [
+    ? @pool != 0x100000 [ 0 -> @good. ]
+    ? @poolBytes != 0x300000 [ 0 -> @good. ]
+] ~ [
+    ? :load64[@boot+96] != 2 [ 0 -> @good. ]
+    ? @poolBytes != 0x100000 [ 0 -> @good. ]
+]
+? @pool == 0 [ 0 -> @good. ]
+? @pool+@poolBytes <= @pool [ 0 -> @good. ]
+? @arena < @pool [ 0 -> @good. ]
+? @arena+65536 > @pool+@poolBytes [ 0 -> @good. ]
+? :load8[@base+131071] != 49 [ 0 -> @good. ]
+? :load8[@base+131072] != 50 [ 0 -> @good. ]
+? :load8[@base+262143] != 51 [ 0 -> @good. ]
+? :load8[@base+262144] != 52 [ 0 -> @good. ]
+? :load8[@base+393215] != 53 [ 0 -> @good. ]
+? :load8[@base+393216] != 54 [ 0 -> @good. ]
+? :load8[@base+458751] != 90 [ 0 -> @good. ]
+? @good [
+    !store8[@arena|0x41].
+    !store8[@arena+65535|0x42].
+    !store8[@pool|0x43].
+    ? :load8[@arena] != 0x41 [ 0 -> @good. ]
+    ? :load8[@arena+65535] != 0x42 [ 0 -> @good. ]
+    ? :load8[@pool] != 0x43 [ 0 -> @good. ]
+]
+? @good [ "BOOT448 TAIL/ARENA/POOL PASS\r\n" -> @message. ]
+?? :load8[@message+@index] != 0 [
+    0 -> @wait. 0 -> @status.
+    ?? (@status < 32)*(@wait < 1000000) [
+        :in8[0x3fd] -> @status.
+        ?? @status >= 64 [ @status-64 -> @status. ]
+        @wait+1 -> @wait.
+    ]
+    !out8[0x3f8|:load8[@message+@index]].
+    @index+1 -> @index.
+]
+? @good [ !out8[0xf4|0]. ] ~ [ !out8[0xf4|1]. ]
+!halt.

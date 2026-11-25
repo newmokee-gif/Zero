@@ -1,0 +1,155 @@
+# Prime the worker's explicit initial handshake before the first request.
+!switch[@web+1024|@web+1408].
+1 -> @t1.
+?? @t1 <= 320 [
+ !store64[@web+16|0]. !store64[@web+24|0]. !store64[@web+32|2].
+ @web+4096 -> @t4. 0 -> @t5. ?? @t5 < 3072 [ !store8[@t4+@t5|0]. @t5+1 -> @t5. ]
+ !store64[@t4+8|1]. !store8[@t4+32|120]. !store64[@t4+480|@t4+512].
+ !store8[@t4+512|79]. !store8[@t4+513|108]. !store8[@t4+514|100]. !store64[@t4+488|3].
+ !store64[@t4+1024+8|4].
+ "document.getElementById('x').textContent='Hello';" -> @t2. "Hello" -> @t3. 0 -> @t6. 0 -> @t10.
+ ? @t1 == 2 [ "let a=2; const b=3; document.getElementById('x').textContent=a+b;" -> @t2. "5" -> @t3. ]
+ ? @t1 == 3 [ "var a='Zero'; a=a+' Web'; document.getElementById('x').textContent=a;" -> @t2. "Zero Web" -> @t3. ]
+ ? @t1 == 4 [ "document.getElementById('x').textContent='Count: '+12+3;" -> @t2. "Count: 123" -> @t3. ]
+ ? @t1 == 5 [ "document.getElementById('x').textContent=12+3+' items';" -> @t2. "15 items" -> @t3. ]
+ ? @t1 == 6 [ "// comment\n let a=4; /* ignored */ document . getElementById ( 'x' ) . textContent = a + 6" -> @t2. "10" -> @t3. ]
+ ? @t1 == 7 [ "document.getElementById('x').textContent=0;" -> @t2. "0" -> @t3. ]
+ ? @t1 == 8 [ "document.getElementById('x').textContent=9007199254740991;" -> @t2. "9007199254740991" -> @t3. ]
+ ? @t1 == 9 [ "document.getElementById('x').textContent='Line\\nTwo\\t!';" -> @t2. "Line\nTwo\t!" -> @t3. ]
+ ? @t1 == 10 [ "document.getElementById('x').textContent='';" -> @t2. "" -> @t3. ]
+ ? @t1 == 11 [ "const a=1; a=2;" -> @t2. 65 -> @t6. ]
+ ? @t1 == 12 [ "let a=1; let a=2;" -> @t2. 65 -> @t6. ]
+ ? @t1 == 13 [ "document.getElementById('missing').textContent='x';" -> @t2. 65 -> @t6. ]
+ ? @t1 == 14 [ "document.getElementById('x').textContent=unknown;" -> @t2. 65 -> @t6. ]
+ ? @t1 == 15 [ "document.getElementById('x').textContent=9007199254740992;" -> @t2. 65 -> @t6. ]
+ ? @t1 == 16 [ "document.getElementById('x').textContent=9007199254740991+1;" -> @t2. 65 -> @t6. ]
+ ? @t1 == 17 [ "document.getElementById('x').textContent=01;" -> @t2. 65 -> @t6. ]
+ ? @t1 == 18 [ "document.getElementById('x').textContent=1.5;" -> @t2. 65 -> @t6. ]
+ ? @t1 == 19 [ "document.getElementById('x').textContent=-1;" -> @t2. 65 -> @t6. ]
+ ? @t1 == 20 [ "while(1){}" -> @t2. 65 -> @t6. ]
+ ? @t1 == 21 [ "document.getElementById('x').textContent='unterminated" -> @t2. 65 -> @t6. ]
+ ? @t1 == 22 [ "/* unterminated" -> @t2. 65 -> @t6. ]
+ ? @t1 == 23 [ "document.getElementById('x').textContent='\\u0041';" -> @t2. 65 -> @t6. ]
+ ? @t1 == 24 [ "let a=1 let b=2;" -> @t2. 65 -> @t6. ]
+ ? @t1 == 25 [ "let document=3;" -> @t2. 65 -> @t6. ]
+ ? @t1 == 26 [ "eval('danger');" -> @t2. 65 -> @t6. ]
+ ? @t1 == 27 [ "fetch('http://invalid/');" -> @t2. 65 -> @t6. ]
+ ? @t1 == 28 [ "document.getElementById('x').innerHTML='x';" -> @t2. 65 -> @t6. ]
+ ? @t1 == 29 [ "document.getElementById('x').textContent='safe'; unknown();" -> @t2. 65 -> @t6. ]
+ ? @t1 == 30 [ "// only comment" -> @t2. "Old" -> @t3. ]
+ ? @t1 == 31 [ ";;;" -> @t2. "Old" -> @t3. ]
+ ? @t1 == 32 [ "" -> @t2. "Old" -> @t3. ]
+ ? @t1 == 33 [ "let $a_1=8; document.getElementById('x').textContent=$a_1;" -> @t2. "8" -> @t3. ]
+ ? @t1 == 34 [ "let abcdefghijklmnopqrstuvwxyzabcdef=1;" -> @t2. 65 -> @t6. ]
+ ? @t1 == 35 [ "let abcdefghijklmnopqrstuvwxyzabcde=7;document.getElementById('x').textContent=abcdefghijklmnopqrstuvwxyzabcde;" -> @t2. "7" -> @t3. ]
+ ? @t1 == 36 [ "document.getElementById('x').textContent='2'+3+4;" -> @t2. "234" -> @t3. ]
+ ? @t1 == 37 [ "document.getElementById('x').textContent=2+3+'4';" -> @t2. "54" -> @t3. ]
+ ? @t1 == 38 [ "document.getElementById('x').textContent='\\\"'+\"'\"+'\\\\';" -> @t2. "\"'\\" -> @t3. ]
+ ? @t1 == 39 [ "let a=4;" -> @t2. "9" -> @t3. ]
+ ? @t1 == 40 [ "not executable!" -> @t2. "Old" -> @t3. "application/python" -> @t10. ]
+ ? @t1 == 41 [ "not executable!" -> @t2. "Old" -> @t3. "module" -> @t10. ]
+ ? @t1 == 42 [ " Text/JavaScript " -> @t10. ]
+ ? @t1 == 43 [ "application/javascript" -> @t10. ]
+ ? @t1 == 44 [ 123 -> @t6. !store64[@web+16|123]. "Old" -> @t3. ]
+ ? @t1 == 45 [ "document.getElementById('x').textContent='x';" -> @t2. 70 -> @t6. ]
+ ? @t1 == 46 [ "document.getElementById('x').textContent='x';" -> @t2. 70 -> @t6. ]
+ ? @t1 == 47 [ "document.getElementById('x').textContent='x';" -> @t2. 70 -> @t6. ]
+ ? (@t1 == 48)+(@t1 == 49) [ "" -> @t3. ]
+ ? @t1 == 50 [ "63" -> @t3. ]
+ ? @t1 == 51 [ 28 -> @t6. ]
+ ? @t1 == 52 [ 28 -> @t6. ]
+ ? @t1 == 53 [ "let a=1; let b=a; a=2; document.getElementById('x').textContent=b;" -> @t2. "1" -> @t3. ]
+ ? @t1 == 54 [ "let while=1;" -> @t2. 65 -> @t6. ]
+ ? @t1 == 55 [ "document.getElementById('x').textContent='one';document.getElementById('x').textContent='two';" -> @t2. "two" -> @t3. ]
+ ? @t1 == 56 [ 70 -> @t6. ]
+ ? @t1 == 57 [ 70 -> @t6. ]
+ ? @t1 == 58 [ "document.getElementById('x').textContent=9007199254740991+'!';" -> @t2. "9007199254740991!" -> @t3. ]
+ ? @t1 == 59 [ "document.getElementById('x').textContent='raw\nnewline';" -> @t2. 65 -> @t6. ]
+ ? @t1 == 60 [ "document.getElementById('x').textContent='escape\\" -> @t2. 65 -> @t6. ]
+ ? @t1 == 61 [ "not JavaScript!" -> @t2. "application/ld+json" -> @t10. "Old" -> @t3. ]
+ ? @t1 == 62 [ "/" -> @t2. 65 -> @t6. ]
+ ? @t1 == 63 [ "let a=2;//*" -> @t2. "Old" -> @t3. ]
+ ? @t1 == 64 [ "document.getElementById('x').textContent=2+3+4;" -> @t2. "9" -> @t3. ]
+ @web+1507328 -> @t7. 0 -> @t5.
+ ?? :load8[@t2+@t5] [ !store8[@t7+@t5|:load8[@t2+@t5]]. @t5+1 -> @t5. ]
+ !store64[@web|@t7]. !store64[@web+8|@t5]. !store64[@t4+1024+480|@t7]. !store64[@t4+1024+488|@t5].
+ ? @t10 [ 0 -> @t5. ?? :load8[@t10+@t5] [ !store8[@t4+1024+96+@t5|:load8[@t10+@t5]]. @t5+1 -> @t5. ] ]
+ ? @t1 == 39 [
+  @t7+:load64[@web+8] -> @t7. "document.getElementById('x').textContent=a+5;" -> @t2. 0 -> @t5.
+  ?? :load8[@t2+@t5] [ !store8[@t7+@t5|:load8[@t2+@t5]]. @t5+1 -> @t5. ]
+  !store64[@t4+2048+8|4]. !store64[@t4+2048+480|@t7]. !store64[@t4+2048+488|@t5]. !store64[@web+8|:load64[@web+8]+@t5]. !store64[@web+32|3].
+ ]
+ ? @t1 == 45 [ !store64[@t4+1024+480|1]. ]
+ ? @t1 == 46 [ !store64[@web+32|513]. ]
+ ? @t1 == 47 [ !store64[@t4+1024+488|65537]. ]
+ ? (@t1 == 48)+(@t1 == 49) [
+  @web+1507328 -> @t7. "document.getElementById('x').textContent='" -> @t2. 0 -> @t5.
+  ?? :load8[@t2+@t5] [ !store8[@t7+@t5|:load8[@t2+@t5]]. @t5+1 -> @t5. ]
+  511 -> @t11. ? @t1 == 49 [ 512 -> @t11. 28 -> @t6. ]
+  0 -> @t12. ?? @t12 < @t11 [ !store8[@t7+@t5|65]. @t5+1 -> @t5. @t12+1 -> @t12. ]
+  !store8[@t7+@t5|39]. !store8[@t7+@t5+1|59]. @t5+2 -> @t5.
+  !store64[@web|@t7]. !store64[@web+8|@t5]. !store64[@t4+1024+480|@t7]. !store64[@t4+1024+488|@t5].
+ ]
+ ? (@t1 == 50)+(@t1 == 51) [
+  @web+1507328 -> @t7. 0 -> @t5. 0 -> @t11. 64 -> @t12. ? @t1 == 51 [ 65 -> @t12. ]
+  ?? @t11 < @t12 [
+   "let a" -> @t2. 0 -> @t13. ?? :load8[@t2+@t13] [ !store8[@t7+@t5|:load8[@t2+@t13]]. @t5+1 -> @t5. @t13+1 -> @t13. ]
+   @t11 -> @t14. 0 -> @t15. ?? @t14 >= 10 [ @t14-10 -> @t14. @t15+1 -> @t15. ]
+   ? @t15 [ !store8[@t7+@t5|48+@t15]. @t5+1 -> @t5. ] !store8[@t7+@t5|48+@t14]. @t5+1 -> @t5.
+   !store8[@t7+@t5|61]. @t5+1 -> @t5.
+   ? @t15 [ !store8[@t7+@t5|48+@t15]. @t5+1 -> @t5. ] !store8[@t7+@t5|48+@t14]. @t5+1 -> @t5.
+   !store8[@t7+@t5|59]. @t5+1 -> @t5. @t11+1 -> @t11.
+  ]
+  "document.getElementById('x').textContent=a63;" -> @t2. 0 -> @t13. ?? :load8[@t2+@t13] [ !store8[@t7+@t5|:load8[@t2+@t13]]. @t5+1 -> @t5. @t13+1 -> @t13. ]
+  !store64[@web+8|@t5]. !store64[@t4+1024+488|@t5].
+ ]
+ ? @t1 == 52 [
+  @web+1507328 -> @t7. "document.getElementById('x').textContent='" -> @t2. 0 -> @t5.
+  ?? :load8[@t2+@t5] [ !store8[@t7+@t5|:load8[@t2+@t5]]. @t5+1 -> @t5. ]
+  0 -> @t12. ?? @t12 < 256 [ !store8[@t7+@t5|65]. @t5+1 -> @t5. @t12+1 -> @t12. ]
+  !store8[@t7+@t5|39]. !store8[@t7+@t5+1|43]. !store8[@t7+@t5+2|39]. @t5+3 -> @t5.
+  0 -> @t12. ?? @t12 < 256 [ !store8[@t7+@t5|66]. @t5+1 -> @t5. @t12+1 -> @t12. ]
+  !store8[@t7+@t5|39]. !store8[@t7+@t5+1|59]. @t5+2 -> @t5.
+  !store64[@web+8|@t5]. !store64[@t4+1024+488|@t5].
+ ]
+ ? @t1 == 56 [ 0 -> @t5. ?? @t5 < 128 [ !store8[@t4+1024+96+@t5|65]. @t5+1 -> @t5. ] ]
+ ? @t1 == 57 [ !store64[@t4+1024+480|-4]. ]
+ ? @t1 > 64 [
+  "abcde0123456789/!*\"' =+;.$_()\n\t" -> @t2. 0 -> @t11. ?? :load8[@t2+@t11] [ @t11+1 -> @t11. ]
+  @web+1507328 -> @t7. 0 -> @t5. @t1 -> @t12.
+  ?? @t5 < 256 [
+   :bitand[@t12*1664525+1013904223|0xffffffff] -> @t12. :bitand[:shr[@t12|16]|255] -> @t13.
+   ?? @t13 >= @t11 [ @t13-@t11 -> @t13. ]
+   !store8[@t7+@t5|:load8[@t2+@t13]]. @t5+1 -> @t5.
+  ] !store64[@web+8|256]. !store64[@t4+1024+488|256]. -1 -> @t6.
+ ]
+ # Guard local scratch, complete input immutability hash, and whole arena ends.
+ 0 -> @t5. ?? @t5 < 32 [ !store8[@web+739968+@t5|165]. !store8[@web+840000+@t5|165]. @t5+1 -> @t5. ]
+ 2166136261 -> @t8. 0 -> @t5.
+ ?? @t5 < :load64[@web+8] [ :bitand[(@t8*16777619)+:load8[:load64[@web]+@t5]|0xffffffff] -> @t8. @t5+1 -> @t5. ]
+ !switch[@web+1024|@web+1408].
+ ? (@t6 != -1)*(:load64[@web+16] != @t6) [ "JavaScript status mismatch case " -> @t2. 0 -> @t5. ?? :load8[@t2+@t5] [ !put[:load8[@t2+@t5]]. @t5+1 -> @t5. ] @t1 -> @t14. 0 -> @t15. ?? @t14 >= 10 [ @t14-10 -> @t14. @t15+1 -> @t15. ] !put[48+@t15]. !put[48+@t14]. !put[32]. :load64[@web+16] -> @t14. 0 -> @t15. ?? @t14 >= 10 [ @t14-10 -> @t14. @t15+1 -> @t15. ] !put[48+@t15]. !put[48+@t14]. !put[10]. !exit[1]. ]
+ ? @t6 == -1 [ ? (:load64[@web+16] != 0)*(:load64[@web+16] != 65)*(:load64[@web+16] != 28) [ !exit[13]. ] ]
+ ? @t6 == 0 [
+  ? @t1 != 48 [
+   0 -> @t5. ?? :load8[@t3+@t5] [ ? :load8[@t4+512+@t5] != :load8[@t3+@t5] [ @t1 -> @t14. 0 -> @t15. ?? @t14 >= 10 [ @t14-10 -> @t14. @t15+1 -> @t15. ] !put[48+@t15]. !put[48+@t14]. !exit[2]. ] @t5+1 -> @t5. ]
+   ? (:load8[@t4+512+@t5] != 0)+(:load64[@t4+488] != @t5) [ @t1 -> @t14. 0 -> @t15. ?? @t14 >= 10 [ @t14-10 -> @t14. @t15+1 -> @t15. ] !put[48+@t15]. !put[48+@t14]. !exit[3]. ]
+  ] ~ [
+   ? :load64[@t4+488] != 511 [ !exit[4]. ]
+   0 -> @t5. ?? @t5 < 511 [ ? :load8[@t4+512+@t5] != 65 [ !exit[5]. ] @t5+1 -> @t5. ]
+   ? :load8[@t4+1023] != 0 [ !exit[6]. ]
+  ]
+ ]
+ ? (:load64[@web+16] != 0)*(@t6 != 123) [ ? :bitand[:load64[@web+24]|4] == 0 [ !exit[7]. ] ]
+ ? @t1 == 41 [ ? :bitand[:load64[@web+24]|4] == 0 [ !exit[8]. ] ]
+ ? @t1 == 44 [ ? :load64[@web+24] [ !exit[9]. ] ]
+ 2166136261 -> @t9. 0 -> @t5.
+ ?? @t5 < :load64[@web+8] [ :bitand[(@t9*16777619)+:load8[:load64[@web]+@t5]|0xffffffff] -> @t9. @t5+1 -> @t5. ]
+ ? @t8 != @t9 [ !exit[10]. ]
+ 0 -> @t5. ?? @t5 < 32 [ ? (:load8[@web+739968+@t5] != 165)+(:load8[@web+840000+@t5] != 165) [ !exit[11]. ] @t5+1 -> @t5. ]
+ 0 -> @t5. ?? @t5 < 64 [ ? (:load8[@t0+@t5] != 165)+(:load8[@web+4194304+@t5] != 165) [ !exit[12]. ] @t5+1 -> @t5. ]
+ @t1+1 -> @t1.
+]
+"JavaScript profile: 64 semantic/boundary checks and 256 malformed probes passed.\n" -> @t2.
+0 -> @t5. ?? :load8[@t2+@t5] [ !put[:load8[@t2+@t5]]. @t5+1 -> @t5. ]
+!exit[0].

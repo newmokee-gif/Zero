@@ -1,0 +1,35 @@
+:reserve[2048] => @templates.
+0 => @i.
+?? @i < 2048 [ !store64[@templates + @i | 0]. @i + 8 -> @i. ]
+# Original BIOS E820 encoding. Standard binary ECX continuation / EAX buffer.
+# Buffer must be <=0xffe0; an invalid buffer returns0xffffffff without access.
+# Requests24 bytes, initializes extended attributes to1, stores returned size
+# at buffer+24. Returns EBX continuation or0xffffffff on CF, invalid signature,
+# returned size<20 or>24. Preserves general registers except EAX result,
+# DS/ES/EFLAGS, then clears DF. Uses our existing CS:0x6e08 result scratch.
+!store64[@templates + 1280 | "669c1e0666603667668b7c241c6681ffe0ff0000660f87730000003667668b5c241831d28eda8ec2fc266766c747140100000066b820e8000066ba50414d5366b918000000fbcd15fa3667668b7c241cba00008ec2266766894f18660f822c000000663d50414d53660f851f0000006683f914660f82140000006683f918660f87090000006689d866e90600000066b8ffffffff2e66a3086e6661071f669dfc2e66a1086e"].
+!store64[@templates + 1288 | 165].
+:reserve[1024] => @output.
+0 => @out.
+0 => @j.
+0 => @str.
+0 => @len.
+0 => @a.
+0 => @b.
+80 -> @i.
+?? @i < 81 [
+ :load64[@templates + @i * 16] -> @str.
+ :load64[@templates + @i * 16 + 8] -> @len.
+ 0 -> @j.
+ ?? @j < @len [
+  :load8[@str + @j * 2] -> @a.
+  :load8[@str + @j * 2 + 1] -> @b.
+  ? @a < 58 [ @a - 48 -> @a. ] ~ [ @a - 87 -> @a. ]
+  ? @b < 58 [ @b - 48 -> @b. ] ~ [ @b - 87 -> @b. ]
+  !store8[@output + @out | @a * 16 + @b].
+  @out + 1 -> @out. @j + 1 -> @j.
+ ]
+ @i + 1 -> @i.
+]
+:write[@output | @out] => @written.
+? @written != @out [ !exit[1]. ]

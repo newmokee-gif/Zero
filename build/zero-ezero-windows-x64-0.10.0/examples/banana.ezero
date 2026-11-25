@@ -1,0 +1,5 @@
+3 банана => purchase
+purchase => show
+purchase[1] + 2 => show
+purchase[2] => show
+size(purchase[2]) => show

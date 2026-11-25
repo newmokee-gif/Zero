@@ -1,0 +1,52 @@
+ZTEXT00100000a79d21afab10000000
+Zero filesystem driver ABI, revision 1
+
+Drivers are original Zero state machines inside the monolithic kernel.
+The same source runs in hosted test harnesses using Zero positioned I/O.
+No external filesystem implementation is linked into the guest.
+
+H = memory + 24576. Common request fields are unsigned 64-bit values:
+  0 operation: 0 probe, 1 watch, 2 read, 3 create, 4 save, 5 remove
+  8 ASCII name pointer
+ 16 name length, at most 31
+ 24 input pointer
+ 32 input length, at most 400
+ 40 output pointer
+ 48 output capacity including trailing NUL
+ 56 output length excluding NUL
+ 64 result
+ 72 caller completion state
+ 80 volume start in absolute 512-byte sectors
+ 88 volume length in 512-byte sectors
+ 96 format: 1 ext4, 2 NTFS, 3 Btrfs
+104 flags: bit0 mounted, bit1 writable
+136 listing policy:0 terminal entries,1 supported regular files only
+    This extension occupies memory+24712, between root volume-management
+    fields. Default0 preserves the existing terminal/driver ABI. The guest
+    application service sets1 for its request and clears it before return.
+
+Result: 0 success, 1 unsupported profile, 2 corrupt metadata, 3 I/O failure,
+4 missing, 5 exists, 6 capacity exhausted, 7 invalid name/argument,
+8 too large, 9 dirty/recovery required, 10 wrong format, 255 pending.
+Wrong magic returns10; recognized unsupported features return1.
+Names are flat ASCII, letters/digits/dot/underscore/hyphen; dot and dot-dot
+are not valid file names. Save creates or replaces, create preserves existing.
+Read and watch terminate output with NUL without exceeding output capacity.
+
+Entry states: ext4 200, NTFS 300, Btrfs 400. All operations reload and validate
+the selected volume, so switching drives does not reuse another drive's cache.
+Completion writes result/output length then state=load64[H+72].
+Root owns H..H+1023. Driver private memory is25600..32767.
+Two16KiB buffers begin at memory+32768 and memory+49152.
+Caller output uses memory+14336, capacity2044.
+Do not overwrite root header, terminal, glyphs, scheduler, or ZeroFS cache.
+
+Block I/O state90 takes io_lba absolute sector, io_buffer, io_count1..32,
+io_write0 read/1 write/2 flush, io_return completion state. It returns io_ok.
+disk_select identifies the physical ATA position0..3 and is root-owned.
+Volatile scalar variables may be clobbered by I/O and terminal rendering;
+store continuation state in driver-private memory. Preserve request header.
+All requests must stay inside H+80/H+88 before invoking block I/O.
+Mutations must preflight unsupported features and bounds before first write,
+flush their documented transaction, and report failure rather than success
+when durability or integrity is uncertain.

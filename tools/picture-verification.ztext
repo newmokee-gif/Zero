@@ -1,0 +1,30 @@
+ZTEXT0010000068e884558850000000
+NATIVE PICTURE CODEC VERIFICATION
+
+2026-11-17. All 61 initial Linux CLI/container checks passed: one-pixel and
+255/256-run boundaries, independent headers/checksums, 1080p, 3840x2160,
+worst-case alternating 4K pixels, exact RGB/P6 round trips, malformed headers,
+truncation/trailing bytes, record errors, bounded dimensions, P6 comments/CRLF,
+existing-file preservation and injected write/fsync failures.
+
+All six image fixtures produced byte-identical ZPIX and decoded RGB on native
+Linux and Windows/Wine. Ten malformed Windows inputs were rejected and an
+existing destination was preserved. The final bounded shared decoder also
+rejected five upper-word corruptions; six decoded image arrays matched prior
+results. Windows final decoder repeated the 1080p round trip and upper-word
+overflow rejection successfully.
+
+Independent original Zero regression media/picture-check.zero passed 42/42
+on Linux and Windows/Wine, with full raster checks, input preservation and
+output guard bytes. A separate reviewer also checked exact-path/hardlink/
+symlink output aliases and checksum failures with new/existing destinations.
+No remaining defect was found in that review.
+
+These are codec and native-tool checks. A .zpix desktop viewer and an OS
+render command are not part of this change. Native Windows tests used Wine;
+they do not establish physical Windows or a specific desktop GUI integration.
+
+Source hashes:
+tools/picture.zero 7fdf0c50d206073478550366469f1c0c2311a2e28236150a48b917485b3c74d4
+media/zpix-decoder.zero.part 6b7626cd70a200e3d98f41a9967463cb196c45b60a91374f7ae3da2ef5122b88
+media/picture-check.zero fde50bf84d4ca86dc0d165e0db4849f0e49999c28103273369bfc779f7c71b50

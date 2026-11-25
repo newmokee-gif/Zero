@@ -1,0 +1,16 @@
+
+:reserve[80] => @parent. :reserve[80] => @child.
+:reserve[81920] => @stack. :reserve[16] => @shared.
+:argument[1] => @argptr. 0 => @role.
+!store64[@shared | 0].
+:fork[@child | @stack | 81920] -> @role.
+? @role == 1 [
+ ? :argcount[] != 1 [ !exit[1]. ]
+ ? :argument[1] != @argptr [ !exit[2]. ]
+ ? :load8[:argument[1]] != 120 [ !exit[3]. ]
+ ? :program[] == 0 [ !exit[4]. ]
+ !store64[@shared | 1]. !switch[@child | @parent]. !exit[5].
+]
+!switch[@parent | @child].
+? :load64[@shared] != 1 [ !exit[6]. ]
+? :argument[1] != @argptr [ !exit[7]. ] !exit[0].

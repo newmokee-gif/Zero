@@ -1,0 +1,41 @@
+ZTEXT00100000398c73c09cc0000000
+NOTE: several default settings have changed in version 5.15, please make sure
+      this does not affect your deployments:
+      - DUP for metadata (-m dup)
+      - enabled no-holes (-O no-holes)
+      - enabled free-space-tree (-R free-space-tree)
+
+0
+0
+0
+0
+0
+4
+PASS CRUD, empty transitions, missing read
+0
+5
+verification/btrfs/matrix.img: OK
+4
+verification/btrfs/matrix.img: OK
+PASS 31-byte names, 400-byte payload, duplicate/missing nonmutation
+verification/btrfs/matrix.img: OK
+0
+0
+PASS leaf-full refusal after 19 additional files, deletion/reuse
+NOTE: several default settings have changed in version 5.15, please make sure
+      this does not affect your deployments:
+      - DUP for metadata (-m dup)
+      - enabled no-holes (-O no-holes)
+      - enabled free-space-tree (-R free-space-tree)
+
+0
+3
+3
+3
+3
+3
+3
+3
+3
+PASS 8 write/flush failure points; check and old-or-new restore
+PASS both superblock checksum mirrors

@@ -1,0 +1,78 @@
+ZTEXT001000012a10e4ec40a0000000
+Current original Zero workflow (0.12)
+
+Use the native tools on Linux or their .exe versions on Windows:
+  zero-integrate PROJECT_DIRECTORY NEW_KERNEL.zero
+  zero-build PROJECT_DIRECTORY NEW_OUTPUT_DIRECTORY NEW_KERNEL.zero
+  zero-check PROJECT_DIRECTORY NEW_TEST_DIRECTORY
+All destination paths must be new. The integrator preserves authored sources;
+the builder checks its compiler fixed point and builds the original targets;
+the verifier checks language behavior and host file operations in process.
+See tools/integrate.ztext, tools/build.ztext and checks/README.ztext.
+Read these documents with zero-text read FILE.
+
+The notes below preserve earlier implementation and test history. Any old
+shell/Python runner names, generated artifacts, JSON reports or commands are
+historical references: they were removed from the active project and are not
+current runnable instructions or current-release validation. Native host
+checks do not replace BIOS/UEFI, persistence or physical-hardware testing.
+
+Historical implementation notes
+
+Zero volume discovery (original Zero implementation)
+
+Entry150 examines the four IDENTIFY-populated legacy ATA positions, builds
+A:| through Z:| in physical-device order and then partition-table order, and
+returns199. A missing/ATAPI/incompatible physical device is skipped. No write
+operation is issued; discovery neither formats nor repairs a disk.
+
+Physical descriptors at H+896+i*32 contain capacity, validATA, discovery
+status, partition kind, all u64. Status0 success,1 unsupported,2 corrupt or
+ambiguous,3 I/O failure,6 inventory capacity exceeded. Kind0 raw,1 MBR,2 GPT.
+The 26 volume descriptors at H+256+i*24 contain startLBA, sectorCount and
+packed bytes: physical device at16, format17, later probe status18, write
+blocked19. Filesystem probing is separate. GPT read-only attribute bit60
+sets byte19 and must never be cleared by a filesystem probe.
+H+128 holds volumeCount and H+144 the scan index. Other common request fields
+are preserved. Private continuation state occupies25600..26623; buffers are
+32768 and49152. Sector size512 and LBA28 capacity bounds are required.
+
+Supported discovery profiles
+- Raw whole-device volumes. Recognized ZeroFS and NTFS boot sectors bypass
+  MBR interpretation; their bytes446..509 may contain ordinary filesystem
+  boot code. Other raw volumes require no signed partition table and no
+  partition-like records in that region. An EFI PART header without a valid
+  protective MBR is rejected. A signed empty MBR has no exposed volumes.
+- MBR: up to four primary partitions. Active flag0/0x80, nonzero start/size,
+  physical bounds and pairwise disjoint intervals are required. CHS values
+  are not used. Extended types05/0F/85 and hybrid protective tables are
+  explicitly unsupported. Empty entries must have zero start and length.
+- GPT revision1.0:128-byte entries,1..128 entries,512-byte header sector;
+  headerSize92..512, valid primary and backup header CRC32, same disk GUID,
+  usable bounds, entry count/size/CRC, opposite current/backup LBAs, and
+  byte-identical primary/backup entry arrays. Table CRC covers precisely the
+  declared entry bytes, not sector padding. Primary header is LBA1; backup
+  header is the physical last sector. Both arrays must be outside usable
+  data and inside disk bounds. Used entries require a nonzero unique GUID,
+  ordered bounded first/last LBAs and no partition overlap. Empty type GUIDs
+  denote unused entries. Partition names and type-specific attributes other
+  than read-only bit60 do not alter discovery. Filesystem drivers validate
+  the actual contained format independently.
+
+A failed disk scan rolls back every provisional volume from that physical
+disk while retaining valid volumes from other disks. More than26 volumes
+never causes a truncated partial table to become writable: the overflowing
+disk is rejected with status6. Letters are deterministic for the current
+connected-device/table order; persistent letter assignment is not implemented.
+
+Validation
+review-tests/discovery/run.sh compiles the exact scanner into a hosted Zero
+harness. The I/O adapter rejects writes and out-of-range accesses, deliberately
+clobbers all volatile scalars, and verifies inventory memory canaries. Every
+scratch-image checksum remains unchanged. The CRC helper independently checks
+the standard123456789 -> CBF43926 vector. Original Zero fixture generation
+covers raw/NTFS/ZeroFS, validMBR/GPT, malformed bounds and headers, primary and
+backup CRC errors, mismatched arrays, overlapping partitions, duplicate GUIDs,
+read-only attribute, unsupported tables and capacity rollback. Host partx
+independently verifies the valid MBR/GPT fixture start/length pairs. These
+are hosted parser tests; integrated guest boot tests are reported separately.

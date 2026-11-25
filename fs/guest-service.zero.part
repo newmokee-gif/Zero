@@ -1,0 +1,208 @@
+# Original Zero whole-file service. The service coroutine owns its scalar frame.
+# Descriptor at console+2496; app and service continuations use separate stacks.
+? (@boot_information == 0)*(@current == 700) [
+ :load64[@console+2496] -> @c5.
+ 0 -> @message. 720 -> @state.
+ !store64[@c5+64|-1]. !store64[@c5+72|7]. !store64[@c5+104|0].
+ !store64[@c5+144|0]. !store64[@c5+168|@listing]. !store64[@c5+176|0].
+ :load64[@c5+32] -> @operation. 1 -> @valid.
+ ? (:load64[@c5+80] != 1)+(@operation < 1)+(@operation > 9) [ 0 -> @valid. ]
+ ? (@operation == 1)+(@operation == 2)+(@operation == 3)+(@operation == 6)+(@operation == 7)+(@operation == 9) [
+  :load64[@c5+48] -> @text. :load64[@c5+56] -> @text_length.
+  ? (@text == 0)+(@text_length > 65536)+(@text+@text_length < @text) [ 0 -> @valid. ]
+ ]
+ ? @valid*(@operation == 9) [
+  :load64[@memory+24704]*4 -> @j.
+  ? @j > :load64[@c5+56] [ !store64[@c5+72|8]. ] ~ [
+   0 -> @i. ?? @i < @j [
+    !store8[@listing+@i|65+:shr[@i|2]]. !store8[@listing+@i+1|58].
+    !store8[@listing+@i+2|124]. !store8[@listing+@i+3|0]. @i+4 -> @i.
+   ]
+   !store64[@c5+144|@j]. !store64[@c5+72|0].
+  ]
+  0 -> @valid.
+ ]
+ ? @valid [
+  :load64[@c5+40] -> @pointer. @c5+512 -> @name. 0 -> @name_length.
+  ? @pointer == 0 [ 0 -> @valid. ]
+  ?? @valid*(@name_length < 35) [
+   :load8[@pointer+@name_length] -> @character. !store8[@name+@name_length|@character].
+   ? @character == 0 [ 0 -> @valid. ] ~ [ @name_length+1 -> @name_length. ]
+  ]
+  (@pointer != 0)*(@name_length < 35) -> @valid.
+  :load64[@memory+24688] -> @i.
+  ? @valid [
+   ? (:load8[@name] != 0)*(:load8[@name+1] == 58) [
+    :load8[@name] -> @character. ? (@character >= 97)*(@character <= 122) [ @character-32 -> @character. ]
+    ? (@character < 65)+(@character > 90)+(:load8[@name+2] != 124) [ 0 -> @valid. ]
+    @character-65 -> @i. @name+3 -> @name.
+   ] ~ [ ? :load8[@name] == 124 [ @name+1 -> @name. ] ]
+   ? @i >= :load64[@memory+24704] [ 0 -> @valid. ]
+  ]
+  ? @valid [
+   !store64[@memory+24696|@i]. @memory+24832+@i*24 -> @pointer.
+   :load8[@pointer+16] -> @disk_select. !store64[@c5+96|@pointer].
+   :load8[@pointer+17] -> @temporary. !store64[@c5+104|@temporary].
+   ? (@operation == 6)+(@operation == 8) [
+    ? (:load8[@name] == 46)*(:load8[@name+1] == 0) [ @name+1 -> @name. ]
+    ? :load8[@name] [ 0 -> @valid. ]
+   ]
+   ? @valid*(@operation == 8) [
+    !store64[@memory+24688|@i]. !store64[@c5+72|0]. 0 -> @valid.
+   ]
+   ? @valid [
+    0 -> @name_length.
+    ?? (:load8[@name+@name_length] != 0)*(@name_length < 32) [
+     :load8[@name+@name_length] -> @character.
+     ((@character >= 65)*(@character <= 90))+((@character >= 97)*(@character <= 122))+((@character >= 48)*(@character <= 57))+(@character == 46)+(@character == 95)+(@character == 45) -> @ready.
+     ? @operation == 7 [ @ready+(@character == 42)+(@character == 63) -> @ready. ]
+     ? @ready == 0 [ 0 -> @valid. ] @name_length+1 -> @name_length.
+    ]
+    ? @name_length > 31 [ 0 -> @valid. ]
+    ? @operation <= 5 [
+     ? (@name_length == 0)+((@name_length == 1)*(:load8[@name] == 46))+((@name_length == 2)*(:load16[@name] == 0x2e2e)) [ 0 -> @valid. ]
+    ]
+    !store64[@c5+160|@name].
+    @c5+640 -> @text. 0 -> @text_length. !store8[@text|0].
+    ? (@operation == 2)+(@operation == 3) [
+     :load64[@c5+56] -> @text_length.
+     ? @text_length > 400 [ 0 -> @valid. !store64[@c5+72|8]. ]
+     0 -> @j. ?? @valid*(@j < @text_length) [
+      :load8[:load64[@c5+48]+@j] -> @character.
+      ? ((@character < 32)*(@character != 9)*(@character != 10)*(@character != 13))+(@character > 126) [ 0 -> @valid. ]
+      !store8[@text+@j|@character]. @j+1 -> @j.
+     ]
+     ? @valid [ !store8[@text+@text_length|0]. ]
+    ]
+    ? @valid [
+     !store64[@c5+72|0].
+     ? (@operation >= 2)*(@operation <= 5)*:load8[@pointer+19] [ !store64[@c5+72|9]. 0 -> @valid. ]
+     ? (@temporary == 0)+(@temporary > 4) [ !store64[@c5+72|10]. 0 -> @valid. ]
+     ? (@temporary == 4)*(@fs_ready == 0) [ !store64[@c5+72|9]. 0 -> @valid. ]
+    ]
+    ? @valid [
+     ? @temporary == 4 [
+      0 -> @file. 0 -> @free_file. 0 -> @slot. 0 -> @j.
+      ?? @slot < 8 [
+       @work+512+@slot*512 -> @pointer.
+       ? :load8[@pointer] [
+        ? @operation >= 6 [
+         0 -> @i. ?? :load8[@pointer+1+@i] [ !store8[@listing+@j|:load8[@pointer+1+@i]]. @i+1 -> @i. @j+1 -> @j. ]
+         !store8[@listing+@j|10]. @j+1 -> @j.
+        ] ~ [
+         0 -> @i. 1 -> @equal.
+         ?? (@i <= @name_length)*@equal [ ? :load8[@name+@i] != :load8[@pointer+1+@i] [ 0 -> @equal. ] @i+1 -> @i. ]
+         ? @equal [ @pointer -> @file. ]
+        ]
+       ] ~ [ ? @free_file == 0 [ @pointer -> @free_file. ] ]
+       @slot+1 -> @slot.
+      ]
+      ? @operation >= 6 [ !store64[@c5+144|@j]. !store8[@listing+@j|0]. ]
+      ? @operation == 1 [
+       ? @file [ !store64[@c5+144|:load16[@file+34]]. !store64[@c5+168|@file+36]. ] ~ [ !store64[@c5+72|4]. ]
+      ]
+      ? (@operation >= 2)*(@operation <= 5) [
+       ? (@operation == 3)*(@file != 0) [ !store64[@c5+72|5]. 0 -> @valid. ]
+       ? (@operation == 4)*(@file != 0) [ 0 -> @valid. ]
+       ? (@operation == 5)*(@file == 0) [ !store64[@c5+72|4]. 0 -> @valid. ]
+       ? (@operation <= 4)*(@file == 0)*(@free_file == 0) [ !store64[@c5+72|6]. 0 -> @valid. ]
+       ? @valid [
+        6 -> @operation. ? :load64[@c5+32] == 5 [ 8 -> @operation. ]
+        31 -> @state.
+       ]
+      ]
+     ] ~ [
+      2 -> @i. ? @operation == 2 [ 4 -> @i. ]
+      ? @operation == 3 [ !store64[@c5+176|1]. ]
+      ? @operation == 4 [ 3 -> @i. ] ? @operation == 5 [ 5 -> @i. ] ? @operation >= 6 [ 1 -> @i. ]
+      !store64[@memory+24576|@i]. !store64[@memory+24584|@name]. !store64[@memory+24592|@name_length].
+      !store64[@memory+24600|@text]. !store64[@memory+24608|@text_length].
+      !store64[@memory+24616|@listing]. !store64[@memory+24624|2044].
+      !store64[@memory+24632|0]. !store64[@memory+24640|255]. !store64[@memory+24648|720].
+      :load64[@c5+96] -> @pointer.
+      !store64[@memory+24656|:load64[@pointer]]. !store64[@memory+24664|:load64[@pointer+8]].
+      !store64[@memory+24672|@temporary]. !store64[@memory+24680|0].
+      !store64[@memory+24712|1].
+      @temporary*100+100 -> @state.
+     ]
+    ]
+   ]
+  ]
+ ]
+]
+? @current == 720 [
+ :load64[@console+2496] -> @c5. :load64[@c5+32] -> @operation. 721 -> @state.
+ ? (:load64[@c5+104] >= 1)*(:load64[@c5+104] <= 3)*(:load64[@c5+72] == 0)*(@operation <= 7) [
+  :load64[@memory+24640] -> @status. !store64[@c5+72|@status].
+  :load64[@c5+96] -> @pointer.
+  ? (@status == 2)+(@status == 3)+(@status == 9) [ !store8[@pointer+19|1]. ]
+  ? (@operation == 4)*(@status == 5) [ !store64[@c5+72|0]. ]
+  ? :load64[@c5+176] [
+   ? @status == 4 [
+    !store64[@c5+176|0]. !store64[@c5+72|0]. !store64[@memory+24576|4].
+    !store64[@memory+24640|255]. :load64[@c5+104]*100+100 -> @state.
+   ] ~ [ ? @status == 0 [ !store64[@c5+72|5]. ] ]
+  ] ~ [ !store64[@c5+144|:load64[@memory+24632]]. ]
+ ]
+ ? (:load64[@c5+104] == 4)*(@fs_ready == 0)*(@operation <= 7) [ !store64[@c5+72|3]. ]
+ ? (@state == 721)*(:load64[@c5+72] == 0)*((@operation == 6)+(@operation == 7)) [
+  !store64[@console+2504|:load64[@c5+160]]. !store64[@console+2512|2].
+  ? @operation == 6 [ !store64[@console+2504|""]. ] 730 -> @state.
+ ]
+]
+? @current == 721 [
+ :load64[@console+2496] -> @c5. :load64[@c5+32] -> @operation.
+ ? :load64[@c5+72] == 0 [
+  :load64[@c5+144] -> @j.
+  ? (@operation == 1)+(@operation == 6)+(@operation == 7)+(@operation == 9) [
+   ? (@j > 2043)+((@operation == 1)*(@j > 400)) [ !store64[@c5+72|2]. ]
+   ? @j > :load64[@c5+56] [ !store64[@c5+72|8]. ]
+   ? :load64[@c5+72] == 0 [
+    0 -> @i. ?? @i < @j [ !store8[:load64[@c5+48]+@i|:load8[:load64[@c5+168]+@i]]. @i+1 -> @i. ]
+   ]
+  ] ~ [ 0 -> @j. ? (@operation == 2)+(@operation == 3) [ :load64[@c5+56] -> @j. ] ]
+  ? :load64[@c5+72] == 0 [ !store64[@c5+64|@j]. ]
+ ]
+ !store64[@c5+120|@fs_ready]. !store64[@c5+128|@active_bank]. !store64[@c5+80|2].
+ !store64[@memory+24712|0].
+ 0 -> @message. 700 -> @state.
+ !switch[:load64[@c5+16]|:load64[@c5+24]].
+]
+# Shared filename-glob filtering: terminal output stays LF, app output is NUL.
+? @current == 730 [
+ :load64[@console+2504] -> @wanted. 0 -> @i. 0 -> @j. 1 -> @valid.
+ ?? (:load8[@listing+@i] != 0)*(@i < 2044)*@valid [
+  @listing+@i -> @file. 0 -> @name_length.
+  ?? (:load8[@listing+@i] != 0)*(:load8[@listing+@i] != 10)*(@i < 2044) [ @i+1 -> @i. @name_length+1 -> @name_length. ]
+  ? (@name_length == 0)+(@name_length > 31)+(@i >= 2044) [ 0 -> @valid. ]
+  ? :load8[@listing+@i] == 10 [ @i+1 -> @i. ]
+  1 -> @equal. 0 -> @k. 0 -> @temporary. -1 -> @ready. 0 -> @done.
+  ? :load8[@wanted] [
+   ?? (@k < @name_length)*@equal [
+    :load8[@wanted+@temporary] -> @character.
+    ? @character == 42 [ @temporary -> @ready. @temporary+1 -> @temporary. @k -> @done. ] ~ [
+     ? (@character == 63)+(@character == :load8[@file+@k]) [ @k+1 -> @k. @temporary+1 -> @temporary. ] ~ [
+      ? @ready != -1 [ @done+1 -> @done. @done -> @k. @ready+1 -> @temporary. ] ~ [ 0 -> @equal. ]
+     ]
+    ]
+   ]
+   ?? :load8[@wanted+@temporary] == 42 [ @temporary+1 -> @temporary. ]
+   ? :load8[@wanted+@temporary] [ 0 -> @equal. ]
+  ]
+  ? @equal*@valid [
+   0 -> @k. ?? @k < @name_length [ !store8[@listing+@j|:load8[@file+@k]]. @k+1 -> @k. @j+1 -> @j. ]
+   10 -> @character. ? :load64[@console+2512] == 2 [ 0 -> @character. ]
+   !store8[@listing+@j|@character]. @j+1 -> @j.
+  ]
+ ]
+ !store8[@listing+@j|0].
+ ? :load64[@console+2512] == 2 [
+  :load64[@console+2496] -> @c5. !store64[@c5+144|@j].
+  ? @valid == 0 [ !store64[@c5+72|2]. ] 721 -> @state.
+ ] ~ [
+  @listing -> @message. 9 -> @state.
+  ? @j == 0 [ "No matching files.\r\n" -> @message. ]
+  ? @valid == 0 [ "Invalid filesystem listing.\r\n" -> @message. ]
+ ]
+ !store64[@console+2504|0]. !store64[@console+2512|0].
+]

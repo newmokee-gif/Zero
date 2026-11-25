@@ -1,0 +1,15 @@
+# Native media backend. Exactly thirteen globals including the caller-owned state.
+# mh points to 8192 initialized bytes; initialise handle at16 to -1.
+0 => @mh.
+0 => @mh0.
+0 => @mh1.
+0 => @mh2.
+0 => @mh3.
+0 => @mh4.
+0 => @mh5.
+0 => @mh6.
+0 => @mh7.
+0 => @mh8.
+0 => @mh9.
+0 => @mh10.
+0 => @mh11.

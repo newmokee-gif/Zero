@@ -1,0 +1,161 @@
+ZTEXT00100001ec284414e780000000
+Zero source syntax - data first
+
+Zero has its own source grammar. A statement starts with the value being
+bound, a control marker, or an explicit effect. Variable references carry @;
+expression operations carry :; side effects carry !. Periods end statements,
+square brackets delimit blocks and arguments, and | separates arguments.
+
+Bindings
+    10 => @count.
+    @count + 1 -> @count.
+    "Ready\n" => @message.
+
+=> declares a new top-level variable. -> assigns an existing variable.
+The expression is evaluated first. The new name becomes visible only after
+its initializer; duplicate names and self-reference in an initializer fail.
+Declarations inside control blocks are rejected. Variables persist for the
+whole top-level program; there are no implicit globals or shadowed names.
+
+Variable references always use @name. Names are ASCII, case-sensitive,
+1..31 characters: a letter or underscore, followed by letters/digits/_ .
+The @ prefix does not count toward that length. Operation names from every
+target and retired language keywords are reserved and cannot be variable
+names. A name does not become available merely because its operation is
+unsupported by the selected target.
+
+Control flow
+    ? @count == 10 [
+        !put[65].
+    ] ~ [
+        !put[66].
+    ]
+
+    ?? @count < 20 [
+        @count + 1 -> @count.
+    ]
+
+? selects a block when its condition is nonzero. The optional ~ block runs
+when the condition is zero. ?? repeats a block while its condition is nonzero.
+Control blocks do not take a trailing period. Whitespace and indentation do
+not determine structure. # starts a comment through the end of the line.
+
+Operations and effects
+    :reserve[64] => @buffer.
+    :load8[@buffer] => @byte.
+    !store8[@buffer | 65].
+    :write[@buffer | 1] => @written.
+    :bitxor[0xff00 | 0x0ff0] => @bits.
+    :bitand[@bits | 255] -> @bits.
+    :shr[@bits | 4] -> @bits.
+    :arg0[] => @boot.
+    !halt.
+
+: introduces a value-producing operation. It always has argument brackets,
+including [] for a zero-argument operation such as arg0. ! introduces an
+effect statement. Effects with arguments use brackets; effects without
+arguments are written !halt. / !disable. / !enable. where the target allows
+them. Arguments are evaluated from left to right. | is only an argument
+separator, not a bitwise operator. Only the operations supplied by a target
+are available; target restrictions and hardware ABI contracts still apply.
+
+Hosted file-descriptor operations retain exactly the same grammar:
+    :pread[3 | @buffer | 512 | 4096] => @read_count.
+    :pwrite[3 | @buffer | @read_count | 8192] => @write_count.
+    :fsync[3] => @flush_status.
+The invoking host supplies descriptor3 in this example. Return values must be
+checked for short I/O and negative errno represented as unsigned 64-bit values.
+
+Examples for firmware targets
+    :cpuid[0x80000001 | 3] => @features.
+    :memmap[0 | 0x6600] => @next_record.
+    :biosmove[0x6800 | 16384] => @copy_status.
+    !out8[0x3f8 | 65].
+    !out32[0xcf8 | 0x80000000].
+    :in32[0xcfc] => @pci_identity.
+    :call[@function | @a1 | @a2 | @a3 | @a4 | @a5] -> @status.
+    !longjump[8 | 0x20000 | @handoff | 0x90000].
+    !protectedjump[8 | 0x20000 | @handoff | 0x90000].
+
+biosmove is a REAL-only INT15/AH87 block transfer using a caller-initialized
+48-byte descriptor table; see portability/guest/biosmove/README.ztext.
+The last two are real-mode architectural transfer primitives. The Zero
+loader supplies the GDT, memory layout and control-register policy first.
+protectedjump requires a flat 32-bit code descriptor at the supplied selector and
+a flat writable data descriptor at selector 0x10. It far-transfers to a 32-bit
+ABI shim, loads DS/ES/SS/FS/GS=0x10, clears DF, and enters the supplied kernel
+with cdecl arg0 on its new stack and arg1=0. A return address leads to a halt
+loop. The stack is aligned so entry ESP modulo 16 is 12. It does not construct
+tables, read disks, select CPU modes, or enable paging by itself.
+
+Cooperative continuation forms
+    :fork[@child_context | @child_stack | 81920] -> @branch.
+    ? @branch == 1 [
+        !switch[@child_context | @parent_context].
+    ]
+    !switch[@parent_context | @child_context].
+
+This is a grammar example using already allocated, aligned context and stack
+memory. fork returns 0 in the parent; its suspended child receives 1 when
+first switched to. switch is an effect that later resumes at its continuation.
+The source controls scheduling. Independent stacks do not imply separate
+address spaces: pre-existing pointers remain shared. See LANGUAGE.ztext for
+memory ownership, minimum stack sizes, target restrictions and native ABI.
+
+Expressions
+Numbers are decimal or 0x hexadecimal; strings use double quotes. Strings
+retain the ASCII escapes \n, \r, \t, \\, and \". Arithmetic parentheses are
+available for grouping; they are not operation-call delimiters.
+Precedence: primary/grouping, unary -, *, +/-, then one unsigned comparison
+(== != < <= > >=). Comparisons produce 0 or 1; arithmetic wraps at the target
+value width. Existing x86-64 targets use u64; the real-mode subset uses u32.
+The protected-mode IA32 target also preserves full-u64 values; X86.ztext
+documents its paired-register representation and firmware ABI.
+
+There are no implicit assignments or conversions between operation forms.
+A value-producing operation cannot be used as an effect merely by changing
+its prefix. Bind its result to a variable when the operation returns a value.
+
+Migration boundary
+The old declaration-first statements, bare variable references, alphabetic
+control keywords, braces, semicolon endings and parenthesized operation calls
+are not accepted aliases. Source files must use this grammar consistently.
+The compiler is itself written in this grammar. Self-hosting does not add
+assembly blocks, imported compiler code or a second source language.
+See LANGUAGE.ztext, REAL.ztext and X86.ztext for target
+limits and operations, and verification reports for the tested scope.
+
+Shared grammar across output targets
+The syntax above is Zero syntax. The same compiler can target Linux ELF
+(default/--host), Windows x64 PE (--windows), native Zero OS applications
+(--app64/--app32), raw kernels (--raw/--raw32), UEFI (--efi/--efi32), or the
+real-mode BIOS subset (--real). Target flags change entry/output contracts
+and allowed operations, not statement spelling. See LANGUAGE.ztext.
+Ezero has its own higher-level source grammar, documented in ezero/README.ztext
+and ezero/ABI.ztext; unquoted UTF-8 phrases and one-based collections belong to
+Ezero and are not silently accepted as aliases by the Zero parser.
+
+Native host operation examples (same Zero grammar)
+    :host[] => @platform.
+    :argcount[] => @count.
+    :argument[1] => @path.
+    :fileopen[@path | 1] => @handle.
+    :filewrite[@handle | "Hello" | 5] => @written.
+    :filesync[@handle] => @flushed.
+    :fileclose[@handle] => @closed.
+    :hostwait[250] => @waited.
+    :program[] => @executable_path.
+    :hostalloc[4096] => @pages.
+    :hostprotect[@pages | 4096 | 1] => @protected.
+    :hostfree[@pages | 4096] => @released.
+
+These are form examples; real programs must validate arguments and check every
+return before using a handle or pointer. Mutation primitives still use ':'
+because they return status; !fileclose and other effect aliases are rejected.
+filesync requests a file flush; it does not make directory renames durable.
+hostwait accepts milliseconds0..86400000 and suspends the native thread;
+larger unsigned values fail immediately. Both return0 or unsigned-1.
+fileopen modes 0..4 are explicit low-level API constants, while user argument
+indices start at 1. Guest builds return unavailable-service sentinels described
+in LANGUAGE.ztext. Ezero offers separate high-level host()/arguments()/readfile()/
+writefile()/fileexists() forms; those are not Zero grammar aliases.

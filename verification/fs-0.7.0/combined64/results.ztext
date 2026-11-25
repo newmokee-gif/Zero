@@ -1,0 +1,25 @@
+ZTEXT0010000066242439c980000000
+Final BIOS64 verification, exact ISO6af39753816e30ab40e77cf56af4a8edce4de20abb30ef09d722884c217a5f3b
+QEMU pc/TCG, qemu64, SeaBIOS,128MiB, standard VGA, PS/2 commands.
+
+Final first run reused private images containing earlier developmental writes;
+old ZeroFS/ext4/NTFS/Btrfs files all read correctly after the ISO upgrade.
+Created final on B/C/D, saved then overwrote content, read exact changed ext4,
+changed ntfs, changed btrfs. Created and removed remove on allthree and confirmed
+missing. Cross-volume paths retained separate data. E GPT ext4 remained readable
+and rejected mutation. disks shows healthy B/C/D and explicitread-onlyE.
+info identifies allfourformats; tasks shows bothworkersrunning. pause1 freezes
+graphics for final.png while the terminal remainsusable. Screenshot inspected.
+
+After full process exit, a new process with the same finalISO read A:|same as
+zero separate and allthreefinal files with exactcontents. Removedfiles stayed
+absent andEwelcome unchanged. before-restart.sha256/restart-disks-unchanged.txt
+proveallthreephysicalimages wereunchanged bythe restart. BothVMs stopped.
+
+Final externalofflinechecks: e2fsck-fn0, ntfsfix-n0, btrfscheckreadonly0.
+Debugfs/ntfscat/btrfsrestoreexactbytecomparisons allpassed; Btrfsremove absent.
+ReadonlyGPTmatchesoriginalfixturebyteforbyte. Exactcheckerlogs,readbacks and
+expectedfiles are inthisdirectory. final-first.serial andfinal-restart.serial
+are actualguestoutput; final.png/restart.png areactualVMscreens.
+Earlier candidate.iso/first.serial concernanearlierdevelopmentbuild only.
+No userdiskwasused; allwritableimages areprivatecopies andexcludedfromrelease.

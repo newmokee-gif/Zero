@@ -1,0 +1,16 @@
+# Parent modal only; child file-service continuation must never enter the UI.
+? @boot_information*(:load64[@console+2416] == 3) [
+ :load64[@console+2400]+163840 -> @c5.
+ :load64[@console+2448] -> @character. !store64[@console+2448|0].
+ # INCLUDE EDITOR guest-input.zero.part
+ # INCLUDE EDITOR guest-file.zero.part
+ ? @boot_information*(:load64[@console+2416] == 3) [
+  :load64[@console+2400]+163840 -> @c5.
+  ? :load64[@c5+96] [
+   !store64[@c5+96|0]. !store64[@c5+104|0].
+   @c5+512 -> @arguments. 25+:load64[@c5+48] -> @operation.
+   760 -> @state.
+  ]
+  # INCLUDE EDITOR guest-render.zero.part
+ ]
+]

@@ -1,0 +1,207 @@
+# Original native compiler/application VM proof.
+:arg0[] => @boot.
+"ZEROAPP_VM_UNIQUE_ANCHOR" => @anchor.
+@anchor-74 => @base.
+0 => @bundle.
+0x800000 => @work.
+0 => @zero.
+0 => @front.
+0 => @pack.
+0 => @context.
+0 => @input.
+0 => @inputBytes.
+0 => @output.
+0 => @capacity.
+0 => @image.
+0 => @status.
+0 => @stage.
+1 => @good.
+0 => @i.
+0 => @part.
+0 => @length.
+0 => @combined.
+0 => @outBytes.
+0 => @wait.
+0 => @flags.
+0 => @message.
+"guest-compiler-probe" => @name.
+"--app32" => @target.
+
+:load64[@boot+128] -> @bundle.
+:load64[@boot+144] -> @work.
+? (:load64[@boot+136] != 1048576) + (:load64[@boot+152] != 8388608) [ 0 -> @good. ]
+? (@bundle == 0) + (@work == 0) [ 0 -> @good. ]
+? @good [
+ ? :load64[@bundle] != 0x31304c444e42525a [ 0 -> @good. ]
+ @bundle+:load64[@bundle+224] -> @zero.
+ @bundle+:load64[@bundle+224+32] -> @front.
+ @bundle+:load64[@bundle+224+64] -> @pack.
+]
+
+@work -> @context.
+@work+589824 -> @combined.
+? @good [
+ 0 -> @i. ?? @i < 192 [ !store64[@context+@i|0]. @i+8 -> @i. ]
+ !store64[@context+8|@work+2097152+4096].
+ !store64[@context+168|@work+2097152]. !store64[@context+176|4096].
+ :call[@zero+64|@context|0|0|0|0] -> @status.
+ ? (@status != 64) + (:load64[@context+88] != 64) [ 0 -> @good. ]
+]
+?? (@stage < 6) * @good [
+ "GUEST stage " -> @message. 0 -> @i.
+ ?? :load8[@message+@i] [ !out8[0x3f8|:load8[@message+@i]]. @i+1 -> @i. ]
+ !out8[0x3f8|48+@stage]. !out8[0x3f8|13]. !out8[0x3f8|10].
+ 0 -> @i. ?? @i < 192 [ !store64[@context+@i|0]. @i+8 -> @i. ]
+ !store64[@context|1]. !store64[@context+8|@work+8388608].
+ !store64[@context+168|@work+2097152]. !store64[@context+176|6291456].
+ !store64[@context+64|1]. !store64[@context+72|@name].
+ @work+4096 -> @input. 0 -> @inputBytes.
+ @work+1572864 -> @output. 65536 -> @capacity.
+ ? @stage == 0 [
+  @zero -> @image.
+  "!put[90].!exit[7]." -> @input. 18 -> @inputBytes.
+  @work+1048576 -> @output. 458752 -> @capacity.
+  !store64[@context+64|2]. !store64[@context+80|@target].
+ ]
+ ? @stage == 1 [ @work+1048576 -> @image. ]
+ ? @stage == 2 [
+  @front -> @image.
+  @work+270336 -> @output. 70000 -> @capacity.
+  !store8[@input+0|51].
+  !store8[@input+1|32].
+  !store8[@input+2|208].
+  !store8[@input+3|177].
+  !store8[@input+4|208].
+  !store8[@input+5|176].
+  !store8[@input+6|208].
+  !store8[@input+7|189].
+  !store8[@input+8|208].
+  !store8[@input+9|176].
+  !store8[@input+10|208].
+  !store8[@input+11|189].
+  !store8[@input+12|208].
+  !store8[@input+13|176].
+  !store8[@input+14|32].
+  !store8[@input+15|61].
+  !store8[@input+16|62].
+  !store8[@input+17|32].
+  !store8[@input+18|112].
+  !store8[@input+19|117].
+  !store8[@input+20|114].
+  !store8[@input+21|99].
+  !store8[@input+22|104].
+  !store8[@input+23|97].
+  !store8[@input+24|115].
+  !store8[@input+25|101].
+  !store8[@input+26|10].
+  !store8[@input+27|112].
+  !store8[@input+28|117].
+  !store8[@input+29|114].
+  !store8[@input+30|99].
+  !store8[@input+31|104].
+  !store8[@input+32|97].
+  !store8[@input+33|115].
+  !store8[@input+34|101].
+  !store8[@input+35|91].
+  !store8[@input+36|49].
+  !store8[@input+37|93].
+  !store8[@input+38|43].
+  !store8[@input+39|50].
+  !store8[@input+40|32].
+  !store8[@input+41|61].
+  !store8[@input+42|62].
+  !store8[@input+43|32].
+  !store8[@input+44|115].
+  !store8[@input+45|104].
+  !store8[@input+46|111].
+  !store8[@input+47|119].
+  !store8[@input+48|10].
+  !store8[@input+49|112].
+  !store8[@input+50|117].
+  !store8[@input+51|114].
+  !store8[@input+52|99].
+  !store8[@input+53|104].
+  !store8[@input+54|97].
+  !store8[@input+55|115].
+  !store8[@input+56|101].
+  !store8[@input+57|91].
+  !store8[@input+58|50].
+  !store8[@input+59|93].
+  !store8[@input+60|32].
+  !store8[@input+61|61].
+  !store8[@input+62|62].
+  !store8[@input+63|32].
+  !store8[@input+64|115].
+  !store8[@input+65|104].
+  !store8[@input+66|111].
+  !store8[@input+67|119].
+  !store8[@input+68|10].
+  69 -> @inputBytes.
+ ]
+
+ ? @stage == 3 [
+  @pack -> @image.
+  @work+270336 -> @input. @outBytes -> @inputBytes.
+  @work+393216 -> @output. 196608 -> @capacity.
+ ]
+ ? @stage == 4 [
+  0 -> @length.
+@bundle+:load64[@bundle+32] -> @part.
+  0 -> @i. ?? @i < :load64[@bundle+40] [ !store8[@combined+@i|:load8[@part+@i]]. @i+1 -> @i. ]
+  @i -> @length.
+  0 -> @i. ?? @i < @outBytes [ !store8[@combined+@length+@i|:load8[@work+393216+@i]]. @i+1 -> @i. ]
+  @length+@outBytes -> @length.
+@bundle+:load64[@bundle+48] -> @part.
+  0 -> @i. ?? @i < :load64[@bundle+56] [ !store8[@combined+@length+@i|:load8[@part+@i]]. @i+1 -> @i. ]
+  @length+@i -> @length.
+
+  @zero -> @image. @combined -> @input. @length -> @inputBytes.
+  @work+1048576 -> @output. 458752 -> @capacity.
+  !store64[@context+64|2]. !store64[@context+80|@target].
+ ]
+ ? @stage == 5 [ @work+1048576 -> @image. ]
+ !store64[@context+16|@input]. !store64[@context+24|@inputBytes].
+ !store64[@context+40|@output]. !store64[@context+48|@capacity].
+ ? :load64[@image] != 0x315050414f52455a [ 0 -> @good. ]
+ ? :load64[@image+8] != 32 [ 0 -> @good. ]
+ ? :load64[@image+24] != 64 [ 0 -> @good. ]
+ ? @good [
+  :call[@image+64|@context|0|0|0|0] -> @status.
+  :load64[@context+56] -> @outBytes.
+  ? @outBytes > @capacity [ 0 -> @good. ]
+  ? @stage == 1 [
+   ? (@status != 7) + (:load64[@context+88] != 7) + (@outBytes != 1) [ 0 -> @good. ]
+   ? :load8[@output] != 90 [ 0 -> @good. ]
+  ] ~ [ ? @status + :load64[@context+88] != 0 [ 0 -> @good. ] ]
+  ? @stage == 5 [
+   ? @outBytes != 15 [ 0 -> @good. ]
+   ? :load8[@output+0] != 53 [ 0 -> @good. ]
+   ? :load8[@output+1] != 10 [ 0 -> @good. ]
+   ? :load8[@output+2] != 208 [ 0 -> @good. ]
+   ? :load8[@output+3] != 177 [ 0 -> @good. ]
+   ? :load8[@output+4] != 208 [ 0 -> @good. ]
+   ? :load8[@output+5] != 176 [ 0 -> @good. ]
+   ? :load8[@output+6] != 208 [ 0 -> @good. ]
+   ? :load8[@output+7] != 189 [ 0 -> @good. ]
+   ? :load8[@output+8] != 208 [ 0 -> @good. ]
+   ? :load8[@output+9] != 176 [ 0 -> @good. ]
+   ? :load8[@output+10] != 208 [ 0 -> @good. ]
+   ? :load8[@output+11] != 189 [ 0 -> @good. ]
+   ? :load8[@output+12] != 208 [ 0 -> @good. ]
+   ? :load8[@output+13] != 176 [ 0 -> @good. ]
+   ? :load8[@output+14] != 10 [ 0 -> @good. ]
+
+  ]
+ ]
+ @stage+1 -> @stage.
+]
+"GUEST ZERO/EZERO NATIVE PIPELINE FAIL\r\n" -> @message.
+? @good [ "GUEST ZERO/EZERO NATIVE PIPELINE PASS\r\n" -> @message. ]
+0 -> @i.
+?? :load8[@message+@i] [
+ 0 -> @wait. 0 -> @flags.
+ ?? (@flags < 32)*(@wait < 1000000) [ :in8[0x3fd] -> @flags. ?? @flags >= 64 [ @flags-64 -> @flags. ] @wait+1 -> @wait. ]
+ !out8[0x3f8|:load8[@message+@i]]. @i+1 -> @i.
+]
+? @good [ !out8[0xf4|0]. ] ~ [ !out8[0xf4|1]. ]
+!halt.

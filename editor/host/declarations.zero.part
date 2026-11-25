@@ -1,0 +1,78 @@
+# Original Zero Studio host editor. All implementation is Zero.
+# Fixed 1280x800 canvas; bytes outside ASCII are rejected without changing files.
+0 => @e.
+0 => @text.
+0 => @pixels.
+0 => @wire.
+0 => @font.
+0 => @platform.
+1 => @running.
+0 => @changed.
+1 => @dirty.
+0 => @length.
+0 => @caret.
+0 => @top.
+0 => @mode.
+0 => @path.
+0 => @prompt.
+0 => @plen.
+0 => @status.
+0 => @key.
+0 => @mod.
+0 => @mousex.
+0 => @mousey.
+0 => @event.
+0 => @render.
+0 => @i.
+0 => @j.
+0 => @k.
+0 => @n.
+0 => @c.
+0 => @a.
+0 => @b.
+0 => @d.
+0 => @x.
+0 => @y.
+0 => @col.
+0 => @row.
+0 => @bits.
+0 => @color.
+-1 => @fd.
+-1 => @sock.
+0 => @window.
+0 => @gc.
+0 => @base.
+0 => @mask.
+0 => @root.
+0 => @depth.
+1280 => @width.
+800 => @height.
+0 => @api.
+0 => @message.
+0 => @keys.
+0 => @keycols.
+0 => @code.
+0 => @work.
+0 => @phase.
+0 => @target.
+0 => @compilebytes.
+0 => @argc.
+0 => @quit.
+0 => @failed.
+:host[] -> @platform.
+:hostalloc[1048576] -> @e.
+:hostalloc[4194304] -> @pixels.
+:hostalloc[262144] -> @wire.
+? (@e == 0) + (@pixels == 0) + (@wire == 0) [ !exit[1]. ]
+@e + 4096 -> @text. @e + 512 -> @path. @e + 1024 -> @prompt.
+@e + 2048 -> @api. @e + 76800 -> @message. @e + 131072 -> @keys.
+"Ready. Ctrl+O open   Ctrl+S save   F5 build   Ctrl+Q quit" -> @status.
+"00000004444404:::0000:O::O:04?D>5N4IJ248;C<BD8EB=44800002488842842224804E>E40044O4400000448000O0000000004122488@>ACEIA>4<4444>>A1248ON11611N26:BO22O@@N11N68@NAA>O124888>AA>AA>>AA?12<04004000400448124842100O0O00@84248@>A12404>AGEG@>>AAOAAANAANAAN?@@@@@?NAAAAANO@@N@@OO@@N@@@?@@GAA?AAAOAAA>44444>72222B<ABDHDBA@@@@@@OAKEEAAAAIIECCA>AAAAA>NAAN@@@>AAAEB=NAANDBA?@@>11NO444444AAAAAA>AAAAA:4AAAEEKAAA:4:AAAA:4444O1248@O>88888>@884221>22222>4:A0000000000O842000000>1?A?@@NAAAN00?@@@?11?AAA?00>AO@?698N8880?AA?1>@@NAAAA40<444>20622B<@@BDHDB<44444>00JEEEE00NAAAA00>AAA>0NAAN@@0?AA?1100FI@@@00?@>1N88N889600AAAA?00AAA:400AAEE:00A:4:A0AAA?1>00O248O34484434444444H44244H009F000" -> @font.
+:argcount[] -> @argc.
+!store64[@e + 320 | :program[]].
+? @argc > 0 [
+ :argument[1] -> @a. 0 -> @i.
+ ?? (:load8[@a + @i] != 0) * (@i < 500) [ !store8[@prompt + @i | :load8[@a + @i]]. @i + 1 -> @i. ]
+ !store8[@prompt + @i | 0]. @i -> @plen.
+ ? :load8[@a + @i] != 0 [ "Startup path exceeds 500 bytes; no file was opened." -> @status. ] ~ [ 1 -> @phase. ]
+]

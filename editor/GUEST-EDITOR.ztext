@@ -1,0 +1,57 @@
+ZTEXT00100000caea808beac0000000
+ZERO STUDIO / ZERO OS GUEST EDITOR
+
+Implementation
+All editor implementation is original Zero. Ezero is a selectable input language
+for the bundled compiler. No foreign editor, GUI toolkit, shell command, or host
+compiler is launched by the guest editor. The window manager paints the canvas
+with Zero's own font and pixel renderer.
+
+Open
+Type edit, or edit FILE. A missing named file opens an empty, unsaved buffer;
+opening the editor does not create or modify a file. Paths use the current
+volume, or the existing A:|NAME form. The selected filesystem service validates
+names, capacity and write permission. A failed open keeps the current buffer.
+
+Keys
+F6 saves. An untitled buffer first asks for a filename.
+F7 opens a filename dialog. Missing files become new unsaved buffers.
+F8 compiles and runs the source with the installed Zero or Ezero toolchain.
+F9 selects Zero or Ezero. The selected language is visible in the title.
+F10 starts a new buffer. Esc closes the editor.
+Arrow keys move the caret; Home and End move within a line; Backspace and Delete
+remove text. Enter inserts a line break. Tab inserts one space.
+Unsaved changes require Y before closing, opening another file or starting a
+new buffer. N or Esc cancels the discard. Merely choosing an action does not
+write the buffer. Ctrl+S/O/B/L/N are equivalent serial input events.
+
+Limits in this first guest editor
+The writable guest file service currently limits source to 400 ASCII bytes and
+filenames to 31 characters. The editor checks this before insertion and does not
+silently truncate. It rejects binary/non-ASCII files and files over 400 bytes.
+Opening a CRLF file normalizes line endings in memory; disk bytes change only
+on Save. The display uses ten code rows with line numbers beginning at 1 and an
+insertion caret. Long source lines wrap; the viewport follows the caret.
+The diagnostic line shows the first 80 characters. The editor also retains up
+to 1023 output bytes, and mirrors a bounded status/output excerpt to serial.
+The editor's editing controls are keyboard driven. The system mouse pointer
+is separately implemented by the Zero PS/2 driver.
+
+Build and files
+F8 uses the same validated compiler bundle as the terminal zero and ezero
+commands. Compilation failures leave the source intact. Running a program has
+the same current guest runtime/file-service capabilities as terminal programs;
+this first editor is not a process sandbox or debugger.
+Open and Save use the actual cooperative guest file service with an independent
+continuation. Save reports success only after that service returns success.
+The editor state is outside the compiler workspace and filesystem buffers.
+
+Integration
+The editor is modal type 3 at console+2416. Its 64KiB private region is
+network_base+163840, shared exclusively with the inactive browser. It uses the
+first 8192 bytes: state, filename fields,400-byte source, diagnostics, a temporary
+read buffer, bounded serial status and an 80-column by 16-row frame at+4096.
+File-service continuations use the existing compiler workspace descriptor and
+owned child stack. Compilation uses state 760 and the existing compiler block
+exactly once; its result returns to the editor. No editor memory touches the
+user disk directly.

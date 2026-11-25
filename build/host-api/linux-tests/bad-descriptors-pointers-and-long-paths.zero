@@ -1,0 +1,12 @@
+
+:reserve[4097] => @p. 0 => @i.
+?? @i < 4096 [ !store8[@p + @i | 97]. @i + 1 -> @i. ]
+!store8[@p + 4096 | 0].
+? :fileopen[@p | 0] != -1 [ !exit[1]. ]
+? :fileopen[0 | 0] != -1 [ !exit[2]. ]
+? :filedelete[0] != -1 [ !exit[3]. ]
+? :fileread[-1 | @p | 1] != -1 [ !exit[4]. ]
+? :filewrite[4294967297 | @p | 1] != -1 [ !exit[5]. ]
+? :filesize[-1] != -1 [ !exit[6]. ]
+? :fileclose[4294967297] != -1 [ !exit[7]. ]
+? :filewrite[1 | "OK" | 2] != 2 [ !exit[8]. ] !exit[0].

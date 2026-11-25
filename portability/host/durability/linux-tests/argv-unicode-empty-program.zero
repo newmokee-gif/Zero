@@ -1,0 +1,17 @@
+
+0 => @a. 0 => @b. 0 => @i.
+? :host[] != 1 [ !exit[1]. ]
+? :argcount[] != 3 [ !exit[2]. ]
+? :argument[0] != 0 [ !exit[3]. ]
+? :argument[4] != 0 [ !exit[4]. ]
+? :argument[-1] != 0 [ !exit[5]. ]
+:program[] -> @a. :argument[1] -> @b.
+? @a == 0 [ !exit[6]. ]
+?? :load8[@b + @i] [
+ ? :load8[@a + @i] != :load8[@b + @i] [ !exit[7]. ] @i + 1 -> @i.
+]
+? :load8[@a + @i] != 0 [ !exit[8]. ]
+? :write[:argument[2] | 14] != 14 [ !exit[9]. ]
+? :load8[:argument[2] + 14] != 0 [ !exit[10]. ]
+? :load8[:argument[3]] != 0 [ !exit[11]. ]
+!exit[0].

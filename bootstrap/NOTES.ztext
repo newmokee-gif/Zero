@@ -1,0 +1,18 @@
+ZTEXT00100000401ea3438bf0000000
+Original Zero compiler provenance and active seed
+
+The active application seed is bootstrap/zero64.zapp, an original Zero compiler
+image with the ZEROAPP1 ABI header. tools/build.zero validates it, compiles the
+canonical compiler.zero source and checks successive app generations for exact
+self-reproduction before producing artifacts.
+
+Use zero-build PROJECT_DIRECTORY NEW_OUTPUT_DIRECTORY. The output directory
+must not exist. Source composition is performed by tools/integrate.zero; neither
+step calls a foreign compiler, assembler, linker, script or interpreter.
+Read tools/build.ztext and tools/integrate.ztext with zero-text.
+
+Early bootstrap work originally used our own assembly implementation, followed
+by an original Zero compiler and an original Zero arena adjustment. That is
+provenance, not a current build dependency. Historical transition helpers and
+reports do not constitute a current release test; active source is Zero/Ezero.
+The current seed and source identity must be recorded with each verified build.

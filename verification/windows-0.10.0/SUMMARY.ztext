@@ -1,0 +1,13 @@
+ZTEXT00100000483688b422c0000000
+Windows native toolkit packaged smoke: 13/13 PASS.
+Wine10 on Debian13; no native Windows run.
+Final ZIP SHA256: 8b66f28c6b64ccc781bc296c31aa9b514df1e02e371b0c8c4da862b64a3bdaa5
+ISO SHA256: 8f31413952cbac47c16074ef6fb6534ada173246f822916e54d79b35d9ffb129
+Native product contains no CMD/PowerShell/shell/Python files or foreign runtime.
+Installer/updater selections are preparation only; boot activation remains unimplemented.
+Final packaged updater/SHA256 matrix:16/16 PASS under Wine.
+Final PE updater:c0085f827b55b27ee53a5efdbdb2e82c2d01984d5211e247e5fb9b43d4bae4c9.
+Final PE SHA256:26d6a604a8e59f8491a74e236984ba322538f877c7db32fe2aeb5188a7250700.
+See updater-16.json for exact final artifact evidence; updater/verification/windows-wine.json is the historical earlier-compiler component run.
+Archive remained byte-identical after the additional matrix.
+Documentation-only final refresh: four Ezero docs and SHA256SUMS.txt changed; all other38 payload files are byte-identical, including all9 native executable/app images. Runtime tests were not repeated. Historical execution-time ZIP SHA256 remains recorded in packaged-smoke.json and updater-16.json.

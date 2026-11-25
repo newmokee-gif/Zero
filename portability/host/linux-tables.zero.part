@@ -1,0 +1,77 @@
+# Own Linux x86-64 host primitives. Product code is Zero instruction data.
+# Insert after common host stubs and before template decoding; Linux only.
+# Unary operand RAX; binary operands RCX/RAX; ternary operands pushed in order.
+# Preserve RBP, RSP and R12..R15. All errors normalize to unsigned u64 -1.
+? @mode < 2 [
+ # Keep the original argc/argv frame in R14 so cooperative children share it.
+ # Existing 4 MiB arena, RBP, argc/argv and reserve offsets remain unchanged.
+ !store64[@templates + 1120 | "4883e4f04889e54881ec000200004889e731c0b940000000fcf348ab4881ec000040004989e54989e44989ee"].
+ !store64[@templates + 1128 | 44].
+ # 86 host: Linux = 1.
+ !store64[@templates + 1376 | "b801000000"].
+ !store64[@templates + 1384 | 5].
+ # 87 argcount: original argc minus program name, with a zero guard.
+ !store64[@templates + 1392 | "498b064885c0740348ffc8"].
+ !store64[@templates + 1400 | 11].
+ # 88 argument: 1-based user argument, NUL pointer when outside 1..argcount.
+ !store64[@templates + 1408 | "4885c0740c493b067307498b44c608eb0231c0"].
+ !store64[@templates + 1416 | 19].
+ # 89 fileopen: path RCX, mode RAX. open(2), always CLOEXEC | NOFOLLOW.
+ # Modes: read; exclusive create/write; create/truncate/write; existing read/write;
+ # exclusive create executable. Create permissions 0600/0700 honor umask.
+ # NONBLOCK prevents FIFO stalls; fstat rejects all nonregular file types.
+ # Mode 2 truncates only after validation. Errors close the fd and restore stack.
+ # EINTR retries; invalid mode returns -1 without opening anything.
+ !store64[@templates + 1424 | "4881ec900000004889cf4989c24883f8040f87a4000000be00080a00bac1080a0083f8010f44f283f8040f44f2ba41080a0083f8020f44f2ba02080a0083f8030f44f2ba8001000041b8c001000083f804410f44d0b8020000000f054883f8fc74f34885c078544989c14889c74889e6b8050000000f054883f8fc74f34885c0782f8b4424182500f000003d00800000751f4983fa02751431f6b84d0000000f054883f8fc74f34885c078054c89c8eb114c89cfb8030000000f0548c7c0ffffffff4881c490000000"].
+ !store64[@templates + 1432 | 201].
+ # 90 fileread: pop count, buffer, fd; reject descriptors beyond INT_MAX.
+ # Retry EINTR, return actual count (including short read or zero at EOF).
+ !store64[@templates + 1440 | "5a5e5f4881ffffffff7f7712b8000000000f054883f8fc74f34885c0790748c7c0ffffffff"].
+ !store64[@templates + 1448 | 37].
+ # 91 filewrite: same ABI and EINTR handling, actual possibly partial count.
+ !store64[@templates + 1456 | "5a5e5f4881ffffffff7f7712b8010000000f054883f8fc74f34885c0790748c7c0ffffffff"].
+ !store64[@templates + 1464 | 37].
+ # 92 filesize: fstat(5), 144-byte Linux x86-64 stat scratch, st_size at +48.
+ # Current file offset is untouched; scratch stack is restored on every path.
+ !store64[@templates + 1472 | "4889c74881ec900000004881ffffffff7f771c4889e6b8050000000f054883f8fc74f34885c07807488b442430eb0748c7c0ffffffff4881c490000000"].
+ !store64[@templates + 1480 | 61].
+ # 93 fileclose: never retry EINTR; Linux may already have released the fd.
+ !store64[@templates + 1488 | "4889c74881ffffffff7f770cb8030000000f054885c0790748c7c0ffffffff"].
+ !store64[@templates + 1496 | 31].
+ # 94 filedelete: unlink(87), which removes a link itself rather than following it.
+ !store64[@templates + 1504 | "4889c7b8570000000f054885c0790748c7c0ffffffff"].
+ !store64[@templates + 1512 | 22].
+ # 95 makedir: mkdir(83), permissions 0777 honor umask; existing path fails.
+ !store64[@templates + 1520 | "4889c7beff010000b8530000000f054885c0790748c7c0ffffffff"].
+ !store64[@templates + 1528 | 27].
+ # 96 dirempty: rmdir(84), only removes an empty directory.
+ !store64[@templates + 1536 | "4889c7b8540000000f054885c0790748c7c0ffffffff"].
+ !store64[@templates + 1544 | 22].
+ # 97 filemove: renameat2(316), AT_FDCWD=-100 and RENAME_NOREPLACE=1.
+ # An existing destination is never silently replaced; cross-device moves fail.
+ !store64[@templates + 1552 | "4889ce4989c248c7c79cffffff48c7c29cffffff41b801000000b83c0100000f054885c0790748c7c0ffffffff"].
+ !store64[@templates + 1560 | 45].
+ # 98 hostalloc: anonymous private RW mmap(9), no executable permission.
+ # Zero length or syscall error returns zero. RAX is the requested byte count.
+ !store64[@templates + 1568 | "4889c64885f6742331ffba0300000041ba2200000049c7c0ffffffff4531c9b8090000000f054885c0790231c0"].
+ !store64[@templates + 1576 | 45].
+ # 99 hostprotect: pop execute, count, address; only execute 0=RW or 1=RX.
+ !store64[@templates + 1584 | "585e5f4883f801771aba0300000085c07405ba05000000b80a0000000f054885c0790748c7c0ffffffff"].
+ !store64[@templates + 1592 | 42].
+ # 100 hostfree: munmap(11), address RCX and byte count RAX, returns 0/-1.
+ !store64[@templates + 1600 | "4889cf4889c6b80b0000000f054885c0790748c7c0ffffffff"].
+ !store64[@templates + 1608 | 25].
+ # 101 program: bounded readlink(89) of /proc/self/exe into 4096 arena bytes.
+ # The embedded pathname is jumped over. Failure consumes no arena space.
+ # Successful output is NUL-terminated; truncation and arena overflow return 0.
+ !store64[@templates + 1616 | "eb0f2f70726f632f73656c662f657865004c89ee4d89e84981c000100000723e488d9500feffff4939d07732488d3dcfffffffba00100000b8590000000f054883f8fc74f34885c07814483d00100000730cc60406004889f04d89c5eb0231c0"].
+ !store64[@templates + 1624 | 96].
+ # 102 filesync: fsync(74), descriptor in RAX, retry interrupted calls.
+ # Successful flush covers the opened file, not its directory entry or rename.
+ !store64[@templates + 1632 | "4889c74881ffffffff7f7712b84a0000000f054883f8fc74f34885c0790748c7c0ffffffff"].
+ !store64[@templates + 1640 | 37].
+ # 103 hostwait: bounded milliseconds0..86400000, nanosleep(35).
+ # Retry EINTR with kernel-provided remaining seconds/nanoseconds on stack.
+ !store64[@templates + 1648 | "483d005c26050f874e0000004883ec1031d2b9e803000048f7f1488904244869d240420f0048895424084889e74889e6b8230000000f054883f8fc0f84efffffff4885c00f890700000048c7c0ffffffff4883c410e90700000048c7c0ffffffff"].
+ !store64[@templates + 1656 | 97].
+]

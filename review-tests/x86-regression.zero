@@ -1,0 +1,54 @@
+# IA32 full-u64 regression; direct test ports are external VM instrumentation.
+:reserve[64] => @buffer.
+0 => @index.
+0xffffffffffffffff => @all.
+? 0xffffffff + 1 != 0x100000000 [ !out8[0xf4 | 1]. !halt. ]
+!out8[0xe9 | 65].
+? 0x100000000 - 1 != 0xffffffff [ !out8[0xf4 | 2]. !halt. ]
+!out8[0xe9 | 66].
+? @all + 1 != 0 [ !out8[0xf4 | 3]. !halt. ]
+? 0 - 1 != @all [ !out8[0xf4 | 4]. !halt. ]
+!out8[0xe9 | 67].
+? 0xffffffff * 0xffffffff != 0xfffffffe00000001 [ !out8[0xf4 | 5]. !halt. ]
+? @all * 2 != 0xfffffffffffffffe [ !out8[0xf4 | 6]. !halt. ]
+? 0x100000001 * 0x200000003 != 0x500000003 [ !out8[0xf4 | 7]. !halt. ]
+!out8[0xe9 | 68].
+? -0 != 0 [ !out8[0xf4 | 8]. !halt. ]
+? -1 != @all [ !out8[0xf4 | 9]. !halt. ]
+? -0x100000000 != 0xffffffff00000000 [ !out8[0xf4 | 10]. !halt. ]
+? -0x8000000000000000 != 0x8000000000000000 [ !out8[0xf4 | 11]. !halt. ]
+!out8[0xe9 | 69].
+? 0x8000000000000000 > 0x7fffffffffffffff [ !out8[0xe9 | 70]. ] ~ [ !out8[0xf4 | 12]. !halt. ]
+? 0x100000000 > 0xffffffff [ !out8[0xe9 | 71]. ] ~ [ !out8[0xf4 | 13]. !halt. ]
+? 0x1234567800000000 < 0x1234567800000001 [ !out8[0xe9 | 72]. ] ~ [ !out8[0xf4 | 14]. !halt. ]
+? @all >= @all [ !out8[0xe9 | 73]. ] ~ [ !out8[0xf4 | 15]. !halt. ]
+? 0x100000000 <= 0x100000000 [ !out8[0xe9 | 74]. ] ~ [ !out8[0xf4 | 16]. !halt. ]
+? 0x100000000 [ !out8[0xe9 | 75]. ] ~ [ !out8[0xf4 | 17]. !halt. ]
+!store64[@buffer | 0xfedcba9876543210].
+? :load64[@buffer] != 0xfedcba9876543210 [ !out8[0xf4 | 18]. !halt. ]
+? :load32[@buffer] != 0x76543210 [ !out8[0xf4 | 19]. !halt. ]
+? :load32[@buffer + 4] != 0xfedcba98 [ !out8[0xf4 | 20]. !halt. ]
+? :load16[@buffer] != 0x3210 [ !out8[0xf4 | 21]. !halt. ]
+? :load8[@buffer] != 0x10 [ !out8[0xf4 | 22]. !halt. ]
+!out8[0xe9 | 76].
+!store8[@buffer | 0x1234].
+!store16[@buffer + 2 | 0x12345678].
+!store32[@buffer + 4 | 0x123456789abcdef0].
+? :load8[@buffer] != 0x34 [ !out8[0xf4 | 23]. !halt. ]
+? :load16[@buffer + 2] != 0x5678 [ !out8[0xf4 | 24]. !halt. ]
+? :load32[@buffer + 4] != 0x9abcdef0 [ !out8[0xf4 | 25]. !halt. ]
+!out8[0xe9 | 77].
+? :load8["ASCII"] != 65 [ !out8[0xf4 | 26]. !halt. ]
+? :load8["ASCII" + 4] != 73 [ !out8[0xf4 | 27]. !halt. ]
+!out8[0xe9 | 78].
+?? @index < 4 [
+    !out8[0xe9 | 48 + @index].
+    @index + 1 -> @index.
+]
+? (0x100000002 + 3) * (0x200000003 - 1) != 0xc0000000a [ !out8[0xf4 | 28]. !halt. ]
+!out8[0xe9 | 79].
+? :arg0[] != 0x900 [ !out8[0xf4 | 29]. !halt. ]
+!out8[0xe9 | 80].
+!out8[0xe9 | 10].
+!out8[0xf4 | 0].
+!halt.

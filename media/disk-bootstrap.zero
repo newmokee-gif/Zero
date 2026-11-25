@@ -1,0 +1,10 @@
+# Original Zero bootstrap. Compiled with --real, linked by disk.zero.
+# The linker retains the compiler's canonical far jump, normalizes CS to zero,
+# moves this string-free body into the MBR, and links the successful tail to
+# the compiler's real-mode second-stage entry at physical 7e00.
+!store32[0x3900|0x001f0010].
+!store32[0x3904|0x07e00000].
+!store32[0x3908|1].
+!store32[0x390c|0].
+? :bios[:arg0[]|0x3900] [ !halt. ]
+# The compiler's final halt is linked to the second-stage far jump.

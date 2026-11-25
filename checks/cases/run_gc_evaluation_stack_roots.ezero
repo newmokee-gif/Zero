@@ -1,0 +1,14 @@
+make :: [
+ 0 => counter
+ empty => temporary
+ 10000 => repeat [
+  Temporary counter => temporary
+  counter + 1 => counter
+ ]
+ Tail => return
+]
+pair :: first | second [
+ [first | second] => return
+]
+Prefix + make() => show
+pair(Head | make()) => show

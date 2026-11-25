@@ -1,0 +1,9 @@
+ZTEXT00100000232b73505870000000
+Root disk/path tests
+run-paths.sh: exact fs/volumes.zero.part in hosted Zero,25 public command cases.
+run-io-bounds.sh: actual kernel state90 guards,23 physical/volume/buffer cases.
+run-independent-audit.sh: independent exact-state probes of format safety,
+read-only state, failed caches, maximum inventory and additional ATA edges.
+Scripts are under review-tests/volumes. They never open a physical disk.
+vm-commands.sh sends ordinary PS/2 keys to an already-running disposable QEMU
+monitor for integrated guest tests, including GO and the vertical-bar syntax.

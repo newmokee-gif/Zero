@@ -1,0 +1,49 @@
+ZTEXT00100000bad5daf33390000000
+Independent original Zero archive review, 2026-11-17
+
+Reviewed tools/archive.zero and frozen native binaries. No implementation
+changes were made by this reviewer. No unresolved correctness issue was found
+within the documented bounds and no-concurrent-writers contract.
+
+22 independent checks passed, supplementing the author's separate suite:
+Windows PE under Wine packed, verified, listed and extracted nested paths,
+repeated basenames, Unicode names, empty files, binary bytes and multi-chunk
+content. Linux and Windows encoding of the same manifest/data was byte-identical.
+Existing archives and destination trees were preserved. Damaged content and a
+checksummed traversal path were rejected before creating a destination.
+CONIN$, CONOUT$ with extension, COM superscript-one and LPT superscript-two
+aliases were rejected. Unicode case-alias extraction failed cleanly and removed
+its newly owned tree. Executable manifest flags survived Windows-to-Linux
+packing/extraction: executable files had 0700, data files0600 under the test
+umask. Windows extraction also preserved contents. A checksummed unsupported
+flag2 was rejected before mkdir on both hosts. No extracted code was executed.
+
+Review findings
+Workspace regions fit the stated allocation. Counts/index sizes are checked
+before record traversal. Each data offset must equal the previous exact end;
+remaining-length checks precede data hashing. The entire index, all paths and
+all content checksums are validated before extraction creates its root.
+Every file is exclusively created; partial-write, flush and close failures
+enter cleanup restricted to the newly created destination tree. Existing
+roots are refused before setting the ownership flag. Directory/file prefix
+conflicts and ASCII case aliases are checked before mutation. The indexed
+format requires canonical contiguous payloads with no unexplained trailing
+bytes. Reserved entry flags accept only0/1 before choosing output modes.
+
+Limits remain64 MiB,4096 files,255-byte paths and32 components. The path
+preflight folds ASCII case only. Non-ASCII names that alias on a target
+filesystem can still be refused during exclusive extraction; this is not a
+promise of complete Unicode filename portability. Source manifest paths use
+the process working directory. Filesystem mutation assumes no concurrent
+writers; extraction is not an atomic transaction or a permission-preserving
+backup system. FNV checksums detect corruption, not hostile forgery.
+Windows evidence is Wine execution, not a physical Windows installation.
+
+External evidence:
+/tmp/zero-support/validation-0.12/ezero/archive-review-0nk94qk9/results.txt
+/tmp/zero-support/validation-0.12/ezero/archive-review-0nk94qk9/flags-results.txt
+
+SHA256:
+673b03a3bc2e1bbb46d47120743dd2eeebc915bcd61a9ba797d086975f282518  tools/archive.zero
+43b37154f1e0ea53543691cf051ccd09843f28c01f2cd16df4e73abe35f46d99  reviewed native ELF
+57579ca431cd94594685e11f7c46f1868baa847efae0c450a92435938a46e2f9  reviewed Windows PE

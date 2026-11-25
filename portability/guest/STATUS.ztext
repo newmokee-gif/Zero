@@ -1,0 +1,51 @@
+ZTEXT00100000c5eeb1e08660000000
+Guest native compiler and filesystem integration, revision0.12
+
+All implementation sources are original Zero. tools/integrate.zero composes
+kernel source parts and tools/build.zero builds native targets. The guest
+controller is portability/guest/kernel-commands.zero.part; filesystem service
+states are fs/guest-service.zero.part. ABI.ztext specifies the current contract.
+
+--app64 and --app32 emit ZEROAPP1 images with bounded memory streams and
+independent4MiB arenas. The kernel loads an architecture-matched compiler,
+Ezero frontend and packer from its1MiB compiler bundle. Native app slots are
+159744 bytes, with the Ezero runtime prefix at962560 and body at966656.
+The original compilers execute inside the VM; no host compiler translates
+terminal commands. The source command limit is480 bytes including the command
+name, and application terminal output is4095 bytes.
+
+The8MiB workspace holds context0, filesystem descriptor256, continuations512
+and608, source4096, Ezero package270336, initializer393216, combined Zero589824,
+compiled image1048576 (capacity524288), output1572864, filesystem service stack
+1703936 (81920 bytes), application stack2097152 through8388608.
+Each program gets a fresh service continuation. It invokes the same kernel
+ZeroFS/ext4/NTFS/Btrfs drivers used by terminal commands. No command strings
+or host filesystem are used for guest file access.
+
+Implemented file primitives: readfile, save, writefile (exclusive), create,
+del, watch, search, go and disks. Root syntax is A:| through Z:|. Relative
+paths use the current volume. watch(.) and go(.) use its root. Names and
+content remain bounded by existing filesystem profiles: flat ASCII names
+of1..31 bytes, ASCII file contents including TAB/LF/CR up to400 bytes; ZeroFS has eight
+file slots. Search supports * and ? in the filename component. go changes
+the active terminal volume even after the program returns.
+
+File/list outputs are staged and copied only when the whole result fits.
+Malformed requests, unsupported filesystem profiles and capacity errors
+return unsigned-1. Mutations run the existing flush protocols. No automatic
+formatting, partition changes or writes to unsupported volumes occur.
+
+These apps cooperate and share kernel memory; they are not isolated user
+processes. Unsafe stores and infinite loops remain possible. Generic foreign
+program loading, nested directories, descriptor-based guest file APIs and
+persistent executable images are outside this interface. host() remains0,
+and host command-line argument APIs remain unavailable in a guest.
+
+Current validation: verification/guest-files-0.12/report.ztext records280
+passed terminal commands on the0.12 candidate. ZeroFS/service/Ztext checks
+passed BIOS32/64 and UEFI32/64 with cold-restart persistence. Original ext4,
+NTFS and Btrfs guest service checks passed both32-bit and64-bit BIOS paths.
+Dirty/unsupported profiles refused all mutation APIs without changing any
+byte of their private test volumes. User-owned disks were never attached.
+The report records the tested ISO SHA256; later builds need their own smoke
+verification. Historical0.10/0.11 evidence is not used to certify these changes.

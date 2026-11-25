@@ -1,0 +1,5 @@
+arguments()[1] => path
+7000 => repeat [
+ readfile(path) => temporary
+]
+size(Prefix + readfile(path)) => show

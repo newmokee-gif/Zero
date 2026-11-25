@@ -1,0 +1,101 @@
+ZTEXT00100000d74c3f6f9110000000
+RESULT
+PASS bios64 btrfs 18 commands, foreign FS guest services and reboot persistence
+ISO SHA256 386b4b3442ba47a939edb878d305327acc5df09378d85cbe595570d874b78312
+
+VM ARGUMENTS
+/tmp/zero-support/tools/qemu-local/root/usr/bin/qemu-system-x86_64
+-L
+/tmp/zero-support/tools/qemu-local/root/usr/share/qemu
+-machine
+pc
+-accel
+tcg
+-cpu
+qemu64
+-m
+128
+-display
+none
+-nic
+none
+-no-reboot
+-boot
+order=d
+-vga
+none
+-device
+VGA,romfile=/tmp/zero-support/tools/qemu-local/root/usr/share/seabios/vgabios-stdvga.bin
+-monitor
+unix:/tmp/zero-support/validation-0.12/guest-service/foreign-bios64-btrfs/monitor.socket,server=on,wait=off
+-serial
+unix:/tmp/zero-support/validation-0.12/guest-service/foreign-bios64-btrfs/serial.socket,server=on,wait=off
+-drive
+file=/tmp/zero-support/validation-0.12/build-root-patched/zero.iso,format=raw,media=cdrom,if=ide,index=2,readonly=on
+-drive
+file=/tmp/zero-support/validation-0.12/guest-service/foreign-bios64-btrfs/private-zero.img,format=raw,if=ide,index=0
+-drive
+file=/tmp/zero-support/validation-0.12/guest-service/foreign-bios64-btrfs/private-foreign.img,format=raw,if=ide,index=1
+-bios
+/tmp/zero-support/tools/qemu-local/root/usr/share/seabios/bios-256k.bin
+
+CAPTURED SERIAL
+ZERO BIOS: loading own Zero kernel
+ZERO BIOS: entering 64-bit kernel
+
+ZERO OS 0.12.0 / OWN LANGUAGE
+Native threads. Pixel graphics. Independent volumes.
+F1 new, F2 close, F3/F4 focus, F5 layout. Type help.
+Primary disk is not a valid ZeroFS volume. Detecting other formats.
+Volume discovery complete. Type disks.
+A:|> format ZERO
+Saved to disk.
+A:|> disks
+A:|  disk 1 16 MiB  ZeroFS
+B:|  disk 2 256 MiB  Btrfs
+A:|> zero ? :go["B:|"] != 0 [!exit[1].]!put[79].!put[75].
+OK
+B:|> zero :reserve[64]=>@b.? :create["qfile"] != 0 [!exit[1].]? :save["qfile"|"Foreign"|7] != 7 [!exit[2].]? :readfile["qfile"|@b|64] != 7 [!exit[3].]? :load8[@b] != 70 [!exit[4].]!put[79].!put[75].
+OK
+B:|> read qfile
+Foreign
+B:|> zero :reserve[64]=>@b.? :create["qfile"] != 0 [!exit[1].]? :writefile["qfile"|"Bad"|3] != -1 [!exit[2].]? :readfile["qfile"|@b|64] != 7 [!exit[3].]? :load8[@b] != 70 [!exit[4].]!put[79].!put[75].
+OK
+B:|> zero :reserve[64]=>@b.? :search["qfile"|@b|64] != 6 [!exit[1].]? :load8[@b] != 113 [!exit[2].]? :search["lost+found"|@b|64] != -1 [!exit[3].]? :disks[@b|64] != 8 [!exit[4].]!put[79].!put[75].
+OK
+B:|> zero ? :writefile["qother"|"Other"|5] != 5 [!exit[1].]? :del["qother"] != 0 [!exit[2].]? :del["qother"] != -1 [!exit[3].]!put[79].!put[75].
+OK
+B:|> ezero [create(eguest) | save(eguest | Hello) | read(eguest) | create(eguest) | readfile(eguest) | size(search(eguest)) | size(watch(.)) | go(.) | size(disks()) | del(eguest) | fileexists(eguest)] => show
+[1 | 5 | Hello | 1 | Hello | 1 | 3 | 1 | 2 | 1 | 0]
+
+B:|> zero ? :save["qtext.ztext"|"ZTEXT00100000006812189530000000\nHello\n"|38] != 38 [!exit[1].]!put[79].!put[75].
+OK
+B:|> read qtext.ztext
+Hello
+
+B:|> ezero watch(.) => show
+[same | qfile | qtext.ztext]
+
+B:|> search q*
+qfile
+qtext.ztext
+B:|> zero ? :go["A:|"] != 0 [!exit[1].]!put[79].!put[75].
+OK
+A:|> read qfile
+File not found.
+A:|> ZERO BIOS: loading own Zero kernel
+ZERO BIOS: entering 64-bit kernel
+
+ZERO OS 0.12.0 / OWN LANGUAGE
+Native threads. Pixel graphics. Independent volumes.
+F1 new, F2 close, F3/F4 focus, F5 layout. Type help.
+ZeroFS mounted. Files survive restart. Type help.
+Volume discovery complete. Type disks.
+A:|> read B:|qfile
+Foreign
+A:|> read B:|qtext.ztext
+Hello
+
+A:|> read B:|qother
+File not found.
+A:|> 

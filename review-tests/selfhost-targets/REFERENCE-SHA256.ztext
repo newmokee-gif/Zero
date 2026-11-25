@@ -1,0 +1,6 @@
+ZTEXT0010000017b7b1159520000000
+# Historical own compiler binaries captured before the self-host replacement.
+# Stored only under /tmp/zero-selfhost-targets/reference during this task.
+c153273d34afcfbfa4662db69d49c06b3e091a8ac82312c6965294f8ee8b02bb  zero-x64
+51340958840264ba0606722a9f56262dd7d2b989d655cce9867d5bcd07450a72  zero-x86
+499f00d4e1a58c1eb33157560eb96b134e442de365d7752dddb60349a2567fea  zero-real

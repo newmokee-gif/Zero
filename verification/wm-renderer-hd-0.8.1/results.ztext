@@ -1,0 +1,19 @@
+ZTEXT001000005914b3a33d20000000
+ZERO WM FULL HD RENDERER CHECKS
+Worker SHA256: 4636b1ff2cd1403895e03a2100f1618f2d3999549974a3864e1a91bf02a4f0c3
+The production worker writes the actual physical framebuffer; no PNG is upscaled.
+Host fixtures replace only the infinite loop and cooperative yields.
+The own Zero test helper raises only fixture host arenas to16MiB, never production artifacts.
+
+PASS 1920x1080: tile/scroll guards128B, stride16pixels and grid-end sentinel; RGB/BGR exact.
+PASS 960x540: tile/scroll guards128B, stride16pixels and grid-end sentinel; RGB/BGR exact.
+PASS 800x600: tile/scroll guards128B, stride16pixels and grid-end sentinel; RGB/BGR exact; exact0.8.0 pixel parity.
+PASS 640x480: tile/scroll guards128B, stride16pixels and grid-end sentinel; RGB/BGR exact; exact0.8.0 pixel parity.
+PASS 640x400: tile/scroll guards128B, stride16pixels and grid-end sentinel; RGB/BGR exact; exact0.8.0 pixel parity.
+PASS exact native2x geometry for tile: everyphysicalpixel checked against960x540 logical rendering.
+PASS exact native2x geometry for scroll: everyphysicalpixel checked against960x540 logical rendering.
+PASS fixture helper rejects empty input, invalidELF and non4MiB prologue before output.
+
+These are isolated renderer images, not VM screenshots.
+No guest scheduling, firmware mode selection or input-routing claim is made here.
+Generated full Zero fixtures and internal files: /workspace/zero-foundation/build/wm-renderer-hd.s321w3mh

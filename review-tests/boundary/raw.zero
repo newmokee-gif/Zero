@@ -1,0 +1,1 @@
+0xb8000 => @a. !store8[@a| 65]. !store16[@a + 2| 0x0f42]. !store32[@a + 4| 0x0f440f43]. !store64[@a + 8| 0]. !out8[0x80| 0]. !halt.

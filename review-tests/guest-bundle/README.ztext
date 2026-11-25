@@ -1,0 +1,54 @@
+ZTEXT00100000c647d1439330000000
+Current original Zero workflow (0.12)
+
+Use the native tools on Linux or their .exe versions on Windows:
+  zero-integrate PROJECT_DIRECTORY NEW_KERNEL.zero
+  zero-build PROJECT_DIRECTORY NEW_OUTPUT_DIRECTORY NEW_KERNEL.zero
+  zero-check PROJECT_DIRECTORY NEW_TEST_DIRECTORY
+All destination paths must be new. The integrator preserves authored sources;
+the builder checks its compiler fixed point and builds the original targets;
+the verifier checks language behavior and host file operations in process.
+See tools/integrate.ztext, tools/build.ztext and checks/README.ztext.
+Read these documents with zero-text read FILE.
+
+The notes below preserve earlier implementation and test history. Any old
+shell/Python runner names, generated artifacts, JSON reports or commands are
+historical references: they were removed from the active project and are not
+current runnable instructions or current-release validation. Native host
+checks do not replace BIOS/UEFI, persistence or physical-hardware testing.
+
+Historical implementation notes
+
+Original Zero native-tool boot verification
+
+Run from project root: python3 review-tests/guest-bundle/run.py
+Host Python only orchestrates builds, firmware VMs and independent byte checks.
+All boot code, native applications, container writers and guest probes are Zero.
+The default compiler is build/zero; ZERO_TEST_COMPILER may override it.
+App fixtures come from build/guest-app/{zero,frontend,pack}{64,32}.app; parent
+integration rebuilds those targets from the final merged compiler separately.
+
+Validates the 480 KiB kernel layout, 1 MiB native compiler bundle, complete FAT
+chains and ISO extents/catalog/endian fields, exact payload equality, malformed
+app headers/padding, writer failures, four actual firmware/CPU paths and BIOS
+low-RAM refusal. The guest probe computes a weighted checksum of all 1 MiB of
+the loaded bundle, checks kernel markers through byte491519, and writes/reads
+both ends of every 4 KiB page in the 8 MiB workspace. It also validates kernel
+pool bounds and that the bundle/workspace/pool do not overlap.
+
+The runner writes only private build/guest-bundle.* and evidence files. It
+never attaches a writable data disk, asserts existing data.img/data.vdi/live
+ISO hashes unchanged and stops all its VMs. Evidence is recorded in
+verification/guest-bundle-480k-runtime64k/. Historical28KiB runtime-slot
+evidence remains in verification/guest-bundle-480k/. Actual native compiler pipeline execution is
+covered separately by portability/guest tests and verification/guest-app/.
+Native VirtualBox and physical hardware are not claimed by QEMU tests.
+
+Runtime storage expansion (0.10)
+python3 review-tests/guest-bundle/runtime-capacity.py runs component checks only.
+It covers the actual host-files runtime,65,535-byte maximum body, strict zero
+padding, invalid/oversized/short inputs, input/output errors and fragmented
+reads. It builds only the original Zero bundle writer, leaves the live ISO
+and data disks untouched and starts no VM. Its separate evidence is in
+verification/guest-bundle-runtime64k/. The expanded runtime slot does not
+change app offsets, the1MiB bundle, boot loader allocations or ISO geometry.

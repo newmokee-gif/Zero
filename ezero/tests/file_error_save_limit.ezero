@@ -1,0 +1,5 @@
+# The private fixture's existing protected file must remain unchanged.
+x => content
+16 => repeat [ content + content => content ]
+content + x => content
+save(protected | content) => show

@@ -1,0 +1,5 @@
+:reserve[16] => @buffer.
+:read[@buffer | 16] => @count.
+:write[@buffer | @count] => @written.
+? @written != @count [ !exit[3]. ]
+!exit[0].

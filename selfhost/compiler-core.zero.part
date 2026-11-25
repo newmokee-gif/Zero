@@ -1,0 +1,687 @@
+# Decode our instruction tables once, including the two inactive targets.
+0 -> @i. 0 -> @k.
+?? @i < 384 [
+ :load64[@templates + @i * 16] -> @str.
+ :load64[@templates + @i * 16 + 8] -> @len.
+ ? @k + @len > 32768 [ !exit[1]. ]
+ !store64[@templates + @i * 16 | @decoded + @k].
+ 0 -> @j.
+ ?? @j < @len [
+  :load8[@str + @j * 2] -> @c.
+  :load8[@str + @j * 2 + 1] -> @d.
+  ? @c < 58 [ @c - 48 -> @c. ] ~ [ @c - 87 -> @c. ]
+  ? @d < 58 [ @d - 48 -> @d. ] ~ [ @d - 87 -> @d. ]
+  !store8[@decoded + @k + @j | @c * 16 + @d].
+  @j + 1 -> @j.
+ ]
+ @k + @len -> @k. @i + 1 -> @i.
+]
+@templates + @arch * 2048 -> @templates.
+# Read until EOF, retrying interrupted reads. One extra byte detects overflow.
+0 -> @n. 0 -> @done.
+?? @done == 0 [
+ :read[@source + @n | 262145 - @n] -> @v.
+ ? @v == 18446744073709551612 [ ] ~ [
+  ? @v > 262145 [ !exit[1]. ]
+  ? @v == 0 [ 1 -> @done. ] ~ [
+   @n + @v -> @n. ? @n > 262144 [ !exit[1]. ]
+  ]
+ ]
+]
+!store8[@source + @n | 0].
+# Tokens are 12 bytes: kind u32, then value u64 or offset/length u32 pair.
+0 -> @p. 0 -> @count.
+?? @p < @n [
+ :load8[@source + @p] -> @c. 0 -> @done.
+ ? @c == 32 [ 1 -> @done. ]
+ ? @c == 9 [ 1 -> @done. ]
+ ? @c == 10 [ 1 -> @done. ]
+ ? @c == 13 [ 1 -> @done. ]
+ ? @done == 1 [ @p + 1 -> @p. ]
+ ? @c == 35 [
+  1 -> @done.
+  ?? @p < @n [
+   ? :load8[@source + @p] == 10 [ @n -> @x. ] ~ [ 0 -> @x. ]
+   ? @x == @n [ @p + 1 -> @p. @n + 1 -> @x. ] ~ [ @p + 1 -> @p. ]
+   ? @x > @n [ @p -> @v. @n -> @p. ]
+  ]
+  ? @x > @n [ @v -> @p. ]
+ ]
+ ? @done == 0 [
+  0 -> @x. 0 -> @nlen. 0 -> @tv.
+  ? @c == 95 [ 1 -> @x. ]
+  ? @c >= 65 [ ? @c <= 90 [ 1 -> @x. ] ]
+  ? @c >= 97 [ ? @c <= 122 [ 1 -> @x. ] ]
+  ? @x == 1 [
+   @p -> @tv. 256 -> @tt. 0 -> @nlen.
+   ?? @x == 1 [
+    @p + 1 -> @p. @nlen + 1 -> @nlen.
+    ? @nlen > 31 [ !exit[1]. ]
+    :load8[@source + @p] -> @c. 0 -> @x.
+    ? @c == 95 [ 1 -> @x. ]
+    ? @c >= 65 [ ? @c <= 90 [ 1 -> @x. ] ]
+    ? @c >= 97 [ ? @c <= 122 [ 1 -> @x. ] ]
+    ? @c >= 48 [ ? @c <= 57 [ 1 -> @x. ] ]
+   ]
+   0 -> @i. 0 -> @k.
+   ?? @k < 73 [
+    0 -> @j. 1 -> @x.
+    ?? :load8[@names + @i + @j] != 32 [
+     ? @j >= @nlen [ 0 -> @x. ] ~ [
+      ? :load8[@names + @i + @j] != :load8[@source + @tv + @j] [ 0 -> @x. ]
+     ]
+     @j + 1 -> @j.
+    ]
+    ? @j != @nlen [ 0 -> @x. ]
+    ? @x == 1 [ @k + 500 -> @tt. ]
+    @i + @j + 1 -> @i. @k + 1 -> @k.
+   ]
+  ] ~ [
+   0 -> @x. ? @c >= 48 [ ? @c <= 57 [ 1 -> @x. ] ]
+   ? @x == 1 [
+    257 -> @tt. 0 -> @tv. 10 -> @base. 0 -> @len.
+    ? @c == 48 [ ? :load8[@source + @p + 1] == 120 [ 16 -> @base. @p + 2 -> @p. ] ]
+    0 -> @done.
+    ?? @done == 0 [
+     :load8[@source + @p] -> @c. 99 -> @d.
+     ? @c >= 48 [ ? @c <= 57 [ @c - 48 -> @d. ] ]
+     ? @base == 16 [
+      ? @c >= 65 [ ? @c <= 70 [ @c - 55 -> @d. ] ]
+      ? @c >= 97 [ ? @c <= 102 [ @c - 87 -> @d. ] ]
+     ]
+     ? @d >= @base [ 1 -> @done. ] ~ [
+      ? @base == 10 [
+       ? @tv > 1844674407370955161 [ !exit[1]. ]
+       ? @tv == 1844674407370955161 [ ? @d > 5 [ !exit[1]. ] ]
+      ] ~ [ ? @tv > 1152921504606846975 [ !exit[1]. ] ]
+      @tv * @base + @d -> @tv. @p + 1 -> @p. @len + 1 -> @len.
+     ]
+    ]
+    ? @len == 0 [ !exit[1]. ]
+    ? @arch == 2 [ ? @tv > 4294967295 [ !exit[1]. ] ]
+   ] ~ [
+    ? @c == 34 [
+     258 -> @tt. @p + 1 -> @p. @p -> @tv. 0 -> @len. 0 -> @done.
+     ?? @done == 0 [
+      ? @p >= @n [ !exit[1]. ]
+      :load8[@source + @p] -> @c. @p + 1 -> @p.
+      ? @c == 34 [ 1 -> @done. ] ~ [
+       ? @c < 32 [ !exit[1]. ] ? @c > 126 [ !exit[1]. ]
+       ? @c == 92 [
+        ? @p >= @n [ !exit[1]. ]
+        :load8[@source + @p] -> @c. @p + 1 -> @p. 0 -> @x.
+        ? @c == 110 [ 1 -> @x. ] ? @c == 114 [ 1 -> @x. ]
+        ? @c == 116 [ 1 -> @x. ] ? @c == 92 [ 1 -> @x. ]
+        ? @c == 34 [ 1 -> @x. ] ? @x == 0 [ !exit[1]. ]
+       ]
+       @len + 1 -> @len. ? @len > 4095 [ !exit[1]. ]
+      ]
+     ]
+     @len -> @nlen.
+    ] ~ [
+     ? @c < 32 [ !exit[1]. ] ? @c > 126 [ !exit[1]. ]
+     @c -> @tt. @p + 1 -> @p.
+     :load8[@source + @p] -> @d.
+     ? @c == 61 [
+      0 -> @tt.
+      ? @d == 61 [ 400 -> @tt. ]
+      ? @d == 62 [ 404 -> @tt. ]
+      ? @tt == 0 [ !exit[1]. ] @p + 1 -> @p.
+     ]
+     ? @c == 33 [ ? @d == 61 [ 401 -> @tt. @p + 1 -> @p. ] ]
+     ? @c == 60 [ ? @d == 61 [ 402 -> @tt. @p + 1 -> @p. ] ]
+     ? @c == 62 [ ? @d == 61 [ 403 -> @tt. @p + 1 -> @p. ] ]
+     ? @c == 45 [ ? @d == 62 [ 405 -> @tt. @p + 1 -> @p. ] ]
+     ? @c == 63 [ ? @d == 63 [ 406 -> @tt. @p + 1 -> @p. ] ]
+    ]
+   ]
+  ]
+  ? @count >= 262144 [ !exit[1]. ]
+  !store32[@tokens + @count * 12 | @tt].
+  !store64[@tokens + @count * 12 + 4 | @tv].
+  ? @tt == 256 [ !store32[@tokens + @count * 12 + 8 | @nlen]. ]
+  ? @tt == 258 [ !store32[@tokens + @count * 12 + 8 | @nlen]. ]
+  ? @tt >= 500 [ !store32[@tokens + @count * 12 + 8 | @nlen]. ]
+  @count + 1 -> @count.
+ ]
+]
+!store32[@tokens + @count * 12 | 0]. !store64[@tokens + @count * 12 + 4 | 0].
+# Action frames contain operation, first operand and second operand (24 bytes).
+@tokens -> @ti. 0 -> @out. 0 -> @vars. 0 -> @ed. 0 -> @bd.
+? @mode == 7 [
+ 4096 -> @out. 0 -> @i.
+ ?? @i < 4096 [ !store8[@output + @i | 0]. @i + 1 -> @i. ]
+]
+!store64[@stack | 99]. !store64[@stack + 8 | 0]. !store64[@stack + 16 | 0].
+!store64[@stack + 24 | 1]. !store64[@stack + 32 | 0]. !store64[@stack + 40 | 0].
+48 -> @sp.
+? (@mode == 8) + (@mode == 9) [
+ !store64[@stack + @sp | 90]. !store64[@stack + @sp + 8 | 0]. @sp + 24 -> @sp.
+ !store64[@stack + @sp | 90]. !store64[@stack + @sp + 8 | 84]. @sp + 24 -> @sp.
+] ~ [
+? @mode < 2 [
+ !store64[@stack + @sp | 90]. !store64[@stack + @sp + 8 | 70]. @sp + 24 -> @sp.
+ !store64[@stack + @sp | 90]. !store64[@stack + @sp + 8 | 46]. @sp + 24 -> @sp.
+] ~ [
+ !store64[@stack + @sp | 90]. !store64[@stack + @sp + 8 | 0]. @sp + 24 -> @sp.
+ ? @arch == 2 [
+  !store64[@stack + @sp | 90]. !store64[@stack + @sp + 8 | 52]. @sp + 24 -> @sp.
+ ] ~ [
+  !store64[@stack + @sp | 90]. !store64[@stack + @sp + 8 | 1]. @sp + 24 -> @sp.
+  ? @mode == 3 [ !store64[@stack + @sp | 90]. !store64[@stack + @sp + 8 | 47]. @sp + 24 -> @sp. ]
+  ? @mode == 5 [ !store64[@stack + @sp | 90]. !store64[@stack + @sp + 8 | 47]. @sp + 24 -> @sp. ]
+ ]
+]
+? @mode == 7 [
+ # Discard raw entry actions, then emit the original Windows hosted prologue.
+ 48 -> @sp.
+ !store64[@stack + @sp | 90]. !store64[@stack + @sp + 8 | 70]. @sp + 24 -> @sp.
+]
+]
+?? @sp > 0 [
+ ? @sp > 32640 [ !exit[1]. ]
+ @sp - 24 -> @sp.
+ :load64[@stack + @sp] -> @op.
+ :load64[@stack + @sp + 8] -> @a.
+ :load64[@stack + @sp + 16] -> @b.
+ :load32[@ti] -> @tt. :load64[@ti + 4] -> @tv.
+ -1 -> @e0. -1 -> @e1. -1 -> @e2. -1 -> @e3. -1 -> @suffix.
+ 0 -> @width. 0 -> @imm. -1 -> @tail. 0 -> @next. 0 -> @na. 0 -> @nb.
+ ? @op == 1 [
+  ? @tt == 0 [ ? @a != 0 [ !exit[1]. ] ] ~ [
+   ? @tt == 93 [
+    ? @a == 0 [ !exit[1]. ]
+    @ti + 12 -> @ti. @bd - 1 -> @bd.
+   ] ~ [
+    !store64[@stack + @sp | 1]. !store64[@stack + @sp + 8 | @a]. !store64[@stack + @sp + 16 | 0]. @sp + 24 -> @sp.
+    2 -> @next.
+   ]
+  ]
+ ]
+ ? @op == 2 [
+  0 -> @x. ? @tt == 63 [ 1 -> @x. ] ? @tt == 406 [ 1 -> @x. ]
+  ? @x == 1 [
+   -1 -> @b. ? @tt == 406 [ @out -> @b. ]
+   @ti + 12 -> @ti.
+   !store64[@stack + @sp | 40]. !store64[@stack + @sp + 8 | 0]. !store64[@stack + @sp + 16 | @b]. @sp + 24 -> @sp.
+   10 -> @next.
+  ] ~ [
+   ? @tt == 33 [
+    @ti + 12 -> @ti.
+    !store64[@stack + @sp | 4]. @sp + 24 -> @sp.
+    31 -> @next. 1 -> @na.
+   ] ~ [
+    !store64[@stack + @sp | 3]. @sp + 24 -> @sp.
+    10 -> @next.
+   ]
+  ]
+ ]
+ ? @op == 3 [
+  0 -> @x. ? @tt == 404 [ 1 -> @x. ] ? @tt == 405 [ 1 -> @x. ]
+  ? @x == 0 [ !exit[1]. ] @tt -> @b. @ti + 12 -> @ti.
+  ? :load32[@ti] != 64 [ !exit[1]. ] @ti + 12 -> @ti.
+  ? :load32[@ti] != 256 [ !exit[1]. ]
+  :load32[@ti + 4] -> @name. :load32[@ti + 8] -> @nlen.
+  64 -> @x. 0 -> @i.
+  ?? @i < @vars [
+   ? :load64[@symbols + @i * 16 + 8] == @nlen [
+    :load64[@symbols + @i * 16] -> @str. 1 -> @y. 0 -> @j.
+    ?? @j < @nlen [
+     ? :load8[@source + @name + @j] != :load8[@source + @str + @j] [ 0 -> @y. ]
+     @j + 1 -> @j.
+    ]
+    ? @y == 1 [ @i -> @x. ]
+   ]
+   @i + 1 -> @i.
+  ]
+  ? @b == 404 [
+   ? @bd != 0 [ !exit[1]. ] ? @x != 64 [ !exit[1]. ] ? @vars >= 64 [ !exit[1]. ]
+   @vars -> @x.
+   !store64[@symbols + @vars * 16 | @name]. !store64[@symbols + @vars * 16 + 8 | @nlen].
+   @vars + 1 -> @vars.
+  ] ~ [ ? @x == 64 [ !exit[1]. ] ]
+  @ti + 12 -> @ti. ? :load32[@ti] != 46 [ !exit[1]. ] @ti + 12 -> @ti.
+  4 -> @e0. 4 -> @width. -8 * (@x + 1) -> @imm.
+  ? @arch == 1 [ 50 -> @suffix. ]
+  ? @arch == 2 [ -4 * (@x + 1) -> @imm. ]
+ ]
+ ? @op == 4 [ ? @tt != 46 [ !exit[1]. ] @ti + 12 -> @ti. ]
+ # Expression precedence: comparison, additive, product, unary/primary.
+ ? @op == 10 [
+  !store64[@stack + @sp | 11]. @sp + 24 -> @sp. 14 -> @next.
+ ]
+ ? @op == 11 [
+  0 -> @x.
+  ? @tt == 400 [ 12 -> @x. ] ? @tt == 401 [ 13 -> @x. ]
+  ? @tt == 60 [ 14 -> @x. ] ? @tt == 62 [ 15 -> @x. ]
+  ? @tt == 402 [ 16 -> @x. ] ? @tt == 403 [ 17 -> @x. ]
+  ? @x != 0 [
+   @ti + 12 -> @ti. 5 -> @e0.
+   !store64[@stack + @sp | 12]. !store64[@stack + @sp + 8 | @x]. @sp + 24 -> @sp.
+   14 -> @next.
+  ]
+ ]
+ ? @op == 12 [ 6 -> @e0. 11 -> @e1. @a -> @e2. 18 -> @e3. ]
+ ? @op == 14 [ !store64[@stack + @sp | 15]. @sp + 24 -> @sp. 17 -> @next. ]
+ ? @op == 15 [
+  0 -> @x. ? @tt == 43 [ 7 -> @x. ] ? @tt == 45 [ 8 -> @x. ]
+  ? @x != 0 [
+   @ti + 12 -> @ti. 5 -> @e0.
+   !store64[@stack + @sp | 15]. @sp + 24 -> @sp.
+   !store64[@stack + @sp | 16]. !store64[@stack + @sp + 8 | @x]. @sp + 24 -> @sp.
+   17 -> @next.
+  ]
+ ]
+ ? @op == 16 [ 6 -> @e0. @a -> @e1. ]
+ ? @op == 17 [ !store64[@stack + @sp | 18]. @sp + 24 -> @sp. 20 -> @next. ]
+ ? @op == 18 [
+  ? @tt == 42 [
+   @ti + 12 -> @ti. 5 -> @e0.
+   !store64[@stack + @sp | 18]. @sp + 24 -> @sp.
+   !store64[@stack + @sp | 16]. !store64[@stack + @sp + 8 | 9]. @sp + 24 -> @sp.
+   20 -> @next.
+  ]
+ ]
+ ? @op == 20 [
+  @ed + 1 -> @ed. ? @ed > 64 [ !exit[1]. ]
+  !store64[@stack + @sp | 25]. @sp + 24 -> @sp.
+  ? @tt == 45 [
+   @ti + 12 -> @ti.
+   !store64[@stack + @sp | 21]. @sp + 24 -> @sp. 20 -> @next.
+  ] ~ [
+   ? @tt == 40 [
+    @ti + 12 -> @ti.
+    !store64[@stack + @sp | 24]. @sp + 24 -> @sp. 10 -> @next.
+   ] ~ [
+    ? @tt == 257 [
+     2 -> @e0. 8 -> @width. @tv -> @imm.
+     ? @arch != 0 [ 4 -> @width. ]
+     ? @arch == 1 [ 48 -> @suffix. :load32[@ti + 8] -> @tail. ]
+     @ti + 12 -> @ti.
+    ] ~ [
+     ? @tt == 258 [
+      :load32[@ti + 4] -> @na. :load32[@ti + 8] -> @nb.
+      20 -> @e0. 4 -> @width. @nb + 1 -> @imm. 23 -> @next.
+      @ti + 12 -> @ti.
+     ] ~ [
+      ? @tt == 64 [
+       @ti + 12 -> @ti. ? :load32[@ti] != 256 [ !exit[1]. ]
+       :load32[@ti + 4] -> @name. :load32[@ti + 8] -> @nlen.
+       64 -> @x. 0 -> @i.
+       ?? @i < @vars [
+        ? :load64[@symbols + @i * 16 + 8] == @nlen [
+         :load64[@symbols + @i * 16] -> @str. 1 -> @y. 0 -> @j.
+         ?? @j < @nlen [
+          ? :load8[@source + @name + @j] != :load8[@source + @str + @j] [ 0 -> @y. ]
+          @j + 1 -> @j.
+         ]
+         ? @y == 1 [ @i -> @x. ]
+        ]
+        @i + 1 -> @i.
+       ]
+       ? @x == 64 [ !exit[1]. ]
+       @ti + 12 -> @ti. 3 -> @e0. 4 -> @width. -8 * (@x + 1) -> @imm.
+       ? @arch == 1 [ 49 -> @suffix. ]
+       ? @arch == 2 [ -4 * (@x + 1) -> @imm. ]
+      ] ~ [
+       ? @tt == 58 [ @ti + 12 -> @ti. 31 -> @next. ] ~ [ !exit[1]. ]
+      ]
+     ]
+    ]
+   ]
+  ]
+ ]
+ ? @op == 21 [ 10 -> @e0. ]
+ ? @op == 23 [
+  ? @out + @b + 1 > @limit [ !exit[1]. ]
+  @a -> @p. 0 -> @j.
+  ?? @j < @b [
+   :load8[@source + @p] -> @c. @p + 1 -> @p.
+   ? @c == 92 [
+    :load8[@source + @p] -> @c. @p + 1 -> @p.
+    ? @c == 110 [ 10 -> @c. ]
+    ? @c == 114 [ 13 -> @c. ]
+    ? @c == 116 [ 9 -> @c. ]
+   ]
+   !store8[@output + @out + @j | @c]. @j + 1 -> @j.
+  ]
+  !store8[@output + @out + @b | 0]. @out + @b + 1 -> @out.
+  4 -> @width.
+  ? @arch == 2 [ 2 -> @e0. 31744 + @out - @b - 1 -> @imm. ] ~ [
+   21 -> @e0. -(@b + 8) -> @imm.
+  ]
+ ]
+ ? @op == 24 [ ? @tt != 41 [ !exit[1]. ] @ti + 12 -> @ti. ]
+ ? @op == 25 [ @ed - 1 -> @ed. ]
+ # Builtins share metadata; target restrictions are checked before code emission.
+ ? @op == 31 [
+  ? @tt < 500 [ !exit[1]. ] ? @tt > 572 [ !exit[1]. ]
+  ? @tt >= 539 [ ? @tt <= 542 [ !exit[1]. ] ]
+  @tt - 500 -> @idx.
+  ? :load64[@meta + @idx * 24 + 16] != @a [ !exit[1]. ]
+  0 -> @x.
+  ? @mode < 2 [
+   ? @idx < 2 [ 1 -> @x. ]
+   ? @idx >= 10 [ ? @idx <= 13 [ 1 -> @x. ] ]
+   ? @idx == 16 [ 1 -> @x. ] ? @idx == 21 [ 1 -> @x. ] ? @idx == 22 [ 1 -> @x. ]
+   ? @mode == 1 [ ? @idx >= 2 [ ? @idx <= 5 [ 1 -> @x. ] ] ]
+  ] ~ [
+   ? @idx >= 2 [ ? @idx <= 20 [ 1 -> @x. ] ]
+   ? @arch == 1 [ ? @idx == 23 [ 1 -> @x. ] ]
+   ? @arch == 2 [
+    ? @idx == 5 [ 0 -> @x. ] ? @idx == 13 [ 0 -> @x. ]
+    ? @idx >= 18 [ ? @idx <= 20 [ 0 -> @x. ] ]
+    ? @idx >= 24 [ ? @idx <= 38 [ 1 -> @x. ] ]
+   ]
+  ]
+  ? @arch < 2 [
+   ? @idx == 43 [ 1 -> @x. ] ? @idx == 44 [ 1 -> @x. ]
+  ] ~ [
+   ? @idx == 45 [ 1 -> @x. ] ? @idx == 46 [ 1 -> @x. ]
+  ]
+  ? @mode < 2 [
+   ? @idx == 47 [ 1 -> @x. ] ? @idx == 48 [ 1 -> @x. ] ? @idx == 53 [ 1 -> @x. ]
+  ]
+  ? @idx >= 49 [ ? @idx <= 51 [ 1 -> @x. ] ]
+  ? @arch == 2 [ ? @idx == 52 [ 1 -> @x. ] ]
+  ? @mode >= 2 [ ? @idx >= 54 [ ? @idx <= 55 [ 1 -> @x. ] ] ]
+  ? @mode == 6 [ ? @idx == 56 [ 1 -> @x. ] ]
+  ? @mode == 7 [
+   0 -> @x.
+   ? @idx <= 5 [ 1 -> @x. ]
+   ? (@idx >= 10) * (@idx <= 13) [ 1 -> @x. ]
+   ? (@idx == 16) + (@idx == 21) + (@idx == 22) [ 1 -> @x. ]
+   ? (@idx >= 49) * (@idx <= 51) [ 1 -> @x. ]
+   ? (@idx == 43) + (@idx == 44) [ 1 -> @x. ]
+  ]
+  ? (@mode == 8) + (@mode == 9) [
+   0 -> @x.
+   ? @idx <= 5 [ 1 -> @x. ]
+   ? (@idx >= 10) * (@idx <= 13) [ 1 -> @x. ]
+   ? (@idx >= 16) * (@idx <= 18) [ 1 -> @x. ]
+   ? (@idx == 21) + (@idx == 22) [ 1 -> @x. ]
+   ? (@idx >= 49) * (@idx <= 51) [ 1 -> @x. ]
+  ]
+  # host[] is a capability query; other APIs exist in host/app modes.
+  ? @idx == 57 [ 1 -> @x. ]
+  ? (@mode == 1) + (@mode == 7) [ ? @idx == 19 [ 1 -> @x. ] ]
+  ? (@mode < 2) + (@mode >= 7) [
+   ? (@idx >= 58) * (@idx <= 72) [ 1 -> @x. ]
+  ]
+  ? @x == 0 [ !exit[1]. ]
+  :load64[@meta + @idx * 24] -> @id.
+  ? :load64[@templates + @id * 16 + 8] == 0 [ !exit[1]. ]
+  :load64[@meta + @idx * 24 + 8] -> @len.
+  @ti + 12 -> @ti.
+  ? @len == 0 [
+   ? @a == 0 [
+    ? :load32[@ti] != 91 [ !exit[1]. ] @ti + 12 -> @ti.
+    ? :load32[@ti] != 93 [ !exit[1]. ] @ti + 12 -> @ti.
+   ]
+   @id -> @e0.
+  ] ~ [
+   ? :load32[@ti] != 91 [ !exit[1]. ] @ti + 12 -> @ti.
+   !store64[@stack + @sp | 32]. !store64[@stack + @sp + 8 | @id]. @sp + 24 -> @sp.
+   !store64[@stack + @sp | 33]. !store64[@stack + @sp + 8 | @len]. !store64[@stack + @sp + 16 | @id]. @sp + 24 -> @sp.
+   10 -> @next.
+  ]
+ ]
+ ? @op == 32 [
+  0 -> @x. ? @a == 66 [ 1 -> @x. ] ? @a == 69 [ 1 -> @x. ]
+  ? @x == 1 [
+   66 -> @e0. 4 -> @width.
+   31744 + @out + :load64[@templates + 66 * 16 + 8] + 9 -> @imm.
+   34 -> @next. @a -> @na.
+  ] ~ [ @a -> @e0. ]
+ ]
+ ? @op == 33 [
+  ? @a > 1 [
+   ? @tt != 124 [ !exit[1]. ] @ti + 12 -> @ti. 5 -> @e0.
+   !store64[@stack + @sp | 33]. !store64[@stack + @sp + 8 | @a - 1]. !store64[@stack + @sp + 16 | @b]. @sp + 24 -> @sp.
+   10 -> @next.
+  ] ~ [
+   ? @tt != 93 [ !exit[1]. ] @ti + 12 -> @ti.
+   0 -> @x.
+   ? @b == 37 [ 1 -> @x. ] ? @b == 38 [ 1 -> @x. ]
+   ? @b == 51 [ 1 -> @x. ] ? @b == 65 [ 1 -> @x. ]
+   ? @b == 66 [ 1 -> @x. ] ? @b == 69 [ 1 -> @x. ]
+   ? @b >= 71 [ ? @b <= 73 [ 1 -> @x. ] ]
+   ? @b == 75 [ 1 -> @x. ] ? @b == 76 [ 1 -> @x. ]
+   ? (@b == 90) + (@b == 91) + (@b == 99) [ 1 -> @x. ]
+   ? @x == 1 [ 5 -> @e0. ] ~ [
+    0 -> @x.
+    ? @b >= 26 [ ? @b <= 29 [ 1 -> @x. ] ]
+    ? @b == 32 [ 1 -> @x. ] ? @b == 33 [ 1 -> @x. ]
+    ? @b == 41 [ 1 -> @x. ] ? @b == 42 [ 1 -> @x. ]
+    ? @b == 54 [ 1 -> @x. ] ? @b == 59 [ 1 -> @x. ]
+    ? @b == 74 [ 1 -> @x. ] ? @b == 83 [ 1 -> @x. ] ? @b == 85 [ 1 -> @x. ]
+    ? (@b == 89) + (@b == 97) + (@b == 100) [ 1 -> @x. ]
+    ? @b >= 77 [ ? @b <= 80 [ 1 -> @x. ] ]
+    ? @x == 1 [ 6 -> @e0. ]
+   ]
+  ]
+ ]
+ ? @op == 34 [
+  67 -> @e0. ? @a == 66 [ 68 -> @e1. ] ~ [ 69 -> @e1. ]
+ ]
+ # Conditional and loop frames remember displacement locations, not pointers.
+ ? @op == 40 [
+  ? @tt != 91 [ !exit[1]. ] @ti + 12 -> @ti.
+  @bd + 1 -> @bd. ? @bd > 64 [ !exit[1]. ]
+  19 -> @e0. 4 -> @width.
+  @out + :load64[@templates + 19 * 16 + 8] -> @x.
+  !store64[@stack + @sp | 41]. !store64[@stack + @sp + 8 | @x]. !store64[@stack + @sp + 16 | @b]. @sp + 24 -> @sp.
+  1 -> @next. 1 -> @na.
+ ]
+ ? @op == 41 [
+  ? @b != -1 [
+   20 -> @e0. 4 -> @width.
+   @out + :load64[@templates + 20 * 16 + 8] + 4 -> @x.
+   @b - @x -> @imm. !store32[@output + @a | @x - @a - 4].
+  ] ~ [
+   ? @tt == 126 [
+    @ti + 12 -> @ti. ? :load32[@ti] != 91 [ !exit[1]. ] @ti + 12 -> @ti.
+    @bd + 1 -> @bd. ? @bd > 64 [ !exit[1]. ]
+    20 -> @e0. 4 -> @width.
+    @out + :load64[@templates + 20 * 16 + 8] -> @x.
+    !store32[@output + @a | @x - @a].
+    !store64[@stack + @sp | 42]. !store64[@stack + @sp + 8 | @x]. @sp + 24 -> @sp.
+    1 -> @next. 1 -> @na.
+   ] ~ [ !store32[@output + @a | @out - @a - 4]. ]
+  ]
+ ]
+ ? @op == 42 [ !store32[@output + @a | @out - @a - 4]. ]
+ ? @op == 90 [ @a -> @e0. ]
+ ? @op == 99 [
+  ? @tt != 0 [ !exit[1]. ] ? @ed != 0 [ !exit[1]. ] ? @bd != 0 [ !exit[1]. ]
+  ? (@mode < 2) + (@mode == 7) + (@mode == 8) + (@mode == 9) [ 45 -> @e0. ] ~ [ 40 -> @e0. ]
+ ]
+ # Emit up to four prefixes, a little-endian immediate, suffix, and high word.
+ 0 -> @idx.
+ ?? @idx < 7 [
+  -1 -> @id.
+  ? @idx == 0 [ @e0 -> @id. ]
+  ? @idx == 1 [ @e1 -> @id. ]
+  ? @idx == 2 [ @e2 -> @id. ]
+  ? @idx == 3 [ @e3 -> @id. ]
+  ? @idx == 5 [ @suffix -> @id. ]
+  ? @id != -1 [
+   ? @id >= 128 [ !exit[1]. ]
+   :load64[@templates + @id * 16] -> @str.
+   :load64[@templates + @id * 16 + 8] -> @len.
+   ? @out + @len > @limit [ !exit[1]. ]
+   0 -> @j.
+   ?? @j < @len [
+    !store8[@output + @out + @j | :load8[@str + @j]]. @j + 1 -> @j.
+   ]
+   @out + @len -> @out.
+  ]
+  ? @idx == 4 [
+   ? @out + @width > @limit [ !exit[1]. ]
+   ? @width == 4 [ !store32[@output + @out | @imm]. ]
+   ? @width == 8 [ !store64[@output + @out | @imm]. ]
+   @out + @width -> @out.
+  ]
+  ? @idx == 6 [
+   ? @tail != -1 [
+    ? @out + 4 > @limit [ !exit[1]. ]
+    !store32[@output + @out | @tail]. @out + 4 -> @out.
+   ]
+  ]
+  @idx + 1 -> @idx.
+ ]
+ ? @sp > 32640 [ !exit[1]. ]
+ ? @next != 0 [
+  !store64[@stack + @sp | @next]. !store64[@stack + @sp + 8 | @na]. !store64[@stack + @sp + 16 | @nb]. @sp + 24 -> @sp.
+ ]
+]
+# Finalize already-emitted headers and code. Compiler errors exit before output.
+# Inputs: @output, @out, @mode, @arch, @limit.
+# Scratch: @i, @j, @k, @x, @y, @z, @c, @d. PE changes @out.
+? @mode < 2 [
+ ? @out < 120 [ !exit[1]. ]
+ ? @out > @limit [ !exit[1]. ]
+ !store64[@output + 96 | @out].
+ !store64[@output + 104 | @out].
+]
+? (@mode == 8) + (@mode == 9) [
+ ? @out < 64 [ !exit[1]. ]
+ ? @out > @limit [ !exit[1]. ]
+ !store64[@output + 16 | @out].
+]
+0 -> @c.
+? @mode == 3 [ 1 -> @c. ]
+? @mode == 5 [ 1 -> @c. ]
+? @c == 1 [
+ ? @out < 512 [ !exit[1]. ]
+ ? @out > @limit [ !exit[1]. ]
+ # Leave room for both alignment increments and the image-size field.
+ ? @out > 0xffff0000 [ !exit[1]. ]
+ ? @arch > 1 [ !exit[1]. ]
+ @out - 512 -> @x.
+ 0 -> @y.
+ ?? @y < @x [ @y + 512 -> @y. ]
+ @y + 512 -> @k.
+ @k + 512 -> @d.
+ ? @d > @limit [ !exit[1]. ]
+ 0 -> @z.
+ ?? @z < @x [ @z + 4096 -> @z. ]
+ @z + 4096 -> @z.
+ # Every header field and final byte is in bounds before the first store.
+ @out -> @i.
+ ?? @i < @d [
+  !store8[@output + @i | 0].
+  @i + 1 -> @i.
+ ]
+ 0 -> @j.
+ ? @arch == 0 [ 16 -> @j. ]
+ !store32[@output + 92 | @y].
+ !store32[@output + 144 | @z + 4096].
+ !store32[@output + 320 + @j | @x].
+ !store32[@output + 328 + @j | @y].
+ !store32[@output + 364 + @j | @z].
+ !store32[@output + 372 + @j | @k].
+ !store32[@output + 224 + @j | @z].
+ ? @arch == 1 [ !store32[@output + 112 | @z]. ]
+ !store32[@output + @k | 4096].
+ !store32[@output + @k + 4 | 12].
+ @d -> @out.
+]
+# Original PE64 console application, fixed import RVAs and PIC code.
+? @mode == 7 [
+ ? @out < 4096 [ !exit[1]. ]
+ @out - 4096 -> @x.
+ 0 -> @y. ?? @y < @x [ @y + 512 -> @y. ]
+ @y + 4096 -> @k. @k + 512 -> @d.
+ ? @d > @limit [ !exit[1]. ]
+ 0 -> @z. ?? @z < @x [ @z + 4096 -> @z. ]
+ @z + 8192 -> @z.
+ @out -> @i. ?? @i < @d [ !store8[@output + @i | 0]. @i + 1 -> @i. ]
+ # DOS/COFF and PE32+ optional header.
+ !store16[@output | 0x5a4d]. !store32[@output + 60 | 64].
+ !store32[@output + 64 | 0x4550]. !store16[@output + 68 | 0x8664].
+ !store16[@output + 70 | 3]. !store16[@output + 84 | 240].
+ !store16[@output + 86 | 0x22]. !store16[@output + 88 | 0x20b].
+ !store8[@output + 90 | 1].
+ !store32[@output + 92 | @y]. !store32[@output + 96 | 4096].
+ !store32[@output + 104 | 8192]. !store32[@output + 108 | 8192].
+ !store64[@output + 112 | 0x140000000].
+ !store32[@output + 120 | 4096]. !store32[@output + 124 | 512].
+ !store16[@output + 128 | 6]. !store16[@output + 136 | 6].
+ !store32[@output + 144 | @z + 4096]. !store32[@output + 148 | 512].
+ !store16[@output + 156 | 3]. !store16[@output + 158 | 0x160].
+ # Commit the owned hosted stack up front: Zero reserves4MiB without CRT probes.
+ !store64[@output + 160 | 16777216]. !store64[@output + 168 | 16777216].
+ !store64[@output + 176 | 1048576]. !store64[@output + 184 | 4096].
+ !store32[@output + 196 | 16].
+ !store32[@output + 208 | 4096]. !store32[@output + 212 | 40].
+ !store32[@output + 240 | @z]. !store32[@output + 244 | 12].
+ !store32[@output + 296 | 4352]. !store32[@output + 300 | 192].
+ # Writable imports, executable/read-only text, discardable relocations.
+ !store64[@output + 328 | 0x000061746164692e].
+ !store32[@output + 336 | 3584]. !store32[@output + 340 | 4096].
+ !store32[@output + 344 | 3584]. !store32[@output + 348 | 512].
+ !store32[@output + 364 | 0xc0000040].
+ !store64[@output + 368 | 0x000000747865742e].
+ !store32[@output + 376 | @x]. !store32[@output + 380 | 8192].
+ !store32[@output + 384 | @y]. !store32[@output + 388 | 4096].
+ !store32[@output + 404 | 0x60000020].
+ !store64[@output + 408 | 0x0000636f6c65722e].
+ !store32[@output + 416 | 12]. !store32[@output + 420 | @z].
+ !store32[@output + 424 | 512]. !store32[@output + 428 | @k].
+ !store32[@output + 444 | 0x42000040].
+ # One KERNEL32 import descriptor plus null descriptor.
+ !store32[@output + 512 | 4608]. !store32[@output + 524 | 4864].
+ !store32[@output + 528 | 4352].
+ "KERNEL32.dll" -> @str. 0 -> @j.
+ ?? :load8[@str + @j] [ !store8[@output + 1280 + @j | :load8[@str + @j]]. @j + 1 -> @j. ]
+ 0 -> @i.
+ ?? @i < 23 [
+  4928 + @i * 32 -> @c.
+  !store64[@output + 768 + @i * 8 | @c].
+  !store64[@output + 1024 + @i * 8 | @c].
+  "GetCommandLineW" -> @str.
+  ? @i == 1 [ "GetStdHandle" -> @str. ]
+  ? @i == 2 [ "ReadFile" -> @str. ]
+  ? @i == 3 [ "WriteFile" -> @str. ]
+  ? @i == 4 [ "ExitProcess" -> @str. ]
+  ? @i == 5 [ "GetLastError" -> @str. ]
+  ? @i == 6 [ "CreateFileW" -> @str. ]
+  ? @i == 7 [ "GetFileSizeEx" -> @str. ]
+  ? @i == 8 [ "CloseHandle" -> @str. ]
+  ? @i == 9 [ "DeleteFileW" -> @str. ]
+  ? @i == 10 [ "CreateDirectoryW" -> @str. ]
+  ? @i == 11 [ "RemoveDirectoryW" -> @str. ]
+  ? @i == 12 [ "MoveFileExW" -> @str. ]
+  ? @i == 13 [ "MultiByteToWideChar" -> @str. ]
+  ? @i == 14 [ "GetFileInformationByHandle" -> @str. ]
+  ? @i == 15 [ "GetFileAttributesW" -> @str. ]
+  ? @i == 16 [ "SetEndOfFile" -> @str. ]
+  ? @i == 17 [ "WideCharToMultiByte" -> @str. ]
+  ? @i == 18 [ "VirtualAlloc" -> @str. ]
+  ? @i == 19 [ "VirtualProtect" -> @str. ]
+  ? @i == 20 [ "VirtualFree" -> @str. ]
+  ? @i == 21 [ "GetModuleFileNameW" -> @str. ]
+  ? @i == 22 [ "FlushInstructionCache" -> @str. ]
+  0 -> @j.
+  ?? :load8[@str + @j] [
+   !store8[@output + 1346 + @i * 32 + @j | :load8[@str + @j]]. @j + 1 -> @j.
+  ]
+  @i + 1 -> @i.
+ ]
+ # All code/data references are relative; two ABSOLUTE relocation padding entries.
+ !store32[@output + @k | 8192]. !store32[@output + @k + 4 | 12].
+ @d -> @out.
+]
+
+# Nothing reaches stdout until lexing, parsing and finalization all succeed.
+0 -> @p.
+?? @p < @out [
+ :write[@output + @p | @out - @p] -> @v.
+ ? @v == 18446744073709551612 [ ] ~ [
+  ? @v == 0 [ !exit[1]. ]
+  ? @v > @out - @p [ !exit[1]. ]
+  @p + @v -> @p.
+ ]
+]
+!exit[0].

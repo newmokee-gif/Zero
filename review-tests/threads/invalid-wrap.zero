@@ -1,0 +1,3 @@
+:reserve[80] => @context.
+:fork[@context | 0xfffffffffffffff0 | 81920] => @result.
+!exit[99].

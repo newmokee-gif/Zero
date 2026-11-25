@@ -1,0 +1,47 @@
+ZTEXT001000009c4269289ac0000000
+Current original Zero workflow (0.12)
+
+Use the native tools on Linux or their .exe versions on Windows:
+  zero-integrate PROJECT_DIRECTORY NEW_KERNEL.zero
+  zero-build PROJECT_DIRECTORY NEW_OUTPUT_DIRECTORY NEW_KERNEL.zero
+  zero-check PROJECT_DIRECTORY NEW_TEST_DIRECTORY
+All destination paths must be new. The integrator preserves authored sources;
+the builder checks its compiler fixed point and builds the original targets;
+the verifier checks language behavior and host file operations in process.
+See tools/integrate.ztext, tools/build.ztext and checks/README.ztext.
+Read these documents with zero-text read FILE.
+
+The notes below preserve earlier implementation and test history. Any old
+shell/Python runner names, generated artifacts, JSON reports or commands are
+historical references: they were removed from the active project and are not
+current runnable instructions or current-release validation. Native host
+checks do not replace BIOS/UEFI, persistence or physical-hardware testing.
+
+Historical implementation notes
+
+Native Zero 0.10 / Ezero Linux toolkit complete and frozen.
+Archive: build/native-linux-dist/zero-ezero-linux-x86_64.tar.gz
+SHA256: b97b1f4f537e54583d8ef20064877928fe8c3d2d434b16b91e26dc4bb4930f4c
+Bytes: 152179
+Debian 13.6 native: 18/18 packaged checks PASS.
+Arch official base userspace 20261108.0.623074: 18/18 packaged checks PASS.
+Arch used a restricted container sharing the host kernel; no Arch boot claim.
+Native CLI integration: 30/30 PASS. Linux host API behavior: 17/17 PASS.
+
+Native tools: zero, ezero, zero-setup, zero-update and zero-sha256.
+No product .sh/.cmd/.py/.ps1 files. All implementation source is original Zero.
+Installer/updater provide verified PREPARED files, not host boot integration.
+
+Final source/compiler:
+cf01adff93330c930d1fa6628bbc459d6e93a404b3196afa6ae783922ecc77b7 compiler.zero
+911f6d67361300755c13bbf5f3d231d54ceae5736f1ec5e60dde5d6e4095ed3a build/zero
+Evidence: portability/linux/native-verification/SUMMARY.ztext.
+An added HOST-ABI.ztext document was independently audited after runtime tests;
+all other payloads remained byte-identical and the final manifest passed.
+Two final builds produced identical archive bytes.
+
+The older build/linux-dist archive and verification/ folder preserve the 0.9
+shell-wrapper development baseline; they are not the current native release.
+
+Ezero README/LANGUAGE/ABI/MEMORY documentation corrected after runtime checks;
+all non-documentation payloads byte-identical; final SHA256SUMS verified.

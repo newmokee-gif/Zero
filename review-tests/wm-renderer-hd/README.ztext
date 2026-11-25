@@ -1,0 +1,61 @@
+ZTEXT00100000d094000fba20000000
+Current original Zero workflow (0.12)
+
+Use the native tools on Linux or their .exe versions on Windows:
+  zero-integrate PROJECT_DIRECTORY NEW_KERNEL.zero
+  zero-build PROJECT_DIRECTORY NEW_OUTPUT_DIRECTORY NEW_KERNEL.zero
+  zero-check PROJECT_DIRECTORY NEW_TEST_DIRECTORY
+All destination paths must be new. The integrator preserves authored sources;
+the builder checks its compiler fixed point and builds the original targets;
+the verifier checks language behavior and host file operations in process.
+See tools/integrate.ztext, tools/build.ztext and checks/README.ztext.
+Read these documents with zero-text read FILE.
+
+The notes below preserve earlier implementation and test history. Any old
+shell/Python runner names, generated artifacts, JSON reports or commands are
+historical references: they were removed from the active project and are not
+current runnable instructions or current-release validation. Native host
+checks do not replace BIOS/UEFI, persistence or physical-hardware testing.
+
+Historical implementation notes
+
+ZERO WM FULL HD RENDERER CHECKS
+
+Run from the project root:
+  bash review-tests/wm-renderer-hd/run.sh
+
+The own Zero compiler builds the actual production renderer with isolated
+hosted setup/finish fixtures. Host Python performs orchestration and an
+independent pixel oracle; it is never part of the OS. ImageMagick convert
+only stores directly rendered PPM data as PNG for viewing.
+
+The source lives in wm/worker.zero.part. The existing common fixtures under
+review-tests/wm-renderer/ provide an800x600 setup; this runner creates exact
+physical1920x1080,960x540,800x600,640x480 and640x400 versions with additional
+stride padding, framebuffer guards and a text-grid sentinel. It replaces
+only the infinite loop and cooperative yields to obtain one complete frame.
+Full generated Zero sources and internal binaries go to a fresh private
+build/wm-renderer-hd.* directory. Logs and PNG fixture outputs go to
+verification/wm-renderer-hd-0.8.1.
+
+A1920x1080 software framebuffer exceeds the normal4MiB hosted arena. The
+original Zero helper grow-host-16m.zero validates our current ELF/prologue
+and raises only the fixture arena immediate to16MiB. This helper derives
+from the already documented own bootstrap transition helper. The runner
+verifies that all other executable bytes are unchanged and rejects empty,
+invalid ELF and already-modified prologue inputs. Fixture processes receive
+a64MiB stack limit, or the available hard limit if smaller (minimum32MiB).
+The production compiler, loaders, kernel arena and boot image are untouched
+by this helper. It is not used by a normal OS build.
+
+legacy-worker.zero.part is the frozen0.8.0 source, used only as an independent
+exact-pixel compact-mode regression baseline. Current and legacy fixtures
+both use the own current compiler and identical setup. Tests compare tile
+and scrolling outputs at800x600,640x480,640x400.
+
+FullHD tests compare every physical pixel against the960x540 logical fixture
+and verify all native2x2 groups, RGB/BGR byte equivalence,128-byte guards,
+16-pixel stride padding and the cell-grid end sentinel. No screenshot is
+upscaled to produce the FullHD outputs. These are host-renderer fixtures,
+not virtual-machine screenshots. Firmware, input and scheduling require
+separate VM verification. No user data disk is opened by these tests.

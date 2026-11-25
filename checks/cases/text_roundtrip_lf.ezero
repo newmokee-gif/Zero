@@ -1,0 +1,2 @@
+"A\n\n🌍\n" => value
+join(lines(value) | "\n") == value => show

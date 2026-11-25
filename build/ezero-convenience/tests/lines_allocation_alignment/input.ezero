@@ -1,0 +1,3 @@
+lines("aaaaaaaaaaaaaaa\nbbbbbbbbbbbbbbbb\r\nccccccccccccccccc") => each item [
+size(item) => show
+]

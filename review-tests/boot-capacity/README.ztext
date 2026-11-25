@@ -1,0 +1,52 @@
+ZTEXT00100000aaf98a733550000000
+Current original Zero workflow (0.12)
+
+Use the native tools on Linux or their .exe versions on Windows:
+  zero-integrate PROJECT_DIRECTORY NEW_KERNEL.zero
+  zero-build PROJECT_DIRECTORY NEW_OUTPUT_DIRECTORY NEW_KERNEL.zero
+  zero-check PROJECT_DIRECTORY NEW_TEST_DIRECTORY
+All destination paths must be new. The integrator preserves authored sources;
+the builder checks its compiler fixed point and builds the original targets;
+the verifier checks language behavior and host file operations in process.
+See tools/integrate.ztext, tools/build.ztext and checks/README.ztext.
+Read these documents with zero-text read FILE.
+
+The notes below preserve earlier implementation and test history. Any old
+shell/Python runner names, generated artifacts, JSON reports or commands are
+historical references: they were removed from the active project and are not
+current runnable instructions or current-release validation. Native host
+checks do not replace BIOS/UEFI, persistence or physical-hardware testing.
+
+Historical implementation notes
+
+448 KiB boot/container capacity verification
+
+Run from the project directory:
+python3 review-tests/boot-capacity/run.py
+
+The runner uses the private capacity candidate at
+build/network-ports/capacity-stage2 when present, otherwise build/zero.
+That must be the own Zero compiler with the 458752-byte output limit.
+No assembler, linker or borrowed guest implementation is used.
+
+Five actual Zero sources are compiled: BIOS, AMD64/IA32 EFI loaders and the
+FAT/ISO writers. The original Zero slot-tail probe is compiled separately for
+both kernels. Its anchor offset is measured and substituted before the final
+compile, then verified stable. Test bytes are placed beyond executable code,
+including both sides of the previous384KiB boundary and byte458751.
+
+The writers build a private16MiB FAT image and17,776,640-byte optical ISO.
+Python independently walks the FAT chains and ISO records, checking all
+payloads and endian fields. Short/excess/invalid inputs and read/write failures
+must produce documented errors. Four QEMU pc/TCG boots execute the whole-slot
+probe in BIOS32/64 and IA32/AMD64 OVMF. QEMU, firmware and Python are external
+test infrastructure. No writable data disk is attached to these VMs.
+
+Internal generated binaries, firmware variable copies and images are under a
+fresh build/boot-capacity.* directory; those are not distribution artifacts.
+Evidence is under verification/boot-capacity-448k. The final integrated OS
+uses a different kernel/ISO and requires its own VM results.
+
+The runner contains the current workspace paths for QEMU/OVMF; adjust those
+host-only paths when reproducing on another machine. It never runs build.sh
+or replaces the project's current ISO or user disks.

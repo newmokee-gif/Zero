@@ -1,0 +1,39 @@
+ZTEXT00100000776b88c1e6a0000000
+Compiler0.6 release regression report
+Date:2026-11-15 UTC
+Compiler SHA256:
+3f9da290f0afc54da61c02297ca9a385b70a49da45fc5094688f966904ad98c6
+Oracle SHA256:
+234e613cb5e7c2fb9df7d27fa899af81c1a075daa0f81eeca21decc65ab72ddb
+
+PASS:1107 compiler checks and5 safe native executions, zero failures.
+Normal verification requires no old compiler or temporary reference path.
+
+PASS:Independent Zero ABI auditor compares all322 accepted outputs against
+the pinned own0.5 compiler. Only exact reviewed prologue/call changes and
+independently validated ELF/PE size changes are permitted. Unchanged source
+fixtures also reconfirm their archived0.5 non-host byte hashes.
+PASS:Seven deliberate binary corruptions are rejected by that auditor.
+PASS:785 rejection cases retain status1 and zero stdout.
+PASS:All original target/fixture/expected-status entries are preserved.
+
+243 exact non-host hashes:192 intentionally updated,51 real-mode unchanged.
+79 hosted acceptance cases also passed the independent normalized byte audit.
+This report does not claim the new binaries are unchanged from0.5.
+
+Exact ceilings are131072 bytes for raw/host/ELF/EFI and16384 for real.
+EFI .text reaches exactly130048 bytes. Every over-limit fixture now requires
+exactly one additional code byte, including the repaired hosted fixture.
+Normal run.sh explicitly verifies exact sizes, including hosted outputs.
+
+Full rationale and analytic fixture adjustments:
+review-tests/selfhost-targets/ABI-MIGRATION-0.6.txt
+Old oracle/provenance/original output-limit fixtures:
+review-tests/selfhost-targets/archive/0.5.0/
+
+Detailed evidence:results.tsv,migration.tsv,ceilings.tsv,auditor-controls.tsv.
+Tests invoke existing own Zero executables. No assembler, linker or foreign
+compiler is invoked. Raw/EFI binaries are compiled and inspected, not executed
+by this suite; separate threading and full-u64 IA32 VM evidence is under
+verification/threads/ia32/.
+

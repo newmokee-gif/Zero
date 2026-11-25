@@ -1,0 +1,87 @@
+  ]
+  !switch[@ds+128|@ds].
+ ]
+]
+? @dr != 0 [ !exit[70]. ]
+? :argcount[] != 0 [ !exit[64]. ]
+-1 -> @dfd.
+? :host[] == 1 [
+ :hostsyscall[2|"/sys/class/block"|0x90000|0|0|0|0] -> @dfd.
+ ? @dfd > 2147483647 [ !exit[69]. ]
+]
+? (:host[] != 1) * (:host[] != 2) [ !exit[69]. ]
+?? @ddone == 0 [
+ 0 -> @dvalid.
+ ? :host[] == 1 [
+  :load64[@ds+520] -> @dn.
+  ? @di >= @dn [
+   :hostsyscall[217|@dfd|@ds+16384|8192|0|0|0] -> @dn. 0 -> @di.
+   !store64[@ds+520|@dn].
+   ? @dn == 0 [ 1 -> @ddone. ]
+   ? @dn > 8192 [ 1 -> @ddone. 74 -> @derror. ]
+  ]
+  ? @ddone == 0 [
+   ? @di+20 > @dn [ 1 -> @ddone. 74 -> @derror. ] ~ [
+    :load16[@ds+16384+@di+16] -> @dk.
+    ? (@dk < 20) + (@di+@dk > @dn) [ 1 -> @ddone. 74 -> @derror. ] ~ [
+     @ds+16384+@di+19 -> @dtext. 0 -> @dj.
+     ?? (@dj < @dk-19) * (:load8[@dtext+@dj] != 0) [ @dj+1 -> @dj. ]
+     ? (@dj >= 3) * (@dj <= 5) * (@dj < @dk-19) [
+      ? :load16[@dtext] == 0x6473 [
+       1 -> @dvalid. 2 -> @dn. !store64[@ds+512|@dj].
+       ?? @dn < @dj [ ? (:load8[@dtext+@dn] < 97) + (:load8[@dtext+@dn] > 122) [ 0 -> @dvalid. ] @dn+1 -> @dn. ]
+       # Restore the getdents byte count, kept in the state below.
+      ]
+     ]
+     ? @dvalid [
+      !store32[@ds+24576|0x7665642f]. !store8[@ds+24580|47]. 0 -> @dn.
+      ?? @dn < @dj [ !store8[@ds+24581+@dn|:load8[@dtext+@dn]]. @dn+1 -> @dn. ]
+      !store8[@ds+24581+@dj|0].
+     ]
+     @di+@dk -> @di.
+    ]
+   ]
+  ]
+ ]
+ ? :host[] == 2 [
+  ? @dnumber > 255 [ 1 -> @ddone. ] ~ [
+   "\\\\.\\PhysicalDrive" -> @dtext. 0 -> @dj.
+   ?? @dj < 17 [ !store8[@ds+24576+@dj|:load8[@dtext+@dj]]. @dj+1 -> @dj. ]
+   @dnumber -> @dvalue. 100 -> @dpower.
+   ? @dvalue < 100 [ 10 -> @dpower. ] ? @dvalue < 10 [ 1 -> @dpower. ]
+   ?? @dpower [
+    0 -> @ddigit. ?? @dvalue >= @dpower [ @dvalue-@dpower -> @dvalue. @ddigit+1 -> @ddigit. ]
+    !store8[@ds+24576+@dj|48+@ddigit]. @dj+1 -> @dj.
+    ? @dpower == 100 [ 10 -> @dpower. ] ~ [ ? @dpower == 10 [ 1 -> @dpower. ] ~ [ 0 -> @dpower. ] ]
+   ]
+   !store8[@ds+24576+@dj|0]. @dnumber+1 -> @dnumber. 1 -> @dvalid.
+  ]
+ ]
+ ? @dvalid [
+  !store64[@mh|1]. !store64[@mh+8|@ds+24576]. !store64[@mh+200|1]. !switch[@ds|@ds+128].
+  ? :load64[@mh+40] == 0 [
+   @dcount+1 -> @dcount. 0 -> @dk.
+   ?? @dk < 2 [
+    @dcount -> @dvalue. ? @dk == 1 [ :load64[@mh+24] -> @dvalue. ]
+    1 -> @dpower. ?? (@dpower <= 1000000000000000000) * (@dpower*10 <= @dvalue) [ @dpower*10 -> @dpower. ]
+    ?? @dpower [
+     0 -> @ddigit. ?? @dvalue >= @dpower [ @dvalue-@dpower -> @dvalue. @ddigit+1 -> @ddigit. ] !put[48+@ddigit].
+     0 -> @dj. 0 -> @dn. 1 -> @dtext.
+     ?? @dtext < @dpower [ @dtext -> @dn. @dtext*10 -> @dtext. ] @dn -> @dpower.
+    ]
+    ? @dk == 0 [
+     !put[46]. !put[32]. 0 -> @dj. ?? :load8[@ds+24576+@dj] [ !put[:load8[@ds+24576+@dj]]. @dj+1 -> @dj. ] !put[32].
+    ] ~ [ " bytes\n" -> @dtext. 0 -> @dj. ?? :load8[@dtext+@dj] [ !put[:load8[@dtext+@dj]]. @dj+1 -> @dj. ] ]
+    @dk+1 -> @dk.
+   ]
+  ]
+  !store64[@mh+200|3]. !switch[@ds|@ds+128].
+ ]
+]
+? @dfd <= 2147483647 [ :hostsyscall[3|@dfd|0|0|0|0|0] -> @dr. ]
+? @dcount == 0 [
+ "No eligible USB disks. Administrator access, a removable USB disk with a serial identity, and unmounted volumes are required.\n" -> @dtext.
+ 0 -> @dj. ?? :load8[@dtext+@dj] [ !put[:load8[@dtext+@dj]]. @dj+1 -> @dj. ]
+]
+:hostfree[@ds|131072] -> @dr.
+!exit[@derror].

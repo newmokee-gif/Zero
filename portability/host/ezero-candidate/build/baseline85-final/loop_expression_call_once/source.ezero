@@ -1,0 +1,7 @@
+count :: [
+ Called => show
+ 3 => return
+]
+count() => repeat [
+ Tick => show
+]

@@ -1,0 +1,16 @@
+ZTEXT001000003743054a8270000000
+Ezero runtime source status
+
+Original Zero runtime: tagged numbers/text/lists/phrases, 64 function frames,
+copying garbage collection, one-based indexing, UTF-8 scalar size and explicit
+source-line errors. The 2 MiB owned arena and exactly 64 declared variables,
+including the eight prefix variables, remain the integration contract.
+
+The file extension implements opcodes through 40, calling native adapters or
+the Zero OS kernel file service. Listing results are validated, staged outside
+the heap and copied into managed immutable text lists after exact allocation
+reservation. No shell or external language runtime implements these operations.
+
+Current runtime source is 41399 bytes, below the 65535-byte bundle limit.
+Current verification is recorded in tests/files-verification.ztext. Historical
+runtime/bytecode tests predate this extension; guest VM verification is separate.

@@ -1,0 +1,3 @@
+Prefix + lines("A\nB")[2] => show
+Prefix + join(lines("A\nB") | /) => show
+join([join([A | B] | /) | C] | :) => show

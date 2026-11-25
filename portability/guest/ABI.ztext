@@ -1,0 +1,143 @@
+ZTEXT00100001e55aed8f3580000000
+ZEROAPP1 native guest application contract (original Zero implementation)
+
+--app64 (mode8) and --app32 (mode9) compile hosted-style Zero source to
+position-independent guest code with bounded memory streams. No Linux syscall
+or firmware service is used by the application. These remain cooperative
+shared-address-space kernel applications, not protected user processes.
+Mode7 is reserved for the independently developed --windows target.
+
+64-byte image header, u64 little-endian fields:
+0 magic0x315050414f52455a (ZEROAPP1)
+8 architecture64 or32
+16 complete image size, including this header
+24 entry offset64
+32 minimum stack-region size4198400 (4MiB +4KiB)
+40 ABI version1
+48 reserved0
+56 reserved0
+The caller validates header/size/architecture, then calls image+64.
+x64 uses the existing Zero Microsoft-style call ABI: RCX=context.
+IA32 uses the existing Zero cdecl call ABI: [ESP+4]=context.
+
+Context is caller-owned, zero initialized, at least192 bytes, all u64 fields:
+0 reserved/version1 (caller sets1)
+8 stackTop = stackBase+stackBytes
+16 input address
+24 input byte length
+32 input consumed (initial0)
+40 output address
+48 output capacity
+56 output produced (initial0)
+64 argc (1 or2 for the Zero compiler)
+72 argv0 pointer to NUL-terminated name
+80 argv1 pointer to NUL-terminated target flag or0
+88 returned low8-bit exit status
+96 saved caller SP (application-private)
+104..160 reserved/application-private
+168 owned stackBase
+176 owned stackBytes (>=4198400)
+184 optional Zero filesystem service descriptor pointer, or0
+
+The entry validates stack size, no wrap and exact stackTop, saves caller
+callee-preserved registers and changes to the supplied stack. Its arena is
+exactly4MiB and its64 local slots retain normal language value semantics.
+The argc/argv memory at arenaBase+4194816 follows the existing Zero compiler's
+own entry contract on both architectures. IA32 uses a separate internal frame
+header above those argv records to avoid aliasing its arena cursor.
+
+read copies up to the requested amount from the input stream and advances its
+position. EOF returns0. write copies up to remaining output room and returns
+the copied count; no remaining room returns unsigned negative ENOSPC(-28).
+put appends one low byte or exits74 on full output. exit returns to the caller
+with its low8 bits, also stored in context88. Falling off source returns0.
+Memory streams need no service callback or external runtime.
+Input/output address arithmetic is bounded; the caller must provide valid,
+owned buffers and must not overlap the application image/stack/context.
+There is no memory protection against explicitly unsafe Zero memory stores.
+
+Supported operations: put/exit/read/write, memory load/store/reserve and
+bitxor/bitand/shr. Firmware, port, foreign-call, fork/switch and positioned
+file-descriptor operations are unavailable for these targets. The initial
+compiler apps do not need them. Ezero inherits the supported memory-stream
+capabilities. Whole-file services below access the selected guest volume.
+
+The0.10 host interoperability extension also accepts host/argument/file API
+source forms in guest targets, with explicit unavailable fallbacks: host,
+argcount, argument, program and hostalloc return0; file operations,
+hostprotect and hostfree return unsigned-1. No host filesystem is exposed.
+Ezero host() consequently returns0; Ezero arguments remain unavailable.
+Ezero file helpers use the whole-file services introduced below; they report
+runtime errors when the service is absent or a filesystem operation fails.
+The compiler's internal argc/argv frame above remains available for selecting
+its output target; it is distinct from the guest host-argument API fallback.
+See portability/host/ABI.ztext and ezero/HOST.ztext for the extension contract.
+
+Whole-file service extension, revision1
+
+The kernel may provide context184=S. S identifies its original filesystem
+state machine through a private cooperative continuation. No shell command
+is constructed or executed. Each request completes before the app resumes.
+The descriptor and both continuations belong to the kernel; callers must
+not modify these structures except through the compiler's builtin templates.
+All descriptor fields are u64 little-endian:
+  0 magic0x313053464f52455a (ZEROFS01)
+  8 version1
+ 16 service continuation pointer (80 bytes)
+ 24 application continuation pointer (80 bytes)
+ 32 operation:1 readfile,2 save,3 writefile,4 create,5 del,
+              6 watch,7 search,8 go,9 disks
+ 40 NUL-terminated path pointer, or0 for disks
+ 48 input/output buffer pointer
+ 56 input length or output capacity
+ 64 returned byte count,0,or unsigned-1
+ 72 filesystem driver result (fs/ABI.ztext)
+ 80 phase:1 request,2 completed
+ 88 reserved0
+ 96..255 kernel-private
+The app checks magic/version/nonzero continuation pointers before publishing
+a request. A missing or incompatible service returns unsigned-1.
+The native continuation format for IA32 app frames is version2; the raw
+kernel switch accepts this frame and restores the app arena and context.
+Raw kernel/service frames retain continuation version1.
+
+Builtins and successful results:
+ :readfile[path|buffer|capacity] returns file bytes, without a trailing NUL.
+ :save[path|buffer|length] creates or replaces and returns length.
+ :writefile[path|buffer|length] creates exclusively and returns length.
+ :create[path] returns0; an existing regular file is preserved.
+ :del[path] returns0; a missing file is an error.
+ :watch[root|buffer|capacity] returns NUL-separated filename bytes.
+ :search[patternpath|buffer|capacity] returns the same list representation.
+ :go[root] returns0 and changes the active terminal volume.
+ :disks[buffer|capacity] returns NUL-separated logical volume roots.
+Every failure returns unsigned-1. Lists count each filename terminator and
+have no extra sentinel entry. An empty list returns0. Output is copied only
+when the complete result fits, so capacity errors leave the caller buffer
+unchanged. Input/output buffers must be valid owned memory, with capacities
+at most65536. Shared-address-space apps remain trusted, not memory isolated.
+
+Roots are A:| through Z:|. A relative name uses the current volume; a leading
+| also selects its root. watch(.) and go(.) refer to the current root.
+Only flat filenames of1..31 ASCII letters/digits/dot/underscore/hyphen are
+supported; dot and dot-dot are not filenames. Search accepts * and ? in the
+last component; plain names match exactly, an empty pattern matches all.
+Writes accept at most400 printable ASCII bytes plus TAB, LF and CR. Profile validation happens
+before mutation, and unsupported formats/features fail explicitly. ZeroFS
+has eight file records. The existing restricted ext4/NTFS/Btrfs profiles and
+durability rules also apply; this API does not extend their on-disk formats.
+No formatting/partitioning service is exposed to applications.
+
+Bundle/integration requirements
+Reserve an8MiB kernel-owned workspace and load native application images for
+the selected architecture: Zero compiler, Ezero frontend and Ezero packer.
+Also provide the Ezero runtime prefix/body as source bytes. Reuse the same
+application stack after each call returns. Buffers retain source/package/
+generated Zero/output across calls. The kernel chooses --app64/--app32 via
+context argv1 when invoking the Zero compiler.
+The existing400-byte user-file limit can supply small source programs; larger
+bundled examples/source buffers require an explicit separate command path.
+Native binary persistence is not provided by this ABI.
+UEFI can load bundle files and allocate workspace using existing boot services.
+The BIOS path needs a safe loader-owned high-memory transfer, because the
+conventional-memory kernel region cannot hold the compiler bundle as well.

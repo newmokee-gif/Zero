@@ -1,0 +1,825 @@
+# Ezero-owned hosted execution arena. Eight shared initialization variables.
+:reserve[2097152] => @ez_mem.
+@ez_mem => @ez_program.
+0 => @ez_program_bytes.
+0 => @ez_encoded.
+0 => @ez_decode_i.
+0 => @ez_decode_n.
+0 => @ez_decode_a.
+0 => @ez_decode_b.
+"455a45524f4d563110010000000000000500000000000000010000000000000000000000000000001000000000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000b00000000000000010000000000000002000000000000000b00000000000000050000000000000001000000000000001c00000000000000000000000000000000000000000000000100000000000000130000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000002000000000000006578616d706c652e74787448656c6c6f" -> @ez_encoded.
+0 -> @ez_decode_i.
+272 -> @ez_decode_n.
+?? @ez_decode_i < @ez_decode_n [
+ :load8[@ez_encoded + @ez_decode_i * 2] -> @ez_decode_a.
+ :load8[@ez_encoded + @ez_decode_i * 2 + 1] -> @ez_decode_b.
+ ? @ez_decode_a < 58 [ @ez_decode_a - 48 -> @ez_decode_a. ] ~ [ @ez_decode_a - 87 -> @ez_decode_a. ]
+ ? @ez_decode_b < 58 [ @ez_decode_b - 48 -> @ez_decode_b. ] ~ [ @ez_decode_b - 87 -> @ez_decode_b. ]
+ !store8[@ez_program + 0 + @ez_decode_i | @ez_decode_a * 16 + @ez_decode_b].
+ @ez_decode_i + 1 -> @ez_decode_i.
+]
+272 -> @ez_program_bytes.
+# Original Ezero runtime, generated program data is supplied above this part.
+# All values, function frames, heap objects and garbage collection are Zero code.
+0 => @ez_code.
+0 => @ez_consts.
+0 => @ez_funcs.
+0 => @ez_ncode.
+0 => @ez_nfunc.
+0 => @ez_nglobal.
+0 => @ez_nconst.
+0 => @ez_globals.
+0 => @ez_locals.
+0 => @ez_frames.
+0 => @ez_stack.
+0 => @ez_heap.
+0 => @ez_other.
+0 => @ez_used.
+0 => @ez_sp.
+0 => @ez_depth.
+0 => @ez_pc.
+0 => @ez_op.
+0 => @ez_a.
+0 => @ez_b.
+0 => @ez_line.
+0 => @ez_error.
+0 => @ez_halt.
+0 => @ez_i.
+0 => @ez_j.
+0 => @ez_k.
+0 => @ez_x.
+0 => @ez_y.
+0 => @ez_z.
+0 => @ez_ta.
+0 => @ez_tb.
+0 => @ez_va.
+0 => @ez_vb.
+0 => @ez_need.
+0 => @ez_size.
+0 => @ez_dst.
+0 => @ez_src.
+0 => @ez_n.
+0 => @ez_limit.
+0 => @ez_base.
+0 => @ez_frame.
+0 => @ez_result.
+0 => @ez_type.
+0 => @ez_scan.
+0 => @ez_phase.
+0 => @ez_root.
+0 => @ez_copy.
+0 => @ez_free.
+0 => @ez_oldused.
+0 => @ez_msg.
+0 => @ez_digit.
+0 => @ez_div.
+0 => @ez_fmt.
+0 => @ez_fmtdepth.
+0 => @ez_tmp.
+0 => @ez_ret.
+@ez_mem + 262144 -> @ez_globals.
+@ez_mem + 266240 -> @ez_locals.
+@ez_mem + 528384 -> @ez_frames.
+@ez_mem + 532480 -> @ez_stack.
+@ez_mem + 589824 -> @ez_heap.
+@ez_mem + 851968 -> @ez_other.
+@ez_mem + 1310976 -> @ez_fmt.
+# Clear all global/local/frame/evaluation state, not program or heap bytes.
+262144 -> @ez_i.
+?? @ez_i < 565248 [ !store64[@ez_mem + @ez_i | 0]. @ez_i + 8 -> @ez_i. ]
+!store64[@ez_mem + 1114112 | 1].
+!store64[@ez_mem + 1114120 | 10].
+!store64[@ez_mem + 1114128 | 100].
+!store64[@ez_mem + 1114136 | 1000].
+!store64[@ez_mem + 1114144 | 10000].
+!store64[@ez_mem + 1114152 | 100000].
+!store64[@ez_mem + 1114160 | 1000000].
+!store64[@ez_mem + 1114168 | 10000000].
+!store64[@ez_mem + 1114176 | 100000000].
+!store64[@ez_mem + 1114184 | 1000000000].
+!store64[@ez_mem + 1114192 | 10000000000].
+!store64[@ez_mem + 1114200 | 100000000000].
+!store64[@ez_mem + 1114208 | 1000000000000].
+!store64[@ez_mem + 1114216 | 10000000000000].
+!store64[@ez_mem + 1114224 | 100000000000000].
+!store64[@ez_mem + 1114232 | 1000000000000000].
+!store64[@ez_mem + 1114240 | 10000000000000000].
+!store64[@ez_mem + 1114248 | 100000000000000000].
+!store64[@ez_mem + 1114256 | 1000000000000000000].
+!store64[@ez_mem + 1114264 | 10000000000000000000].
+!store64[@ez_mem + 1311056 | 0].
+# Validate all package lengths before dereferencing variable-sized regions.
+? (@ez_program_bytes < 64) + (@ez_program_bytes > 70000) [ 1 -> @ez_error. ]
+? @ez_error == 0 [
+ ? :load64[@ez_program] != 0x31564d4f52455a45 [ 1 -> @ez_error. ]
+ ? :load64[@ez_program + 8] != @ez_program_bytes [ 1 -> @ez_error. ]
+ ? :load64[@ez_program + 48] != 1 [ 1 -> @ez_error. ]
+ ? :load64[@ez_program + 56] != 0 [ 1 -> @ez_error. ]
+ :load64[@ez_program + 16] -> @ez_ncode.
+ :load64[@ez_program + 24] -> @ez_nfunc.
+ :load64[@ez_program + 32] -> @ez_nglobal.
+ :load64[@ez_program + 40] -> @ez_nconst.
+ ? (@ez_ncode == 0) + (@ez_ncode > 1536) + (@ez_nfunc == 0) + (@ez_nfunc > 64) + (@ez_nglobal > 256) + (@ez_nconst > 16384) [ 1 -> @ez_error. ]
+]
+? @ez_error == 0 [
+ ? 64 + @ez_nfunc * 32 + @ez_ncode * 32 + @ez_nconst != @ez_program_bytes [ 1 -> @ez_error. ]
+ @ez_program + 64 -> @ez_funcs.
+ @ez_funcs + @ez_nfunc * 32 -> @ez_code.
+ @ez_code + @ez_ncode * 32 -> @ez_consts.
+ 0 -> @ez_i.
+ ?? (@ez_i < @ez_nfunc) * (@ez_error == 0) [
+  @ez_funcs + @ez_i * 32 -> @ez_src.
+  ? :load64[@ez_src] >= @ez_ncode [ 1 -> @ez_error. ]
+  ? :load64[@ez_src + 8] > 16 [ 1 -> @ez_error. ]
+  ? :load64[@ez_src + 16] > 256 [ 1 -> @ez_error. ]
+  ? :load64[@ez_src + 8] > :load64[@ez_src + 16] [ 1 -> @ez_error. ]
+  ? :load64[@ez_src + 24] != 0 [ 1 -> @ez_error. ]
+  @ez_i + 1 -> @ez_i.
+ ]
+ ? :load64[@ez_funcs] + :load64[@ez_funcs + 8] + :load64[@ez_funcs + 16] != 0 [ 1 -> @ez_error. ]
+]
+?? (@ez_error == 0) * (@ez_halt == 0) [
+ ? @ez_pc >= @ez_ncode [ 1 -> @ez_error. ]
+ ? @ez_error == 0 [
+  @ez_code + @ez_pc * 32 -> @ez_src.
+  :load64[@ez_src] -> @ez_op. :load64[@ez_src + 8] -> @ez_a.
+  :load64[@ez_src + 16] -> @ez_b. :load64[@ez_src + 24] -> @ez_line.
+  @ez_pc + 1 -> @ez_pc.
+  0 -> @ez_base.
+  ? @ez_depth [ :load64[@ez_frames + (@ez_depth - 1) * 64 + 8] -> @ez_base. ]
+  0 -> @ez_n. 0 -> @ez_need.
+  ? @ez_op > 31 [ 1 -> @ez_error. ]
+  ? (@ez_op == 4) + (@ez_op == 6) + ((@ez_op >= 18) * (@ez_op <= 20)) + (@ez_op == 22) + (@ez_op == 24) + (@ez_op == 25) [ 1 -> @ez_n. ]
+  ? ((@ez_op >= 7) * (@ez_op <= 15)) + (@ez_op == 17) [ 2 -> @ez_n. ]
+  ? (@ez_op == 16) + (@ez_op == 26) [ @ez_a -> @ez_n. ]
+  ? @ez_op == 23 [ @ez_b -> @ez_n. ]
+  ? (@ez_op == 27) + (@ez_op == 29) [ 1 -> @ez_n. ]
+  ? @ez_op == 28 [ 2 -> @ez_n. ]
+  ? (@ez_op >= 27) * (@ez_op <= 31) [ ? (@ez_a != 0) + (@ez_b != 0) [ 1 -> @ez_error. ] ]
+  ? @ez_n > @ez_sp - @ez_base [ 3 -> @ez_error. ]
+  ? (@ez_op == 1) + (@ez_op == 2) + (@ez_op == 3) + (@ez_op == 5) + (@ez_op == 25) + (@ez_op == 30) + (@ez_op == 31) [
+   ? @ez_sp >= 2048 [ 2 -> @ez_error. ]
+  ]
+  ? (@ez_op == 16) + (@ez_op == 26) [
+   ? @ez_a > 2048 [ 1 -> @ez_error. ]
+   ? (@ez_a == 0) * (@ez_sp >= 2048) [ 2 -> @ez_error. ]
+   16 + @ez_a * 16 -> @ez_need.
+  ]
+  ? @ez_op == 2 [
+   ? (@ez_a > @ez_nconst) + (@ez_b > 4096) [ 1 -> @ez_error. ]
+   ? @ez_error == 0 [ ? @ez_b > @ez_nconst - @ez_a [ 1 -> @ez_error. ] ]
+   16 + :shr[@ez_b + 15 | 4] * 16 -> @ez_need.
+  ]
+  ? (@ez_op == 21) + (@ez_op == 22) [ ? @ez_a >= @ez_ncode [ 1 -> @ez_error. ] ]
+  ? (@ez_op == 3) + (@ez_op == 4) [ ? @ez_a >= @ez_nglobal [ 1 -> @ez_error. ] ]
+  ? (@ez_op == 5) + (@ez_op == 6) [
+   ? @ez_depth == 0 [ 1 -> @ez_error. ] ~ [
+    ? @ez_a >= :load64[@ez_frames + (@ez_depth - 1) * 64 + 16] [ 1 -> @ez_error. ]
+   ]
+  ]
+  ? @ez_op == 23 [
+   ? (@ez_a == 0) + (@ez_a >= @ez_nfunc) [ 1 -> @ez_error. ]
+   ? @ez_error == 0 [ ? @ez_b != :load64[@ez_funcs + @ez_a * 32 + 8] [ 1 -> @ez_error. ] ]
+   ? @ez_depth >= 64 [ 9 -> @ez_error. ]
+  ]
+  ? @ez_op == 24 [ ? @ez_depth == 0 [ 11 -> @ez_error. ] ]
+  ? (@ez_error == 0) * (@ez_op == 7) [
+   :load64[@ez_stack + (@ez_sp - 2) * 16] -> @ez_ta.
+   :load64[@ez_stack + (@ez_sp - 1) * 16] -> @ez_tb.
+   :load64[@ez_stack + (@ez_sp - 2) * 16 + 8] -> @ez_va.
+   :load64[@ez_stack + (@ez_sp - 1) * 16 + 8] -> @ez_vb.
+   0 -> @ez_x.
+   ? (@ez_ta == 1) * (@ez_tb == 1) [ 1 -> @ez_x. ]
+   ? (@ez_ta == 2) * (@ez_tb == 2) [
+    16 + :shr[:load64[@ez_va + 8] + :load64[@ez_vb + 8] + 15 | 4] * 16 -> @ez_need. 1 -> @ez_x.
+   ]
+   ? ((@ez_ta == 2) * (@ez_tb == 1)) + ((@ez_ta == 1) * (@ez_tb == 2)) [
+    @ez_va -> @ez_y. ? @ez_tb == 1 [ @ez_vb -> @ez_y. ]
+    20 -> @ez_n.
+    ?? (@ez_n > 1) * (@ez_y < :load64[@ez_mem + 1114112 + (@ez_n - 1) * 8]) [ @ez_n - 1 -> @ez_n. ]
+   ]
+   ? (@ez_ta == 2) * (@ez_tb == 1) [ 16 + :shr[:load64[@ez_va + 8] + @ez_n + 15 | 4] * 16 -> @ez_need. 1 -> @ez_x. ]
+   ? (@ez_ta == 1) * (@ez_tb == 2) [ 16 + :shr[:load64[@ez_vb + 8] + @ez_n + 15 | 4] * 16 -> @ez_need. 1 -> @ez_x. ]
+   ? (@ez_ta == 3) * (@ez_tb == 3) [ 16 + (:load64[@ez_va + 8] + :load64[@ez_vb + 8]) * 16 -> @ez_need. 1 -> @ez_x. ]
+   ? @ez_x == 0 [ 5 -> @ez_error. ]
+  ]
+# Original Zero host interoperability. All mutable scratch is outside GC heaps.
+# Paths1311360/1315456; external text1323008; metadata1311040; arg lengths1392640.
+? (@ez_error == 0) * (@ez_op >= 27) * (@ez_op <= 30) [
+ ? :host[] == 0 [ 13 -> @ez_error. ]
+ ? (@ez_error == 0) * (@ez_op <= 29) [
+  1 -> @ez_n. ? @ez_op == 28 [ 2 -> @ez_n. ]
+  :load64[@ez_stack + (@ez_sp - @ez_n) * 16] -> @ez_ta.
+  :load64[@ez_stack + (@ez_sp - @ez_n) * 16 + 8] -> @ez_va.
+  ? @ez_ta != 2 [ 14 -> @ez_error. ] ~ [
+   :load64[@ez_va + 8] -> @ez_limit.
+   ? (@ez_limit == 0) + (@ez_limit > 4095) [ 14 -> @ez_error. ]
+   ? @ez_error == 0 [
+    @ez_va + 16 -> @ez_src.
+    # Validate external text: ez_src/ez_limit bytes, strict UTF-8, no embedded NUL.
+# Scratch i,j,x,y,z only; retain outer argument counter k and allocation need.
+0 -> @ez_i.
+?? (@ez_i < @ez_limit) * (@ez_error == 0) [
+ :load8[@ez_src + @ez_i] -> @ez_x.
+ ? @ez_x < 128 [
+  ? @ez_x == 0 [ 18 -> @ez_error. ]
+  @ez_i + 1 -> @ez_i.
+ ] ~ [
+  0 -> @ez_y.
+  ? (@ez_x >= 194) * (@ez_x <= 223) [ 2 -> @ez_y. ]
+  ? (@ez_x >= 224) * (@ez_x <= 239) [ 3 -> @ez_y. ]
+  ? (@ez_x >= 240) * (@ez_x <= 244) [ 4 -> @ez_y. ]
+  ? (@ez_y == 0) + (@ez_i + @ez_y > @ez_limit) [ 18 -> @ez_error. ]
+  1 -> @ez_j.
+  ?? (@ez_j < @ez_y) * (@ez_error == 0) [
+   :load8[@ez_src + @ez_i + @ez_j] -> @ez_z.
+   ? (@ez_z < 128) + (@ez_z > 191) [ 18 -> @ez_error. ]
+   ? @ez_j == 1 [
+    ? (@ez_x == 224) * (@ez_z < 160) [ 18 -> @ez_error. ]
+    ? (@ez_x == 237) * (@ez_z > 159) [ 18 -> @ez_error. ]
+    ? (@ez_x == 240) * (@ez_z < 144) [ 18 -> @ez_error. ]
+    ? (@ez_x == 244) * (@ez_z > 143) [ 18 -> @ez_error. ]
+   ]
+   @ez_j + 1 -> @ez_j.
+  ]
+  @ez_i + @ez_y -> @ez_i.
+ ]
+]
+
+    0 -> @ez_i.
+    ?? (@ez_i < @ez_limit) * (@ez_error == 0) [
+     !store8[@ez_mem + 1311360 + @ez_i | :load8[@ez_src + @ez_i]]. @ez_i + 1 -> @ez_i.
+    ]
+    !store8[@ez_mem + 1311360 + @ez_i | 0].
+    !store64[@ez_mem + 1311096 | @ez_limit].
+   ]
+  ]
+ ]
+ ? (@ez_error == 0) * (@ez_op == 27) [
+  :fileopen[@ez_mem + 1311360 | 0] -> @ez_ret.
+  ? @ez_ret == -1 [ 15 -> @ez_error. ] ~ [
+   :filesize[@ez_ret] -> @ez_n.
+   ? @ez_n == -1 [ 17 -> @ez_error. ] ~ [ ? @ez_n > 65536 [ 16 -> @ez_error. ] ]
+   0 -> @ez_n. 0 -> @ez_tmp.
+   ?? (@ez_tmp == 0) * (@ez_error == 0) [
+    :fileread[@ez_ret | @ez_mem + 1323008 + @ez_n | 65537 - @ez_n] -> @ez_x.
+    ? @ez_x > 65537 - @ez_n [ 17 -> @ez_error. ] ~ [
+     ? @ez_x == 0 [ 1 -> @ez_tmp. ] ~ [
+      @ez_n + @ez_x -> @ez_n. ? @ez_n > 65536 [ 16 -> @ez_error. ]
+     ]
+    ]
+   ]
+   :fileclose[@ez_ret] -> @ez_x.
+   ? (@ez_error == 0) * (@ez_x != 0) [ 17 -> @ez_error. ]
+   ? @ez_error == 0 [
+    !store64[@ez_mem + 1311040 | @ez_n].
+    @ez_mem + 1323008 -> @ez_src. @ez_n -> @ez_limit.
+    # Validate external text: ez_src/ez_limit bytes, strict UTF-8, no embedded NUL.
+# Scratch i,j,x,y,z only; retain outer argument counter k and allocation need.
+0 -> @ez_i.
+?? (@ez_i < @ez_limit) * (@ez_error == 0) [
+ :load8[@ez_src + @ez_i] -> @ez_x.
+ ? @ez_x < 128 [
+  ? @ez_x == 0 [ 18 -> @ez_error. ]
+  @ez_i + 1 -> @ez_i.
+ ] ~ [
+  0 -> @ez_y.
+  ? (@ez_x >= 194) * (@ez_x <= 223) [ 2 -> @ez_y. ]
+  ? (@ez_x >= 224) * (@ez_x <= 239) [ 3 -> @ez_y. ]
+  ? (@ez_x >= 240) * (@ez_x <= 244) [ 4 -> @ez_y. ]
+  ? (@ez_y == 0) + (@ez_i + @ez_y > @ez_limit) [ 18 -> @ez_error. ]
+  1 -> @ez_j.
+  ?? (@ez_j < @ez_y) * (@ez_error == 0) [
+   :load8[@ez_src + @ez_i + @ez_j] -> @ez_z.
+   ? (@ez_z < 128) + (@ez_z > 191) [ 18 -> @ez_error. ]
+   ? @ez_j == 1 [
+    ? (@ez_x == 224) * (@ez_z < 160) [ 18 -> @ez_error. ]
+    ? (@ez_x == 237) * (@ez_z > 159) [ 18 -> @ez_error. ]
+    ? (@ez_x == 240) * (@ez_z < 144) [ 18 -> @ez_error. ]
+    ? (@ez_x == 244) * (@ez_z > 143) [ 18 -> @ez_error. ]
+   ]
+   @ez_j + 1 -> @ez_j.
+  ]
+  @ez_i + @ez_y -> @ez_i.
+ ]
+]
+
+    16 + :shr[@ez_n + 15 | 4] * 16 -> @ez_need.
+   ]
+  ]
+ ]
+ ? (@ez_error == 0) * (@ez_op == 28) [
+  :load64[@ez_stack + (@ez_sp - 1) * 16] -> @ez_tb.
+  :load64[@ez_stack + (@ez_sp - 1) * 16 + 8] -> @ez_vb.
+  ? @ez_tb != 2 [ 22 -> @ez_error. ] ~ [
+   :load64[@ez_vb + 8] -> @ez_limit.
+   ? @ez_limit > 65536 [ 16 -> @ez_error. ] ~ [
+    @ez_vb + 16 -> @ez_src.
+    # Validate external text: ez_src/ez_limit bytes, strict UTF-8, no embedded NUL.
+# Scratch i,j,x,y,z only; retain outer argument counter k and allocation need.
+0 -> @ez_i.
+?? (@ez_i < @ez_limit) * (@ez_error == 0) [
+ :load8[@ez_src + @ez_i] -> @ez_x.
+ ? @ez_x < 128 [
+  ? @ez_x == 0 [ 18 -> @ez_error. ]
+  @ez_i + 1 -> @ez_i.
+ ] ~ [
+  0 -> @ez_y.
+  ? (@ez_x >= 194) * (@ez_x <= 223) [ 2 -> @ez_y. ]
+  ? (@ez_x >= 224) * (@ez_x <= 239) [ 3 -> @ez_y. ]
+  ? (@ez_x >= 240) * (@ez_x <= 244) [ 4 -> @ez_y. ]
+  ? (@ez_y == 0) + (@ez_i + @ez_y > @ez_limit) [ 18 -> @ez_error. ]
+  1 -> @ez_j.
+  ?? (@ez_j < @ez_y) * (@ez_error == 0) [
+   :load8[@ez_src + @ez_i + @ez_j] -> @ez_z.
+   ? (@ez_z < 128) + (@ez_z > 191) [ 18 -> @ez_error. ]
+   ? @ez_j == 1 [
+    ? (@ez_x == 224) * (@ez_z < 160) [ 18 -> @ez_error. ]
+    ? (@ez_x == 237) * (@ez_z > 159) [ 18 -> @ez_error. ]
+    ? (@ez_x == 240) * (@ez_z < 144) [ 18 -> @ez_error. ]
+    ? (@ez_x == 244) * (@ez_z > 143) [ 18 -> @ez_error. ]
+   ]
+   @ez_j + 1 -> @ez_j.
+  ]
+  @ez_i + @ez_y -> @ez_i.
+ ]
+]
+
+   ]
+  ]
+  ? @ez_error == 0 [
+   # Sibling temporary file, exclusive creation, then atomic NOREPLACE publish.
+   # Find the parent prefix; a drive-relative Windows path retains its drive.
+   0 -> @ez_k. 0 -> @ez_i.
+   ? :host[] == 2 [
+    ? (:load64[@ez_mem + 1311096] >= 2) * (:load8[@ez_mem + 1311361] == 58) [ 2 -> @ez_k. ]
+   ]
+   ?? @ez_i < :load64[@ez_mem + 1311096] [
+    :load8[@ez_mem + 1311360 + @ez_i] -> @ez_x.
+    ? (@ez_x == 47) + ((:host[] == 2) * (@ez_x == 92)) [ @ez_i + 1 -> @ez_k. ]
+    @ez_i + 1 -> @ez_i.
+   ]
+   ? @ez_k > 4064 [ 23 -> @ez_error. ] ~ [
+    0 -> @ez_i.
+    ?? @ez_i < @ez_k [
+     !store8[@ez_mem + 1315456 + @ez_i | :load8[@ez_mem + 1311360 + @ez_i]]. @ez_i + 1 -> @ez_i.
+    ]
+    ".ezero-tmp-" -> @ez_src. 0 -> @ez_i.
+    ?? @ez_i < 11 [ !store8[@ez_mem + 1315456 + @ez_k + @ez_i | :load8[@ez_src + @ez_i]]. @ez_i + 1 -> @ez_i. ]
+    ".tmp" -> @ez_src. 0 -> @ez_i.
+    ?? @ez_i < 5 [ !store8[@ez_mem + 1315456 + @ez_k + 27 + @ez_i | :load8[@ez_src + @ez_i]]. @ez_i + 1 -> @ez_i. ]
+    0 -> @ez_tmp. -1 -> @ez_ret.
+    ?? (@ez_tmp < 64) * (@ez_ret == -1) [
+     :load64[@ez_mem + 1311056] + 1 -> @ez_x. !store64[@ez_mem + 1311056 | @ez_x].
+     "0123456789abcdef" -> @ez_src. 0 -> @ez_i.
+     ?? @ez_i < 16 [
+      !store8[@ez_mem + 1315456 + @ez_k + 11 + @ez_i | :load8[@ez_src + :bitand[:shr[@ez_x | 60 - @ez_i * 4] | 15]]].
+      @ez_i + 1 -> @ez_i.
+     ]
+     :fileopen[@ez_mem + 1315456 | 1] -> @ez_ret. @ez_tmp + 1 -> @ez_tmp.
+    ]
+    ? @ez_ret == -1 [ 19 -> @ez_error. ] ~ [
+     0 -> @ez_n.
+     ?? (@ez_n < :load64[@ez_vb + 8]) * (@ez_error == 0) [
+      :filewrite[@ez_ret | @ez_vb + 16 + @ez_n | :load64[@ez_vb + 8] - @ez_n] -> @ez_x.
+      ? (@ez_x == 0) + (@ez_x > :load64[@ez_vb + 8] - @ez_n) [ 17 -> @ez_error. ] ~ [ @ez_n + @ez_x -> @ez_n. ]
+     ]
+     :fileclose[@ez_ret] -> @ez_x.
+     ? (@ez_error == 0) * (@ez_x != 0) [ 17 -> @ez_error. ]
+     ? @ez_error == 0 [
+      :filemove[@ez_mem + 1315456 | @ez_mem + 1311360] -> @ez_x.
+      ? @ez_x != 0 [ 20 -> @ez_error. ]
+     ]
+     ? @ez_error [ :filedelete[@ez_mem + 1315456] -> @ez_x. ]
+     !store64[@ez_mem + 1311048 | @ez_n].
+    ]
+   ]
+  ]
+ ]
+ ? (@ez_error == 0) * (@ez_op == 29) [
+  !store64[@ez_mem + 1311048 | 0].
+  :fileopen[@ez_mem + 1311360 | 0] -> @ez_ret.
+  ? @ez_ret != -1 [
+   !store64[@ez_mem + 1311048 | 1].
+   ? :fileclose[@ez_ret] != 0 [ 17 -> @ez_error. ]
+  ]
+ ]
+ ? (@ez_error == 0) * (@ez_op == 30) [
+  :argcount[] -> @ez_n.
+  ? @ez_n > 63 [ 21 -> @ez_error. ] ~ [
+   !store64[@ez_mem + 1311072 | @ez_n]. !store64[@ez_mem + 1311080 | 0].
+   16 + @ez_n * 16 -> @ez_need. 1 -> @ez_k.
+   ?? (@ez_k <= :load64[@ez_mem + 1311072]) * (@ez_error == 0) [
+    :argument[@ez_k] -> @ez_src. 0 -> @ez_limit.
+    ? @ez_src == 0 [ 21 -> @ez_error. ] ~ [
+     ?? (@ez_limit < 4096) * (:load8[@ez_src + @ez_limit] != 0) [ @ez_limit + 1 -> @ez_limit. ]
+     ? @ez_limit > 4095 [ 21 -> @ez_error. ] ~ [
+      !store64[@ez_mem + 1392640 + (@ez_k - 1) * 8 | @ez_limit].
+      !store64[@ez_mem + 1311080 | :load64[@ez_mem + 1311080] + @ez_limit].
+      ? :load64[@ez_mem + 1311080] > 65536 [ 21 -> @ez_error. ]
+      # Validate external text: ez_src/ez_limit bytes, strict UTF-8, no embedded NUL.
+# Scratch i,j,x,y,z only; retain outer argument counter k and allocation need.
+0 -> @ez_i.
+?? (@ez_i < @ez_limit) * (@ez_error == 0) [
+ :load8[@ez_src + @ez_i] -> @ez_x.
+ ? @ez_x < 128 [
+  ? @ez_x == 0 [ 18 -> @ez_error. ]
+  @ez_i + 1 -> @ez_i.
+ ] ~ [
+  0 -> @ez_y.
+  ? (@ez_x >= 194) * (@ez_x <= 223) [ 2 -> @ez_y. ]
+  ? (@ez_x >= 224) * (@ez_x <= 239) [ 3 -> @ez_y. ]
+  ? (@ez_x >= 240) * (@ez_x <= 244) [ 4 -> @ez_y. ]
+  ? (@ez_y == 0) + (@ez_i + @ez_y > @ez_limit) [ 18 -> @ez_error. ]
+  1 -> @ez_j.
+  ?? (@ez_j < @ez_y) * (@ez_error == 0) [
+   :load8[@ez_src + @ez_i + @ez_j] -> @ez_z.
+   ? (@ez_z < 128) + (@ez_z > 191) [ 18 -> @ez_error. ]
+   ? @ez_j == 1 [
+    ? (@ez_x == 224) * (@ez_z < 160) [ 18 -> @ez_error. ]
+    ? (@ez_x == 237) * (@ez_z > 159) [ 18 -> @ez_error. ]
+    ? (@ez_x == 240) * (@ez_z < 144) [ 18 -> @ez_error. ]
+    ? (@ez_x == 244) * (@ez_z > 143) [ 18 -> @ez_error. ]
+   ]
+   @ez_j + 1 -> @ez_j.
+  ]
+  @ez_i + @ez_y -> @ez_i.
+ ]
+]
+
+      @ez_need + 16 + :shr[@ez_limit + 15 | 4] * 16 -> @ez_need.
+     ]
+    ]
+    @ez_k + 1 -> @ez_k.
+   ]
+  ]
+ ]
+]
+
+  ? @ez_need > 262144 [ 10 -> @ez_error. ]
+  # Allocating op operands remain on the evaluation stack throughout GC.
+  ? (@ez_error == 0) * (@ez_used + @ez_need > 262144) [
+   @ez_used -> @ez_oldused. 0 -> @ez_free. 0 -> @ez_phase.
+   0 -> @ez_i. 0 -> @ez_j. 0 -> @ez_scan.
+   ?? (@ez_phase < 4) * (@ez_error == 0) [
+    0 -> @ez_root.
+    ? @ez_phase == 0 [
+     ? @ez_i < @ez_nglobal [ @ez_globals + @ez_i * 16 -> @ez_root. @ez_i + 1 -> @ez_i. ]
+     ~ [ 1 -> @ez_phase. 0 -> @ez_i. ]
+    ]
+    ? (@ez_phase == 1) * (@ez_root == 0) [
+     ? @ez_i < @ez_depth * 256 [ @ez_locals + @ez_i * 16 -> @ez_root. @ez_i + 1 -> @ez_i. ]
+     ~ [ 2 -> @ez_phase. 0 -> @ez_i. ]
+    ]
+    ? (@ez_phase == 2) * (@ez_root == 0) [
+     ? @ez_i < @ez_sp [ @ez_stack + @ez_i * 16 -> @ez_root. @ez_i + 1 -> @ez_i. ]
+     ~ [ 3 -> @ez_phase. ]
+    ]
+    ? (@ez_phase == 3) * (@ez_root == 0) [
+     ? @ez_scan >= @ez_free [ 4 -> @ez_phase. ] ~ [
+      @ez_other + @ez_scan -> @ez_src.
+      :load64[@ez_src] -> @ez_type. :load64[@ez_src + 8] -> @ez_n.
+      ? @ez_type == 2 [ @ez_scan + 16 + :shr[@ez_n + 15 | 4] * 16 -> @ez_scan. ]
+      ~ [
+       ? (@ez_type == 3) + (@ez_type == 4) [
+        ? @ez_j < @ez_n [ @ez_src + 16 + @ez_j * 16 -> @ez_root. @ez_j + 1 -> @ez_j. ]
+        ~ [ @ez_scan + 16 + @ez_n * 16 -> @ez_scan. 0 -> @ez_j. ]
+       ] ~ [ 1 -> @ez_error. ]
+      ]
+     ]
+    ]
+    ? @ez_root [
+     :load64[@ez_root] -> @ez_type.
+     ? (@ez_type >= 2) * (@ez_type <= 4) [
+      :load64[@ez_root + 8] -> @ez_src.
+      ? (@ez_src < @ez_heap) + (@ez_src >= @ez_heap + @ez_oldused) [ 1 -> @ez_error. ]
+      ? @ez_error == 0 [
+       ? :load64[@ez_src] == 255 [ !store64[@ez_root + 8 | :load64[@ez_src + 8]]. ]
+       ~ [
+        ? :load64[@ez_src] != @ez_type [ 1 -> @ez_error. ]
+        :load64[@ez_src + 8] -> @ez_n.
+        16 + @ez_n * 16 -> @ez_size.
+        ? @ez_type == 2 [ 16 + :shr[@ez_n + 15 | 4] * 16 -> @ez_size. ]
+        ? (@ez_size > @ez_oldused) + (@ez_size > 262144 - @ez_free) [ 1 -> @ez_error. ]
+        ? @ez_error == 0 [ ? @ez_src - @ez_heap > @ez_oldused - @ez_size [ 1 -> @ez_error. ] ]
+        ? @ez_error == 0 [
+         @ez_other + @ez_free -> @ez_dst. 0 -> @ez_copy.
+         ?? @ez_copy < @ez_size [ !store64[@ez_dst + @ez_copy | :load64[@ez_src + @ez_copy]]. @ez_copy + 8 -> @ez_copy. ]
+         @ez_free + @ez_size -> @ez_free.
+         !store64[@ez_src | 255]. !store64[@ez_src + 8 | @ez_dst]. !store64[@ez_root + 8 | @ez_dst].
+        ]
+       ]
+      ]
+     ] ~ [ ? @ez_type > 4 [ 1 -> @ez_error. ] ]
+    ]
+   ]
+   ? @ez_error == 0 [
+    @ez_heap -> @ez_x. @ez_other -> @ez_heap. @ez_x -> @ez_other. @ez_free -> @ez_used.
+    ? @ez_used + @ez_need > 262144 [ 10 -> @ez_error. ]
+   ]
+  ]
+  ? @ez_error == 0 [
+   # All temporary object pointers are reloaded AFTER collection.
+   0 -> @ez_ta. 0 -> @ez_tb. 0 -> @ez_va. 0 -> @ez_vb.
+   ? @ez_sp > @ez_base [
+    :load64[@ez_stack + (@ez_sp - 1) * 16] -> @ez_ta.
+    :load64[@ez_stack + (@ez_sp - 1) * 16 + 8] -> @ez_va.
+   ]
+   ? @ez_sp > @ez_base + 1 [
+    @ez_ta -> @ez_tb. @ez_va -> @ez_vb.
+    :load64[@ez_stack + (@ez_sp - 2) * 16] -> @ez_ta.
+    :load64[@ez_stack + (@ez_sp - 2) * 16 + 8] -> @ez_va.
+   ]
+   # Simple producers use the common push epilogue.
+   0 -> @ez_type. 0 -> @ez_result.
+   ? @ez_op == 0 [ ? @ez_depth [ 11 -> @ez_error. ] ~ [ 1 -> @ez_halt. ] ]
+   ? @ez_op == 1 [ 1 -> @ez_type. @ez_a -> @ez_result. ]
+   ? @ez_op == 2 [
+    @ez_heap + @ez_used -> @ez_result. 2 -> @ez_type.
+    !store64[@ez_result | 2]. !store64[@ez_result + 8 | @ez_b].
+    0 -> @ez_i.
+    ?? @ez_i < @ez_b [ !store8[@ez_result + 16 + @ez_i | :load8[@ez_consts + @ez_a + @ez_i]]. @ez_i + 1 -> @ez_i. ]
+    @ez_used + @ez_need -> @ez_used.
+   ]
+   ? (@ez_op == 3) + (@ez_op == 5) [
+    @ez_globals + @ez_a * 16 -> @ez_src.
+    ? @ez_op == 5 [ @ez_locals + (@ez_depth - 1) * 4096 + @ez_a * 16 -> @ez_src. ]
+    :load64[@ez_src] -> @ez_type. :load64[@ez_src + 8] -> @ez_result.
+    ? @ez_type == 0 [ 4 -> @ez_error. ]
+   ]
+   ? (@ez_op == 4) + (@ez_op == 6) [
+    @ez_globals + @ez_a * 16 -> @ez_dst.
+    ? @ez_op == 6 [ @ez_locals + (@ez_depth - 1) * 4096 + @ez_a * 16 -> @ez_dst. ]
+    @ez_sp - 1 -> @ez_sp. @ez_stack + @ez_sp * 16 -> @ez_src.
+    !store64[@ez_dst | :load64[@ez_src]]. !store64[@ez_dst + 8 | :load64[@ez_src + 8]].
+   ]
+   ? (@ez_op >= 7) * (@ez_op <= 15) [
+    @ez_sp - 2 -> @ez_sp.
+    ? @ez_op == 7 [
+     ? (@ez_ta == 1) * (@ez_tb == 1) [
+      1 -> @ez_type. @ez_va + @ez_vb -> @ez_result.
+      ? @ez_result < @ez_va [ 6 -> @ez_error. ]
+     ] ~ [
+      ? (@ez_ta == 3) * (@ez_tb == 3) [
+       3 -> @ez_type. @ez_heap + @ez_used -> @ez_result.
+       :load64[@ez_va + 8] -> @ez_x. :load64[@ez_vb + 8] -> @ez_y.
+       !store64[@ez_result | 3]. !store64[@ez_result + 8 | @ez_x + @ez_y].
+       0 -> @ez_i.
+       ?? @ez_i < @ez_x * 16 [ !store64[@ez_result + 16 + @ez_i | :load64[@ez_va + 16 + @ez_i]]. @ez_i + 8 -> @ez_i. ]
+       0 -> @ez_i.
+       ?? @ez_i < @ez_y * 16 [ !store64[@ez_result + 16 + @ez_x * 16 + @ez_i | :load64[@ez_vb + 16 + @ez_i]]. @ez_i + 8 -> @ez_i. ]
+       @ez_used + @ez_need -> @ez_used.
+      ] ~ [
+       # For mixed number/text concatenation format the number into scratch.
+       0 -> @ez_n.
+       ? (@ez_ta == 1) + (@ez_tb == 1) [
+        @ez_va -> @ez_x. ? @ez_tb == 1 [ @ez_vb -> @ez_x. ]
+        20 -> @ez_i. 0 -> @ez_n. 0 -> @ez_j.
+        ?? @ez_i > 0 [
+         @ez_i - 1 -> @ez_i. :load64[@ez_mem + 1114112 + @ez_i * 8] -> @ez_div. 0 -> @ez_digit.
+         ?? @ez_x >= @ez_div [ @ez_x - @ez_div -> @ez_x. @ez_digit + 1 -> @ez_digit. ]
+         ? (@ez_digit != 0) + (@ez_j != 0) + (@ez_i == 0) [ !store8[@ez_fmt + @ez_n | 48 + @ez_digit]. @ez_n + 1 -> @ez_n. 1 -> @ez_j. ]
+        ]
+       ]
+       @ez_va + 16 -> @ez_src. @ez_vb + 16 -> @ez_dst.
+       ? @ez_ta == 1 [ @ez_fmt -> @ez_src. @ez_n -> @ez_x. ] ~ [ :load64[@ez_va + 8] -> @ez_x. ]
+       ? @ez_tb == 1 [ @ez_fmt -> @ez_dst. @ez_n -> @ez_y. ] ~ [ :load64[@ez_vb + 8] -> @ez_y. ]
+       2 -> @ez_type. @ez_heap + @ez_used -> @ez_result.
+       !store64[@ez_result | 2]. !store64[@ez_result + 8 | @ez_x + @ez_y].
+       0 -> @ez_i.
+       ?? @ez_i < @ez_x [ !store8[@ez_result + 16 + @ez_i | :load8[@ez_src + @ez_i]]. @ez_i + 1 -> @ez_i. ]
+       0 -> @ez_i.
+       ?? @ez_i < @ez_y [ !store8[@ez_result + 16 + @ez_x + @ez_i | :load8[@ez_dst + @ez_i]]. @ez_i + 1 -> @ez_i. ]
+       @ez_used + 16 + :shr[@ez_x + @ez_y + 15 | 4] * 16 -> @ez_used.
+      ]
+     ]
+    ]
+    ? (@ez_op == 8) + (@ez_op == 9) + ((@ez_op >= 12) * (@ez_op <= 15)) [
+     ? (@ez_ta != 1) + (@ez_tb != 1) [ 5 -> @ez_error. ] ~ [
+      1 -> @ez_type.
+      ? @ez_op == 8 [ ? @ez_va < @ez_vb [ 7 -> @ez_error. ] ~ [ @ez_va - @ez_vb -> @ez_result. ] ]
+      ? @ez_op == 9 [
+       @ez_va -> @ez_x. @ez_vb -> @ez_y. 0 -> @ez_result.
+       ?? (@ez_y != 0) * (@ez_error == 0) [
+        ? :bitand[@ez_y | 1] [
+         @ez_result + @ez_x -> @ez_z.
+         ? @ez_z < @ez_result [ 6 -> @ez_error. ] ~ [ @ez_z -> @ez_result. ]
+        ]
+        :shr[@ez_y | 1] -> @ez_y.
+        ? @ez_y [ ? @ez_x > 0x7fffffffffffffff [ 6 -> @ez_error. ] ~ [ @ez_x * 2 -> @ez_x. ] ]
+       ]
+      ]
+      ? @ez_op == 12 [ @ez_va < @ez_vb -> @ez_result. ]
+      ? @ez_op == 13 [ @ez_va <= @ez_vb -> @ez_result. ]
+      ? @ez_op == 14 [ @ez_va > @ez_vb -> @ez_result. ]
+      ? @ez_op == 15 [ @ez_va >= @ez_vb -> @ez_result. ]
+     ]
+    ]
+    ? (@ez_op == 10) + (@ez_op == 11) [
+     1 -> @ez_type. 0 -> @ez_result.
+     ? (@ez_ta >= 3) + (@ez_tb >= 3) [ 5 -> @ez_error. ] ~ [
+      ? @ez_ta == @ez_tb [
+       ? @ez_ta == 1 [ @ez_va == @ez_vb -> @ez_result. ] ~ [
+        ? :load64[@ez_va + 8] == :load64[@ez_vb + 8] [
+         1 -> @ez_result. 0 -> @ez_i.
+         ?? (@ez_i < :load64[@ez_va + 8]) * @ez_result [
+          ? :load8[@ez_va + 16 + @ez_i] != :load8[@ez_vb + 16 + @ez_i] [ 0 -> @ez_result. ]
+          @ez_i + 1 -> @ez_i.
+         ]
+        ]
+       ]
+      ]
+      ? @ez_op == 11 [ 1 - @ez_result -> @ez_result. ]
+     ]
+    ]
+   ]
+   ? (@ez_op == 16) + (@ez_op == 26) [
+    3 -> @ez_type. ? @ez_op == 26 [ 4 -> @ez_type. ]
+    @ez_heap + @ez_used -> @ez_result.
+    !store64[@ez_result | @ez_type]. !store64[@ez_result + 8 | @ez_a].
+    @ez_sp - @ez_a -> @ez_sp. 0 -> @ez_i.
+    ?? @ez_i < @ez_a * 16 [ !store64[@ez_result + 16 + @ez_i | :load64[@ez_stack + @ez_sp * 16 + @ez_i]]. @ez_i + 8 -> @ez_i. ]
+    @ez_used + @ez_need -> @ez_used.
+   ]
+   ? @ez_op == 17 [
+    @ez_sp - 2 -> @ez_sp.
+    ? ((@ez_ta != 3) * (@ez_ta != 4)) + (@ez_tb != 1) [ 5 -> @ez_error. ] ~ [
+     ? (@ez_vb == 0) + (@ez_vb > :load64[@ez_va + 8]) [ 8 -> @ez_error. ] ~ [
+      @ez_va + 16 + (@ez_vb - 1) * 16 -> @ez_src.
+      :load64[@ez_src] -> @ez_type. :load64[@ez_src + 8] -> @ez_result.
+     ]
+    ]
+   ]
+   ? @ez_op == 18 [
+    @ez_sp - 1 -> @ez_sp.
+    :load64[@ez_stack + @ez_sp * 16] -> @ez_ta. :load64[@ez_stack + @ez_sp * 16 + 8] -> @ez_va.
+    ? (@ez_ta < 2) + (@ez_ta > 4) [ 5 -> @ez_error. ] ~ [
+     1 -> @ez_type. :load64[@ez_va + 8] -> @ez_result.
+     ? @ez_ta == 2 [
+      0 -> @ez_result. 0 -> @ez_i.
+      ?? @ez_i < :load64[@ez_va + 8] [
+       :load8[@ez_va + 16 + @ez_i] -> @ez_x.
+       ? (@ez_x < 128) + (@ez_x >= 192) [ @ez_result + 1 -> @ez_result. ]
+       @ez_i + 1 -> @ez_i.
+      ]
+     ]
+    ]
+   ]
+   ? @ez_op == 19 [
+    # Iterative pretty-printer; immutable values need no additional heap.
+    @ez_sp - 1 -> @ez_sp.
+    :load64[@ez_stack + @ez_sp * 16] -> @ez_ta. :load64[@ez_stack + @ez_sp * 16 + 8] -> @ez_va.
+    0 -> @ez_fmtdepth. 0 -> @ez_phase.
+    ?? (@ez_phase != 2) * (@ez_error == 0) [
+     ? @ez_phase == 0 [
+      ? @ez_ta == 1 [
+       @ez_va -> @ez_x.
+        20 -> @ez_i. 0 -> @ez_n. 0 -> @ez_j.
+        ?? @ez_i > 0 [
+         @ez_i - 1 -> @ez_i. :load64[@ez_mem + 1114112 + @ez_i * 8] -> @ez_div. 0 -> @ez_digit.
+         ?? @ez_x >= @ez_div [ @ez_x - @ez_div -> @ez_x. @ez_digit + 1 -> @ez_digit. ]
+         ? (@ez_digit != 0) + (@ez_j != 0) + (@ez_i == 0) [ !store8[@ez_fmt + @ez_n | 48 + @ez_digit]. @ez_n + 1 -> @ez_n. 1 -> @ez_j. ]
+        ]
+       0 -> @ez_i. ?? @ez_i < @ez_n [ !put[:load8[@ez_fmt + @ez_i]]. @ez_i + 1 -> @ez_i. ]
+       1 -> @ez_phase.
+      ]
+      ? @ez_ta == 2 [
+       0 -> @ez_i. ?? @ez_i < :load64[@ez_va + 8] [ !put[:load8[@ez_va + 16 + @ez_i]]. @ez_i + 1 -> @ez_i. ]
+       1 -> @ez_phase.
+      ]
+      ? (@ez_ta == 3) + (@ez_ta == 4) [
+       ? @ez_fmtdepth >= 8192 [ 12 -> @ez_error. ] ~ [
+        ? @ez_ta == 3 [ !put[91]. ]
+        @ez_mem + 1114368 + @ez_fmtdepth * 24 -> @ez_dst.
+        !store64[@ez_dst | @ez_va]. !store64[@ez_dst + 8 | 0]. !store64[@ez_dst + 16 | @ez_ta].
+        @ez_fmtdepth + 1 -> @ez_fmtdepth. 1 -> @ez_phase.
+       ]
+      ]
+     ]
+     ? (@ez_phase == 1) * (@ez_error == 0) [
+      ? @ez_fmtdepth == 0 [ 2 -> @ez_phase. ] ~ [
+       @ez_mem + 1114368 + (@ez_fmtdepth - 1) * 24 -> @ez_src.
+       :load64[@ez_src] -> @ez_va. :load64[@ez_src + 8] -> @ez_i.
+       ? @ez_i < :load64[@ez_va + 8] [
+        ? @ez_i [ !put[32]. ? :load64[@ez_src + 16] == 3 [ !put[124]. !put[32]. ] ]
+        !store64[@ez_src + 8 | @ez_i + 1].
+        @ez_va + 16 + @ez_i * 16 -> @ez_dst.
+        :load64[@ez_dst] -> @ez_ta. :load64[@ez_dst + 8] -> @ez_va. 0 -> @ez_phase.
+       ] ~ [
+        ? :load64[@ez_src + 16] == 3 [ !put[93]. ]
+        @ez_fmtdepth - 1 -> @ez_fmtdepth.
+       ]
+      ]
+     ]
+    ]
+    ? @ez_error == 0 [ !put[10]. ]
+   ]
+   ? @ez_op == 20 [ @ez_sp - 1 -> @ez_sp. ]
+   ? @ez_op == 21 [ @ez_a -> @ez_pc. ]
+   ? @ez_op == 22 [
+    @ez_sp - 1 -> @ez_sp.
+    ? :load64[@ez_stack + @ez_sp * 16] != 1 [ 5 -> @ez_error. ] ~ [
+     ? :load64[@ez_stack + @ez_sp * 16 + 8] == 0 [ @ez_a -> @ez_pc. ]
+    ]
+   ]
+   ? @ez_op == 23 [
+    @ez_frames + @ez_depth * 64 -> @ez_frame.
+    @ez_funcs + @ez_a * 32 -> @ez_src.
+    !store64[@ez_frame | @ez_pc]. !store64[@ez_frame + 8 | @ez_sp - @ez_b].
+    !store64[@ez_frame + 16 | :load64[@ez_src + 16]].
+    @ez_locals + @ez_depth * 4096 -> @ez_dst. 0 -> @ez_i.
+    ?? @ez_i < 4096 [ !store64[@ez_dst + @ez_i | 0]. @ez_i + 8 -> @ez_i. ]
+    @ez_sp - @ez_b -> @ez_sp. 0 -> @ez_i.
+    ?? @ez_i < @ez_b * 16 [ !store64[@ez_dst + @ez_i | :load64[@ez_stack + @ez_sp * 16 + @ez_i]]. @ez_i + 8 -> @ez_i. ]
+    :load64[@ez_src] -> @ez_pc. @ez_depth + 1 -> @ez_depth.
+   ]
+   ? @ez_op == 24 [
+    @ez_frames + (@ez_depth - 1) * 64 -> @ez_frame.
+    :load64[@ez_stack + (@ez_sp - 1) * 16] -> @ez_type.
+    :load64[@ez_stack + (@ez_sp - 1) * 16 + 8] -> @ez_result.
+    :load64[@ez_frame + 8] -> @ez_sp. :load64[@ez_frame] -> @ez_pc.
+    @ez_depth - 1 -> @ez_depth.
+   ]
+   ? @ez_op == 25 [
+    :load64[@ez_stack + (@ez_sp - 1) * 16] -> @ez_type.
+    :load64[@ez_stack + (@ez_sp - 1) * 16 + 8] -> @ez_result.
+   ]
+# Host results were staged before GC; all text allocation is now exact/bounded.
+? @ez_op == 27 [
+ @ez_sp - 1 -> @ez_sp. 2 -> @ez_type. @ez_heap + @ez_used -> @ez_result.
+ :load64[@ez_mem + 1311040] -> @ez_n.
+ !store64[@ez_result | 2]. !store64[@ez_result + 8 | @ez_n].
+ 0 -> @ez_i. ?? @ez_i < @ez_n [
+  !store8[@ez_result + 16 + @ez_i | :load8[@ez_mem + 1323008 + @ez_i]]. @ez_i + 1 -> @ez_i.
+ ]
+ @ez_used + @ez_need -> @ez_used.
+]
+? (@ez_op == 28) + (@ez_op == 29) [
+ @ez_sp - 1 -> @ez_sp. ? @ez_op == 28 [ @ez_sp - 1 -> @ez_sp. ]
+ 1 -> @ez_type. :load64[@ez_mem + 1311048] -> @ez_result.
+]
+? @ez_op == 30 [
+ 3 -> @ez_type. @ez_heap + @ez_used -> @ez_result.
+ :load64[@ez_mem + 1311072] -> @ez_n.
+ !store64[@ez_result | 3]. !store64[@ez_result + 8 | @ez_n].
+ @ez_result + 16 + @ez_n * 16 -> @ez_dst. 1 -> @ez_i.
+ ?? @ez_i <= @ez_n [
+  :argument[@ez_i] -> @ez_src. :load64[@ez_mem + 1392640 + (@ez_i - 1) * 8] -> @ez_x.
+  !store64[@ez_dst | 2]. !store64[@ez_dst + 8 | @ez_x].
+  !store64[@ez_result + 16 + (@ez_i - 1) * 16 | 2].
+  !store64[@ez_result + 24 + (@ez_i - 1) * 16 | @ez_dst].
+  0 -> @ez_j. ?? @ez_j < @ez_x [ !store8[@ez_dst + 16 + @ez_j | :load8[@ez_src + @ez_j]]. @ez_j + 1 -> @ez_j. ]
+  @ez_dst + 16 + :shr[@ez_x + 15 | 4] * 16 -> @ez_dst.
+  @ez_i + 1 -> @ez_i.
+ ]
+ @ez_used + @ez_need -> @ez_used.
+]
+? @ez_op == 31 [ 1 -> @ez_type. :host[] -> @ez_result. ]
+
+   ? (@ez_error == 0) * (@ez_type != 0) [
+    ? @ez_sp >= 2048 [ 2 -> @ez_error. ] ~ [
+     !store64[@ez_stack + @ez_sp * 16 | @ez_type]. !store64[@ez_stack + @ez_sp * 16 + 8 | @ez_result].
+     @ez_sp + 1 -> @ez_sp.
+    ]
+   ]
+  ]
+ ]
+]
+? @ez_error [
+ "Ezero runtime error at line " -> @ez_msg. 0 -> @ez_i.
+ ?? :load8[@ez_msg + @ez_i] [ !put[:load8[@ez_msg + @ez_i]]. @ez_i + 1 -> @ez_i. ]
+ @ez_line -> @ez_x.
+        20 -> @ez_i. 0 -> @ez_n. 0 -> @ez_j.
+        ?? @ez_i > 0 [
+         @ez_i - 1 -> @ez_i. :load64[@ez_mem + 1114112 + @ez_i * 8] -> @ez_div. 0 -> @ez_digit.
+         ?? @ez_x >= @ez_div [ @ez_x - @ez_div -> @ez_x. @ez_digit + 1 -> @ez_digit. ]
+         ? (@ez_digit != 0) + (@ez_j != 0) + (@ez_i == 0) [ !store8[@ez_fmt + @ez_n | 48 + @ez_digit]. @ez_n + 1 -> @ez_n. 1 -> @ez_j. ]
+        ]
+ 0 -> @ez_i. ?? @ez_i < @ez_n [ !put[:load8[@ez_fmt + @ez_i]]. @ez_i + 1 -> @ez_i. ]
+ ": invalid program" -> @ez_msg.
+ ? @ez_error == 2 [ ": evaluation stack capacity exceeded" -> @ez_msg. ]
+ ? @ez_error == 3 [ ": evaluation stack underflow" -> @ez_msg. ]
+ ? @ez_error == 4 [ ": variable has no value yet" -> @ez_msg. ]
+ ? @ez_error == 5 [ ": incompatible value types" -> @ez_msg. ]
+ ? @ez_error == 6 [ ": number overflow" -> @ez_msg. ]
+ ? @ez_error == 7 [ ": subtraction would be negative" -> @ez_msg. ]
+ ? @ez_error == 8 [ ": index outside collection" -> @ez_msg. ]
+ ? @ez_error == 9 [ ": function call depth exceeded" -> @ez_msg. ]
+ ? @ez_error == 10 [ ": managed memory capacity exceeded" -> @ez_msg. ]
+ ? @ez_error == 11 [ ": invalid function return" -> @ez_msg. ]
+ ? @ez_error == 12 [ ": display nesting exceeded" -> @ez_msg. ]
+ ? @ez_error == 13 [ ": host files and arguments are unavailable in Zero OS; run this program on Linux or Windows" -> @ez_msg. ]
+ ? @ez_error == 14 [ ": file path must be nonempty text of at most 4095 UTF-8 bytes" -> @ez_msg. ]
+ ? @ez_error == 15 [ ": readfile cannot open a readable regular file at this path" -> @ez_msg. ]
+ ? @ez_error == 16 [ ": text file exceeds the 65536-byte limit" -> @ez_msg. ]
+ ? @ez_error == 17 [ ": file I/O failed; existing destination files were preserved" -> @ez_msg. ]
+ ? @ez_error == 18 [ ": external text must be valid UTF-8 without NUL bytes" -> @ez_msg. ]
+ ? @ez_error == 19 [ ": writefile cannot create a temporary file in the destination folder" -> @ez_msg. ]
+ ? @ez_error == 20 [ ": writefile destination already exists or cannot be published; existing files were preserved" -> @ez_msg. ]
+ ? @ez_error == 21 [ ": arguments exceed 63 items, 4095 bytes per item, or 65536 bytes total" -> @ez_msg. ]
+ ? @ez_error == 22 [ ": writefile requires text as its second argument" -> @ez_msg. ]
+ ? @ez_error == 23 [ ": destination folder path is too long for a temporary file name" -> @ez_msg. ]
+ 0 -> @ez_i. ?? :load8[@ez_msg + @ez_i] [ !put[:load8[@ez_msg + @ez_i]]. @ez_i + 1 -> @ez_i. ]
+ !put[10]. !exit[65].
+]
+!exit[0].

@@ -1,0 +1,11 @@
+:reserve[16] => @p.
+!store8[@p | 65].
+:load8[@p] => @n.
+? @n == 65 [
+    :write[@p | 1] -> @n.
+] ~ [
+    !exit[9].
+]
+? @n != 1 [ !exit[8]. ]
+!put[10].
+!exit[0].

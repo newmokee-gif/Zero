@@ -1,0 +1,137 @@
+ZTEXT00100002170b5ea4a9c0000000
+Ezero owned runtime memory
+
+runtime-prefix.zero.part reserves one2MiB block from the existing Zero hosted
+arena. The generated initialization and runtime execute as one Zero program.
+The normal Zero compiler still provides its unchanged4MiB hosted arena;
+there are exactly64 declared variables including the eight prefix names.
+Ezero calls use the following memory frames, not native recursive Zero calls.
+The implementation is entirely original Zero code.
+
+All offsets below are relative to ez_mem; all endpoints are exclusive.
+0..262144       generated package; actual validated size is at most70000
+262144..266240  256 global value slots
+266240..528384  64 call frames,256 local value slots each
+528384..532480  64 call metadata records,64 bytes each
+532480..565248  2048 evaluation value slots
+589824..851968  first262144-byte heap semispace
+851968..1114112 second262144-byte heap semispace
+1114112..1114272 twenty u64 decimal powers,10^0..10^19
+1114368..1310976 bounded iterative display stack,8192 records of24bytes
+1310976..1311040 decimal formatting scratch; at most20bytes used
+Host and text convenience scratch in the remaining reservation is listed below.
+
+Value cells are16bytes: u64 kind followed by u64 payload.
+0 is uninitialized;1 is unsigned u64 number;2 is text object address;
+3 is list object address;4 is typed phrase object address.
+Variables automatically retain their current tagged value. No source-level
+pointer arithmetic or manual allocation is exposed to Ezero programs.
+Reading a variable that has not executed an assignment raises an error.
+
+Objects are immutable and16-byte aligned. The header stores kind and length.
+Text length is a byte count and is followed by UTF-8 bytes plus alignment
+padding. SIZE counts Unicode scalar starts, not bytes or grapheme clusters;
+UTF-8 validity is checked by the source frontend. Valid concatenations
+preserve UTF-8. List/phrase length is a cell count followed by16-byte values.
+Lists render with brackets and ' | ' separators; phrases use spaces and no
+brackets. MAKE_PHRASE preserves typed parts, including all-text parts; the
+frontend already merges consecutive literal text words into one text segment.
+Collection INDEX is one-based:1 is first;0 and values above length fail.
+Text indexing is not implemented. Lists and phrases can be nested.
+
+Copying collection
+Allocation checks the exact required object size. If the active semispace has
+insufficient room, collection copies reachable objects into the other space.
+Roots are all declared globals, all256 initialized/zeroed slots in every
+active call frame, and the live evaluation stack. An allocating instruction
+keeps its operands on that stack until collection completes, then reloads
+all object addresses. Dead frames and stale stack entries are not roots.
+Old objects receive a forwarding header (kind255, new address). Aliases reuse
+that address, preserving identity without duplicate copies. A Cheney scan
+rewrites references inside every copied list or phrase; text has no child
+references. After scanning finishes, spaces swap and allocation resumes.
+A live set plus the new object larger than262144bytes produces a managed
+memory capacity error. This is automatic bounded collection, not unlimited
+RAM or an OS virtual-memory allocator. No objects are individually freed.
+
+Function frames
+Call metadata offsets0,8,16 contain return instruction, caller evaluation
+prefix length, and callee local count. Arguments become the first local
+slots in order. All256 local slots are cleared on each call, and depth is
+checked before frame access. Return restores the caller's prefix and appends
+one result; references in active caller locals and intermediate expressions
+remain GC roots. At most64 calls may be active. Main globals are separate.
+The evaluation stack cannot consume values below the active call's prefix.
+
+Execution guards
+The runtime validates package header/size, section sizes, function entries
+and counts before executing. Every instruction checks opcode, required stack
+values, destinations, indices and available stack/frame/object capacity.
+Arithmetic is unsigned and checked: addition/multiplication overflow and
+negative subtraction fail. Comparisons return0/1. Numeric and text equality
+compare contents; mixed numeric/text values differ; list/phrase equality is
+rejected. Display walks nested collections iteratively and checks its stack.
+These checks protect Ezero values in this hosted runtime; they are not an OS
+process-isolation or hostile-native-code security boundary.
+
+Errors print an ASCII diagnostic with the Ezero source line and exit65.
+Already printed output may precede the diagnostic. Output is on stdout under
+the current underlying Zero host-I/O contract. The native compiler command
+does not publish outputs when compilation fails.
+Native output I/O failures retain Zero's exit74 behavior.
+
+Hosted validation
+Initial own-compiler fixtures exercised nested lists, mixed text/u64 output,
+UTF-8 typed phrases, one-based indexing, Unicode SIZE, recursive factorial
+with a live caller expression, repeated4096-byte allocation/collection,
+number overflow, negative subtraction and index-zero rejection.
+Thirty independently designed package fixtures also passed when executed by
+the runtime author: recursive collection with active caller/local/evaluation
+roots, nested aliases, live-heap and call/evaluation-stack exhaustion, exact
+64call capacity,256variables,16parameters, content equality and bad opcodes.
+Broader frontend-to-runtime acceptance has a separate report. Guest execution
+inside Zero OS is recorded separately in verification/system-0.10.0; the
+historical component review above did not itself execute a guest image.
+
+Host extension scratch in0.10 (no new declarations;64 variables retained)
+1311040..1311104 host result/count/path-length metadata, persistent temp counter
+1311360..1315456 NUL-terminated destination/read path,4096bytes
+1315456..1319552 NUL-terminated sibling temporary path,4096bytes
+1323008..1388545 external read scratch,65537bytes (one-byte overflow probe)
+1392640..1393144 63argument byte lengths,8bytes each
+These areas are outside both heap semispaces and iterative display storage.
+Read bytes and argument length metadata are staged before the normal GC check.
+File path operands stay on the evaluation stack throughout collection. The
+read result is allocated/copied afterward; arguments reserve the entire list
+and all strings before construction, with no collection during construction.
+Native argument pointers are process-lifetime strings and are copied into
+immutable managed text objects. No pointer into external staging escapes as
+an Ezero value. Temporary-file sequence metadata is initialized before use.
+
+Text convenience scratch (no new runtime declarations)
+1311120..1311128 saved lines result count
+1311128..1311136 saved join result UTF-8 byte count
+1393152..1425920 up to 2048 line boundary pairs: byte offset and byte length
+Offsets refer to the text argument's payload, not to its current heap address.
+LINES reserves its complete list plus all independently aligned text objects
+before collection. JOIN validates every list item and reserves one complete
+text object. Both keep all input operands on the evaluation stack during GC,
+then reload the updated pointers afterward. Construction performs no further
+collection. Scratch lives outside heaps, frames, display state and host staging.
+Repeated splits/joins cannot leave a pointer into scratch as an Ezero value.
+
+File listing extension (same 64 runtime declarations)
+WATCH/SEARCH/DISKS reuse external staging at 1323008..1388545, the saved count
+at 1311120 and the 2048 boundary pairs at 1393152..1425920. Each staged name
+must be nonempty, NUL-terminated and valid UTF-8; the final terminator must fit
+inside the returned byte count. The complete list header, value cells and
+aligned text objects are counted before collection. Offsets refer to external
+staging, never movable heap addresses. The path operand remains rooted until
+construction finishes; DISKS has no input operand. Result text is copied into
+managed objects and no staging address escapes. Oversized, malformed or failed
+listings stop with a source-line error instead of silently truncating results.
+
+Guest READ_FILE and WRITE_FILE use whole-file service primitives; native
+READ_FILE and exclusive WRITE_FILE retain their original handle/staging paths.
+SAVE validates all text before invoking explicit create/replace. Numeric file
+results are staged outside the heap and do not introduce additional GC roots.

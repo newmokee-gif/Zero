@@ -1,0 +1,97 @@
+!switch[@web+1024|@web+1152]. !switch[@web+1024|@web+1280].
+!switch[@web+1024|@web+1408]. !switch[@web+1024|@web+1664].
+1 -> @v31.
+?? @v31 <= 35 [
+ !store64[@web+16|0]. !store64[@web+24|0]. !store64[@web+32|0]. !store64[@web+80|0].
+ !store64[@web+40|800]. !store64[@web+48|600].
+ 0 -> @v30. 0 -> @v29. 0 -> @v28. 0 -> @v27.
+ "<p>Hello</p>" -> @v0.
+ ? @v31 == 1 [ "" -> @v0. ]
+ ? @v31 == 2 [ "Hello" -> @v29. ]
+ ? @v31 == 3 [ "<p id=x>old</p><script>let n=2;document.getElementById('x').textContent='value '+n;</script>" -> @v0. "value 2" -> @v29. ]
+ ? @v31 == 4 [ "<p>&lt;Zero&gt; &amp; friends</p>" -> @v0. "<Zero> & friends" -> @v29. ]
+ ? @v31 == 5 [ "<div style='display:none'>Hidden</div>" -> @v0. ]
+ ? @v31 == 6 [ "<div style='background-color:#123456;padding:8px'>Color</div>" -> @v0. ]
+ ? @v31 == 7 [ "<p>bad" -> @v0. 65 -> @v30. ]
+ ? @v31 == 8 [ "<p style='color:invalid'>Ignored CSS</p>" -> @v0. 2 -> @v28. ]
+ ? @v31 == 9 [ "<script>while(true){}</script>" -> @v0. 65 -> @v30. ]
+ ? @v31 == 10 [ "<p>Server Python is fine</p><script type=text/python>import os</script>" -> @v0. "Server Python is fine" -> @v29. ]
+ ? @v31 == 11 [ "<script src=x>let a=1;</script>" -> @v0. 65 -> @v30. ]
+ ? @v31 == 12 [ "<div style='color:#123456'><p>Inherited</p></div>" -> @v0. 0x123456 -> @v27. ]
+ ? @v31 == 13 [ "<script>const a=1;a=2;</script>" -> @v0. 65 -> @v30. ]
+ ? @v31 == 14 [ "<script>let a=9007199254740992;</script>" -> @v0. 65 -> @v30. ]
+ ? @v31 == 15 [ "<div id=x><p>Old child</p></div><script>document.getElementById('x').textContent='New parent';</script>" -> @v0. "New parent" -> @v29. ]
+ ? @v31 == 16 [ "<p id=x></p><script>let a=12;</script><script>document.getElementById('x').textContent='v'+a;</script>" -> @v0. "v12" -> @v29. ]
+ ? @v31 == 17 [ "<p id='x>y'>Before</p><script>document.getElementById('x>y').textContent='After';</script>" -> @v0. "After" -> @v29. ]
+ ? @v31 == 18 [ "<style>p{color:red}.a{color:blue}#x{color:green}</style><p id=x class=a style='color:#123456'>Order</p>" -> @v0. 0x123456 -> @v27. ]
+ ? @v31 == 19 [ "<p style='padding:4096px;margin:4096px;width:1px;font-size:96px'>Bounds</p>" -> @v0. ]
+ ? @v31 == 20 [ "<p style='margin:4096px'>Below viewport</p>" -> @v0. ]
+ ? @v31 == 21 [ "<!-- <script>invalid</script> --><p>Comment hidden</p>" -> @v0. "Comment hidden" -> @v29. ]
+ ? @v31 == 22 [ "<script type=application/ld+json>{invalid}</script><p>Inert data</p>" -> @v0. "Inert data" -> @v29. ]
+ ? @v31 == 23 [ "<style>p:hover{color:red}</style><p>Unsupported selector</p>" -> @v0. 2 -> @v28. ]
+ ? @v31 == 24 [ "<p id=x>Safe</p><script>document.getElementById('x').textContent='Changed';fetch('file:///secret');</script>" -> @v0. 65 -> @v30. ]
+ ? @v31 == 25 [ "<p>Unicode: &#945; &#128578;</p>" -> @v0. ]
+ ? @v31 == 26 [ "<p>unterminated" -> @v0. ]
+ ? @v31 == 27 [ "<p title='unterminated>" -> @v0. 65 -> @v30. ]
+ ? @v31 == 28 [ "<body><h1>Heading</h1><div><span>Inline</span> text</div></body>" -> @v0. ]
+ ? @v31 == 29 [ "<p>Viewport guard</p>" -> @v0. !store64[@web+40|801]. 70 -> @v30. ]
+ ? @v31 == 30 [ "<script type=module>unknown module syntax</script><p>Module skipped</p>" -> @v0. 4 -> @v28. ]
+ ? @v31 == 31 [ "<p>long whitespace</p>" -> @v0. ]
+ ? @v31 == 32 [ "<head><title>Hidden title</title><style>body{color:blue}</style></head><body><p>Visible</p></body>" -> @v0. "Visible" -> @v29. ]
+ ? @v31 == 33 [ "A<br>B" -> @v0. ]
+ ? @v31 == 34 [ "<span style='background-color:red'>AAA</span>" -> @v0. ]
+ ? @v31 == 35 [ "<span id=x style='background-color:red'>AAA</span><script>document.getElementById('x').textContent='AAA';</script>" -> @v0. ]
+ 0 -> @v1. ?? :load8[@v0+@v1] [ !store8[@web+1507328+@v1|:load8[@v0+@v1]]. @v1+1 -> @v1. ]
+ ? @v31 == 7 [ !store8[@web+1507328+@v1|192]. @v1+1 -> @v1. ]
+ ? @v31 == 31 [ 65536 -> @v1. 0 -> @v2. ?? @v2 < @v1 [ !store8[@web+1507328+@v2|32]. @v2+1 -> @v2. ] ]
+ !store64[@web+8|@v1]. !store64[@web+1507328+@v1|0xa55aa55aa55aa55a].
+ 0 -> @v2. 2166136261 -> @v26.
+ ?? @v2 < @v1 [ :bitand[:bitxor[@v26|:load8[@web+1507328+@v2]]*16777619|0xffffffff] -> @v26. @v2+1 -> @v2. ]
+ !switch[@web+1024|@web+1152]. !switch[@web+1024|@web+1408]. !switch[@web+1024|@web+1280].
+ !store64[@web+2097144|0xa55aa55aa55aa55a]. !store64[@web+4017152|0xa55aa55aa55aa55a].
+ !switch[@web+1024|@web+1664].
+ ? :load64[@web+16] != @v30 [ !put[69]. !put[48+:shr[@v31|4]]. !put[48+:bitand[@v31|15]]. !put[10]. !exit[1]. ]
+ ? :bitand[:load64[@web+24]|@v28] != @v28 [ !put[70]. !exit[@v31]. ]
+ ? (:load64[@web-8] != 0xa55aa55aa55aa55a)+(:load64[@web+4194304] != 0xa55aa55aa55aa55a)+(:load64[@web+2097144] != 0xa55aa55aa55aa55a)+(:load64[@web+4017152] != 0xa55aa55aa55aa55a) [ !put[71]. !exit[@v31]. ]
+ ? :load64[@web+1507328+:load64[@web+8]] != 0xa55aa55aa55aa55a [ !put[72]. !exit[@v31]. ]
+ 0 -> @v2. 2166136261 -> @v3.
+ ?? @v2 < :load64[@web+8] [ :bitand[:bitxor[@v3|:load8[@web+1507328+@v2]]*16777619|0xffffffff] -> @v3. @v2+1 -> @v2. ]
+ ? @v3 != @v26 [ !put[73]. !exit[@v31]. ]
+ ? @v29 [
+  1 -> @v0. 0 -> @v5.
+  ?? @v0 <= :load64[@web+32] [
+   @web+4096+(@v0-1)*1024 -> @v1. :load64[@v1+480] -> @v2. 0 -> @v3. 1 -> @v4.
+   ? @v2 [
+    ?? :load8[@v29+@v3]*@v4 [
+     ? @v3 >= :load64[@v1+488] [ 0 -> @v4. ] ~ [ ? :load8[@v2+@v3] != :load8[@v29+@v3] [ 0 -> @v4. ] ] @v3+1 -> @v3.
+    ]
+    ? @v4*(@v3 == :load64[@v1+488]) [ 1 -> @v5. ]
+   ] @v0+1 -> @v0.
+  ] ? @v5 == 0 [ !put[84]. !exit[@v31]. ]
+ ]
+ ? @v27 [
+  1 -> @v0. 0 -> @v5.
+  ?? @v0 <= :load64[@web+32] [ ? :load64[@web+540672+(@v0-1)*64] == @v27 [ 1 -> @v5. ] @v0+1 -> @v0. ]
+  ? @v5 == 0 [ !put[67]. !exit[@v31]. ]
+ ]
+ ? (@v31 == 1)+(@v31 == 5)+(@v31 == 31) [
+  0 -> @v0. ?? @v0 < 480000 [ ? :load32[@web+2097152+@v0*4] != 0xffffff [ !put[87]. !exit[@v31]. ] @v0+1 -> @v0. ]
+ ]
+ ? @v31 == 6 [ ? :load32[@web+2097152+(16*800+16)*4] != 0x123456 [ !put[66]. !exit[6]. ] ]
+ ? @v31 == 20 [
+  ? :load64[@web+88] <= 600 [ !put[83]. !exit[20]. ]
+  !store64[@web+80|4096]. !switch[@web+1024|@web+1664].
+  ? :load64[@web+16] [ !exit[20]. ]
+ ]
+ ? @v31 == 33 [
+  34 -> @v0. 0 -> @v2.
+  ?? @v0 < 52 [
+   16 -> @v1. ?? @v1 < 28 [ ? :load32[@web+2097152+(@v0*800+@v1)*4] != 0xffffff [ @v2+1 -> @v2. ] @v1+1 -> @v1. ]
+   @v0+1 -> @v0.
+  ] ? @v2 == 0 [ !put[82]. !exit[33]. ]
+ ]
+ ? (@v31 == 34)+(@v31 == 35) [ ? :load32[@web+2097152+(16*800+16)*4] != 0xff0000 [ !put[73]. !exit[@v31]. ] ]
+ @v31+1 -> @v31.
+]
+"35 original Zero Web integration checks passed.\n" -> @v0. 0 -> @v1.
+?? :load8[@v0+@v1] [ !put[:load8[@v0+@v1]]. @v1+1 -> @v1. ] !exit[0].

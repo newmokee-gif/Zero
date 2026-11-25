@@ -1,0 +1,204 @@
+:reserve[2200000] => @source.
+@source + 65552 => @tokens.
+@tokens + 2097184 => @constants.
+0 => @n.
+0 => @nt.
+0 => @nc.
+0 => @line.
+0 => @fail.
+0 => @errline.
+0 => @p.
+0 => @c.
+0 => @d.
+0 => @v.
+0 => @start.
+0 => @length.
+0 => @kind.
+0 => @i.
+0 => @j.
+0 => @x.
+0 => @y.
+0 => @tmp.
+0 => @ok.
+0 -> @ok.
+?? (@n < 65537) * (@ok == 0) [
+ :read[@source + @n | 65537 - @n] -> @x.
+ ? @x == 0 [ 1 -> @ok. ] ~ [ @n + @x -> @n. ]
+]
+# Ezero lexer, original Zero implementation. Parent owns all storage/locals.
+# Token = kind,value,length,line as four u64 fields. Source is immutable.
+# First validate UTF-8 over the complete input, including comments and strings.
+0 -> @p. 1 -> @line.
+?? (@p < @n) * (@fail == 0) [
+ @line -> @errline. :load8[@source + @p] -> @c.
+ ? @c < 128 [
+  ? (@c < 32) * (@c != 9) * (@c != 10) * (@c != 13) [ "Invalid control byte in source" -> @fail. ]
+  ? @c == 127 [ "Invalid control byte in source" -> @fail. ]
+  ? @c == 10 [ @line + 1 -> @line. ]
+  ? @c == 13 [
+   @line + 1 -> @line.
+   ? @p + 1 < @n [ ? :load8[@source + @p + 1] == 10 [ @p + 1 -> @p. ] ]
+  ]
+  @p + 1 -> @p.
+ ] ~ [
+  0 -> @length.
+  ? (@c >= 194) * (@c <= 223) [ 2 -> @length. ]
+  ? (@c >= 224) * (@c <= 239) [ 3 -> @length. ]
+  ? (@c >= 240) * (@c <= 244) [ 4 -> @length. ]
+  ? @length == 0 [ "Invalid UTF-8 leading byte" -> @fail. ]
+  ? @p + @length > @n [ "Incomplete UTF-8 sequence" -> @fail. ]
+  ? @fail == 0 [
+   1 -> @i.
+   ?? (@i < @length) * (@fail == 0) [
+    :load8[@source + @p + @i] -> @d.
+    ? (@d < 128) + (@d > 191) [ "Invalid UTF-8 continuation byte" -> @fail. ]
+    ? @i == 1 [
+     ? (@c == 224) * (@d < 160) [ "Overlong UTF-8 sequence" -> @fail. ]
+     ? (@c == 237) * (@d > 159) [ "UTF-8 surrogate is not a scalar" -> @fail. ]
+     ? (@c == 240) * (@d < 144) [ "Overlong UTF-8 sequence" -> @fail. ]
+     ? (@c == 244) * (@d > 143) [ "UTF-8 scalar exceeds Unicode range" -> @fail. ]
+    ]
+    @i + 1 -> @i.
+   ]
+  ]
+  @p + @length -> @p.
+ ]
+]
+0 -> @nt. 0 -> @nc. 0 -> @p. 1 -> @line.
+?? (@p < @n) * (@fail == 0) [
+ @line -> @errline. :load8[@source + @p] -> @c.
+ 0 -> @kind. 0 -> @v. 0 -> @length. 0 -> @ok.
+ ? (@c == 32) + (@c == 9) [ @p + 1 -> @p. 1 -> @ok. ]
+ ? (@c == 10) + (@c == 13) [
+  10 -> @kind. 1 -> @ok. @p + 1 -> @p.
+  ? (@c == 13) * (@p < @n) [ ? :load8[@source + @p] == 10 [ @p + 1 -> @p. ] ]
+  @line + 1 -> @line.
+ ]
+ ? @c == 35 [
+  1 -> @ok. @p + 1 -> @p. 0 -> @x.
+  ?? (@p < @n) * (@x == 0) [
+   :load8[@source + @p] -> @d.
+   ? (@d == 10) + (@d == 13) [ 1 -> @x. ] ~ [ @p + 1 -> @p. ]
+  ]
+ ]
+ ? (@ok == 0) * (@c >= 48) * (@c <= 57) [
+  1 -> @ok. 256 -> @kind. 0 -> @v. 0 -> @x.
+  ?? (@p < @n) * (@x == 0) * (@fail == 0) [
+   :load8[@source + @p] -> @d.
+   ? (@d >= 48) * (@d <= 57) [
+    @d - 48 -> @d.
+    ? (@v > 1844674407370955161) + ((@v == 1844674407370955161) * (@d > 5)) [
+     "Number exceeds unsigned 64-bit range" -> @fail.
+    ] ~ [ @v * 10 + @d -> @v. @p + 1 -> @p. ]
+   ] ~ [ 1 -> @x. ]
+  ]
+ ]
+ ? (@ok == 0) * (@c == 34) [
+  1 -> @ok. 257 -> @kind. @nc -> @start.
+  @p + 1 -> @p. 0 -> @x. 0 -> @length.
+  ?? (@p < @n) * (@x == 0) * (@fail == 0) [
+   :load8[@source + @p] -> @d.
+   ? @d == 34 [ 1 -> @x. @p + 1 -> @p. ] ~ [
+    ? (@d < 32) + (@d == 127) [ "String needs printable text or an escape" -> @fail. ]
+    ? @d == 92 [
+     @p + 1 -> @p.
+     ? @p >= @n [ "Unfinished string escape" -> @fail. ] ~ [
+      :load8[@source + @p] -> @d. 0 -> @y.
+      ? @d == 110 [ 10 -> @d. 1 -> @y. ]
+      ? @d == 114 [ 13 -> @d. 1 -> @y. ]
+      ? @d == 116 [ 9 -> @d. 1 -> @y. ]
+      ? (@d == 92) + (@d == 34) [ 1 -> @y. ]
+      ? @y == 0 [ "Unknown string escape" -> @fail. ]
+     ]
+    ]
+    ? @fail == 0 [
+     ? @length >= 4096 [ "String exceeds 4096 bytes" -> @fail. ]
+     ? @nc >= 16384 [ "Text constants exceed 16384 bytes" -> @fail. ]
+     ? @fail == 0 [
+      !store8[@constants + @nc | @d].
+      @nc + 1 -> @nc. @length + 1 -> @length. @p + 1 -> @p.
+     ]
+    ]
+   ]
+  ]
+  ? (@x == 0) * (@fail == 0) [ "Unclosed string" -> @fail. ]
+  @start -> @v.
+ ]
+ ? @ok == 0 [
+  0 -> @d. ? @p + 1 < @n [ :load8[@source + @p + 1] -> @d. ]
+  ? (@c == 43) + (@c == 45) + (@c == 42) + (@c == 40) + (@c == 41) + (@c == 91) + (@c == 93) + (@c == 124) + (@c == 126) [ @c -> @kind. ]
+  ? @c == 60 [ 60 -> @kind. ? @d == 61 [ 263 -> @kind. ] ]
+  ? @c == 62 [ 62 -> @kind. ? @d == 61 [ 264 -> @kind. ] ]
+  ? (@c == 61) * (@d == 62) [ 259 -> @kind. ]
+  ? (@c == 58) * (@d == 58) [ 260 -> @kind. ]
+  ? (@c == 61) * (@d == 61) [ 261 -> @kind. ]
+  ? (@c == 33) * (@d == 61) [ 262 -> @kind. ]
+  ? @kind [
+   1 -> @ok. @p + 1 -> @p. ? @kind >= 259 [ @p + 1 -> @p. ]
+  ]
+  ? (@kind == 0) * (@c == 61) [ "Use => for a binding or == for comparison" -> @fail. ]
+ ]
+ ? (@ok == 0) * (@fail == 0) [
+  # Bare word: punctuation such as ! . , : is text, except reserved operators.
+  # ASCII identifiers of at most31 bytes remain NAME tokens for name lookup.
+  # Longer ASCII words, Unicode and punctuation-containing words are WORD269.
+  @p -> @start. 0 -> @length. 0 -> @x. 1 -> @i. 269 -> @kind.
+  ? (((@c >= 65) * (@c <= 90)) + ((@c >= 97) * (@c <= 122)) + (@c == 95)) == 0 [ 0 -> @i. ]
+  ?? (@p < @n) * (@x == 0) * (@fail == 0) [
+   :load8[@source + @p] -> @d. 0 -> @y.
+   ? @p + 1 < @n [ :load8[@source + @p + 1] -> @y. ]
+   0 -> @tmp.
+   ? (@d == 32) + (@d == 9) + (@d == 10) + (@d == 13) + (@d == 35) + (@d == 34) + (@d == 43) + (@d == 45) + (@d == 42) + (@d == 40) + (@d == 41) + (@d == 91) + (@d == 93) + (@d == 124) + (@d == 126) + (@d == 60) + (@d == 62) + (@d == 61) [ 1 -> @tmp. ]
+   ? ((@d == 58) * (@y == 58)) + ((@d == 33) * (@y == 61)) [ 1 -> @tmp. ]
+   ? @tmp [ 1 -> @x. ] ~ [
+    ? (((@d >= 65) * (@d <= 90)) + ((@d >= 97) * (@d <= 122)) + ((@d >= 48) * (@d <= 57)) + (@d == 95)) == 0 [ 0 -> @i. ]
+    @length + 1 -> @length. @p + 1 -> @p.
+    ? @length > 4096 [ "Text word exceeds 4096 bytes" -> @fail. ]
+   ]
+  ]
+  @start -> @v.
+  ? @length == 0 [ "Unexpected character" -> @fail. ]
+  ? @i * (@length <= 31) [
+   258 -> @kind.
+   "show|return|repeat|when|each|size|true|false|empty|" -> @tmp.
+   0 -> @y. 300 -> @x.
+   ?? (@x < 309) * (@fail == 0) [
+    0 -> @j. 1 -> @i.
+    ?? :load8[@tmp + @y + @j] != 124 [
+     ? @j >= @length [ 0 -> @i. ] ~ [
+      ? :load8[@source + @start + @j] != :load8[@tmp + @y + @j] [ 0 -> @i. ]
+     ]
+     @j + 1 -> @j.
+    ]
+    ? @j != @length [ 0 -> @i. ]
+    ? @i [ @x -> @kind. ]
+    @y + @j + 1 -> @y. @x + 1 -> @x.
+   ]
+  ]
+ ]
+ ? (@kind != 0) * (@fail == 0) [
+  !store64[@tokens + @nt * 32 | @kind].
+  !store64[@tokens + @nt * 32 + 8 | @v].
+  !store64[@tokens + @nt * 32 + 16 | @length].
+  !store64[@tokens + @nt * 32 + 24 | @errline].
+  @nt + 1 -> @nt.
+ ]
+]
+? @fail == 0 [
+ !store64[@tokens + @nt * 32 | 0].
+ !store64[@tokens + @nt * 32 + 8 | 0].
+ !store64[@tokens + @nt * 32 + 16 | 0].
+ !store64[@tokens + @nt * 32 + 24 | @line].
+ @nt + 1 -> @nt.
+]
+? @fail [
+ 0 -> @i.
+ ?? :load8[@fail + @i] != 0 [ !put[:load8[@fail + @i]]. @i + 1 -> @i. ]
+ !put[10]. !exit[1].
+]
+!store64[@source | @nt].
+!store64[@source + 8 | @nc].
+!store64[@source + 16 | @errline].
+:write[@source | 24] -> @x.
+:write[@tokens | @nt * 32] -> @x.
+:write[@constants | @nc] -> @x.

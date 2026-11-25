@@ -1,0 +1,34 @@
+ZTEXT001000007fd3cc749f00000000
+Independent value-operation and E820 verification
+
+Authored fragments: selfhost/x64-values.zero.part, ia32-values.zero.part,
+real-values.zero.part, real-memmap.zero.part. No assembler or linker used.
+Fragments were decoded by our own Zero program and inspected with read-only
+objdump; every instruction and branch target matched its specified ABI.
+
+Native host, raw x64 BIOS VM, and raw IA32 BIOS VM passed110 mathematical
+assertions:60 shifts and50 XOR/AND cases. Shift boundaries include0,1,7,31,
+32,33,63,64,65,0xffffffff,0x100000000 and maximumu64, applied to zero, one,
+maximumu64, the high bit, and a mixed-bit pattern. IA32 VM disabled long mode
+and PAE. Both VMs exited through debug-exit with status1 and exact success
+marker THREADS OK (the existing generic VM fixture protocol).
+
+Host positional I/O passed FD3 offset8 write/read roundtrip, EOF, EBADF,
+and verification that pread/pwrite do not change the descriptor's current
+position. Host FD3 is opened read/write on an initial24-byte file containing
+START---................ and duplicated to stdin for cursor checks.
+The persistent native fixture also includes fsync success/EBADF assertions;
+the compiler parent independently verified those on the full candidate.
+
+Standalone real-mode probe passed90 u32 bit/shift assertions and complete
+BIOS E820 enumeration through continuation0. It checked returned sizes20..24,
+at least one nonempty usable-RAM record, a local-frame canary, buffer+28
+canary, and invalid buffers0xffe1/0xffffffff returning0xffffffff. Probe size
+9592 bytes. Only the16KiB BIOS image at ISO LBA32 was replaced in the frozen
+/workspace/zero-snapshot-0.6.0/build/zero.iso. QEMU qemu64,-lm,-pae,128MiB,
+SeaBIOS printed exact VALUES E820 OK and exited with expected status1.
+
+No current operating-system artifact or canonical compiler was changed by
+these probes. Persistent source fixtures are in review-tests/compiler-fs.
+The x64/IA32 and real VM output, kernel/boot binaries and QEMU logs are saved
+in the neighboring x64-vm, ia32-vm and real-vm directories.

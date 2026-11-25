@@ -1,0 +1,36 @@
+# Win32 is a host interface, not a bundled GUI toolkit. STATIC supplies a native
+# top-level message queue; the editor paints its own original pixel canvas.
+? @platform == 2 [
+ :hostlibrary["user32.dll"] -> @a. :hostlibrary["gdi32.dll"] -> @b. :hostlibrary["kernel32.dll"] -> @d.
+ ? (@a == 0) + (@b == 0) + (@d == 0) [ !exit[20]. ]
+ !store64[@api | :hostsymbol[@a | "CreateWindowExA"]].
+ !store64[@api + 8 | :hostsymbol[@a | "PeekMessageA"]].
+ !store64[@api + 16 | :hostsymbol[@a | "TranslateMessage"]].
+ !store64[@api + 24 | :hostsymbol[@a | "DispatchMessageA"]].
+ !store64[@api + 32 | :hostsymbol[@a | "GetDC"]].
+ !store64[@api + 40 | :hostsymbol[@a | "ReleaseDC"]].
+ !store64[@api + 48 | :hostsymbol[@a | "ValidateRect"]].
+ !store64[@api + 56 | :hostsymbol[@a | "DestroyWindow"]].
+ !store64[@api + 64 | :hostsymbol[@a | "GetKeyState"]].
+ !store64[@api + 72 | :hostsymbol[@b | "SetDIBitsToDevice"]].
+ !store64[@api + 80 | :hostsymbol[@a | "LoadCursorA"]].
+ !store64[@api + 88 | :hostsymbol[@a | "SetCursor"]].
+ !store64[@api + 96 | :hostsymbol[@a | "SetForegroundWindow"]].
+ !store64[@api + 104 | :hostsymbol[@a | "SetFocus"]].
+ !store64[@api + 112 | :hostsymbol[@d | "MoveFileExA"]].
+ !store64[@api + 120 | :hostsymbol[@a | "AdjustWindowRectEx"]].
+ 0 -> @i. ?? @i < 128 [ ? :load64[@api + @i] == 0 [ !exit[21]. ] @i + 8 -> @i. ]
+ # Fixed client canvas fits a 1080p desktop. Caption + system menu + minimize.
+ !store32[@e + 3144 | 1280]. !store32[@e + 3148 | 800].
+ :hostcall12[:load64[@api + 120] | @e + 3136 | 0x10ca0000 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0] -> @c.
+ :bitand[:load32[@e + 3144] - :load32[@e + 3136] | 0xffffffff] -> @a.
+ :bitand[:load32[@e + 3148] - :load32[@e + 3140] | 0xffffffff] -> @b.
+ :hostcall12[:load64[@api] | 0 | "STATIC" | "Zero Studio - original Zero editor" | 0x10ca0000 | 30 | 30 | @a | @b | 0 | 0 | 0 | 0] -> @window.
+ ? @window == 0 [ !exit[22]. ]
+ :hostcall12[:load64[@api + 96] | @window | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0] -> @c.
+ :hostcall12[:load64[@api + 104] | @window | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0] -> @c.
+ :hostcall12[:load64[@api + 80] | 0 | 32512 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0] -> @gc.
+ # BITMAPINFOHEADER: 32-bit BGRX, negative height is top-down.
+ !store32[@e + 3072 | 40]. !store32[@e + 3076 | 1280]. !store32[@e + 3080 | -800].
+ !store16[@e + 3084 | 1]. !store16[@e + 3086 | 32].
+]

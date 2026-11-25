@@ -1,0 +1,190 @@
+# Own streaming FAT16 builder, compiled by our Zero --host target.
+# Input slots: EFI64 64 KiB, EFI32 64 KiB, kernel64 128 KiB, kernel32 128 KiB.
+# Output: deterministic 16 MiB FAT16 image with both UEFI fallback loaders.
+var sector = reserve(512);
+var status = 0;
+var received = 0;
+var emitted = 0;
+var number = 0;
+var index = 0;
+var cluster = 0;
+var value = 0;
+var text = 0;
+var records = 0;
+var record = 0;
+var destination = 0;
+var attributes = 0;
+var firstCluster = 0;
+var fileSize = 0;
+var fatStart = 0;
+var pe = 0;
+var optionalSize = 0;
+var sections = 0;
+var firstEnd = 0;
+var lastEnd = 0;
+
+while number < 32768 {
+    index = 0;
+    while index < 512 { store64(sector + index, 0); index = index + 8; }
+    if number == 0 {
+        # Metadata only: BIOS optical boot uses the separate bios.zero image.
+        store8(sector, 0xeb);
+        store8(sector + 1, 0x3c);
+        store8(sector + 2, 0x90);
+        text = "ZERO    ";
+        index = 0;
+        while index < 8 { store8(sector + 3 + index, load8(text + index)); index = index + 1; }
+        store16(sector + 11, 512);
+        store8(sector + 13, 1);
+        store16(sector + 14, 1);
+        store8(sector + 16, 2);
+        store16(sector + 17, 512);
+        store16(sector + 19, 32768);
+        store8(sector + 21, 0xf8);
+        store16(sector + 22, 128);
+        store16(sector + 24, 63);
+        store16(sector + 26, 255);
+        store8(sector + 36, 0x80);
+        store8(sector + 38, 0x29);
+        store32(sector + 39, 0x5a45524f);
+        text = "ZERO SYSTEM";
+        index = 0;
+        while index < 11 { store8(sector + 43 + index, load8(text + index)); index = index + 1; }
+        text = "FAT16   ";
+        index = 0;
+        while index < 8 { store8(sector + 54 + index, load8(text + index)); index = index + 1; }
+        store16(sector + 510, 0xaa55);
+    }
+    if (number >= 1) * (number <= 256) {
+        fatStart = 1;
+        if number >= 129 { fatStart = 129; }
+        index = 0;
+        while index < 256 {
+            cluster = (number - fatStart) * 256 + index;
+            value = 0;
+            if cluster == 0 { value = 0xfff8; }
+            if (cluster >= 1) * (cluster <= 3) { value = 0xffff; }
+            if (cluster >= 4) * (cluster <= 771) { value = cluster + 1; }
+            if cluster == 131 { value = 0xffff; }
+            if cluster == 259 { value = 0xffff; }
+            if cluster == 515 { value = 0xffff; }
+            if cluster == 771 { value = 0xffff; }
+            store16(sector + index * 2, value);
+            index = index + 1;
+        }
+    }
+
+    # The three directory sectors share a small record emitter.
+    records = 0;
+    if number == 257 { records = 4; }
+    if number == 289 { records = 3; }
+    if number == 290 { records = 4; }
+    record = 0;
+    while record < records {
+        text = ".          ";
+        attributes = 0x10;
+        firstCluster = 2;
+        fileSize = 0;
+        if number == 257 {
+            if record == 0 { text = "EFI        "; }
+            if record == 1 {
+                text = "KERNEL  BIN"; attributes = 0x20;
+                firstCluster = 260; fileSize = 131072;
+            }
+            if record == 2 {
+                text = "KERNEL32BIN"; attributes = 0x20;
+                firstCluster = 516; fileSize = 131072;
+            }
+            if record == 3 {
+                text = "ZERO SYSTEM"; attributes = 8; firstCluster = 0;
+            }
+        }
+        if number == 289 {
+            if record == 1 { text = "..         "; firstCluster = 0; }
+            if record == 2 { text = "BOOT       "; firstCluster = 3; }
+        }
+        if number == 290 {
+            firstCluster = 3;
+            if record == 1 { text = "..         "; firstCluster = 2; }
+            if record == 2 {
+                text = "BOOTX64 EFI"; attributes = 0x20;
+                firstCluster = 4; fileSize = 65536;
+            }
+            if record == 3 {
+                text = "BOOTIA32EFI"; attributes = 0x20;
+                firstCluster = 132; fileSize = 65536;
+            }
+        }
+        destination = sector + record * 32;
+        index = 0;
+        while index < 11 { store8(destination + index, load8(text + index)); index = index + 1; }
+        store8(destination + 11, attributes);
+        store16(destination + 16, 0x0021);
+        store16(destination + 18, 0x0021);
+        store16(destination + 24, 0x0021);
+        store16(destination + 26, firstCluster);
+        store32(destination + 28, fileSize);
+        record = record + 1;
+    }
+
+    if (number >= 291) * (number <= 1058) {
+        received = 0;
+        while received < 512 {
+            status = read(sector + received, 512 - received);
+            if status != -4 {
+                if status == 0 { exit(2); }
+                if status > 512 - received { exit(1); }
+                received = received + status;
+            }
+        }
+        if (number == 291) + (number == 419) {
+            # The two compiler-generated PE headers and section tables fit
+            # in their first sector. Padding bytes are copied unchanged.
+            if load16(sector) != 0x5a4d { exit(2); }
+            pe = load32(sector + 60);
+            if pe > 168 { exit(2); }
+            if load32(sector + pe) != 0x00004550 { exit(2); }
+            if load16(sector + pe + 6) != 2 { exit(2); }
+            optionalSize = 240;
+            if number == 291 {
+                if load16(sector + pe + 4) != 0x8664 { exit(2); }
+                if load16(sector + pe + 24) != 0x20b { exit(2); }
+            } else {
+                optionalSize = 224;
+                if load16(sector + pe + 4) != 0x014c { exit(2); }
+                if load16(sector + pe + 24) != 0x010b { exit(2); }
+            }
+            if load16(sector + pe + 20) != optionalSize { exit(2); }
+            if load32(sector + pe + 56) != 4096 { exit(2); }
+            if load32(sector + pe + 60) != 512 { exit(2); }
+            if load32(sector + pe + 84) != 512 { exit(2); }
+            if load16(sector + pe + 92) != 10 { exit(2); }
+            sections = pe + 24 + optionalSize;
+            if load32(sector + sections + 20) < 512 { exit(2); }
+            firstEnd = load32(sector + sections + 20) + load32(sector + sections + 16);
+            lastEnd = load32(sector + sections + 60) + load32(sector + sections + 56);
+            if load32(sector + sections + 16) == 0 { exit(2); }
+            if load32(sector + sections + 56) == 0 { exit(2); }
+            if load32(sector + sections + 60) < firstEnd { exit(2); }
+            if lastEnd > 65536 { exit(2); }
+        }
+    }
+    if number == 1059 {
+        # Reject excess input before emitting the unused trailing disk area.
+        status = -4;
+        while status == -4 { status = read(sector, 1); }
+        if status > 1 { exit(1); }
+        if status != 0 { exit(3); }
+    }
+    emitted = 0;
+    while emitted < 512 {
+        status = write(sector + emitted, 512 - emitted);
+        if status != -4 {
+            if status == 0 { exit(4); }
+            if status > 512 - emitted { exit(4); }
+            emitted = emitted + status;
+        }
+    }
+    number = number + 1;
+}
+exit(0);

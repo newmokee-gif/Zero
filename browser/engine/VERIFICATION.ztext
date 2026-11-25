@@ -1,0 +1,47 @@
+ZTEXT00100000a3d251817060000000
+ZERO WEB0.15PREVIEW VERIFICATION
+25 November2026
+
+Implementation: original Zero only. No Chromium/V8/Python implementation was
+copied or included. A cancelled experimental client-side Python worker was
+removed after the user clarified server-side Python websites.
+
+Original Zero automated checks
+DOM170, CSS151, JavaScript320 and full document pipeline35:676checks per host.
+Each suite passed native Linux x64 and as a Windows x64 binary under Wine.
+The pipeline covers HTML/CSS/JS interaction, hidden subtrees, textContent,
+background inheritance, inline backgrounds after script replacement, BR,
+unsupported scripts, UTF-8 rejection, capacity, renderer guards and scrolling.
+DOM/CSS/JS checks include deterministic malformed input and guard checks.
+An independent DOM review exercised10000additional malformed inputs across
+revisions; the final6000input run passed. These are testing samples, not proof
+that every malformed page or every web standard is supported.
+
+Independent integration review
+67separate assertions passed:51CLI/format/layout cases,8composition cases and
+8additional background/word-wrap/clipping cases. The review found and fixed
+BR handling, inline backgrounds, the background after textContent replacement,
+and missing-argument handling for single CLI options.
+Own Zero renderer probes also passed deep200and maximal512nested nodes,
+extreme CSS dimensions, memory guards and exact overlapping viewport pixels.
+
+GUI
+10interactive scenarios per platform passed on Linux/Xvfb and Windows/Wine.
+The actual final browser's entire demonstration canvas matched its own
+Zpix export pixel-for-pixel on both platforms. A40paragraph document scrolled
+with PageDown and returned exactly with Home; Esc and native close exited.
+Window-error/headless/renderer-error paths were checked. Native Windows hardware,
+Wayland without Xwayland and physical devices are not verified by these tests.
+
+Build and regression boundary
+The standard original builder completed76stages and72artifacts. A build made
+with the freshly built builder reproduced all72artifacts byte-for-byte.
+The64previous0.14artifacts excluding the changed builder pair are byte-identical
+to their prior baseline, including kernels, bootloaders, guest apps and ISO.
+Boot code did not change; new BIOS/UEFI or VirtualBox runs are not claimed.
+Private storage.zdrive and data.vdi hashes remain unchanged.
+
+Scope
+This is a tested local preview profile. It does not establish modern Internet
+compatibility, complete HTML5/CSS/ECMAScript, TLS, process isolation or a full
+Chromium rewrite. New guest integration and Internet fetching remain unfinished.

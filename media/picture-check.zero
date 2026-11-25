@@ -1,0 +1,216 @@
+# Original Zero in-memory ZPIX decoder regression. No fixture files or codecs.
+# Recompose the decoder with zero-integrate PROJECT NEW.zero --picture-check.
+0 => @work.
+0 => @input.
+0 => @output.
+3 => @mode.
+0 => @error.
+0 => @size.
+0 => @message.
+0 => @literal.
+0 => @i.
+0 => @width.
+0 => @height.
+0 => @pixels.
+0 => @payload.
+0 => @wanted.
+0 => @position.
+0 => @count.
+0 => @hash.
+0 => @run.
+0 => @red.
+0 => @green.
+0 => @blue.
+0 => @raster.
+0 => @testcase.
+0 => @failures.
+0 => @expectederror.
+0 => @expectedwidth.
+0 => @expectedheight.
+0 => @expectedpixels.
+0 => @actualbytes.
+0 => @encoded.
+0 => @generated.
+0 => @remaining.
+0 => @runbuild.
+0 => @rbuild.
+0 => @gbuild.
+0 => @bbuild.
+0 => @checksum.
+0 => @inputhash.
+0 => @afterhash.
+0 => @j.
+0 => @k.
+0 => @guard.
+0 => @failed.
+0 => @value.
+0 => @digit.
+0 => @status.
+:hostalloc[67112960] -> @work.
+? @work == 0 [
+ "Cannot allocate picture check workspace.\n" -> @message.
+ 0 -> @i. ?? :load8[@message+@i] [ !put[:load8[@message+@i]]. @i+1 -> @i. ]
+ !exit[71].
+]
+@work+64 -> @input. @work+33554560 -> @output.
+?? @testcase < 42 [
+ 0 -> @error. 0 -> @failed. 65 -> @expectederror.
+ 1 -> @expectedwidth. 1 -> @expectedheight.
+ ? (@testcase == 0)+(@testcase >= 37) [ 0 -> @expectederror. ]
+ ? @testcase == 37 [ 255 -> @expectedwidth. ]
+ ? @testcase == 38 [ 256 -> @expectedwidth. ]
+ ? @testcase == 39 [ 1920 -> @expectedwidth. 1080 -> @expectedheight. ]
+ ? (@testcase == 40)+(@testcase == 41) [ 3840 -> @expectedwidth. 2160 -> @expectedheight. ]
+ @expectedwidth*@expectedheight -> @expectedpixels.
+ 0 -> @j. ?? @j < 80 [ !store8[@input+@j|0]. @j+1 -> @j. ]
+ "ZPIX0001" -> @literal. 0 -> @j.
+ ?? @j < 8 [ !store8[@input+@j|:load8[@literal+@j]]. @j+1 -> @j. ]
+ !store32[@input+8|@expectedwidth]. !store32[@input+12|@expectedheight].
+ !store32[@input+16|3]. !store32[@input+20|1]. !store64[@input+24|@expectedpixels].
+ 64 -> @encoded. 0 -> @generated. 2166136261 -> @checksum.
+ ?? @generated < @expectedpixels [
+  @expectedpixels-@generated -> @remaining. 255 -> @runbuild.
+  ? @remaining < 255 [ @remaining -> @runbuild. ]
+  13 -> @rbuild. 10 -> @gbuild. 255 -> @bbuild.
+  ? @testcase == 41 [
+   1 -> @runbuild. 15 -> @rbuild. 240 -> @gbuild. 85 -> @bbuild.
+   ? :bitand[@generated|1] [ 240 -> @rbuild. 15 -> @gbuild. 170 -> @bbuild. ]
+  ]
+  !store8[@input+@encoded|@runbuild]. !store8[@input+@encoded+1|@rbuild].
+  !store8[@input+@encoded+2|@gbuild]. !store8[@input+@encoded+3|@bbuild].
+  0 -> @j. ?? @j < @runbuild [
+   :bitand[:bitxor[@checksum|@rbuild]*16777619|4294967295] -> @checksum.
+   :bitand[:bitxor[@checksum|@gbuild]*16777619|4294967295] -> @checksum.
+   :bitand[:bitxor[@checksum|@bbuild]*16777619|4294967295] -> @checksum.
+   @j+1 -> @j.
+  ]
+  @encoded+4 -> @encoded. @generated+@runbuild -> @generated.
+ ]
+ @encoded -> @size. @encoded -> @actualbytes.
+ !store64[@input+32|@size-64]. !store32[@input+40|@checksum]. !store64[@input+48|@size].
+ # Distinct mutations of size, every header field, runs and decoded checksum.
+ ? @testcase == 1 [ 0 -> @size. ]
+ ? @testcase == 2 [ 1 -> @size. ]
+ ? @testcase == 3 [ 63 -> @size. ]
+ ? @testcase == 4 [ 64 -> @size. ]
+ ? @testcase == 5 [ 67 -> @size. ]
+ ? @testcase == 6 [ 69 -> @size. 69 -> @actualbytes. !store64[@input+48|69]. !store64[@input+32|5]. ]
+ ? @testcase == 7 [ !store8[@input|0]. ]
+ ? @testcase == 8 [ !store8[@input+7|50]. ]
+ ? @testcase == 9 [ !store32[@input+8|0]. ]
+ ? @testcase == 10 [ !store32[@input+12|0]. ]
+ ? @testcase == 11 [ !store32[@input+8|3841]. ]
+ ? @testcase == 12 [ !store32[@input+12|2161]. ]
+ ? @testcase == 13 [ !store32[@input+8|4294967295]. ]
+ ? @testcase == 14 [ !store32[@input+12|4294967295]. ]
+ ? @testcase == 15 [ !store32[@input+16|0]. ]
+ ? @testcase == 16 [ !store32[@input+16|4]. ]
+ ? @testcase == 17 [ !store32[@input+20|0]. ]
+ ? @testcase == 18 [ !store32[@input+20|2]. ]
+ ? @testcase == 19 [ !store64[@input+24|0]. ]
+ ? @testcase == 20 [ !store64[@input+24|2]. ]
+ ? @testcase == 21 [ !store32[@input+28|1]. ]
+ ? @testcase == 22 [ !store64[@input+32|0]. ]
+ ? @testcase == 23 [ !store64[@input+32|8]. ]
+ ? @testcase == 24 [ !store32[@input+36|1]. ]
+ ? @testcase == 25 [ !store32[@input+40|:bitxor[@checksum|1]]. ]
+ ? @testcase == 26 [ !store32[@input+44|1]. ]
+ ? @testcase == 27 [ !store64[@input+48|69]. ]
+ ? @testcase == 28 [ !store32[@input+52|1]. ]
+ ? @testcase == 29 [ !store32[@input+56|1]. ]
+ ? @testcase == 30 [ !store32[@input+60|1]. ]
+ ? @testcase == 31 [ !store8[@input+64|0]. ]
+ ? @testcase == 32 [ !store8[@input+64|2]. ]
+ ? @testcase == 33 [ !store8[@input+65|14]. ]
+ ? @testcase == 34 [ !store32[@input+8|2]. !store64[@input+24|2]. ]
+ ? @testcase == 35 [
+  72 -> @size. 72 -> @actualbytes. !store64[@input+32|8]. !store64[@input+48|72].
+  !store8[@input+68|1]. !store8[@input+69|13]. !store8[@input+70|10]. !store8[@input+71|255].
+ ]
+ ? @testcase == 36 [ 33554433 -> @size. ]
+ 2166136261 -> @inputhash. 0 -> @j.
+ ?? @j < @actualbytes [ :bitand[:bitxor[@inputhash|:load8[@input+@j]]*16777619|4294967295] -> @inputhash. @j+1 -> @j. ]
+ @output+64+@expectedpixels*3 -> @guard.
+ !store64[@output+48|0x1234567887654321]. !store64[@output+56|0x1122334455667788].
+ !store64[@guard|0x1234567887654321]. !store64[@guard+8|0x1122334455667788].
+# BEGIN ZERO PICTURE DECODER
+# Memory-only ZPIX0001 decoder, shared by the native picture command.
+# Caller supplies @mode != 1, @error = 0, @input and @size <= 33554432,
+# and @output with at least 24883264 writable bytes. No host/file API is used.
+# Input and output memory ranges must be disjoint; the caller owns both ranges.
+# Success: @error = 0; @width/@height/@pixels are valid, RGB at @output+64.
+# Failure: @error = 65; no decoded bytes may be consumed.
+# Verify every field and every record before any destination is opened.
+? (@mode != 1)*(@error == 0) [
+ "Invalid ZPIX0001 header, dimensions, reserved fields or exact length.\n" -> @message.
+ ? (@size < 68)+(@size > 33554432) [ 65 -> @error. ]
+ ? @error == 0 [
+  "ZPIX0001" -> @literal. 0 -> @i. ?? @i < 8 [ ? :load8[@input+@i] != :load8[@literal+@i] [ 65 -> @error. ] @i+1 -> @i. ]
+  :load32[@input+8] -> @width. :load32[@input+12] -> @height.
+  ? (@width == 0)+(@height == 0)+(@width > 3840)+(@height > 2160) [ 65 -> @error. ]
+  ? (:load32[@input+16] != 3)+(:load32[@input+20] != 1)+(:load32[@input+44] != 0)+(:load64[@input+56] != 0) [ 65 -> @error. ]
+  # Explicit upper words keep bounded header semantics on 32-bit Zero targets.
+  ? (:load32[@input+28] != 0)+(:load32[@input+36] != 0)+(:load32[@input+52] != 0)+(:load32[@input+60] != 0) [ 65 -> @error. ]
+  @width*@height -> @pixels. :load64[@input+32] -> @payload. :load32[@input+40] -> @wanted.
+  ? (:load64[@input+24] != @pixels)+(:load64[@input+48] != @size)+(@payload != @size-64)+(:bitand[@payload|3] != 0) [ 65 -> @error. ]
+ ]
+ ? @error == 0 [
+  "Invalid ZPIX0001 run length, decoded length or RGB checksum.\n" -> @message.
+  64 -> @position. 0 -> @count. 2166136261 -> @hash.
+  ?? (@position < @size)*(@error == 0) [
+   :load8[@input+@position] -> @run.
+   ? (@run == 0)+(@run > @pixels-@count) [ 65 -> @error. ]
+   ? @error == 0 [
+    :load8[@input+@position+1] -> @red. :load8[@input+@position+2] -> @green. :load8[@input+@position+3] -> @blue.
+    0 -> @i.
+    ?? @i < @run [
+     @output+64+(@count+@i)*3 -> @raster.
+     !store8[@raster|@red]. !store8[@raster+1|@green]. !store8[@raster+2|@blue].
+     :bitand[:bitxor[@hash|@red]*16777619|4294967295] -> @hash.
+     :bitand[:bitxor[@hash|@green]*16777619|4294967295] -> @hash.
+     :bitand[:bitxor[@hash|@blue]*16777619|4294967295] -> @hash.
+     @i+1 -> @i.
+    ]
+    @count+@run -> @count. @position+4 -> @position.
+   ]
+  ]
+  ? (@count != @pixels)+(@hash != @wanted) [ 65 -> @error. ]
+ ]
+]
+# END ZERO PICTURE DECODER
+ ? @error != @expectederror [ 1 -> @failed. ]
+ ? (:load64[@output+48] != 0x1234567887654321)+(:load64[@output+56] != 0x1122334455667788) [ 1 -> @failed. ]
+ ? (:load64[@guard] != 0x1234567887654321)+(:load64[@guard+8] != 0x1122334455667788) [ 1 -> @failed. ]
+ 2166136261 -> @afterhash. 0 -> @j.
+ ?? @j < @actualbytes [ :bitand[:bitxor[@afterhash|:load8[@input+@j]]*16777619|4294967295] -> @afterhash. @j+1 -> @j. ]
+ ? @afterhash != @inputhash [ 1 -> @failed. ]
+ ? (@expectederror == 0)*(@error == 0) [
+  ? (@width != @expectedwidth)+(@height != @expectedheight)+(@pixels != @expectedpixels) [ 1 -> @failed. ]
+  0 -> @j. ?? @j < @expectedpixels [
+   13 -> @rbuild. 10 -> @gbuild. 255 -> @bbuild.
+   ? @testcase == 41 [
+    15 -> @rbuild. 240 -> @gbuild. 85 -> @bbuild.
+    ? :bitand[@j|1] [ 240 -> @rbuild. 15 -> @gbuild. 170 -> @bbuild. ]
+   ]
+   @output+64+@j*3 -> @k.
+   ? (:load8[@k] != @rbuild)+(:load8[@k+1] != @gbuild)+(:load8[@k+2] != @bbuild) [ 1 -> @failed. ]
+   @j+1 -> @j.
+  ]
+ ]
+ "PASS picture memory case " -> @message.
+ ? @failed [ @failures+1 -> @failures. "FAIL picture memory case " -> @message. ]
+ 0 -> @i. ?? :load8[@message+@i] [ !put[:load8[@message+@i]]. @i+1 -> @i. ]
+ @testcase+1 -> @value. 0 -> @digit.
+ ?? @value >= 10 [ @value-10 -> @value. @digit+1 -> @digit. ]
+ ? @digit [ !put[48+@digit]. ] !put[48+@value]. !put[10].
+ @testcase+1 -> @testcase.
+]
+"Picture decoder checks: 42 total; " -> @message.
+0 -> @i. ?? :load8[@message+@i] [ !put[:load8[@message+@i]]. @i+1 -> @i. ]
+@failures -> @value. 0 -> @digit.
+?? @value >= 10 [ @value-10 -> @value. @digit+1 -> @digit. ]
+? @digit [ !put[48+@digit]. ] !put[48+@value].
+" failed.\n" -> @message.
+0 -> @i. ?? :load8[@message+@i] [ !put[:load8[@message+@i]]. @i+1 -> @i. ]
+:hostfree[@work|67112960] -> @status.
+? @failures [ !exit[1]. ] !exit[0].

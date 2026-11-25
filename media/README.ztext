@@ -1,0 +1,107 @@
+ZTEXT001000014cf6b98abfb0000000
+Zero Media 0.14 - original Zero disk images and USB writer
+
+All product implementation in this addition is Zero. Ezero is supported by
+the operating system included in the image. No external imaging program,
+assembler, hashing library or shell command is executed by these tools.
+
+The .zmedia file is our own ZMEDIA01 container, not an ISO with a new name.
+It has a 4096-byte versioned header, exact payload length, logical sector
+size, SHA-256 payload checksum, and strictly zero reserved bytes. The limit
+is 256 MiB of disk payload. SHA-256 detects corruption; it is not a digital
+signature and does not authenticate an unknown publisher.
+
+The payload is a whole bootable disk assembled by our own Zero code. Its
+MBR and FAT16 EFI System Partition follow firmware interfaces needed by
+existing PCs. The BIOS loaders, EFI loaders, kernels, compiler bundle,
+format codec and writer are our implementations. The USB disk uses logical
+512-byte sectors. Native 4Kn targets are rejected.
+
+LINUX AND WINDOWS
+
+zero-media info system.zmedia
+zero-media verify system.zmedia
+zero-drives
+zero-flash write system.zmedia DEVICE
+zero-flash check system.zmedia DEVICE
+
+On Windows the executable names end in .exe. Both editions are x86-64.
+Run the disk programs with administrator privileges. DEVICE is the exact
+whole disk path reported by zero-drives, such as /dev/sdb on Linux or
+\\.\PhysicalDrive2 on Windows. It is never a drive-letter path or partition.
+Visible list numbers begin with one; the PhysicalDrive number is the host
+system's actual device name and is not renumbered.
+
+The writer reads the entire source into memory and verifies it before
+opening a target. It reports the path, image size and device capacity.
+To proceed, type ERASE, one space, and that exact device path, then Enter.
+Existing partitions on the selected target are replaced. The writer
+rechecks the pinned device identity and capacity after confirmation.
+It writes the payload, clears the obsolete backup-GPT area beyond the
+image when present, flushes, and compares every written byte on readback.
+An interrupted write is reported as incomplete; this is not an atomic
+disk replacement. Remaining unused disk space is not securely erased.
+
+Only removable USB whole disks with a readable stable serial identity
+are eligible. Internal, read-only, native-4Kn, busy and unidentified disks
+are rejected. Linux volumes must be unmounted and swap disabled. Windows
+volumes must have no drive-letter or directory mount paths; all associated
+volumes are enumerated and locked, and the Windows system disk is excluded.
+The tools do not silently unmount a filesystem. A failed safety check may
+reject an otherwise usable USB device. Details are in HOST-BACKEND.ztext.
+
+NONDESTRUCTIVE FILE TEST
+
+zero-flash inspect system.zmedia
+zero-flash test system.zmedia NEW_FILE
+
+test exclusively creates a new regular file, writes the disk payload,
+flushes it and checks every byte. It cannot replace an existing file or
+open a block device. This does not test the physical USB hardware path.
+
+OWN CODEC
+
+zero-media make DISK_PAYLOAD NEW.zmedia
+zero-media extract IMAGE.zmedia NEW_DISK_PAYLOAD
+zero-media-check
+
+The make/extract output must not already exist. Invalid input never creates
+an output. A new output that fails during writing is retained for diagnosis;
+the program never deletes a path after another process could replace it.
+extract is for interoperability with VM disk tools, not a requirement for
+zero-flash. The .zmedia container itself is not a CD-ROM image and should
+not be attached as an ISO to VirtualBox.
+
+ZERO FIRMWARE EDITION
+
+The Zero edition runs before the kernel using UEFI Block I/O. It is a
+separate original Zero program, not an in-kernel USB driver. The current
+Zero kernel still has ATA storage only. Use the Zero UEFI boot menu to
+launch Flash Writer. BIOS can boot the installed system, but the firmware
+writer requires UEFI. Secure Boot signing is not provided.
+
+Place a file named system.zmedia at the root of a separate filesystem
+that the firmware can read, normally a FAT volume. The writer identifies
+available image sources and removable USB destinations. The utility's
+boot disk and the selected source disk are protected from selection as
+a target. The 16 MiB boot ESP is too small to hold this 18 MiB image;
+keep the source image on a separate readable volume. The image is fully
+checked before confirmation, writing, flushing and full readback.
+
+BUILDING WITH OUR TOOLS
+
+zero-build PROJECT NEW_BUILD_DIRECTORY
+zero-disk NEW_BUILD_DIRECTORY disk-bootstrap.bin disk-bios.bin NEW_DISK
+zero-media make NEW_DISK NEW.zmedia
+
+For zero-disk, use the actual disk-bootstrap.bin and disk-bios.bin paths
+inside the new build directory. zero-build compiles all platform editions
+using our own compiler. Canonical composed .zero sources are included.
+media/compose.zero reconstructs flash, drives and native backend sources;
+media/compose-codec.zero reconstructs the codec and its checks;
+media/firmware-compose.zero reconstructs the firmware sources.
+
+The verification record distinguishes real emulated USB boot/write tests,
+native Linux file tests, Windows/Wine tests, and untested physical devices.
+Physical USB drives and native Windows hardware are not certified by the
+emulator tests. See VERIFICATION.ztext for the exact completed checks.

@@ -1,0 +1,88 @@
+ZTEXT00100001346fede108c0000000
+Zero UEFI loader audit - 2026-11-15
+
+Scope: loader.zero only. LANGUAGE.ztext and UEFI-NOTES.ztext were reviewed before
+editing. The loader remains entirely Zero and uses the compiler's documented
+Microsoft x64 call primitive for firmware interfaces. No C, Python, assembly
+loader, external bootloader, or runtime implementation was introduced.
+
+Fixed defects
+
+1. SetWatchdogTimer failure was overwritten by HandleProtocol. Its result now
+   gates all subsequent setup and reports pre-exit stage 0 on non-success.
+2. The old read-completion sentinel status=2 collided with EFI warning 2. A
+   warning from an earlier protocol or allocation could reach File.Close with
+   no valid file, and a read warning could continue with incomplete code.
+   Completion now has a separate flag. Every service still requires exact
+   EFI_SUCCESS (0); warnings are deliberately rejected, never reinterpreted as
+   internal control flow. Only validated positive read lengths advance the
+   received count. Empty/oversized files, early EOF and oversized read counts
+   use EFI_LOAD_ERROR, not a positive warning value.
+3. Stage 10 previously emitted ':' through '0'+10. Stage diagnostics now
+   produce decimal 0..10, and every diagnostic byte waits for UART readiness.
+4. Final memory-map and exit failures previously halted silently. The UART
+   now identifies GetMemoryMap failure, an invalid map, ExitBootServices
+   failure, or exhaustion of four invalid-key retries. Map size must fit the
+   existing 64 KiB buffer, descriptor size must be at least 40, and at least
+   one descriptor must fit in the returned size.
+
+Final source review
+
+The kernel path remains UTF-16 \\kernel.bin. Allocations remain 32 executable
+LoaderCode pages, 64 LoaderData stack pages, and 17 LoaderData pages for the
+handoff plus memory map. Handoff offsets and enter(code,handoff,stack+262144)
+are unchanged. Kernel reads are bounded by the validated 131072-byte file
+limit, reject zero progress, and cannot advance beyond that limit.
+
+Files close before final map acquisition. Only the existing GetMemoryMap and
+ExitBootServices calls occur in the final retry loop: no added protocol,
+console, allocation, file, or other firmware service runs after the first
+exit attempt. The map capacity is restored for each attempt, its returned key
+is passed to ExitBootServices without intervening firmware calls, and only
+EFI_INVALID_PARAMETER permits retry. Four unsuccessful exit attempts stop.
+Successful exit enters the kernel immediately, disabling interrupts through
+the documented enter primitive. Failure diagnostics use direct COM1 I/O and
+retain a per-byte poll limit of 1000000 iterations before halting.
+
+Build verification
+
+Command: ./build/zero --efi < loader.zero > build/loader-audit.efi
+Result: compiler exit 0; 9216-byte x86-64 PE32+ EFI application, two sections.
+No BOOTX64.EFI, system.img, compiler, kernel, or image-builder source was
+modified by this audit.
+
+Source SHA-256:
+3d83a0a3880fff15ad8c76882ad222db6b030f60ec2baa9074cb12c6f90048e8
+Audit EFI SHA-256:
+c417eeef244d0522de306b11ee5fe96ea2170fce1d22da1adf4d93c3cc8ee888
+
+Runtime verification
+
+PASS: nine QEMU 10.0.13/OVMF boots with 128 MiB, pc/TCG, COM1 output, and
+snapshot-mode data disk. Eight temporary Zero source variants exercised
+specific failure paths; the ninth used unmodified loader.zero and reached
+the kernel terminal. Temporary FAT images were generated with our existing
+Zero image builder. Every expected line appeared; no failure case reached
+the kernel terminal. The test processes were stopped by a 20-second timeout
+after observing their terminal/halt state.
+
+Injected condition                     Observed loader diagnostic
+Watchdog EFI_DEVICE_ERROR               failed before exit; stage=0
+Initial HandleProtocol warning 2        failed before exit; stage=1
+File.Read warning 2                     failed before exit; stage=7
+Handoff allocation OUT_OF_RESOURCES     failed before exit; stage=10
+GetMemoryMap BUFFER_TOO_SMALL           GetMemoryMap failed
+Successful map, descriptor size zero   invalid memory map
+ExitBootServices EFI_DEVICE_ERROR       ExitBootServices failed
+Real ExitBootServices, wrong map key    ExitBootServices retry limit
+Unmodified loader                      kernel serial terminal ready
+
+The wrong-key case called real firmware with each acquired key plus one;
+it therefore exercised reacquisition and UART output after failed real exit
+attempts. Other faults were deterministic status/output substitutions in
+temporary Zero source copies, not claims of hardware firmware failures.
+Tests/scripts/logs reside in /tmp/zero-loader-audit in this execution
+workspace; their source variants are not the production loader. Hardware,
+firmware without COM1, and arbitrary malformed firmware pointers were not
+tested. The fixed memory-map capacity and strict warning policy are retained
+intentional limits; exceeding that capacity now gives a visible failure.

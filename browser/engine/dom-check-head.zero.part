@@ -1,0 +1,7 @@
+# Original Zero semantic, boundary and malformed-input DOM checks.
+0 => @dt_case. 0 => @dt_errors. 0 => @dt_i. 0 => @dt_j. 0 => @dt_n.
+0 => @dt_source. 0 => @dt_expected. 0 => @dt_count. 0 => @dt_error.
+0 => @dt_node. 0 => @dt_ptr. 0 => @dt_len. 0 => @dt_hash. 0 => @dt_after.
+12345 => @dt_seed.
+:hostalloc[4194304] -> @web.
+? @web == 0 [ !exit[70]. ]

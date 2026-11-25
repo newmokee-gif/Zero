@@ -1,0 +1,92 @@
+ZTEXT001000014d0dbef25810000000
+Zero Media independent review and verification
+2026-11-20
+
+Scope: original Zero ZMEDIA01 codec, native flash coordinator and Linux/Windows
+device backends. These are test results, not a claim of physical USB validation.
+
+Independent codec checks
+Linux: 166 passing checks. Windows executable under Wine: 162 passing checks.
+Five independently constructed containers matched every header and payload
+byte, including their SHA-256 digest. Extracted payloads matched exactly.
+Malformed magic, version, header length, sector size, payload length, flags,
+digest, reserved bytes, payload data, truncation and appended bytes were refused.
+Malformed extracts created no output. Existing files, input/output aliases,
+directories and invalid arguments were refused. Linux also refused final
+symlinks and FIFOs without modifying their targets or blocking.
+
+The shared SHA-256 memory worker passed 145 independent Linux comparisons,
+including empty input, abc, one million a bytes, every length 0 through129,
+and boundaries around256,512,4096 and65536 bytes. The independent reference
+implementation and orchestration are test infrastructure outside this project.
+
+Native flash command checks
+Final reviewed native coordinator: 63 passing Linux checks and61 passing
+Windows/Wine checks. Valid containers produced byte-exact private regular
+files, with full readback and unchanged source files. Corrupted containers
+were refused before target discovery. Existing files and input aliases were
+preserved. Malformed physical-device paths and missing/extra arguments failed.
+Linux-specific symlink/FIFO output rejection accounts for the count difference.
+
+Exact device-transfer implementation
+media/host-io-check.zero is an original Zero test application. It creates a new
+private regular file and injects its own handle into the otherwise unchanged
+host I/O implementation. Production device discovery cannot use that route.
+Both Linux and Windows/Wine passed18 transfer cases plus error-preserving
+cleanup: actual positioned write/read, flush, unconfirmed write refusal,
+zero/unaligned/oversized transfers, capacity bounds, unsigned offset overflow,
+invalid handle/op/platform, partial EOF, read-only handle write failure and
+preservation of a prior error. Independent comparison confirmed the expected
+512-byte write and all3584 untouched guard bytes.
+
+Coordinator control-flow checks
+32 checks passed on each of Linux and Windows/Wine using the exact production
+coordinator, transfer implementation, identity comparator and cleanup. Only
+device discovery was replaced with an explicitly supplied private regular
+file. Fault injection was confined to the separate external test executable.
+Eight capacities exercised exact-image disks, one through32 remaining sectors,
+33 remaining sectors, and larger tails. Image bytes, bounded zeroing of up to
+33 old backup-GPT sectors and preservation of intervening bytes matched exactly.
+Eight invalid confirmation forms left the target unchanged. LF and CRLF were
+accepted only with the exact confirmation and target. Too-small targets and
+changed device identity failed before writing. Injected flush/readback failures
+were reported as failures. Read-only comparison never changed the target.
+
+Review corrections incorporated
+The shared worker stack was raised to the compiler-required81920 bytes.
+Codec error cleanup retains its uniquely created partial output: it no longer
+unlinks a path after closing it, avoiding deletion of a substituted file.
+Native tail clearing now handles fewer than33 free sectors without overlapping
+the image. Unknown backend platforms fail closed. Windows writable physical
+handles require unshared access in addition to member-volume locks.
+
+Limits
+No physical USB device was written. Wine exercises the Windows executable and
+regular-file Win32 transfers, not a real Windows USB storage stack. Device
+discovery is deliberately restrictive; an unclassifiable Windows volume can
+cause refusal. Firmware utility and boot-matrix results are reported separately.
+Successful verification establishes byte agreement at readback time; it does
+not establish image authenticity or power-loss durability.
+
+Original user data remained unchanged, confirmed with the own Zero SHA tool:
+data/storage.zdrive
+c730241fb30f5516867c751006951a2878f360319195ee975411a05f040f27e8
+external original data.vdi
+7f58fb36c934405757da797ca65f2dddef3858e69107f43e2cae59d14c89bc5f
+
+Detailed external evidence:
+/tmp/zero-support/validation-0.14/review/
+linux/checks.tsv; windows/checks.tsv; hash-vectors.tsv;
+flash-linux-final/checks.tsv; flash-windows/checks.tsv;
+control-linux/checks.tsv; control-windows/checks.tsv.
+
+Additional firmware review
+The post-confirmation check now re-queries Block I/O and the target device path
+and compares a saved path snapshot, media ID, capacity and required flags.
+Firmware tail clearing uses the same bounded33-sector policy with readback.
+Review found that the IA32 foreign-call adapter had supplied zero for the high
+32 bits of a block address. That is insufficient for tail I/O above2TiB.
+The adapter now passes a masked low word and the actual high word for both
+read and write. A dedicated sparse-large-disk firmware check must be reported with
+the firmware verification results; this report does not infer it from small
+VM disks or from native-host tests.

@@ -1,0 +1,247 @@
+ # Independent volume roots A:| through Z:|. No directory mount aliases.
+ ? @current == 100 [
+  ? @disk_select < 3 [ @disk_select + 1 -> @disk_select. 80 -> @state. ]
+  ~ [ 0 -> @disk_select. 150 -> @state. ]
+ ]
+ ? @current == 199 [
+  !store64[@memory + 24688| 0].
+  !store64[@memory + 24696| 0].
+  110 -> @state.
+ ]
+ ? @current == 110 [
+  :load64[@memory + 24696] -> @i.
+  ? @i >= :load64[@memory + 24704] [
+   0 -> @disk_select. 9 -> @state.
+   "Volume discovery complete. Type disks.\r\n" -> @message.
+  ] ~ [
+   @memory + 24832 + @i * 24 -> @pointer.
+   :load8[@pointer + 16] -> @disk_select.
+   !store64[@memory + 24576| 0].
+   !store64[@memory + 24632| 0]. !store64[@memory + 24640| 255].
+   !store64[@memory + 24648| 111].
+   !store64[@memory + 24656| :load64[@pointer]].
+   !store64[@memory + 24664| :load64[@pointer + 8]].
+   !store64[@memory + 24672| 1]. !store64[@memory + 24680| 0].
+   200 -> @state.
+   ? (@disk_select == 0) * (:load64[@pointer] == 0) * @fs_ready [
+    !store8[@pointer + 17| 4]. !store8[@pointer + 18| 0].
+    119 -> @state.
+   ]
+  ]
+ ]
+ ? @current == 111 [
+  ? :load64[@memory + 24640] == 10 [
+   !store64[@memory + 24672| 2]. !store64[@memory + 24648| 112]. 300 -> @state.
+  ] ~ [ 114 -> @state. ]
+ ]
+ ? @current == 112 [
+  ? :load64[@memory + 24640] == 10 [
+   !store64[@memory + 24672| 3]. !store64[@memory + 24648| 113]. 400 -> @state.
+  ] ~ [ 114 -> @state. ]
+ ]
+ ? @current == 113 [
+  ? :load64[@memory + 24640] == 10 [ !store64[@memory + 24672| 0]. ]
+  114 -> @state.
+ ]
+ ? @current == 114 [
+  @memory + 24832 + :load64[@memory + 24696] * 24 -> @pointer.
+  !store8[@pointer + 17| :load64[@memory + 24672]].
+  !store8[@pointer + 18| :load64[@memory + 24640]].
+  ? (:load64[@memory + 24640] == 2) + (:load64[@memory + 24640] == 3) + (:load64[@memory + 24640] == 9) [ !store8[@pointer + 19| 1]. ]
+  119 -> @state.
+ ]
+ ? @current == 119 [
+  !store64[@memory + 24696| :load64[@memory + 24696] + 1]. 110 -> @state.
+ ]
+ ? @current == 120 [
+  9 -> @state. 1 -> @valid.
+  :load64[@memory + 24688] -> @i. @arguments -> @name.
+  # Only explicit X:| roots are absolute; no slash/backslash aliases.
+  ? (:load8[@name] != 0) * (:load8[@name + 1] == 58) [
+   :load8[@name] -> @character.
+   ? (@character >= 97) * (@character <= 122) [ @character - 32 -> @character. ]
+   ? (@character < 65) + (@character > 90) + (:load8[@name + 2] != 124) [ 0 -> @valid. ]
+   @character - 65 -> @i. @name + 3 -> @name.
+  ] ~ [
+   ? :load8[@name] == 124 [ @name + 1 -> @name. ]
+   ? @operation == 20 [
+    ? (@name == @arguments)*((:load8[@name] != 46)+(:load8[@name+1] != 0)) [ 0 -> @valid. ]
+   ]
+  ]
+  ? @i >= :load64[@memory + 24704] [ 0 -> @valid. ]
+  ? @valid [
+   !store64[@memory + 24696| @i].
+   @memory + 24832 + @i * 24 -> @pointer.
+   :load8[@pointer + 16] -> @disk_select.
+   ? @operation == 20 [
+    ? (:load8[@name] == 46)*(:load8[@name+1] == 0) [ @name+1 -> @name. ]
+    ? :load8[@name] == 0 [
+     !store64[@memory + 24688| @i]. "Current volume changed.\r\n" -> @message.
+    ] ~ [ "GO currently accepts a volume root, for example GO B:|.\r\n" -> @message. ]
+   ] ~ [
+    ? @operation == 31 [
+     0 -> @j.
+     ?? (:load8[@name+@j] != 0)*(@j < 32) [
+      :load8[@name+@j] -> @character.
+      ((@character >= 65)*(@character <= 90))+((@character >= 97)*(@character <= 122))+((@character >= 48)*(@character <= 57))+(@character == 46)+(@character == 95)+(@character == 45)+(@character == 42)+(@character == 63) -> @ready.
+      ? @ready == 0 [ 0 -> @valid. ] @j+1 -> @j.
+     ]
+     ? @j > 31 [ 0 -> @valid. ]
+     ? @valid [ !store64[@console+2504|@name]. ]
+     @name+@j -> @name. 5 -> @operation.
+    ]
+    ? (@operation == 5)*(:load8[@name] == 46)*(:load8[@name+1] == 0) [ @name+1 -> @name. ]
+    @name -> @arguments.
+    ? @operation == 5 [
+     ? :load8[@name] [ 0 -> @valid. ]
+    ]
+    ? @valid [
+     ? :load8[@pointer + 17] == 4 [
+      ? @fs_ready [
+       ? @operation == 5 [ 29 -> @state. ] ~ [ 30 -> @state. ]
+      ] ~ [ "ZeroFS is unavailable or locked after an I/O failure.\r\n" -> @message. ]
+     ] ~ [ 121 -> @state. ]
+    ] ~ [ "watch accepts only a volume root.\r\n" -> @message. ]
+   ]
+  ] ~ [ "Invalid or unavailable volume. Use disks; paths are A:|NAME.\r\n" -> @message. ]
+ ]
+ ? @current == 121 [
+  9 -> @state. 1 -> @valid. 0 -> @name_length. 0 -> @text_length.
+  @arguments -> @name. @name -> @text.
+  ? @operation != 5 [
+   ?? :load8[@text] > 32 [
+    :load8[@text] -> @character. 0 -> @ready.
+    ? (@character >= 65) * (@character <= 90) [ 1 -> @ready. ]
+    ? (@character >= 97) * (@character <= 122) [ 1 -> @ready. ]
+    ? (@character >= 48) * (@character <= 57) [ 1 -> @ready. ]
+    ? (@character == 46) + (@character == 95) + (@character == 45) [ 1 -> @ready. ]
+    ? @ready == 0 [ 0 -> @valid. ]
+    @name_length + 1 -> @name_length. @text + 1 -> @text.
+   ]
+   ? :load8[@text] == 32 [ !store8[@text| 0]. @text + 1 -> @text. ]
+   ? (@name_length == 0) + (@name_length > 31) [ 0 -> @valid. ]
+   ? (@name_length == 1) * (:load8[@name] == 46) [ 0 -> @valid. ]
+   ? (@name_length == 2) * (:load16[@name] == 0x2e2e) [ 0 -> @valid. ]
+   ?? :load8[@text + @text_length] [ @text_length + 1 -> @text_length. ]
+   ? @text_length > 400 [ 0 -> @valid. ]
+   ? (@operation != 6) * @text_length [ 0 -> @valid. ]
+  ]
+  ? @valid [
+   @memory + 24832 + :load64[@memory + 24696] * 24 -> @pointer.
+   :load8[@pointer + 17] -> @i.
+   ? (@i >= 1) * (@i <= 3) [
+    1 -> @temporary.
+    ? @operation == 7 [ 2 -> @temporary. ]
+    ? @operation == 10 [ 3 -> @temporary. ]
+    ? @operation == 6 [ 4 -> @temporary. ]
+    ? @operation == 8 [ 5 -> @temporary. ]
+    ? (@temporary >= 3) * :load8[@pointer + 19] [
+     "Volume is read-only or writes are blocked after a failure.\r\n" -> @message.
+    ] ~ [
+     !store64[@memory + 24576| @temporary].
+     !store64[@memory + 24584| @name]. !store64[@memory + 24592| @name_length].
+     !store64[@memory + 24600| @text]. !store64[@memory + 24608| @text_length].
+     !store64[@memory + 24616| @listing]. !store64[@memory + 24624| 2044].
+     !store64[@memory + 24632| 0]. !store64[@memory + 24640| 255].
+     !store64[@memory + 24648| 140].
+     !store64[@memory + 24656| :load64[@pointer]].
+     !store64[@memory + 24664| :load64[@pointer + 8]].
+     !store64[@memory + 24672| @i]. !store64[@memory + 24680| 0].
+     @i * 100 + 100 -> @state.
+    ]
+   ] ~ [ "Unrecognized filesystem; no data changed.\r\n" -> @message. ]
+  ] ~ [ "Invalid name/data: flat ASCII names <=31, text <=400.\r\n" -> @message. ]
+ ]
+ ? @current == 130 [
+  0 -> @i. 0 -> @j.
+  ?? @i < :load64[@memory + 24704] [
+   @memory + 24832 + @i * 24 -> @pointer.
+   !store8[@listing + @j| 65 + @i]. @j + 1 -> @j.
+   ":|  disk " -> @text. 0 -> @k.
+   ?? :load8[@text + @k] [ !store8[@listing + @j| :load8[@text + @k]]. @k + 1 -> @k. @j + 1 -> @j. ]
+   !store8[@listing + @j| 49 + :load8[@pointer + 16]]. @j + 1 -> @j.
+   !store8[@listing + @j| 32]. @j + 1 -> @j.
+   :shr[:load64[@pointer + 8]| 11] -> @c0. 100000 -> @c1. 0 -> @c3.
+   ?? @c1 [
+    0 -> @c2.
+    ?? @c0 >= @c1 [ @c0 - @c1 -> @c0. @c2 + 1 -> @c2. ]
+    ? @c2 + @c3 + (@c1 == 1) [ !store8[@listing + @j| 48 + @c2]. @j + 1 -> @j. 1 -> @c3. ]
+    ? @c1 == 1 [ 0 -> @c1. ] ~ [
+     ? @c1 == 10 [ 1 -> @c1. ] ~ [
+      ? @c1 == 100 [ 10 -> @c1. ] ~ [
+       ? @c1 == 1000 [ 100 -> @c1. ] ~ [
+        ? @c1 == 10000 [ 1000 -> @c1. ] ~ [ 10000 -> @c1. ]
+       ]
+      ]
+     ]
+    ]
+   ]
+   " MiB  " -> @text. 0 -> @k.
+   ?? :load8[@text + @k] [ !store8[@listing + @j| :load8[@text + @k]]. @k + 1 -> @k. @j + 1 -> @j. ]
+   "unknown" -> @text.
+   ? :load8[@pointer + 17] == 1 [ "ext4" -> @text. ]
+   ? :load8[@pointer + 17] == 2 [ "NTFS" -> @text. ]
+   ? :load8[@pointer + 17] == 3 [ "Btrfs" -> @text. ]
+   ? :load8[@pointer + 17] == 4 [ "ZeroFS" -> @text. ]
+   0 -> @k.
+   ?? :load8[@text + @k] [ !store8[@listing + @j| :load8[@text + @k]]. @k + 1 -> @k. @j + 1 -> @j. ]
+   ? :load8[@pointer + 19] [
+    " [read-only]" -> @text. 0 -> @k.
+    ?? :load8[@text + @k] [ !store8[@listing + @j| :load8[@text + @k]]. @k + 1 -> @k. @j + 1 -> @j. ]
+   ]
+   ? :load8[@pointer + 18] [
+    " [limited/unavailable]" -> @text. 0 -> @k.
+    ?? :load8[@text + @k] [ !store8[@listing + @j| :load8[@text + @k]]. @k + 1 -> @k. @j + 1 -> @j. ]
+   ]
+   !store8[@listing + @j| 10]. @j + 1 -> @j. @i + 1 -> @i.
+  ]
+  0 -> @i.
+  ?? @i < 4 [
+   @memory + 25472 + @i * 32 -> @pointer.
+   ? :load64[@pointer + 8] * :load64[@pointer + 16] [
+    "disk " -> @text. 0 -> @k.
+    ?? :load8[@text + @k] [ !store8[@listing + @j| :load8[@text + @k]]. @k + 1 -> @k. @j + 1 -> @j. ]
+    !store8[@listing + @j| 49 + @i]. @j + 1 -> @j.
+    ": partition discovery rejected this device\n" -> @text. 0 -> @k.
+    ?? :load8[@text + @k] [ !store8[@listing + @j| :load8[@text + @k]]. @k + 1 -> @k. @j + 1 -> @j. ]
+   ]
+   @i + 1 -> @i.
+  ]
+  !store8[@listing + @j| 0]. @listing -> @message. 9 -> @state.
+  ? @j == 0 [ "No supported ATA volumes. Optical media are not writable volumes.\r\n" -> @message. ]
+ ]
+ ? @current == 140 [
+  9 -> @state.
+  :load64[@memory + 24640] -> @status.
+  @memory + 24832 + :load64[@memory + 24696] * 24 -> @pointer.
+  ? (@status <= 3) + (@status == 9) + (@status == 10) [ !store8[@pointer + 18| @status]. ]
+  ? (@status == 2) + (@status == 3) + (@status == 9) [ !store8[@pointer + 19| 1]. ]
+  "Filesystem returned an invalid result.\r\n" -> @message.
+  ? @status == 0 [
+   "Disk operation completed and flushed.\r\n" -> @message.
+   ? :load64[@memory + 24576] <= 2 [
+    :load64[@memory + 24632] -> @j. 1 -> @valid.
+    ? @j >= 2044 [ 0 -> @valid. ]
+    0 -> @i.
+    ?? (@i < @j) * @valid [
+     :load8[@listing + @i] -> @character.
+     ? (@character < 32) + (@character > 126) [
+      ? (@character != 9) * (@character != 10) * (@character != 13) [ 0 -> @valid. ]
+     ]
+     @i + 1 -> @i.
+    ]
+    ? @valid [ !store8[@listing + @j| 0]. @listing -> @message. 12 -> @state. ]
+    ~ [ "File contains non-text bytes; terminal display unavailable.\r\n" -> @message. ]
+   ]
+  ]
+  ? @status == 1 [ "Filesystem feature/profile is not supported. No operation performed.\r\n" -> @message. ]
+  ? @status == 2 [ "Corrupt filesystem metadata; further writes blocked.\r\n" -> @message. ]
+  ? @status == 3 [ "Disk I/O failed; further writes blocked. Check volume integrity.\r\n" -> @message. ]
+  ? @status == 4 [ "File not found.\r\n" -> @message. ]
+  ? @status == 5 [ "File already exists; nothing changed.\r\n" -> @message. ]
+  ? @status == 6 [ "Supported allocation capacity exhausted.\r\n" -> @message. ]
+  ? @status == 7 [ "Invalid name or arguments.\r\n" -> @message. ]
+  ? @status == 8 [ "File/listing exceeds the supported size.\r\n" -> @message. ]
+  ? @status == 9 [ "Volume needs recovery; further writes blocked.\r\n" -> @message. ]
+  ? @status == 10 [ "Filesystem signature no longer matches.\r\n" -> @message. ]
+ ]

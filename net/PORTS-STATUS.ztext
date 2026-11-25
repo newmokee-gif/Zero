@@ -1,0 +1,25 @@
+ZTEXT0010000055fbd165c380000000
+HISTORICAL dword port / 448 KiB compiler publication
+
+Superseded by the merged 0.9 compiler (480 KiB, Windows and guest targets,
+real-mode biosmove). See verification/compiler-0.9 and selfhost/CORE.ztext.
+The hashes and results below identify the earlier port/capacity transition.
+
+Canonical compiler.zero:57573 bytes
+SHA256 d905ac07ee31be5ba3eefb7d28cc28dc9a54caa957d508a7bda68294625e027a
+build/zero and bootstrap/zero:63027 bytes
+SHA256 6920190de948804096ccd8e2b47b1423060631dd5c2a2904b08d1f47f99a3733
+
+Original in32/out32 encodings work on x64, IA32 and real mode; hosts reject.
+64 targeted checks passed, including exact prior OS-source output parity and
+three actual PCI probes (BIOS64, BIOS32 without LM/PAE, real mode).
+30 capacity checks passed, including exact458752 acceptance and458753
+rejection for ELF/raw, plus final EFI header/padding bounds.
+Own fixed point and published-source rebuild are byte-identical.
+Previous0.7 seed/source preserved under bootstrap with SHA256 manifest.
+
+The compiler output buffer grows65536 bytes; following scratch regions shift
+by the same amount. Reservation3965536 stays within unchanged4MiB host arena.
+This does not itself change ISO/loader slots; root coordinates those changes.
+No guest OS/image/data disk changed by this task. All probe VMs stopped.
+Evidence: verification/network-ports; tests: review-tests/network-ports.

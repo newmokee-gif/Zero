@@ -1,0 +1,3 @@
+0x40000 => @stack.
+:fork[@stack | @stack | 81920] => @result.
+!out16[0xf4 | 99]. !halt.

@@ -1,0 +1,2 @@
+ZTEXT00100000140c1fd416f0000000
+This attempt stopped in external smoke harness because the cached Arch base image does not include cmp. No product failure occurred. The harness was changed to compare existing coreutils SHA256 results; the subsequent exact-package23/23 run passed. These old logs are retained separately and are not final verification.

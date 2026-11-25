@@ -1,0 +1,5 @@
+# Original Linux wait encoding; labels resolved by own Zero formatter.
+? @mode < 2 [
+ !store64[@templates + 1648 | "483d005c26050f874e0000004883ec1031d2b9e803000048f7f1488904244869d240420f0048895424084889e74889e6b8230000000f054883f8fc0f84efffffff4885c00f890700000048c7c0ffffffff4883c410e90700000048c7c0ffffffff"].
+ !store64[@templates + 1656 | 97].
+]

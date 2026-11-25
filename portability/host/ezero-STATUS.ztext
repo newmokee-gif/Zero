@@ -1,0 +1,47 @@
+ZTEXT00100000bba1be3a6460000000
+Private Ezero host interoperability - 2026-11-16
+
+Implemented and executed in original Zero: readfile, exclusive-new writefile,
+fileexists, arguments and host expressions; frontend opcodes27..31; bounded
+strict UTF-8 validation; immutable heap results and GC integration; explanatory
+source-line errors; guest unavailable fallbacks without blocking normal code.
+No live0.9 source, installed compiler, user disk or OS image changed.
+
+58/58 new interoperability checks passed against the final merged host compiler
+SHA256 911f6d67361300755c13bbf5f3d231d54ceae5736f1ec5e60dde5d6e4095ed3a.
+Evidence: ezero-candidate/build/interop-nmltjr87/results.json and results.txt.
+Tests include strict UTF-8/NUL errors,Unicode filenames/arguments, exact64KiB
+file bounds, full argument limits, GC roots, incorrect types/arity, directories
+and final symlinks, atomic exclusive publication, preservation of existing
+files and existing staging files, bounded staging-name collisions, data never
+executed, guest64 normal/error/guarded paths and guest32 compilation.
+85/85 original cases passed against the same final merged compiler snapshot;
+evidence is in ezero-candidate/build/baseline85-merged. Exactly64 runtime
+declarations remain, including the8 prefix declarations.
+
+Frontend SHA256 6fb5b55e71f8ad07944a46471516944bfc35a2d1791693fb1a51245f93f60d46
+Runtime SHA256 91907d65f76fdcefecd19a1655744a8c2984022cfc5e262b4eb926ad2a017ec8
+The lexer/expression source parts match the integrated candidate compiler.
+Other frontend parts and the packer/prefix are unchanged from the baseline.
+
+Windows PE fixtures passed under Wine10.0 on Debian13: Unicode paths/text,
+17-byte roundtrip, refusal/preservation of an existing destination, exact
+Unicode/spaces/metacharacter/empty arguments. Evidence is in the adjacent
+windows-verification.json and windows-tests/results.log. This is Wine evidence,
+not a native Microsoft Windows run. Tested runtime/frontend hashes match above.
+Guest32 execution remains separate from successful guest32 compilation.
+
+Final compiler capacity measurements: frontend app64=71380/app32=105170;
+packer app64=5167/app32=6603; all fit131072-byte application slots. Prefix249
+and runtime33358 source bytes. The runtime exceeds the old28671-byte bundle
+body limit. Root/guest integration must expand its padded body slot to65536
+(max65535) before publishing a guest bundle. The slot can retain offset794624
+and end860160 within the existing1MiB bundle. Native CLI source capacity is
+unchanged: maximum196608 initializer+33358 body+249 prefix=230215<262144.
+Measurements and hashes: ezero-candidate/build/final-capacity.json.
+
+Exact overlay paths/hashes: ezero-overlay.sha256. No private files were copied
+over the live0.9 project by this subtask; root owns promotion and guest resize.
+fileexists cannot distinguish missing from inaccessible due to the native
+normalized-error API. No overwrite, append, filesystem sandbox, automatic
+directory creation, implicit shell, or crash-durable write is claimed.

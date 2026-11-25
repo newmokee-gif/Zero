@@ -1,0 +1,46 @@
+# PS/2 auxiliary device, polled alongside the existing translated keyboard.
+# All controller waits are bounded. A missing mouse cannot disable the keyboard.
+2520 -> @i. ?? @i < 3056 [ !store64[@console + @i|0]. @i + 8 -> @i. ]
+# Original 12x17 mask: 0 transparent, 1 outline, 2 interior; 92 saved pixels.
+!store64[@console + 2648|"100000000000110000000000121000000000122100000000122210000000122221000000122222100000122222210000122222221000122222222100122222111110122121000000121012100000110012100000100001210000000001210000000000110000"].
+? (:load64[@console + 160] != 0) * (:load64[@console] == 2) [
+ 1 -> @valid. 0 -> @c4.
+ ?? @c4 < 7 [
+  ? @valid + (@c4 == 6) [
+   0x64 -> @c1. 0xad -> @c2.
+   ? @c4 == 1 [ 0xa8 -> @c2. ]
+   ? (@c4 == 2) + (@c4 == 4) [ 0xd4 -> @c2. ]
+   ? @c4 == 3 [ 0x60 -> @c1. 0xf6 -> @c2. ]
+   ? @c4 == 5 [ 0x60 -> @c1. 0xf4 -> @c2. ]
+   ? @c4 == 6 [ 0xae -> @c2. ]
+   0 -> @ready. 0 -> @timeout.
+   ?? (@ready == 0) * (@timeout < 100000) [
+    ? :bitand[:in8[0x64]|2] == 0 [ 1 -> @ready. ]
+    @timeout + 1 -> @timeout.
+   ]
+   ? @ready [
+    !out8[@c1|@c2].
+    ? (@c4 == 3) + (@c4 == 5) [
+     0 -> @ready. 0 -> @timeout.
+     ?? (@ready == 0) * (@timeout < 100000) [
+      :in8[0x64] -> @status.
+      ? :bitand[@status|1] [
+       :in8[0x60] -> @c3.
+       ? :bitand[@status|224] == 32 [
+        1 -> @ready. ? @c3 != 0xfa [ 0 -> @valid. ]
+       ]
+      ]
+      @timeout + 1 -> @timeout.
+     ]
+     ? @ready == 0 [ 0 -> @valid. ]
+    ]
+   ] ~ [ 0 -> @valid. ]
+  ]
+  @c4 + 1 -> @c4.
+ ]
+ ? @valid [
+  !store64[@console + 2552|:shr[:load64[@console + 16]|1]].
+  !store64[@console + 2560|:shr[:load64[@console + 24]|1]].
+  !store64[@console + 2576|1]. !store64[@console + 2520|1].
+ ]
+]

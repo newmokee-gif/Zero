@@ -1,0 +1,100 @@
+ZTEXT001000016017e8ecaee0000000
+Current original Zero workflow (0.12)
+
+Use the native tools on Linux or their .exe versions on Windows:
+  zero-integrate PROJECT_DIRECTORY NEW_KERNEL.zero
+  zero-build PROJECT_DIRECTORY NEW_OUTPUT_DIRECTORY NEW_KERNEL.zero
+  zero-check PROJECT_DIRECTORY NEW_TEST_DIRECTORY
+All destination paths must be new. The integrator preserves authored sources;
+the builder checks its compiler fixed point and builds the original targets;
+the verifier checks language behavior and host file operations in process.
+See tools/integrate.ztext, tools/build.ztext and checks/README.ztext.
+Read these documents with zero-text read FILE.
+
+The notes below preserve earlier implementation and test history. Any old
+shell/Python runner names, generated artifacts, JSON reports or commands are
+historical references: they were removed from the active project and are not
+current runnable instructions or current-release validation. Native host
+checks do not replace BIOS/UEFI, persistence or physical-hardware testing.
+
+Historical implementation notes
+
+Self-host compiler target regression corpus
+
+Normal verification
+From the project directory:
+review-tests/selfhost-targets/run.sh build/zero
+
+An optional second argument selects the result directory. Otherwise a fresh
+directory under /tmp is used. The script compiles every committed fixture
+with the candidate. It does not rebuild any compiler, invoke an assembler or
+linker, or depend on a historical compiler binary. All test programs are Zero;
+the shell scripts only orchestrate tools, files and comparisons.
+
+expected.tsv is the committed oracle: 1107 target/fixture pairs, comprising
+243 exact raw64/EFI64/raw32/EFI32/real output SHA-256 checks, 79 hosted-target
+acceptance checks, and 785 rejection checks. A rejection requires status1 and
+zero stdout. Diagnostics are retained but their wording is not compared.
+The raw/EFI/real hashes include entry code and binary metadata, not merely
+instruction bodies. Boundary cases include exact maximum output sizes.
+
+Hosted ELF bytes are intentionally not compared with the historical output:
+the self-host compiler expands the hosted allocation arena from64KiB to1MiB.
+Five explicitly safe native tests execute string escapes/output, stdin/stdout,
+and the full-u64 arithmetic/memory regression. Raw, EFI and real-mode binaries
+are never executed by run.sh. The separate run-native.sh suite in the parent
+review-tests directory covers additional hosted APIs and limits.
+
+Fixture groups
+positive/ contains common grammar, each builtin, nested calls, target-specific
+names and complete u64/real-mode probes. invalid/ contains malformed arities,
+unsupported operation forms and grammar failures. cases.tsv expresses the
+historical target compatibility of these inputs.
+boundary/ and boundaries.tsv cover source/string/name lengths, literal widths,
+operator chains, comparison rejection, nesting, symbol counts and exact raw,
+EFI, real and hosted output bounds. Fixtures are source files, not binaries.
+
+Intentional unified-language change
+The old separate target compilers did not reserve every other target's builtin
+name. The unified compiler reserves all operation names consistently. Thus
+23 former positive name cases deliberately become failures: @bios,
+@protectedjump and @enable outside real mode, and @call7 outside IA32.
+They remain in the suite; semantic-overrides.tsv identifies every such change.
+These cases are not described as byte-parity successes. The current language
+contract, not a hidden test omission, defines their expected rejection.
+
+Baseline provenance and optional recapture
+The non-host hashes and original acceptance/rejection baseline were captured
+from three already-built original Zero compilers, copied to a private /tmp
+directory before the self-host build replaced active binaries. No assembler
+or linker ran during capture. REFERENCE-SHA256.ztext identifies those binaries;
+the binaries themselves are not included here or needed by normal tests.
+
+For an explicit historical audit only:
+review-tests/selfhost-targets/record-baseline.sh REFERENCE_DIRECTORY
+
+The supplied directory must contain zero-x64, zero-x86 and zero-real reference
+executables. The script validates cases.tsv/boundaries.tsv against those
+binaries, applies the documented semantic-overrides.tsv, and regenerates
+expected.tsv. It does not build or obtain the references. Do not regenerate
+expectations from an unreviewed candidate simply to make failures disappear.
+
+Optional IA32 VM execution
+review-tests/selfhost-targets/run-ia32-vm.sh build/zero build/zero.iso
+
+This compiles the u64 probe with --raw32 and inserts it into a disposable COPY
+of the documented17121280-byte optical image, at raw32 LBA104. The original
+ISO and data disks are not modified; no data disk is attached. QEMU runs with
+long mode and PAE disabled. Success requires exact ABCDEFGHIJKLMN0123OP plus
+LF on debug portE9 and the expected test-only exit-device status.
+The probe covers carry/borrow, wrapping arithmetic, cross-half multiplication,
+negation, unsigned high/low comparisons, high-only truth, all load/store widths,
+strings, loop code and the IA32 entry argument. This is external VM test
+instrumentation, not a production OS syscall.
+
+ZERO_QEMU, ZERO_QEMU_DATA and ZERO_BIOS_ROM may select the installed test tools.
+The current workspace's privately extracted QEMU tree is detected as a fallback.
+ZERO_TEST_TIMEOUT and ZERO_VM_TIMEOUT adjust bounded test execution time.
+All result binaries, diagnostics and transcripts remain in the selected result
+directory for review. Passing VM tests does not establish physical-hardware
+or native VirtualBox compatibility.

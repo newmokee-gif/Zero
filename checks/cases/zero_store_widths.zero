@@ -1,0 +1,1 @@
+:reserve[32] => @p.!store64[@p|0x123456789abcdef0].? :load8[@p]==240 [!put[65].]? :load16[@p]==57072 [!put[66].]? :load32[@p]==2596069104 [!put[67].]? :load64[@p]==0x123456789abcdef0 [!put[68].]

@@ -1,0 +1,83 @@
+ZTEXT001000012f7285b69f90000000
+Zero OS 0.13 verification - 2026-11-18
+
+Product implementation is original Zero; documentation uses own ZTEXT001.
+Tests check behavior, boundaries and preservation, not merely file extensions.
+External emulator firmware and test orchestration are outside the project.
+
+Compiler and native targets
+Own application stages reproduce identical bytes.182 main compiler checks
+passed;47 capacity/host-interface checks passed on Linux and Windows/Wine.
+Actual IA32 VM checks exercised fullu64 arithmetic, all64local slots including
+short-displacement boundaries16/17, literal127/128 and128two-worker rounds.
+The new native GUI interfaces were checked for Linux syscall arguments,
+Windows12-argument calls, stack alignment and target restrictions.
+
+Browser components
+100 original Zero HTTP parser checks passed: framing, Content-Length,
+chunked extensions/trailers, MIME/status/Location, ambiguous lengths,
+malformed/oversized data and unsupported compression.
+170 HTML reader checks passed:70 semantic/boundary cases and100 deterministic
+malformed probes. All ran on Linux, Windows/Wine and in an actualIA32 VM.
+Wrapped output/title pointers are rejected without error-cleanup dereference.
+76 original Zero navigation/UI/frame checks passed: URL normalization,
+unsafe schemes, query/fragments, redirects, history rollover/back/reload,
+keyboard limits, buffer canaries and unchanged URL/link inputs. Page bytes
+never entered the shell command buffer in these checks.
+
+Browser VM matrix
+The first fullBIOS64 candidate passed68checks, including negative network
+responses, plain/HTML/Unicode, links/history, chunked and23KiBpages, script
+suppression, redirects, HTTPS refusal, PS/2input, real diskfiles andcoldboot.
+The subsequent candidate passed140checks acrossBIOS64(36),BIOS32(32),
+UEFI64(36),UEFI32(36), adding normalizedrelative/query/fragment paths.
+Optional serial-test socket backpressure was diagnosed using a continuously
+drained FIFO; GUI and mouse remained active. A real idle pointer flicker was
+then found and fixed by preserving the overlay until a repaint is needed.
+The fix checks all visible window rings and restores requested pixel writes
+under the pointer;11 extra native dirty/visibility/overlay cases passed.
+
+Editors
+Guest core:28 event/render and7actual file-service coroutine cases passed.
+BIOS64 andBIOS32 each passed20memory/state assertions plus12terminal file
+checks, including4checks aftercoldboot. Zero andEzero compile/run, save/open,
+400-byte bounds, dirty-discard guards and preservation were tested.
+UEFI64 andUEFI32 each executedboth languages and8terminal checks including
+saved-file persistence aftercoldboot. These are separate from browser counts.
+
+Native Studio used real Linux/Xorg and Windows/Wine windows. For bothlanguages,
+tests typed sources, saved, compiled inprocess, executed outputs, rebuilt
+deterministically, moved the caret with mouse/keys, reopenedfiles, rejected
+missing/invalidinputs, protectedunsavedchanges and preservedpreviousbinaries
+aftercompileerrors. An independent originalZero file harness passed10cases:
+missing/binary/oversized/symlink inputs, CRLFbuffer-normalization, normal/empty
+save, existingtempfile, failedrename and500-bytepathboundaries.
+Relocated native kits are separately extracted and checked before publication.
+
+Scope and evidence
+Windows execution evidence uses Wine, not a physical Windows installation.
+Boot evidence uses QEMU BIOS/OVMF; no new VirtualBox or realhardware result
+is claimed. The nativeLinux editor requires X11/Xwayland; nativeASCII limit
+65535bytes, guestASCII limit400bytes. One document, keyboard guest UI, noIDE
+debugger. Browser lacksTLS/CSS/JavaScript/DOM/forms/media and cannot support
+all sites. No tested result establishes absence of every possible bug.
+
+Protected original raw/VDI hashes remain:
+c730241fb30f5516867c751006951a2878f360319195ee975411a05f040f27e8
+7f58fb36c934405757da797ca65f2dddef3858e69107f43e2cae59d14c89bc5f
+Only disposable copies were written during VM tests.
+
+Final release ISO SHA256:
+a95ac7d301c08e4e4dd100cdd4c6e4d1786635199bb1d0f60319aa95eb90dac5
+
+Exact final release checks
+This exact ISO passed36checks in each BIOS64, BIOS32, UEFI64 andUEFI32 VM:
+144final checks, with network/browser/input/files andcoldrestart coverage.
+Actual final pointer checks passed4stableidlecaptures, bothscreenedges,
+clipping, paused-workerpixelpreservation, movement, newwindow/focus/theme.
+The final49artifacts were rebuilt by the own native builder underWine and
+matched Linux byte for byte, including the final ISO andbothStudio binaries.
+Extracted nativekits passed all4Linux/Windows xZero/Ezero GUIcombinations;
+the exact kit hashes and independent extraction results are recorded in
+verification/desktop-0.13/native-kits.ztext. Source archive rebuild results
+are in the separate package receipt, avoiding a self-referential archivehash.

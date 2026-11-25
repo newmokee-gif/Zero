@@ -1,0 +1,156 @@
+ZTEXT00100002513a88c2a480000000
+Zero OS in VirtualBox - x86/x64, BIOS and UEFI
+
+Use this release's zero.iso. It contains both kernels and both UEFI loaders.
+A 32-bit VM is now supported. BIOS selects 32-bit protected mode when long mode
+or PAE is absent, and 64-bit long mode when both are present. Firmware boot
+mode and CPU execution width are separate choices.
+
+Recommended settings
+Create an Other (32-bit) or Other (64-bit) VM. Use 128 MiB RAM, one CPU, PIIX3,
+VBoxVGA with32MiB video memory and a PS/2 keyboard. For wired networking,
+enable Adapter1 in NAT mode, select PCnet-FAST III (Am79C973), and mark
+Cable Connected. Zero obtains its address automatically through DHCP.
+The terminal is visible in the VM window; COM1 is optional. The color desktop
+requires a firmware-provided 32-bit RGB/BGR linear framebuffer. BIOS attempts
+VBE and otherwise keeps its VGA text terminal; UEFI uses compatible GOP modes.
+The preferred graphic mode is1920x1080 with2x interface scaling. If firmware
+does not advertise it, the loader tries smaller validated modes, preferring
+800x600. A text fallback is an intentional compatibility path and does not
+demonstrate color-graphics support.
+
+Full HD firmware settings, with the VM powered off
+Use the exact name of your VM instead of Zero OS. For BIOS, advertise a32-bit
+Full HD VBE mode; for UEFI, request the firmware graphics resolution:
+VBoxManage setextradata "Zero OS" "CustomVideoMode1" "1920x1080x32"
+VBoxManage setextradata "Zero OS" "VBoxInternal2/EfiGraphicsResolution" "1920x1080"
+These settings target different firmware paths and can coexist. They are
+host VirtualBox settings, not commands in the Zero terminal. Host window
+scaling or fullscreen alone does not change the guest framebuffer mode.
+These configuration instructions have not been verified by a native
+VirtualBox boot in this workspace; see the verification boundary below.
+
+Add an IDE controller (PIIX4). Attach build/zero.iso as a read-only optical
+disk at secondary master (port1/device0). Put Optical first in boot order.
+Only the ISO is distributed; no writable disk image is supplied. For saved
+files, create a new blank virtual hard disk in VirtualBox, for example64MiB,
+and attach it as primary master (port0/device0), or attach your existing
+ZeroFS disk there. Do not partition or format the new dedicated disk on the
+host. Power off completely before changing firmware/CPU/storage settings.
+
+At first boot, disks shows the new blank device as an unknown raw volume,
+normally A:|. Select GO A:| and type format ZERO only for that new disk.
+This erases and initializes its ZeroFS area. Existing ZeroFS disks need no
+formatting. With no writable disk attached, the terminal/graphics still boot,
+but file commands have no persistent storage.
+
+BIOS: leave Enable EFI unchecked; the loader selects the supported kernel.
+IA32 UEFI: use 32-bit EFI firmware; it opens EFI/BOOT/BOOTIA32.EFI.
+AMD64 UEFI: use 64-bit EFI firmware; it opens EFI/BOOT/BOOTX64.EFI.
+Secure Boot is not used. Firmware must match the selected CPU architecture.
+
+Keep your chosen user-created disk across restarts and upgrades. Replacing
+it with a new blank disk loses access to its files. BIOS32/64 and UEFI32/64 use
+the same ZeroFS disk format; no reformat is needed when changing boot mode.
+The ISO is read-only and cannot itself store saved files.
+Additional user-owned compatible disks can use the other IDE positions. The
+raw ZeroFS disk stays primary master. Volumes receive letters from A:;
+use disks to inspect them and GO B:| to select another root. A physical disk
+can contain several discovered partitions. Foreign filesystem support has
+strict documented profiles; see DRIVES.ztext and fs/*-profile.txt.
+
+Example: new 32-bit BIOS VM
+Run from the extracted zero-foundation directory. Choose another name if
+Zero OS already exists. Replace the absolute path with a new file location
+for your own disk; the commands create that blank disk and the named VM:
+VBoxManage createvm --name "Zero OS" --ostype Other --register
+VBoxManage modifyvm "Zero OS" --memory 128 --cpus 1 --chipset piix3 --firmware bios --longmode off --pae off --boot1 dvd --boot2 none --boot3 none --boot4 none --graphicscontroller vboxvga --vram 32 --nic1 nat --nictype1 Am79C973 --cableconnected1 on --keyboard ps2 --mouse ps2
+VBoxManage storagectl "Zero OS" --name IDE --add ide --controller PIIX4
+VBoxManage createmedium disk --filename /absolute/path/zero-user-disk.vdi --size 64 --format VDI
+VBoxManage storageattach "Zero OS" --storagectl IDE --port 0 --device 0 --type hdd --medium /absolute/path/zero-user-disk.vdi
+VBoxManage storageattach "Zero OS" --storagectl IDE --port 1 --device 0 --type dvddrive --medium build/zero.iso
+VBoxManage startvm "Zero OS" --type gui
+
+The VDI in this example is created locally by your VirtualBox installation;
+it is not a distributed image. If reusing an existing ZeroFS disk, omit
+createmedium and use that disk's path. For a newly created blank disk, confirm
+its identity with disks in Zero, GO A:|, then initialize with format ZERO.
+
+To select the 64-bit BIOS path after powering off:
+VBoxManage modifyvm "Zero OS" --ostype Other_64 --longmode on --pae on --firmware bios
+To select 32-bit UEFI after powering off:
+VBoxManage modifyvm "Zero OS" --ostype Other --longmode off --firmware efi32
+To select 64-bit UEFI after powering off:
+VBoxManage modifyvm "Zero OS" --ostype Other_64 --longmode on --pae on --firmware efi64
+
+The --longmode/--pae aliases are accepted by the checked VBoxManage 7.2.22;
+newer help also spells them --x86-long-mode/--x86-pae. Changing the OS-type
+label alone may leave the explicit CPU-feature setting unchanged. The 32-bit
+BIOS path does not require those features to be enabled.
+
+Optional serial terminal
+COM1 uses I/O3f8 and IRQ4. For a raw output log, with the VM powered off:
+VBoxManage modifyvm "Zero OS" --uart1 0x3f8 4 --uart-mode1 file /absolute/path/zero-serial.log
+For a Linux host pipe:
+VBoxManage modifyvm "Zero OS" --uart1 0x3f8 4 --uart-mode1 server /tmp/zero-com1
+After VM startup, a suitable host serial client can connect, for example:
+socat -,rawer,escape=0x1d UNIX-CONNECT:/tmp/zero-com1
+
+Troubleshooting
+"No bootable medium found": check that the current zero.iso is attached to
+the optical drive and Optical is first in boot order.
+The old "long mode unavailable" stop belongs to the earlier 64-bit-only BIOS
+loader. Replace that old ISO with the current release; its dispatcher chooses
+32-bit mode when the guest CPU lacks LM or PAE. info reports the selected
+kernel width.
+"Filesystem unavailable": attach your own writable virtual hard disk on IDE
+primary master, not SATA, NVMe, USB or SCSI. Other supported volumes may use
+other IDE positions. Use disks to inspect recognition. For a new blank
+dedicated primary-master disk, GO A:| then format ZERO explicitly erases and
+initializes it. Do not format an existing disk as a recovery step.
+
+Verification boundary
+In historical private tests, VBoxManage accepted the target configuration and
+validated test VDI containers; those containers are not current deliverables.
+The --longmode setting was explicitly checked in VM metadata, including an
+OS-type label change that left the prior CPU setting unchanged.
+Native VirtualBox VMs could not execute in this workspace: required host
+virtualization devices/drivers are absent, the extracted hardened launcher
+requires a system installation path, and private bind mounts are denied.
+No native VirtualBox boot success is claimed.
+
+The final 0.4.0 ISO also booted the 32-bit path under the exact VirtualBox
+7.2.22 PC/VGA BIOS in QEMU with LM/PAE disabled, preserving a file after a
+complete restart. Its VGA ROM is mapped at C0000. This is a firmware test
+on QEMU hardware, not native VirtualBox.
+The separate 0.6 VBE probe using VirtualBox's VGA ROM on QEMU's standard VGA
+device did not advertise a usable VBE mode and retained text fallback.
+That combination is not a native VirtualBox graphics test. Do not infer
+native VirtualBox color-desktop success from either firmware result.
+The VBox EFI firmware did not finish early initialization under QEMU and is
+not counted as a successful UEFI test. UEFI32/64 development uses matching
+OVMF firmware. See verification.ztext for the exact current release matrix,
+artifacts, logs and remaining limits.
+
+External firmware provenance
+Official package:
+https://download.virtualbox.org/virtualbox/7.2.22/virtualbox-7.2_7.2.22-175245~Debian~trixie_amd64.deb
+Package SHA-256, checked against Oracle's published sums:
+83b1919aa91e52dde89c67660bfd77b85b4658f5027c39149387587c7d78f5ba
+PC BIOS (65536 bytes):
+31adbee9eb39530c188882f31bd0b5eb8e3d17b1c504d4e6a173dcb337e1aa6b
+AMD64 EFI (4194304 bytes):
+f9968e6935c736605aa1eab41817b3b01ca2c34ff729fa1730c1087414d3c77c
+VGA BIOS (32768 bytes):
+0ecb2b042c04f101f1ed9fa87d92971dfe3fd71a5482647b193ababa28d844ce
+Those unchanged firmware arrays were extracted for testing only. They are
+not bundled as our OS implementation.
+
+Wired networking in0.9
+With the VM powered off, configure the existing VM without changing disks:
+VBoxManage modifyvm "Zero OS" --nic1 nat --nictype1 Am79C973 --cableconnected1 on
+Then boot and use net to inspect its connection. No manual connect command
+is required. A host connected over WiFi still supplies virtual Ethernet to
+the guest; this is not native guest WiFi. Other virtual NIC models have no
+driver in this version. QEMU PCnet tests pass; native VirtualBox remains
+unverified in this workspace because its host kernel driver is unavailable.

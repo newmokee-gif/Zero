@@ -1,0 +1,739 @@
+# Zero Flash: validated image snapshot, explicit target, complete readback.
+0 => @fwork. 0 => @fimage. 0 => @fbytes. 0 => @fpayload. 0 => @flength.
+-1 => @ffile. -1 => @fout. 0 => @ferror. 0 => @fmessage. 0 => @fmode.
+0 => @fpath. 0 => @ftarget. 0 => @fpos. 0 => @fcount. 0 => @fn.
+0 => @fi. 0 => @fj. 0 => @flit. 0 => @fsame. 0 => @fphase.
+0 => @fcreated. 0 => @fpower. 0 => @fvalue. 0 => @fdigit. 0 => @fstarted.
+0 => @ftotal. 0 => @ftrailer. 0 => @fjob.
+# Shared Zmedia validator and original SHA-256 memory worker.
+0 => @zm. 0 => @zi. 0 => @zj. 0 => @zk. 0 => @zp. 0 => @zq.
+0 => @zr. 0 => @zs. 0 => @zt. 0 => @zu. 0 => @zv. 0 => @zw.
+# Native media backend. Exactly thirteen globals including the caller-owned state.
+# mh points to 8192 initialized bytes; initialise handle at16 to -1.
+0 => @mh.
+0 => @mh0.
+0 => @mh1.
+0 => @mh2.
+0 => @mh3.
+0 => @mh4.
+0 => @mh5.
+0 => @mh6.
+0 => @mh7.
+0 => @mh8.
+0 => @mh9.
+0 => @mh10.
+0 => @mh11.
+"Usage: zero-flash inspect IMAGE.zmedia | write IMAGE.zmedia DEVICE | check IMAGE.zmedia DEVICE | test IMAGE.zmedia NEW_FILE\nUse zero-drives to list eligible USB drives. write asks for ERASE and the exact device path.\n" -> @fmessage.
+? (:argcount[] < 2) + (:argcount[] > 3) [ 64 -> @ferror. ]
+? (:host[] != 1) * (:host[] != 2) [ 64 -> @ferror. ]
+? @ferror == 0 [
+ :argument[1] -> @fpath. 1 -> @fphase.
+ ?? @fphase <= 4 [
+  "inspect" -> @flit. ? @fphase == 2 [ "write" -> @flit. ] ? @fphase == 3 [ "check" -> @flit. ] ? @fphase == 4 [ "test" -> @flit. ]
+  0 -> @fi. 1 -> @fsame.
+  ?? (:load8[@flit+@fi] != 0) * @fsame [
+   ? :load8[@fpath+@fi] != :load8[@flit+@fi] [ 0 -> @fsame. ] ~ [ @fi+1 -> @fi. ]
+  ]
+  ? @fsame [ ? :load8[@fpath+@fi] == 0 [ @fphase -> @fmode. ] ]
+  @fphase+1 -> @fphase.
+ ]
+ ? (@fmode == 0) + ((@fmode == 1) * (:argcount[] != 2)) + ((@fmode > 1) * (:argcount[] != 3)) [ 64 -> @ferror. ]
+ :argument[2] -> @fpath. ? @fmode > 1 [ :argument[3] -> @ftarget. ]
+]
+? @ferror != 0 [ 0 -> @fi. ?? :load8[@fmessage+@fi] [ !put[:load8[@fmessage+@fi]]. @fi+1 -> @fi. ] !exit[@ferror]. ]
+:hostalloc[524288] -> @fwork. ? @fwork == 0 [ !exit[70]. ]
+@fwork -> @zm. @fwork+98304 -> @mh.
+!store64[@mh+16|-1].
+# Caller supplies zeroed90112byte arena@zm before including this block.
+# Descriptor input0,size8,mode16(0envelope,1rawSHA),result24,payload32,size40,digest48.
+# Caller and worker contexts128/224; stack4096..86015; scratch512..1151.
+# Invoke !switch[@zm+128|@zm+224]. No host services are used by this worker.
+:fork[@zm+224|@zm+4096|81920] -> @zs.
+? @zs == 1 [
+ !store32[@zm+512|0x428a2f98].
+ !store32[@zm+516|0x71374491].
+ !store32[@zm+520|0xb5c0fbcf].
+ !store32[@zm+524|0xe9b5dba5].
+ !store32[@zm+528|0x3956c25b].
+ !store32[@zm+532|0x59f111f1].
+ !store32[@zm+536|0x923f82a4].
+ !store32[@zm+540|0xab1c5ed5].
+ !store32[@zm+544|0xd807aa98].
+ !store32[@zm+548|0x12835b01].
+ !store32[@zm+552|0x243185be].
+ !store32[@zm+556|0x550c7dc3].
+ !store32[@zm+560|0x72be5d74].
+ !store32[@zm+564|0x80deb1fe].
+ !store32[@zm+568|0x9bdc06a7].
+ !store32[@zm+572|0xc19bf174].
+ !store32[@zm+576|0xe49b69c1].
+ !store32[@zm+580|0xefbe4786].
+ !store32[@zm+584|0xfc19dc6].
+ !store32[@zm+588|0x240ca1cc].
+ !store32[@zm+592|0x2de92c6f].
+ !store32[@zm+596|0x4a7484aa].
+ !store32[@zm+600|0x5cb0a9dc].
+ !store32[@zm+604|0x76f988da].
+ !store32[@zm+608|0x983e5152].
+ !store32[@zm+612|0xa831c66d].
+ !store32[@zm+616|0xb00327c8].
+ !store32[@zm+620|0xbf597fc7].
+ !store32[@zm+624|0xc6e00bf3].
+ !store32[@zm+628|0xd5a79147].
+ !store32[@zm+632|0x6ca6351].
+ !store32[@zm+636|0x14292967].
+ !store32[@zm+640|0x27b70a85].
+ !store32[@zm+644|0x2e1b2138].
+ !store32[@zm+648|0x4d2c6dfc].
+ !store32[@zm+652|0x53380d13].
+ !store32[@zm+656|0x650a7354].
+ !store32[@zm+660|0x766a0abb].
+ !store32[@zm+664|0x81c2c92e].
+ !store32[@zm+668|0x92722c85].
+ !store32[@zm+672|0xa2bfe8a1].
+ !store32[@zm+676|0xa81a664b].
+ !store32[@zm+680|0xc24b8b70].
+ !store32[@zm+684|0xc76c51a3].
+ !store32[@zm+688|0xd192e819].
+ !store32[@zm+692|0xd6990624].
+ !store32[@zm+696|0xf40e3585].
+ !store32[@zm+700|0x106aa070].
+ !store32[@zm+704|0x19a4c116].
+ !store32[@zm+708|0x1e376c08].
+ !store32[@zm+712|0x2748774c].
+ !store32[@zm+716|0x34b0bcb5].
+ !store32[@zm+720|0x391c0cb3].
+ !store32[@zm+724|0x4ed8aa4a].
+ !store32[@zm+728|0x5b9cca4f].
+ !store32[@zm+732|0x682e6ff3].
+ !store32[@zm+736|0x748f82ee].
+ !store32[@zm+740|0x78a5636f].
+ !store32[@zm+744|0x84c87814].
+ !store32[@zm+748|0x8cc70208].
+ !store32[@zm+752|0x90befffa].
+ !store32[@zm+756|0xa4506ceb].
+ !store32[@zm+760|0xbef9a3f7].
+ !store32[@zm+764|0xc67178f2].
+ ?? 1 [
+  !store64[@zm+24|0]. !store64[@zm+32|0]. !store64[@zm+40|0].
+  0 -> @zi. ?? @zi < 32 [ !store8[@zm+48+@zi|0]. @zi+1 -> @zi. ]
+  :load64[@zm] -> @zp. :load64[@zm+8] -> @zq.
+  ? :load64[@zm+16] > 1 [ !store64[@zm+24|65]. ]
+  ? @zp+@zq < @zp [ !store64[@zm+24|65]. ]
+  ? :load64[@zm+16] == 0 [
+   ? (@zq < 4096)+(@zq > 268439552)+(@zp == 0) [ !store64[@zm+24|65]. ]
+   ? :load64[@zm+24] == 0 [
+    ? (:load64[@zp] != 0x3130414944454d5a)+(:load64[@zp+8] != 1)+(:load64[@zp+16] != 4096)+(:load64[@zp+24] != 512)+(:load64[@zp+40] != 0) [ !store64[@zm+24|65]. ]
+    :load64[@zp+32] -> @zr.
+    ? (@zr < 512)+(@zr > 268435456)+(:bitand[@zr|511] != 0)+(@zr != @zq-4096) [ !store64[@zm+24|65]. ]
+    80 -> @zi. ?? @zi < 4096 [ ? :load8[@zp+@zi] != 0 [ !store64[@zm+24|65]. ] @zi+1 -> @zi. ]
+    @zp+4096 -> @zp. @zr -> @zq.
+   ]
+  ] ~ [
+   ? (@zq > 268435456)+((@zq != 0)*(@zp == 0)) [ !store64[@zm+24|65]. ]
+  ]
+  ? :load64[@zm+24] == 0 [
+   !store32[@zm+768|0x6a09e667]. !store32[@zm+772|0xbb67ae85].
+   !store32[@zm+776|0x3c6ef372]. !store32[@zm+780|0xa54ff53a].
+   !store32[@zm+784|0x510e527f]. !store32[@zm+788|0x9b05688c].
+   !store32[@zm+792|0x1f83d9ab]. !store32[@zm+796|0x5be0cd19].
+   (:shr[@zq|6]+1)*64 -> @zs. ? :bitand[@zq|63] >= 56 [ @zs+64 -> @zs. ]
+   0 -> @zr.
+   ?? @zr < @zs [
+    @zp+@zr -> @zw.
+    ? @zr+64 > @zq [
+     @zm+1088 -> @zw. 0 -> @zi.
+     ?? @zi < 64 [
+      0 -> @zk.
+      ? @zr+@zi < @zq [ :load8[@zp+@zr+@zi] -> @zk. ]
+      ? @zr+@zi == @zq [ 128 -> @zk. ]
+      ? @zr+@zi >= @zs-8 [ :bitand[:shr[@zq*8|(@zs-1-@zr-@zi)*8]|255] -> @zk. ]
+      !store8[@zw+@zi|@zk]. @zi+1 -> @zi.
+     ]
+    ]
+    0 -> @zi.
+    ?? @zi < 16 [
+     @zw+@zi*4 -> @zj.
+     :load8[@zj]*16777216+:load8[@zj+1]*65536+:load8[@zj+2]*256+:load8[@zj+3] -> @zk.
+     !store32[@zm+800+@zi*4|@zk]. @zi+1 -> @zi.
+    ]
+    ?? @zi < 64 [
+     :load32[@zm+800+(@zi-15)*4] -> @zk.
+     :bitxor[:bitxor[:shr[@zk|7]|:bitand[@zk*33554432|0xffffffff]]|:bitxor[:shr[@zk|18]|:bitand[@zk*16384|0xffffffff]]] -> @zu.
+     :bitxor[@zu|:shr[@zk|3]] -> @zu.
+     :load32[@zm+800+(@zi-2)*4] -> @zk.
+     :bitxor[:bitxor[:shr[@zk|17]|:bitand[@zk*32768|0xffffffff]]|:bitxor[:shr[@zk|19]|:bitand[@zk*8192|0xffffffff]]] -> @zv.
+     :bitxor[@zv|:shr[@zk|10]] -> @zv.
+     !store32[@zm+800+@zi*4|:load32[@zm+800+(@zi-16)*4]+@zu+:load32[@zm+800+(@zi-7)*4]+@zv].
+     @zi+1 -> @zi.
+    ]
+    0 -> @zi. ?? @zi < 32 [ !store32[@zm+1056+@zi|:load32[@zm+768+@zi]]. @zi+4 -> @zi. ]
+    0 -> @zi.
+    ?? @zi < 64 [
+     :load32[@zm+1072] -> @zk.
+     :bitxor[:bitxor[:shr[@zk|6]|:bitand[@zk*67108864|0xffffffff]]|:bitxor[:shr[@zk|11]|:bitand[@zk*2097152|0xffffffff]]] -> @zu.
+     :bitxor[@zu|:bitxor[:shr[@zk|25]|:bitand[@zk*128|0xffffffff]]] -> @zu.
+     :bitxor[:bitand[@zk|:load32[@zm+1076]]|:bitand[:bitxor[@zk|0xffffffff]|:load32[@zm+1080]]] -> @zv.
+     :load32[@zm+1084]+@zu+@zv+:load32[@zm+512+@zi*4]+:load32[@zm+800+@zi*4] -> @zt.
+     :load32[@zm+1056] -> @zk.
+     :bitxor[:bitxor[:shr[@zk|2]|:bitand[@zk*1073741824|0xffffffff]]|:bitxor[:shr[@zk|13]|:bitand[@zk*524288|0xffffffff]]] -> @zu.
+     :bitxor[@zu|:bitxor[:shr[@zk|22]|:bitand[@zk*1024|0xffffffff]]] -> @zu.
+     :bitxor[:bitxor[:bitand[@zk|:load32[@zm+1060]]|:bitand[@zk|:load32[@zm+1064]]]|:bitand[:load32[@zm+1060]|:load32[@zm+1064]]] -> @zv.
+     !store32[@zm+1084|:load32[@zm+1080]]. !store32[@zm+1080|:load32[@zm+1076]].
+     !store32[@zm+1076|:load32[@zm+1072]]. !store32[@zm+1072|:load32[@zm+1068]+@zt].
+     !store32[@zm+1068|:load32[@zm+1064]]. !store32[@zm+1064|:load32[@zm+1060]].
+     !store32[@zm+1060|@zk]. !store32[@zm+1056|@zt+@zu+@zv]. @zi+1 -> @zi.
+    ]
+    0 -> @zi. ?? @zi < 32 [ !store32[@zm+768+@zi|:load32[@zm+768+@zi]+:load32[@zm+1056+@zi]]. @zi+4 -> @zi. ]
+    @zr+64 -> @zr.
+   ]
+   0 -> @zi. ?? @zi < 32 [
+    :bitand[@zi|3] -> @zj. :bitand[@zi|0xfffffffc] -> @zk.
+    !store8[@zm+48+@zi|:shr[:load32[@zm+768+@zk]|(3-@zj)*8]]. @zi+1 -> @zi.
+   ]
+   ? :load64[@zm+16] == 0 [
+    :load64[@zm] -> @zr. 0 -> @zi.
+    ?? @zi < 32 [ ? :load8[@zm+48+@zi] != :load8[@zr+48+@zi] [ !store64[@zm+24|65]. ] @zi+1 -> @zi. ]
+   ]
+   ? :load64[@zm+24] == 0 [ !store64[@zm+32|@zp]. !store64[@zm+40|@zq]. ]
+  ]
+  !switch[@zm+224|@zm+128].
+ ]
+]
+# All raw device operations run this own coroutine, retaining the same handle.
+:fork[@fwork+130128|@fwork+262144|81920] -> @fn.
+? @fn == 1 [
+ ?? 1 [
+  ? :load64[@mh+200] == 1 [
+# The caller must close every previous handle before another open request.
+!store64[@mh+40|0]. !store64[@mh+112|0]. !store64[@mh+96|:host[]].
+!store64[@mh+48|"Invalid native media open request.\n"].
+? (:load64[@mh] != 1) * (:load64[@mh] != 2) [ !store64[@mh+40|64]. ]
+? (:load64[@mh+96] != 1) * (:load64[@mh+96] != 2) [ !store64[@mh+40|69]. ]
+? (:load64[@mh+8] == 0) + (:load64[@mh+16] != -1) [ !store64[@mh+40|64]. ]
+? :load64[@mh] == 2 [
+ ? (:load64[@mh+136] == 0) + (:load64[@mh+144] == 0) [ !store64[@mh+40|64]. ]
+]
+# Fail-closed USB whole-device opener. No shell, helper program or device write.
+? (:load64[@mh+40] == 0) * (:load64[@mh+96] == 1) [
+ :load64[@mh+8] -> @mh0. 0 -> @mh1.
+ ?? (:load8[@mh0+@mh1] != 0) * (@mh1 < 32) [ @mh1+1 -> @mh1. ]
+ ? (@mh1 < 8) + (@mh1 > 10) [ !store64[@mh+40|64]. ] ~ [
+  ? :load32[@mh0] != 0x7665642f [ !store64[@mh+40|64]. ]
+  ? (:load16[@mh0+4] != 0x732f) + (:load8[@mh0+6] != 100) [ !store64[@mh+40|64]. ]
+  7 -> @mh2. ?? @mh2 < @mh1 [
+   ? (:load8[@mh0+@mh2] < 97) + (:load8[@mh0+@mh2] > 122) [ !store64[@mh+40|64]. ]
+   @mh2+1 -> @mh2.
+  ]
+ ]
+ !store64[@mh+48|"Target must be a whole USB disk named /dev/sd plus one to three letters.\n"].
+ ? :load64[@mh+40] == 0 [
+  # Preserve the exact canonical sysfs name, then pin the device with O_EXCL.
+  "/sys/class/block/" -> @mh3. 0 -> @mh2.
+  ?? @mh2 < 17 [ !store8[@mh+1024+@mh2|:load8[@mh3+@mh2]]. @mh2+1 -> @mh2. ]
+  5 -> @mh2. ?? @mh2 < @mh1 [ !store8[@mh+1024+12+@mh2|:load8[@mh0+@mh2]]. @mh2+1 -> @mh2. ]
+  @mh1+12 -> @mh3. !store8[@mh+1024+@mh3|0]. !store64[@mh+160|@mh3].
+  0xa0080 -> @mh2. ? :load64[@mh] == 2 [ 0xa0082 -> @mh2. ]
+  :hostsyscall[2|@mh0|@mh2|0|0|0|0] -> @mh4.
+  ? @mh4 > 2147483647 [
+   !store64[@mh+40|73]. !store64[@mh+48|"Cannot exclusively open USB disk. Unmount every volume and disable swap on it; administrator access is required.\n"].
+  ] ~ [ !store64[@mh+16|@mh4]. ]
+ ]
+ ? :load64[@mh+40] == 0 [
+  :hostsyscall[5|@mh4|@mh+512|0|0|0|0] -> @mh2.
+  ? (@mh2 != 0) + (:bitand[:load32[@mh+536]|0xf000] != 0x6000) [ !store64[@mh+40|65]. ]
+  !store64[@mh+104|:load64[@mh+552]].
+  ? :hostsyscall[73|@mh4|6|0|0|0|0] != 0 [ !store64[@mh+40|73]. ]
+  !store64[@mh+48|"Target is not an exclusively locked block device.\n"].
+ ]
+ ? :load64[@mh+40] == 0 [
+  :hostsyscall[89|@mh+1024|@mh+2048|4095|0|0|0] -> @mh5.
+  0 -> @mh6. 14695981039346656037 -> @mh7. 0 -> @mh2.
+  ? (@mh5 == 0) + (@mh5 >= 4095) [ !store64[@mh+40|65]. ] ~ [
+   ?? @mh2 < @mh5 [
+    :bitxor[@mh7|:load8[@mh+2048+@mh2]] * 1099511628211 -> @mh7.
+    ? @mh2+5 < @mh5 [
+     ? :load32[@mh+2048+@mh2] == 0x6273752f [
+      ? (:load8[@mh+2052+@mh2] >= 48) * (:load8[@mh+2052+@mh2] <= 57) [ 1 -> @mh6. ]
+     ]
+    ]
+    @mh2+1 -> @mh2.
+   ]
+  ]
+  ? @mh6 == 0 [ !store64[@mh+40|65]. ]
+  !store64[@mh+48|"Target is not attached through a USB controller.\n"].
+ ]
+ # All attributes are required. A partition, read-only disk or unidentifiable
+ # removable device is rejected before obtaining permission to write.
+ ? :load64[@mh+40] == 0 [ !store64[@mh+48|"USB disk is not a writable removable whole disk with a readable identity; no data was written.\n"]. ]
+ 0 -> @mh8.
+ ?? (@mh8 < 5) * (:load64[@mh+40] == 0) [
+  "/removable" -> @mh9.
+  ? @mh8 == 1 [ "/ro" -> @mh9. ]
+  ? @mh8 == 2 [ "/partition" -> @mh9. ]
+  ? @mh8 == 3 [ "/dev" -> @mh9. ]
+  ? @mh8 == 4 [ "/device/wwid" -> @mh9. ]
+  0 -> @mh2. :load64[@mh+160] -> @mh3.
+  ?? :load8[@mh9+@mh2] [ !store8[@mh+1024+@mh3+@mh2|:load8[@mh9+@mh2]]. @mh2+1 -> @mh2. ]
+  !store8[@mh+1024+@mh3+@mh2|0].
+  :hostsyscall[2|@mh+1024|0xa0000|0|0|0|0] -> @mh6.
+  ? @mh8 == 2 [
+   ? @mh6 != -2 [ !store64[@mh+40|65]. ]
+   ? @mh6 <= 2147483647 [ :hostsyscall[3|@mh6|0|0|0|0|0] -> @mh2. ]
+  ] ~ [
+   ? @mh6 > 2147483647 [ !store64[@mh+40|65]. ] ~ [
+    :hostsyscall[0|@mh6|@mh+2048|4095|0|0|0] -> @mh5.
+    :hostsyscall[3|@mh6|0|0|0|0|0] -> @mh2.
+    ? (@mh5 == 0) + (@mh5 >= 4095) [ !store64[@mh+40|65]. ] ~ [
+     ? @mh8 == 0 [ ? (@mh5 != 2) + (:load16[@mh+2048] != 0x0a31) [ !store64[@mh+40|65]. ] ]
+     ? @mh8 == 1 [ ? (@mh5 != 2) + (:load16[@mh+2048] != 0x0a30) [ !store64[@mh+40|65]. ] ]
+     ? @mh8 == 3 [
+      0 -> @mh9. 0 -> @mh10. 0 -> @mh11. 0 -> @mh2.
+      ?? @mh2 < @mh5 [
+       :load8[@mh+2048+@mh2] -> @mh3.
+       ? (@mh3 >= 48) * (@mh3 <= 57) [
+        ? @mh11 == 0 [ @mh9*10+@mh3-48 -> @mh9. ] ~ [ @mh10*10+@mh3-48 -> @mh10. ]
+        ? (@mh9 > 1048575) + (@mh10 > 4294967295) [ !store64[@mh+40|65]. ]
+       ] ~ [
+        ? (@mh3 == 58) * (@mh11 == 0) * (@mh2 > 0) [ 1 -> @mh11. ] ~ [
+         ? (@mh3 != 10) + (@mh2+1 != @mh5) [ !store64[@mh+40|65]. ]
+        ]
+       ]
+       @mh2+1 -> @mh2.
+      ]
+      :load64[@mh+104] -> @mh2.
+      ? (@mh11 != 1) + (@mh9 != :bitand[:shr[@mh2|8]|4095]+:bitand[:shr[@mh2|32]|0xfffff000]) + (@mh10 != :bitand[@mh2|255]+:bitand[:shr[@mh2|12]|0xffffff00]) [ !store64[@mh+40|65]. ]
+     ]
+     ? @mh8 == 4 [
+      ? @mh5 < 5 [ !store64[@mh+40|65]. ]
+      0 -> @mh2. ?? @mh2 < @mh5 [ :bitxor[@mh7|:load8[@mh+2048+@mh2]]*1099511628211 -> @mh7. @mh2+1 -> @mh2. ]
+     ]
+    ]
+   ]
+  ]
+  @mh8+1 -> @mh8.
+ ]
+ ? :load64[@mh+40] == 0 [
+  !store64[@mh+24|0]. !store64[@mh+32|0].
+  :hostsyscall[16|@mh4|0x80081272|@mh+24|0|0|0] -> @mh2.
+  :hostsyscall[16|@mh4|0x1268|@mh+32|0|0|0] -> @mh3.
+  ? (@mh2 != 0) + (@mh3 != 0) + (:load64[@mh+32] != 512) + (:load64[@mh+24] < 1048576) + (:bitand[:load64[@mh+24]|511] != 0) [
+   !store64[@mh+40|65]. !store64[@mh+48|"Cannot determine USB capacity, or logical sector size is not 512 bytes.\n"].
+  ]
+  !store64[@mh+128|@mh7].
+ ]
+]
+# Native Win64 storage interface. Only a canonical removable USB PhysicalDrive
+# with a serial number is eligible. Mounted volumes are not silently removed.
+? (:load64[@mh+40] == 0) * (:load64[@mh+96] == 2) [
+ :hostlibrary["kernel32.dll"] -> @mh0.
+ ? @mh0 == 0 [ !store64[@mh+40|69]. ] ~ [
+  !store64[@mh+256|:hostsymbol[@mh0|"CreateFileA"]].
+  !store64[@mh+264|:hostsymbol[@mh0|"CloseHandle"]].
+  !store64[@mh+272|:hostsymbol[@mh0|"DeviceIoControl"]].
+  !store64[@mh+280|:hostsymbol[@mh0|"GetWindowsDirectoryA"]].
+  !store64[@mh+288|:hostsymbol[@mh0|"FindFirstVolumeA"]].
+  !store64[@mh+296|:hostsymbol[@mh0|"FindNextVolumeA"]].
+  !store64[@mh+304|:hostsymbol[@mh0|"FindVolumeClose"]].
+  !store64[@mh+312|:hostsymbol[@mh0|"GetVolumePathNamesForVolumeNameA"]].
+  !store64[@mh+320|:hostsymbol[@mh0|"ReadFile"]].
+  !store64[@mh+328|:hostsymbol[@mh0|"WriteFile"]].
+  !store64[@mh+336|:hostsymbol[@mh0|"SetFilePointerEx"]].
+  !store64[@mh+344|:hostsymbol[@mh0|"FlushFileBuffers"]].
+  !store64[@mh+352|:hostsymbol[@mh0|"GetLastError"]].
+  256 -> @mh1. ?? @mh1 <= 352 [ ? :load64[@mh+@mh1] == 0 [ !store64[@mh+40|69]. ] @mh1+8 -> @mh1. ]
+ ]
+ !store64[@mh+48|"Windows storage interfaces are unavailable.\n"].
+ ? :load64[@mh+40] == 0 [
+  :load64[@mh+8] -> @mh0. "\\\\.\\PhysicalDrive" -> @mh1. 0 -> @mh2.
+  ?? (:load8[@mh0+@mh2] != 0) * (@mh2 < 21) [ @mh2+1 -> @mh2. ]
+  ? (@mh2 < 18) + (@mh2 > 20) [ !store64[@mh+40|64]. ]
+  0 -> @mh2.
+  ?? (@mh2 < 17) * (:load64[@mh+40] == 0) [ ? :load8[@mh0+@mh2] != :load8[@mh1+@mh2] [ !store64[@mh+40|64]. ] @mh2+1 -> @mh2. ]
+  17 -> @mh2.
+  0 -> @mh3. 0 -> @mh4.
+  ? :load64[@mh+40] == 0 [
+   ?? (:load8[@mh0+@mh2] != 0) * (@mh2 < 21) [
+    :load8[@mh0+@mh2] -> @mh1.
+    ? (@mh1 < 48) + (@mh1 > 57) [ !store64[@mh+40|64]. ]
+    @mh3*10+@mh1-48 -> @mh3. @mh4+1 -> @mh4. @mh2+1 -> @mh2.
+   ]
+   ? (@mh4 > 1) * (:load8[@mh0+17] == 48) [ !store64[@mh+40|64]. ]
+  ]
+  ? (@mh4 == 0) + (@mh4 > 3) + (@mh3 > 255) [ !store64[@mh+40|64]. ]
+  !store64[@mh+104|@mh3]. !store64[@mh+176|0]. !store64[@mh+184|-1].
+  !store64[@mh+48|"Target must be an exact Windows PhysicalDrive path with a decimal disk number, 0 through 255.\n"].
+ ]
+ ? :load64[@mh+40] == 0 [
+  0x80000000 -> @mh1. 3 -> @mh2.
+  ? :load64[@mh] == 2 [ 0xc0000000 -> @mh1. 0 -> @mh2. ]
+  # Writing needs an unshared physical handle AND each member volume lock.
+  :hostcall12[:load64[@mh+256]|:load64[@mh+8]|@mh1|@mh2|0|3|0|0|0|0|0|0|0] -> @mh4.
+  ? @mh4 == -1 [ !store64[@mh+40|73]. !store64[@mh+48|"Cannot open the physical disk. Run as administrator and close other disk tools.\n"]. ] ~ [ !store64[@mh+16|@mh4]. ]
+ ]
+ ? :load64[@mh+40] == 0 [
+  # STORAGE_DEVICE_DESCRIPTOR is variable-length and every used field is bounded.
+  !store64[@mh+512|0]. !store64[@mh+520|0]. !store64[@mh+528|0].
+  :hostcall12[:load64[@mh+272]|@mh4|0x2d1400|@mh+512|12|@mh+2048|4096|@mh+536|0|0|0|0|0] -> @mh0.
+  :load32[@mh+536] -> @mh1.
+  ? (@mh0 == 0) + (@mh1 < 36) + (@mh1 > 4096) [ !store64[@mh+40|65]. ] ~ [
+   :load32[@mh+2052] -> @mh2. :load32[@mh+2072] -> @mh3.
+   ? (@mh2 < 36) + (@mh2 > @mh1) + (:load8[@mh+2058] != 1) + (:load32[@mh+2076] != 7) + (@mh3 < 36) + (@mh3 >= @mh2) [ !store64[@mh+40|65]. ] ~ [
+    @mh3 -> @mh5. ?? (@mh5 < @mh2) * (:load8[@mh+2048+@mh5] != 0) [ @mh5+1 -> @mh5. ]
+    ? (@mh5 == @mh3) + (@mh5 == @mh2) [ !store64[@mh+40|65]. ]
+    14695981039346656037 -> @mh6. 0 -> @mh5.
+    ?? @mh5 < @mh2 [ :bitxor[@mh6|:load8[@mh+2048+@mh5]]*1099511628211 -> @mh6. @mh5+1 -> @mh5. ]
+    !store64[@mh+128|@mh6].
+   ]
+  ]
+  !store64[@mh+48|"Target must be removable USB storage with a nonempty hardware serial number.\n"].
+ ]
+ ? :load64[@mh+40] == 0 [
+  :hostcall12[:load64[@mh+272]|@mh4|0x2d1080|0|0|@mh+512|32|@mh+536|0|0|0|0|0] -> @mh0.
+  ? (@mh0 == 0) + (:load32[@mh+536] < 12) + (:load32[@mh+512] != 7) + (:load32[@mh+516] != :load64[@mh+104]) + ((:load32[@mh+520] != 0xffffffff) * (:load32[@mh+520] != 0)) [ !store64[@mh+40|65]. ]
+  :hostcall12[:load64[@mh+272]|@mh4|0x700a0|0|0|@mh+2048|4096|@mh+536|0|0|0|0|0] -> @mh0.
+  ? (@mh0 == 0) + (:load32[@mh+536] < 32) [ !store64[@mh+40|65]. ] ~ [
+   !store64[@mh+32|:load32[@mh+2068]]. !store64[@mh+24|:load64[@mh+2072]].
+   ? (:load64[@mh+32] != 512) + (:load64[@mh+24] < 1048576) + (:bitand[:load64[@mh+24]|511] != 0) [ !store64[@mh+40|65]. ]
+  ]
+  :hostcall12[:load64[@mh+272]|@mh4|0x70024|0|0|0|0|@mh+536|0|0|0|0|0] -> @mh0.
+  ? @mh0 == 0 [ !store64[@mh+40|65]. ]
+  !store64[@mh+48|"Physical disk identity, writable state, capacity or 512-byte sector size could not be verified.\n"].
+ ]
+ ? :load64[@mh+40] == 0 [
+  # Explicitly exclude the Windows system volume, even when Windows runs on USB.
+  :hostcall12[:load64[@mh+280]|@mh+1024|512|0|0|0|0|0|0|0|0|0|0] -> @mh0.
+  ? (@mh0 < 3) + (@mh0 >= 512) + (:load8[@mh+1025] != 58) + (:load8[@mh+1026] != 92) [ !store64[@mh+40|65]. ] ~ [
+   !store32[@mh+1536|0x5c2e5c5c]. !store8[@mh+1540|:load8[@mh+1024]]. !store8[@mh+1541|58]. !store8[@mh+1542|0].
+   :hostcall12[:load64[@mh+256]|@mh+1536|0|3|0|3|0|0|0|0|0|0|0] -> @mh5.
+   ? @mh5 == -1 [ !store64[@mh+40|65]. ] ~ [
+    :hostcall12[:load64[@mh+272]|@mh5|0x560000|0|0|@mh+2048|4096|@mh+536|0|0|0|0|0] -> @mh0.
+    :load32[@mh+2048] -> @mh1.
+    ? (@mh0 == 0) + (@mh1 == 0) + (@mh1 > 128) + (:load32[@mh+536] < 8+@mh1*24) [ !store64[@mh+40|65]. ] ~ [
+     0 -> @mh2. ?? @mh2 < @mh1 [ ? :load32[@mh+2056+@mh2*24] == :load64[@mh+104] [ !store64[@mh+40|65]. ] @mh2+1 -> @mh2. ]
+    ]
+    :hostcall12[:load64[@mh+264]|@mh5|0|0|0|0|0|0|0|0|0|0|0] -> @mh0.
+   ]
+  ]
+  !store64[@mh+48|"The Windows system disk is protected, or its identity could not be verified.\n"].
+ ]
+ ? :load64[@mh+40] == 0 [
+  # Enumerate ALL volume GUID names, including volumes without drive letters.
+  :hostcall12[:load64[@mh+288]|@mh+1024|512|0|0|0|0|0|0|0|0|0|0] -> @mh6.
+  ? @mh6 == -1 [ !store64[@mh+40|65]. ] ~ [ !store64[@mh+184|@mh6]. ]
+  0 -> @mh11.
+  ?? (:load64[@mh+40] == 0) * (@mh11 < 4096) [
+   0 -> @mh1. ?? (:load8[@mh+1024+@mh1] != 0) * (@mh1 < 512) [ @mh1+1 -> @mh1. ]
+   ? (@mh1 < 8) + (@mh1 >= 512) [ !store64[@mh+40|65]. ] ~ [
+    ? :load8[@mh+1024+@mh1-1] != 92 [ !store64[@mh+40|65]. ] ~ [
+     !store8[@mh+1024+@mh1-1|0]. !store64[@mh+168|@mh1-1].
+     :hostcall12[:load64[@mh+256]|@mh+1024|0|3|0|3|0|0|0|0|0|0|0] -> @mh5.
+     ? @mh5 == -1 [ !store64[@mh+40|65]. ] ~ [
+      :hostcall12[:load64[@mh+272]|@mh5|0x560000|0|0|@mh+2048|4096|@mh+536|0|0|0|0|0] -> @mh0.
+      :load32[@mh+2048] -> @mh1. 0 -> @mh7.
+      ? (@mh0 == 0) + (@mh1 == 0) + (@mh1 > 128) + (:load32[@mh+536] < 8+@mh1*24) [ !store64[@mh+40|65]. ] ~ [
+       0 -> @mh2. ?? @mh2 < @mh1 [ ? :load32[@mh+2056+@mh2*24] == :load64[@mh+104] [ 1 -> @mh7. ] @mh2+1 -> @mh2. ]
+      ]
+      :hostcall12[:load64[@mh+264]|@mh5|0|0|0|0|0|0|0|0|0|0|0] -> @mh0.
+      ? @mh7 * (:load64[@mh+40] == 0) [
+       # Restore the trailing slash for mount-path enumeration. Any mount path,
+       # including a directory mount point, requires explicit user removal first.
+       !store8[@mh+1024+:load64[@mh+168]|92]. !store8[@mh+1025+:load64[@mh+168]|0].
+       !store64[@mh+2048|0].
+       :hostcall12[:load64[@mh+312]|@mh+1024|@mh+2048|4096|@mh+536|0|0|0|0|0|0|0|0] -> @mh0.
+       ? (@mh0 == 0) + (:load8[@mh+2048] != 0) [ !store64[@mh+40|73]. ]
+       !store8[@mh+1024+:load64[@mh+168]|0].
+       ? (:load64[@mh] == 2) * (:load64[@mh+40] == 0) [
+        ? :load64[@mh+176] >= 128 [ !store64[@mh+40|65]. ] ~ [
+         :hostcall12[:load64[@mh+256]|@mh+1024|0xc0000000|3|0|3|0|0|0|0|0|0|0] -> @mh5.
+         ? @mh5 == -1 [ !store64[@mh+40|73]. ] ~ [
+          # FSCTL_LOCK_VOLUME succeeds only when the filesystem has no open users.
+          :hostcall12[:load64[@mh+272]|@mh5|0x90018|0|0|0|0|@mh+536|0|0|0|0|0] -> @mh0.
+          ? @mh0 == 0 [
+           !store64[@mh+40|73]. :hostcall12[:load64[@mh+264]|@mh5|0|0|0|0|0|0|0|0|0|0|0] -> @mh0.
+          ] ~ [
+           !store64[@mh+6400+:load64[@mh+176]*8|@mh5]. !store64[@mh+176|:load64[@mh+176]+1].
+          ]
+         ]
+        ]
+       ]
+      ]
+     ]
+    ]
+   ]
+   ? :load64[@mh+40] == 0 [
+    :hostcall12[:load64[@mh+296]|@mh6|@mh+1024|512|0|0|0|0|0|0|0|0|0] -> @mh0.
+    ? @mh0 == 0 [
+     :hostcall12[:load64[@mh+352]|0|0|0|0|0|0|0|0|0|0|0|0] -> @mh0.
+     ? @mh0 != 18 [ !store64[@mh+40|65]. ]
+     4096 -> @mh11.
+    ] ~ [ @mh11+1 -> @mh11. ? @mh11 == 4096 [ !store64[@mh+40|65]. ] ]
+   ]
+  ]
+  ? @mh6 != -1 [ :hostcall12[:load64[@mh+304]|@mh6|0|0|0|0|0|0|0|0|0|0|0] -> @mh0. !store64[@mh+184|-1]. ]
+  !store64[@mh+48|"USB volume is mounted or busy, or complete volume ownership could not be verified. Remove its drive letters and mount points before writing.\n"].
+ ]
+]
+# Identity is checked again on the open, pinned device after confirmation.
+? (:load64[@mh+40] == 0) * (:load64[@mh] == 2) [
+ ? (:load64[@mh+128] != :load64[@mh+136]) + (:load64[@mh+24] != :load64[@mh+144]) + (:load64[@mh+104] != :load64[@mh+152]) [
+  !store64[@mh+40|73]. !store64[@mh+48|"The USB device identity or capacity changed after confirmation. Nothing was written.\n"].
+ ] ~ [ !store64[@mh+112|1]. ]
+]
+? :load64[@mh+40] == 0 [ !store64[@mh+48|"USB device validated.\n"]. ]
+  ]
+  ? :load64[@mh+200] == 2 [
+# Aligned positioned transfer, restricted to the pinned validated device.
+# io1=read,2=write,3=flush. The caller compares every readback byte itself.
+!store64[@mh+88|0].
+? :load64[@mh+40] == 0 [
+ :load64[@mh+56] -> @mh0. :load64[@mh+16] -> @mh4.
+ ? (@mh0 < 1) + (@mh0 > 3) + (@mh4 == -1) [ !store64[@mh+40|64]. ]
+ ? (:load64[@mh+96] != 1) * (:load64[@mh+96] != 2) [ !store64[@mh+40|69]. ]
+ ? (@mh0 == 2) * (:load64[@mh+112] != 1) [ !store64[@mh+40|73]. ]
+ ? @mh0 < 3 [
+  ? (:load64[@mh+64] == 0) + (:load64[@mh+72] == 0) + (:load64[@mh+72] > 1048576) + (:bitand[:load64[@mh+72]|511] != 0) + (:bitand[:load64[@mh+80]|511] != 0) [ !store64[@mh+40|64]. ]
+  ? :load64[@mh+80] > :load64[@mh+24] [ !store64[@mh+40|65]. ] ~ [
+   ? :load64[@mh+72] > :load64[@mh+24]-:load64[@mh+80] [ !store64[@mh+40|65]. ]
+  ]
+ ]
+ !store64[@mh+48|"Invalid, out-of-bounds or unconfirmed USB transfer.\n"].
+ ? (:load64[@mh+40] == 0) * (:load64[@mh+96] == 1) [
+  ? @mh0 == 3 [
+   :hostsyscall[74|@mh4|0|0|0|0|0] -> @mh1.
+   ? @mh1 != 0 [ !store64[@mh+40|74]. ]
+  ] ~ [
+   17 -> @mh2. ? @mh0 == 2 [ 18 -> @mh2. ]
+   ?? (:load64[@mh+88] < :load64[@mh+72]) * (:load64[@mh+40] == 0) [
+    :load64[@mh+72]-:load64[@mh+88] -> @mh3.
+    :hostsyscall[@mh2|@mh4|:load64[@mh+64]+:load64[@mh+88]|@mh3|:load64[@mh+80]+:load64[@mh+88]|0|0] -> @mh1.
+    ? @mh1 != -4 [
+     ? (@mh1 == 0) + (@mh1 > @mh3) + (:bitand[@mh1|511] != 0) [ !store64[@mh+40|74]. ] ~ [ !store64[@mh+88|:load64[@mh+88]+@mh1]. ]
+    ]
+   ]
+  ]
+  !store64[@mh+48|"USB read, write or cache flush failed. The device may contain an incomplete image.\n"].
+ ]
+ ? (:load64[@mh+40] == 0) * (:load64[@mh+96] == 2) [
+  ? @mh0 == 3 [
+   :hostcall12[:load64[@mh+344]|@mh4|0|0|0|0|0|0|0|0|0|0|0] -> @mh1.
+   ? @mh1 == 0 [ !store64[@mh+40|74]. ]
+  ] ~ [
+   :hostcall12[:load64[@mh+336]|@mh4|:load64[@mh+80]|0|0|0|0|0|0|0|0|0|0] -> @mh1.
+   ? @mh1 == 0 [ !store64[@mh+40|74]. ]
+   320 -> @mh2. ? @mh0 == 2 [ 328 -> @mh2. ]
+   ?? (:load64[@mh+88] < :load64[@mh+72]) * (:load64[@mh+40] == 0) [
+    :load64[@mh+72]-:load64[@mh+88] -> @mh3. !store64[@mh+512|0].
+    :hostcall12[:load64[@mh+@mh2]|@mh4|:load64[@mh+64]+:load64[@mh+88]|@mh3|@mh+512|0|0|0|0|0|0|0|0] -> @mh1.
+    :load32[@mh+512] -> @mh5.
+    ? (@mh1 == 0) + (@mh5 == 0) + (@mh5 > @mh3) + (:bitand[@mh5|511] != 0) [ !store64[@mh+40|74]. ] ~ [ !store64[@mh+88|:load64[@mh+88]+@mh5]. ]
+   ]
+  ]
+  !store64[@mh+48|"USB read, write or cache flush failed. The device may contain an incomplete image.\n"].
+ ]
+]
+  ]
+  ? :load64[@mh+200] == 3 [
+# Releases locks on every outcome. Preserve an earlier error during cleanup.
+? :load64[@mh+96] == 2 [
+ 0 -> @mh0.
+ ?? @mh0 < :load64[@mh+176] [
+  :hostcall12[:load64[@mh+264]|:load64[@mh+6400+@mh0*8]|0|0|0|0|0|0|0|0|0|0|0] -> @mh1.
+  ? (@mh1 == 0) * (:load64[@mh+40] == 0) [ !store64[@mh+40|74]. !store64[@mh+48|"Cannot release a USB volume lock.\n"]. ]
+  @mh0+1 -> @mh0.
+ ]
+ !store64[@mh+176|0].
+]
+? :load64[@mh+16] != -1 [
+ ? :load64[@mh+96] == 1 [
+  :hostsyscall[3|:load64[@mh+16]|0|0|0|0|0] -> @mh0.
+  ? (@mh0 != 0) * (:load64[@mh+40] == 0) [ !store64[@mh+40|74]. !store64[@mh+48|"Cannot close USB disk.\n"]. ]
+ ]
+ ? :load64[@mh+96] == 2 [
+  :hostcall12[:load64[@mh+264]|:load64[@mh+16]|0|0|0|0|0|0|0|0|0|0|0] -> @mh0.
+  ? (@mh0 == 0) * (:load64[@mh+40] == 0) [ !store64[@mh+40|74]. !store64[@mh+48|"Cannot close USB disk.\n"]. ]
+ ]
+ !store64[@mh+16|-1].
+]
+!store64[@mh+112|0].
+  ]
+  !switch[@fwork+130128|@fwork+130000].
+ ]
+]
+"Cannot read the complete image into an immutable snapshot.\n" -> @fmessage.
+:fileopen[@fpath|0] -> @ffile. ? @ffile == -1 [ 66 -> @ferror. ]
+? @ferror == 0 [
+ :filesize[@ffile] -> @fbytes.
+ ? (@fbytes < 4608) + (@fbytes > 268439552) [ 65 -> @ferror. ]
+]
+? @ferror == 0 [
+ :hostalloc[@fbytes] -> @fimage. ? @fimage == 0 [ 70 -> @ferror. ]
+]
+0 -> @fpos.
+?? (@fpos < @fbytes) * (@ferror == 0) [
+ @fbytes-@fpos -> @fcount. ? @fcount > 65536 [ 65536 -> @fcount. ]
+ :fileread[@ffile|@fimage+@fpos|@fcount] -> @fn.
+ ? (@fn == 0) + (@fn > @fcount) [ 74 -> @ferror. ] ~ [ @fpos+@fn -> @fpos. ]
+]
+? @ferror == 0 [
+ ? :fileread[@ffile|@fwork+147456|1] != 0 [ 74 -> @ferror. ]
+ ? :filesize[@ffile] != @fbytes [ 74 -> @ferror. ]
+]
+? @ffile != -1 [ ? :fileclose[@ffile] != 0 [ 74 -> @ferror. ] -1 -> @ffile. ]
+? @ferror == 0 [
+ !store64[@zm|@fimage]. !store64[@zm+8|@fbytes]. !store64[@zm+16|0].
+ !switch[@zm+128|@zm+224].
+ :load64[@zm+24] -> @ferror.
+ "Invalid ZMEDIA01 header, length or SHA-256. No target was opened.\n" -> @fmessage.
+ ? @ferror == 0 [ :load64[@zm+32] -> @fpayload. :load64[@zm+40] -> @flength. ]
+]
+? @ferror == 0 [
+ "Image verified (SHA-256): " -> @flit. 0 -> @fi. ?? :load8[@flit+@fi] [ !put[:load8[@flit+@fi]]. @fi+1 -> @fi. ]
+ "0123456789abcdef" -> @flit. 0 -> @fi.
+ ?? @fi < 32 [ :load8[@zm+48+@fi] -> @fn. !put[:load8[@flit+:shr[@fn|4]]]. !put[:load8[@flit+:bitand[@fn|15]]]. @fi+1 -> @fi. ] !put[10].
+]
+# Probe only after the complete image has been validated. The regular-file test
+# path cannot open a device: the compiler's fileopen requires a regular file.
+? (@ferror == 0) * ((@fmode == 2) + (@fmode == 3)) [
+ !store64[@mh|1]. !store64[@mh+8|@ftarget]. !store64[@mh+200|1].
+ !switch[@fwork+130000|@fwork+130128].
+ :load64[@mh+40] -> @ferror. :load64[@mh+48] -> @fmessage.
+ ? @ferror == 0 [
+  !store64[@mh+136|:load64[@mh+128]]. !store64[@mh+144|:load64[@mh+24]]. !store64[@mh+152|:load64[@mh+104]].
+  ? :load64[@mh+24] < @flength [ 65 -> @ferror. "Target is smaller than the image.\n" -> @fmessage. ]
+  ? :load64[@mh+24] > @flength [
+   @flength -> @ftrailer.
+   ? :load64[@mh+24]-@flength > 16896 [ :load64[@mh+24]-16896 -> @ftrailer. ]
+  ]
+ ]
+]
+? (@ferror == 0) * (@fmode != 1) [
+ "Target: " -> @flit. 0 -> @fi. ?? :load8[@flit+@fi] [ !put[:load8[@flit+@fi]]. @fi+1 -> @fi. ]
+ 0 -> @fi. ?? :load8[@ftarget+@fi] [ !put[:load8[@ftarget+@fi]]. @fi+1 -> @fi. ] !put[10].
+ 0 -> @fphase. ?? @fphase < 2 [
+  "Image bytes: " -> @flit. @flength -> @fvalue.
+  ? @fphase == 1 [ "Device bytes: " -> @flit. :load64[@mh+24] -> @fvalue. ]
+  ? (@fphase == 0) + (@fmode < 4) [
+   0 -> @fi. ?? :load8[@flit+@fi] [ !put[:load8[@flit+@fi]]. @fi+1 -> @fi. ]
+   10000000000000000000 -> @fpower. 0 -> @fstarted.
+   ?? @fpower != 0 [
+    0 -> @fdigit. ?? @fvalue >= @fpower [ @fvalue-@fpower -> @fvalue. @fdigit+1 -> @fdigit. ]
+    ? @fdigit + @fstarted + (@fpower == 1) [ !put[48+@fdigit]. 1 -> @fstarted. ]
+    # Divide the decimal place by ten using a bounded search over powers.
+    ? @fpower == 1 [ 0 -> @fpower. ] ~ [
+     1 -> @fn. ?? @fn*10 < @fpower [ @fn*10 -> @fn. ] @fn -> @fpower.
+    ]
+   ] !put[10].
+  ] @fphase+1 -> @fphase.
+ ]
+]
+# Close the probe before the confirmation. Reopen checks the captured stable
+# device identity and capacity again, then holds the exclusive write handle.
+? @fmode == 2 [
+ !store64[@mh+200|3]. !switch[@fwork+130000|@fwork+130128].
+ ? (@ferror == 0) * (:load64[@mh+40] != 0) [ :load64[@mh+40] -> @ferror. :load64[@mh+48] -> @fmessage. ]
+]
+? (@ferror == 0) * (@fmode == 2) [
+ "Existing partitions on this target will be replaced. Type ERASE followed by a space and the exact target path, then Enter:\n" -> @flit.
+ 0 -> @fi. ?? :load8[@flit+@fi] [ !put[:load8[@flit+@fi]]. @fi+1 -> @fi. ]
+ "ERASE " -> @flit. 0 -> @fi. ?? @fi < 6 [ !store8[@fwork+220000+@fi|:load8[@flit+@fi]]. @fi+1 -> @fi. ]
+ 0 -> @fj. ?? (:load8[@ftarget+@fj] != 0) * (@fj < 4095) [ !store8[@fwork+220006+@fj|:load8[@ftarget+@fj]]. @fj+1 -> @fj. ]
+ @fj+6 -> @ftotal. 0 -> @fpos. 0 -> @fstarted. 1 -> @fsame.
+ ?? (@fstarted == 0) * (@fpos < 8192) [
+  :read[@fwork+230000|1] -> @fn.
+  ? @fn != 1 [ 1 -> @fstarted. 0 -> @fsame. ] ~ [
+   :load8[@fwork+230000] -> @fn.
+   ? @fn == 10 [ 1 -> @fstarted. ] ~ [
+    ? @fn == 13 [
+     :read[@fwork+230000|1] -> @fn.
+     ? (@fn != 1) + (:load8[@fwork+230000] != 10) [ 0 -> @fsame. ] 1 -> @fstarted.
+    ] ~ [
+     ? @fpos >= @ftotal [ 0 -> @fsame. ] ~ [ ? @fn != :load8[@fwork+220000+@fpos] [ 0 -> @fsame. ] ]
+     @fpos+1 -> @fpos.
+    ]
+   ]
+  ]
+ ]
+ ? (@fsame == 0) + (@fpos != @ftotal) + (@fstarted == 0) [ 64 -> @ferror. "Confirmation did not match. Nothing was written.\n" -> @fmessage. ]
+ ? @ferror == 0 [
+  !store64[@mh|2]. !store64[@mh+200|1]. !switch[@fwork+130000|@fwork+130128].
+  :load64[@mh+40] -> @ferror. :load64[@mh+48] -> @fmessage.
+ ]
+]
+? (@ferror == 0) * (@fmode == 4) [
+ :fileopen[@ftarget|1] -> @fout. ? @fout == -1 [ 73 -> @ferror. "Test output must be a new regular file.\n" -> @fmessage. ] ~ [ 1 -> @fcreated. ]
+]
+# Stage1 writes the image, stage2 clears obsolete backup-GPT sectors when they
+# lie outside the image, stage3 flushes, stage4 reads every image byte back,
+# stage5 reads the cleared tail back. check starts at stage4 and never writes.
+1 -> @fphase. ? @fmode == 3 [ 4 -> @fphase. ]
+? @fmode == 1 [ 6 -> @fphase. ]
+?? (@fphase <= 5) * (@ferror == 0) [
+ ? @fphase == 3 [
+  ? @fmode == 4 [
+   ? :filesync[@fout] != 0 [ 74 -> @ferror. ]
+   ? :fileclose[@fout] != 0 [ 74 -> @ferror. ] -1 -> @fout.
+   ? @ferror == 0 [ :fileopen[@ftarget|0] -> @fout. ? @fout == -1 [ 74 -> @ferror. ] ]
+  ] ~ [
+   !store64[@mh+56|3]. !store64[@mh+200|2]. !switch[@fwork+130000|@fwork+130128]. :load64[@mh+40] -> @ferror.
+  ]
+  "Flush failed. The target may contain an incomplete image.\n" -> @fmessage.
+ ] ~ [
+  @flength -> @ftotal. 0 -> @fjob.
+  ? (@fphase == 2) + (@fphase == 5) [
+   0 -> @ftotal.
+   ? (@ftrailer != 0) * (@fmode != 4) [ :load64[@mh+24]-@ftrailer -> @ftotal. @ftrailer -> @fjob. ]
+   # A read-only check promises the image range only, not unrelated drive tail.
+   ? (@fmode == 3) * (@fphase == 5) [ 0 -> @ftotal. ]
+  ]
+  0 -> @fpos.
+  ?? (@fpos < @ftotal) * (@ferror == 0) [
+   @ftotal-@fpos -> @fcount. ? @fcount > 65536 [ 65536 -> @fcount. ]
+   @fpayload+@fpos -> @flit.
+   ? @fphase != 1 [ @fwork+147456 -> @flit. ]
+   ? @fphase == 2 [ 0 -> @fi. ?? @fi < @fcount [ !store64[@flit+@fi|0]. @fi+8 -> @fi. ] ]
+   ? @fmode == 4 [
+    0 -> @fi. ?? (@fi < @fcount) * (@ferror == 0) [
+     ? @fphase == 1 [ :filewrite[@fout|@flit+@fi|@fcount-@fi] -> @fn. ] ~ [ :fileread[@fout|@flit+@fi|@fcount-@fi] -> @fn. ]
+     ? (@fn == 0) + (@fn > @fcount-@fi) [ 74 -> @ferror. ] ~ [ @fi+@fn -> @fi. ]
+    ]
+   ] ~ [
+    1 -> @fn. ? @fphase < 3 [ 2 -> @fn. ]
+    !store64[@mh+56|@fn]. !store64[@mh+64|@flit]. !store64[@mh+72|@fcount]. !store64[@mh+80|@fjob+@fpos].
+    !store64[@mh+200|2]. !switch[@fwork+130000|@fwork+130128]. :load64[@mh+40] -> @ferror.
+    ? :load64[@mh+88] != @fcount [ 74 -> @ferror. ]
+   ]
+   "Write or readback failed. The target may contain an incomplete image.\n" -> @fmessage.
+   ? (@fphase >= 4) * (@ferror == 0) [
+    0 -> @fi. ?? (@fi < @fcount) * (@ferror == 0) [
+     0 -> @fn. ? @fphase == 4 [ :load64[@fpayload+@fpos+@fi] -> @fn. ]
+     ? :load64[@flit+@fi] != @fn [ 74 -> @ferror. "Readback mismatch. The target is not verified.\n" -> @fmessage. ]
+     @fi+8 -> @fi.
+    ]
+   ]
+   @fpos+@fcount -> @fpos.
+  ]
+ ]
+ @fphase+1 -> @fphase.
+]
+? @fout != -1 [
+ ? (@ferror == 0) * (@fmode == 4) [ ? :filesize[@fout] != @flength [ 74 -> @ferror. ] ]
+ ? :fileclose[@fout] != 0 [ 74 -> @ferror. ] -1 -> @fout.
+]
+? :load64[@mh+16] != -1 [
+ !store64[@mh+200|3]. !switch[@fwork+130000|@fwork+130128].
+ ? (@ferror == 0) * (:load64[@mh+40] != 0) [ :load64[@mh+40] -> @ferror. :load64[@mh+48] -> @fmessage. ]
+]
+# A failed test keeps its uniquely created file for diagnosis. Never unlink a
+# path after close: another process could have substituted a different file.
+? @ferror == 0 [
+ "Image validation complete.\n" -> @fmessage.
+ ? @fmode == 2 [ "Write, flush and full readback complete.\n" -> @fmessage. ]
+ ? @fmode == 3 [ "All image bytes match the target.\n" -> @fmessage. ]
+ ? @fmode == 4 [ "Regular-file write, flush and full readback complete.\n" -> @fmessage. ]
+]
+? @fmessage == 0 [ "Device operation failed.\n" -> @fmessage. ]
+0 -> @fi. ?? :load8[@fmessage+@fi] [ !put[:load8[@fmessage+@fi]]. @fi+1 -> @fi. ]
+? @fimage != 0 [ :hostfree[@fimage|@fbytes] -> @fn. ]
+:hostfree[@fwork|524288] -> @fn.
+!exit[@ferror].

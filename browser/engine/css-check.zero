@@ -1,0 +1,530 @@
+# Original Zero Web experimental engine. Shared worker register names;
+# each fork owns its saved frame. No host calls are made by document workers.
+0 => @web.
+0 => @v0. 0 => @v1. 0 => @v2. 0 => @v3. 0 => @v4. 0 => @v5.
+0 => @v6. 0 => @v7. 0 => @v8. 0 => @v9. 0 => @v10. 0 => @v11.
+0 => @v12. 0 => @v13. 0 => @v14. 0 => @v15. 0 => @v16. 0 => @v17.
+0 => @v18. 0 => @v19. 0 => @v20. 0 => @v21. 0 => @v22. 0 => @v23.
+0 => @v24. 0 => @v25. 0 => @v26. 0 => @v27. 0 => @v28. 0 => @v29.
+0 => @v30. 0 => @v31.
+# Arena: caller zeroes 4194304 bytes. Descriptor input pointer0,length8,
+# error16,warning flags24,node count32,viewport width40,height48.
+# Node N (1-based): web+4096+(N-1)*1024, at most512 nodes.
+# Node: parent0, kind8(1element,2text,3style,4script), tag ASCII[16]16,
+# id[64]32,class[128]96,inline CSS[256]224,
+# text pointer480,text bytes488,flags496(bit1 textContent replacement),
+# reserved504,owned text[512]512 (NUL terminated for ordinary text).
+# style/script raw text refers to immutable input; ordinary text uses owned512.
+# Script tag type goes in class field for kind4 only (empty means JavaScript).
+# All strings NUL terminated, oversized supported fields produce error65.
+# Computed styles: web+540672+(N-1)*64. color0 RGB,background8 RGB,
+# font px16,display24(0none,1block,2inline),padding32,margin40,width48,
+# reserved56. CSS worker initializes every field, inherits text color/font.
+# Parent caller context web+1024; DOM context1152,stack1048576..1130495;
+# CSS context1280,stack1146880..1228799;
+# JS context1408,stack1245184..1327103;
+# renderer context1664,stack1605632..1687551.
+# DOM scratch web+600000..639999; CSS scratch640000..739999;
+# JS scratch740000..839999. No Python interpreter is required for server pages.
+# Root input web+1507328 with capacity65568. Workers see input pointer/length.
+# Raster web+2097152,800*600 native BGRX pixels. Renderer rectangle scratch
+#1802240..1835007, ancestor stack1851392..1855487. Header80 scroll,88height.
+# Child starts, yields to caller, executes one complete request per resume,
+# returns by switch[worker context|caller context], then accepts next request.
+# Errors:65 malformed or unsupported required syntax,28 capacity,70 contract.
+# Each worker leaves a nonzero incoming error unchanged and skips its work.
+# Original Zero CSS checks; fixtures are external CSS input data, not code run
+# by another language. All construction, invocation and assertions are Zero.
+0 => @t_case. 0 => @t_pass. 0 => @t_fail. 0 => @t_i. 0 => @t_j.
+0 => @t_p. 0 => @t_n. 0 => @t_css. 0 => @t_inline. 0 => @t_tag.
+0 => @t_id. 0 => @t_class. 0 => @t_color. 0 => @t_bg. 0 => @t_font.
+0 => @t_display. 0 => @t_padding. 0 => @t_margin. 0 => @t_width.
+0 => @t_warning. 0 => @t_error. 0 => @t_count. 0 => @t_seed.
+0 => @t_hash. 0 => @t_after. 0 => @t_k. 0 => @t_guard.
+:hostalloc[4194432] -> @t_p.
+? @t_p == 0 [ !exit[70]. ]
+@t_p+64 -> @web.
+0 -> @t_i. ?? @t_i < 4194432 [ !store64[@t_p+@t_i|0]. @t_i+8 -> @t_i. ]
+0 -> @t_i. ?? @t_i < 64 [ !store8[@web-64+@t_i|165]. !store8[@web+4194304+@t_i|165]. @t_i+1 -> @t_i. ]
+# Original bounded CSS cascade for the Zero Web experimental document profile.
+# Supported selectors are one tag, .class, #id or *. No foreign engine is used.
+# CSS errors/unknown syntax set warning bit2; resource/ABI errors set error16.
+# Stylesheets have at most128 accepted rules. Source order breaks equal weights.
+# Inline declarations override stylesheet declarations. !important is not parsed.
+:fork[@web+1280|@web+1146880|81920] -> @v0.
+? @v0 == 1 [
+ !switch[@web+1280|@web+1024].
+ ?? 1 [
+  ? :load64[@web+16] == 0 [
+   ? (:load64[@web+32] > 512)+(:load64[@web+8] > 65536)+(:load64[@web]+:load64[@web+8] < :load64[@web]) [ !store64[@web+16|70]. ]
+   0 -> @v0. 0 -> @v1.
+   ?? @v1 < 100000 [ !store8[@web+640000+@v1|0]. @v1+1 -> @v1. ]
+   0 -> @v1. ?? @v1 < 32768 [ !store64[@web+540672+@v1|0]. @v1+8 -> @v1. ]
+   # Compile stylesheet rules, then inline declarations into the style table.
+   0 -> @v26.
+   ?? (@v26 < 2)*(:load64[@web+16] == 0) [
+    1 -> @v1.
+    ?? (@v1 <= :load64[@web+32])*(:load64[@web+16] == 0) [
+     @web+4096+(@v1-1)*1024 -> @v2. 0 -> @v3. 0 -> @v4.
+     ? (@v26 == 0)*(:load64[@v2+8] == 3) [
+      :load64[@v2+480] -> @v3. :load64[@v2+488] -> @v4.
+      ? (@v4 > 65536)+(@v3+:load64[@v2+488] < @v3) [ !store64[@web+16|70]. ]
+      ? @v4 [
+       ? (@v3 < :load64[@web])+(@v3+@v4 > :load64[@web]+:load64[@web+8]) [ !store64[@web+16|70]. ]
+      ]
+     ]
+     ? (@v26 == 1)*(:load64[@v2+8] == 1) [
+      @v2+224 -> @v3. 0 -> @v4.
+      ?? (@v4 < 256)*(:load8[@v3+@v4] != 0) [ @v4+1 -> @v4. ]
+      ? @v4 == 256 [ !store64[@web+16|70]. ]
+     ]
+     ? @v4*(:load64[@web+16] == 0) [
+      # Strip comments outside strings, preserving token boundaries and escapes.
+      @web+674000 -> @v6. 0 -> @v7. 0 -> @v5. 0 -> @v8. 0 -> @v11.
+      ?? @v5 < @v4 [
+       :load8[@v3+@v5] -> @v9. 0 -> @v10.
+       ? (@v8 == 0)*(@v9 == 47)*(@v4-@v5 >= 2) [
+        ? :load8[@v3+@v5+1] == 42 [
+         @v5+2 -> @v5. 1 -> @v10.
+         ?? (@v5 < @v4)*@v10 [
+          ? @v4-@v5 >= 2 [
+           ? (:load8[@v3+@v5] == 42)*(:load8[@v3+@v5+1] == 47) [ @v5+2 -> @v5. 0 -> @v10. ]
+          ]
+          ? @v10 [ @v5+1 -> @v5. ]
+         ]
+         ? @v10 [ ? :bitand[:load64[@web+24]|2] == 0 [ !store64[@web+24|:load64[@web+24]+2]. ] ]
+         !store8[@v6+@v7|32]. @v7+1 -> @v7. 2 -> @v10.
+        ]
+       ]
+       ? @v10 == 0 [
+        !store8[@v6+@v7|@v9]. @v7+1 -> @v7. @v5+1 -> @v5.
+        ? @v8 [
+         ? @v11 [ 0 -> @v11. ] ~ [
+          ? @v9 == 92 [ 1 -> @v11. ] ~ [ ? @v9 == @v8 [ 0 -> @v8. ] ]
+         ]
+        ] ~ [ ? (@v9 == 34)+(@v9 == 39) [ @v9 -> @v8. ] ]
+       ]
+      ]
+      0 -> @v5.
+      ?? (@v5 < @v7)*(:load64[@web+16] == 0) [
+       0 -> @v17.
+       ? @v26 == 1 [
+        @web+540672+(@v1-1)*64 -> @v17. 0 -> @v10. @v7 -> @v11. @v7 -> @v5.
+       ] ~ [
+        # Find one balanced rule; unsupported at-rules are skipped as a unit.
+        ?? (@v5 < @v7)*(:load8[@v6+@v5] <= 32) [ @v5+1 -> @v5. ]
+        @v5 -> @v8. 0 -> @v12. 0 -> @v13. 0 -> @v14.
+        ?? (@v5 < @v7)*(@v12 == 0) [
+         :load8[@v6+@v5] -> @v9.
+         ? @v13 [
+          ? @v14 [ 0 -> @v14. ] ~ [ ? @v9 == 92 [ 1 -> @v14. ] ~ [ ? @v9 == @v13 [ 0 -> @v13. ] ] ]
+         ] ~ [
+          ? (@v9 == 34)+(@v9 == 39) [ @v9 -> @v13. ]
+          ? @v9 == 123 [ 1 -> @v12. ]
+          ? (@v9 == 59)+(@v9 == 125) [ 2 -> @v12. ]
+         ]
+         ? @v12 == 0 [ @v5+1 -> @v5. ]
+        ]
+        ? @v12 != 1 [
+         ? @v8 < @v7 [ ? :bitand[:load64[@web+24]|2] == 0 [ !store64[@web+24|:load64[@web+24]+2]. ] ]
+         ? @v5 < @v7 [ @v5+1 -> @v5. ]
+        ] ~ [
+         @v5 -> @v15. ?? (@v15 > @v8)*(:load8[@v6+@v15-1] <= 32) [ @v15-1 -> @v15. ]
+         @v5+1 -> @v10. @v10 -> @v5. 1 -> @v12. 0 -> @v13. 0 -> @v14.
+         ?? (@v5 < @v7)*@v12 [
+          :load8[@v6+@v5] -> @v9.
+          ? @v13 [
+           ? @v14 [ 0 -> @v14. ] ~ [ ? @v9 == 92 [ 1 -> @v14. ] ~ [ ? @v9 == @v13 [ 0 -> @v13. ] ] ]
+          ] ~ [
+           ? (@v9 == 34)+(@v9 == 39) [ @v9 -> @v13. ]
+           ? @v9 == 123 [ @v12+1 -> @v12. ]
+           ? @v9 == 125 [ @v12-1 -> @v12. ]
+          ]
+          ? @v12 [ @v5+1 -> @v5. ]
+         ]
+         @v5 -> @v11. ? @v5 < @v7 [ @v5+1 -> @v5. ]
+         1 -> @v16. 2 -> @v18. 1 -> @v19. @v8 -> @v20.
+         ? (@v12 != 0)+(@v15 == @v8)+(@v15-@v8 > 127) [ 0 -> @v16. ]
+         ? @v16 [
+          :load8[@v6+@v8] -> @v9.
+          ? @v9 == 42 [ 1 -> @v18. 0 -> @v19. ? @v15-@v8 != 1 [ 0 -> @v16. ] @v20+1 -> @v20. ]
+          ? @v9 == 46 [ 3 -> @v18. 10 -> @v19. @v20+1 -> @v20. ]
+          ? @v9 == 35 [ 4 -> @v18. 100 -> @v19. @v20+1 -> @v20. ]
+          ? (@v18 != 1)*(@v20 == @v15) [ 0 -> @v16. ]
+          ? (@v18 != 1)*(@v20 < @v15) [
+           :load8[@v6+@v20] -> @v9.
+           ? @v9 == 45 [
+            ? @v20+1 == @v15 [ 0 -> @v16. ] ~ [
+             :load8[@v6+@v20+1] -> @v9.
+             ? (((@v9 >= 65)*(@v9 <= 90))+((@v9 >= 97)*(@v9 <= 122))+(@v9 == 95)+(@v9 == 45)) == 0 [ 0 -> @v16. ]
+            ]
+           ] ~ [
+            ? (((@v9 >= 65)*(@v9 <= 90))+((@v9 >= 97)*(@v9 <= 122))+(@v9 == 95)) == 0 [ 0 -> @v16. ]
+           ]
+          ]
+          ?? (@v20 < @v15)*@v16 [
+           :load8[@v6+@v20] -> @v9.
+           ? (((@v9 >= 65)*(@v9 <= 90))+((@v9 >= 97)*(@v9 <= 122))+((@v9 >= 48)*(@v9 <= 57))+(@v9 == 45)+(@v9 == 95)) == 0 [ 0 -> @v16. ]
+           @v20+1 -> @v20.
+          ]
+         ]
+         ? @v16 [
+          ? @v0 == 128 [ !store64[@web+16|28]. ] ~ [
+           @web+640000+@v0*256 -> @v17. 0 -> @v20.
+           ?? @v20 < @v15-@v8 [
+            :load8[@v6+@v8+@v20] -> @v9. ? (@v18 == 2)*(@v9 >= 65)*(@v9 <= 90) [ @v9+32 -> @v9. ]
+            !store8[@v17+@v20|@v9]. @v20+1 -> @v20.
+           ]
+           !store8[@v17+@v20|0]. !store64[@v17+128|@v18]. !store64[@v17+136|@v19].
+           @v17+152 -> @v17. @v0+1 -> @v0.
+          ]
+         ] ~ [ ? :bitand[:load64[@web+24]|2] == 0 [ !store64[@web+24|:load64[@web+24]+2]. ] ]
+        ]
+       ]
+       # Common declaration parser: destination has7 values followed by mask.
+       ? @v17 [
+        ?? @v10 < @v11 [
+         ?? (@v10 < @v11)*((:load8[@v6+@v10] <= 32)+(:load8[@v6+@v10] == 59)) [ @v10+1 -> @v10. ]
+         @v10 -> @v8. 0 -> @v12.
+         ?? (@v10 < @v11)*(@v12 == 0) [
+          :load8[@v6+@v10] -> @v9.
+          ? @v9 == 58 [ 1 -> @v12. ] ? @v9 == 59 [ 2 -> @v12. ]
+          ? @v12 == 0 [ @v10+1 -> @v10. ]
+         ]
+         ? @v12 != 1 [
+          ? @v8 < @v11 [ ? :bitand[:load64[@web+24]|2] == 0 [ !store64[@web+24|:load64[@web+24]+2]. ] ]
+          ? @v10 < @v11 [ @v10+1 -> @v10. ]
+         ] ~ [
+          @v10 -> @v15. ?? (@v15 > @v8)*(:load8[@v6+@v15-1] <= 32) [ @v15-1 -> @v15. ]
+          @v10+1 -> @v10. ?? (@v10 < @v11)*(:load8[@v6+@v10] <= 32) [ @v10+1 -> @v10. ]
+          @v10 -> @v12. 0 -> @v13. 0 -> @v14. 0 -> @v16. 0 -> @v29.
+          ?? (@v10 < @v11)*(@v29 == 0) [
+           :load8[@v6+@v10] -> @v9.
+           ? @v13 [
+            ? @v14 [ 0 -> @v14. ] ~ [ ? @v9 == 92 [ 1 -> @v14. ] ~ [ ? @v9 == @v13 [ 0 -> @v13. ] ] ]
+           ] ~ [
+            ? (@v9 == 34)+(@v9 == 39) [ @v9 -> @v13. ]
+            ? (@v9 == 40)+(@v9 == 91)+(@v9 == 123) [ @v16+1 -> @v16. ]
+            ? (@v9 == 41)+(@v9 == 93)+(@v9 == 125) [ ? @v16 [ @v16-1 -> @v16. ] ]
+            ? (@v9 == 59)*(@v16 == 0) [ 1 -> @v29. ]
+           ]
+           ? @v29 == 0 [ @v10+1 -> @v10. ]
+          ]
+          @v10 -> @v13. ?? (@v13 > @v12)*(:load8[@v6+@v13-1] <= 32) [ @v13-1 -> @v13. ]
+          ? @v10 < @v11 [ @v10+1 -> @v10. ]
+          "color background-color font-size display padding margin width " -> @v18.
+          0 -> @v19. 1 -> @v20. 0 -> @v21.
+          ?? :load8[@v18+@v19] [
+           0 -> @v22. 1 -> @v23.
+           ?? :load8[@v18+@v19] != 32 [
+            ? @v22 >= @v15-@v8 [ 0 -> @v23. ] ~ [
+             :load8[@v6+@v8+@v22] -> @v9. ? (@v9 >= 65)*(@v9 <= 90) [ @v9+32 -> @v9. ]
+             ? @v9 != :load8[@v18+@v19] [ 0 -> @v23. ]
+            ]
+            @v22+1 -> @v22. @v19+1 -> @v19.
+           ]
+           ? @v23*(@v22 == @v15-@v8) [ @v20 -> @v21. ]
+           @v19+1 -> @v19. @v20+1 -> @v20.
+          ]
+          0 -> @v24. 0 -> @v25.
+          ? (@v21 == 1)+(@v21 == 2) [
+           ? (@v13 > @v12)*(:load8[@v6+@v12] == 35) [
+            @v13-@v12-1 -> @v18. ? (@v18 == 3)+(@v18 == 6) [
+             1 -> @v25. @v12+1 -> @v19.
+             ?? (@v19 < @v13)*@v25 [
+              :load8[@v6+@v19] -> @v9. 99 -> @v20.
+              ? (@v9 >= 48)*(@v9 <= 57) [ @v9-48 -> @v20. ]
+              ? (@v9 >= 65)*(@v9 <= 70) [ @v9-55 -> @v20. ]
+              ? (@v9 >= 97)*(@v9 <= 102) [ @v9-87 -> @v20. ]
+              ? @v20 == 99 [ 0 -> @v25. ] ~ [
+               ? @v18 == 3 [ @v24*256+@v20*17 -> @v24. ] ~ [ @v24*16+@v20 -> @v24. ]
+              ] @v19+1 -> @v19.
+             ]
+            ]
+           ] ~ [
+            "black white red green blue gray grey yellow cyan magenta orange purple navy teal silver maroon olive rebeccapurple transparent " -> @v18.
+            0 -> @v19. 1 -> @v20.
+            ?? :load8[@v18+@v19] [
+             0 -> @v22. 1 -> @v23.
+             ?? :load8[@v18+@v19] != 32 [
+              ? @v22 >= @v13-@v12 [ 0 -> @v23. ] ~ [
+               :load8[@v6+@v12+@v22] -> @v9. ? (@v9 >= 65)*(@v9 <= 90) [ @v9+32 -> @v9. ]
+               ? @v9 != :load8[@v18+@v19] [ 0 -> @v23. ]
+              ] @v22+1 -> @v22. @v19+1 -> @v19.
+             ]
+             ? @v23*(@v22 == @v13-@v12) [
+              1 -> @v25. 0 -> @v24.
+              ? @v20 == 2 [ 0xffffff -> @v24. ] ? @v20 == 3 [ 0xff0000 -> @v24. ]
+              ? @v20 == 4 [ 0x008000 -> @v24. ] ? @v20 == 5 [ 0x0000ff -> @v24. ]
+              ? (@v20 == 6)+(@v20 == 7) [ 0x808080 -> @v24. ] ? @v20 == 8 [ 0xffff00 -> @v24. ]
+              ? @v20 == 9 [ 0x00ffff -> @v24. ] ? @v20 == 10 [ 0xff00ff -> @v24. ]
+              ? @v20 == 11 [ 0xffa500 -> @v24. ] ? @v20 == 12 [ 0x800080 -> @v24. ]
+              ? @v20 == 13 [ 0x000080 -> @v24. ] ? @v20 == 14 [ 0x008080 -> @v24. ]
+              ? @v20 == 15 [ 0xc0c0c0 -> @v24. ] ? @v20 == 16 [ 0x800000 -> @v24. ]
+              ? @v20 == 17 [ 0x808000 -> @v24. ] ? @v20 == 18 [ 0x663399 -> @v24. ]
+              ? @v20 == 19 [ -1 -> @v24. ? @v21 != 2 [ 0 -> @v25. ] ]
+             ] @v19+1 -> @v19. @v20+1 -> @v20.
+            ]
+           ]
+          ]
+          ? @v21 == 4 [
+           "none block inline " -> @v18. 0 -> @v19. 0 -> @v20.
+           ?? :load8[@v18+@v19] [
+            0 -> @v22. 1 -> @v23.
+            ?? :load8[@v18+@v19] != 32 [
+             ? @v22 >= @v13-@v12 [ 0 -> @v23. ] ~ [
+              :load8[@v6+@v12+@v22] -> @v9. ? (@v9 >= 65)*(@v9 <= 90) [ @v9+32 -> @v9. ]
+              ? @v9 != :load8[@v18+@v19] [ 0 -> @v23. ]
+             ] @v22+1 -> @v22. @v19+1 -> @v19.
+            ]
+            ? @v23*(@v22 == @v13-@v12) [ 1 -> @v25. @v20 -> @v24. ]
+            @v19+1 -> @v19. @v20+1 -> @v20.
+           ]
+          ]
+          ? (@v21 == 3)+(@v21 >= 5) [
+           @v12 -> @v18. 1 -> @v25. 0 -> @v19.
+           ?? (@v18 < @v13)*@v25 [
+            :load8[@v6+@v18] -> @v9.
+            ? (@v9 >= 48)*(@v9 <= 57) [
+             ? @v24 > 4096 [ 0 -> @v25. ] ~ [ @v24*10+@v9-48 -> @v24. @v18+1 -> @v18. @v19+1 -> @v19. ]
+            ] ~ [ 0 -> @v25. ]
+           ]
+           0 -> @v25.
+           ? @v19 [
+            ? (@v18 == @v13)*(@v24 == 0) [ 1 -> @v25. ]
+            ? @v13-@v18 == 2 [
+             :load8[@v6+@v18] -> @v9. :load8[@v6+@v18+1] -> @v20.
+             ? (@v9 == 112)+(@v9 == 80) [ ? (@v20 == 120)+(@v20 == 88) [ 1 -> @v25. ] ]
+            ]
+           ]
+           ? @v24 > 4096 [ 0 -> @v25. ]
+           ? (@v21 == 3)*((@v24 == 0)+(@v24 > 96)) [ 0 -> @v25. ]
+          ]
+          ? @v25*@v21 [
+           !store64[@v17+(@v21-1)*8|@v24]. 1 -> @v18. 1 -> @v19.
+           ?? @v19 < @v21 [ @v18*2 -> @v18. @v19+1 -> @v19. ]
+           ? :bitand[:load64[@v17+56]|@v18] == 0 [ !store64[@v17+56|:load64[@v17+56]+@v18]. ]
+          ] ~ [ ? :bitand[:load64[@web+24]|2] == 0 [ !store64[@web+24|:load64[@web+24]+2]. ] ]
+         ]
+        ]
+       ]
+      ]
+     ]
+     @v1+1 -> @v1.
+    ]
+    @v26+1 -> @v26.
+   ]
+   # Resolve each element after its parent. Saved inline values are applied last.
+   1 -> @v1.
+   ?? (@v1 <= :load64[@web+32])*(:load64[@web+16] == 0) [
+    @web+4096+(@v1-1)*1024 -> @v2. @web+540672+(@v1-1)*64 -> @v3.
+    0 -> @v4. ?? @v4 < 64 [ !store64[@web+739600+@v4|:load64[@v3+@v4]]. !store64[@v3+@v4|0]. !store64[@web+739680+@v4|0]. @v4+8 -> @v4. ]
+    !store64[@v3|0x1f2937]. !store64[@v3+8|-1]. !store64[@v3+16|16]. !store64[@v3+24|2].
+    :load64[@v2] -> @v4.
+    ? @v4 >= @v1 [ !store64[@web+16|70]. ] ~ [
+     ? @v4 [
+      @web+540672+(@v4-1)*64 -> @v5. !store64[@v3|:load64[@v5]]. !store64[@v3+16|:load64[@v5+16]].
+     ]
+    ]
+    ? :load64[@v2+8] != 2 [
+     "html body div p h1 h2 h3 h4 h5 h6 ul ol li pre blockquote section article header footer nav main table tr form " -> @v6.
+     0 -> @v7.
+     ?? :load8[@v6+@v7] [
+      0 -> @v8. 1 -> @v9.
+      ?? :load8[@v6+@v7] != 32 [
+       ? @v8 >= 15 [ 0 -> @v9. ] ~ [ ? :load8[@v6+@v7] != :load8[@v2+16+@v8] [ 0 -> @v9. ] ]
+       @v8+1 -> @v8. @v7+1 -> @v7.
+      ]
+      ? @v9*(:load8[@v2+16+@v8] == 0) [ !store64[@v3+24|1]. ] @v7+1 -> @v7.
+     ]
+     "head title meta link style script " -> @v6. 0 -> @v7.
+     ?? :load8[@v6+@v7] [
+      0 -> @v8. 1 -> @v9.
+      ?? :load8[@v6+@v7] != 32 [
+       ? :load8[@v6+@v7] != :load8[@v2+16+@v8] [ 0 -> @v9. ] @v8+1 -> @v8. @v7+1 -> @v7.
+      ]
+      ? @v9*(:load8[@v2+16+@v8] == 0) [ !store64[@v3+24|0]. ] @v7+1 -> @v7.
+     ]
+    ]
+    ? :load64[@v2+8] == 1 [
+     0 -> @v6.
+     ?? @v6 < @v0 [
+      @web+640000+@v6*256 -> @v7. :load64[@v7+128] -> @v8. 0 -> @v9.
+      ? @v8 == 1 [ 1 -> @v9. ]
+      ? (@v8 == 2)+(@v8 == 4) [
+       @v2+16 -> @v10. @v7 -> @v11. 16 -> @v12.
+       ? @v8 == 4 [ @v2+32 -> @v10. @v7+1 -> @v11. 64 -> @v12. ]
+       0 -> @v13. 1 -> @v9.
+       ?? (@v13 < @v12)*@v9 [
+        :load8[@v10+@v13] -> @v14. :load8[@v11+@v13] -> @v15.
+        ? @v14 != @v15 [ 0 -> @v9. ]
+        ? (@v14 == 0)*(@v15 == 0) [ @v12 -> @v13. ] ~ [ @v13+1 -> @v13. ]
+       ]
+      ]
+      ? @v8 == 3 [
+       0 -> @v10.
+       ?? (@v10 < 128)*(:load8[@v2+96+@v10] != 0)*(@v9 == 0) [
+        ?? (@v10 < 128)*(:load8[@v2+96+@v10] != 0)*(:load8[@v2+96+@v10] <= 32) [ @v10+1 -> @v10. ]
+        0 -> @v11. 1 -> @v12.
+        ?? (@v10 < 128)*(:load8[@v2+96+@v10] > 32) [
+         ? :load8[@v2+96+@v10] != :load8[@v7+1+@v11] [ 0 -> @v12. ] @v11+1 -> @v11. @v10+1 -> @v10.
+        ]
+        ? @v12*(@v11 != 0)*(:load8[@v7+1+@v11] == 0) [ 1 -> @v9. ]
+       ]
+      ]
+      ? @v9 [
+       0 -> @v10. 1 -> @v11.
+       ?? @v10 < 7 [
+        ? :bitand[:load64[@v7+208]|@v11] [
+         ? :load64[@v7+136] >= :load64[@web+739680+@v10*8] [
+          !store64[@v3+@v10*8|:load64[@v7+152+@v10*8]]. !store64[@web+739680+@v10*8|:load64[@v7+136]].
+         ]
+        ] @v10+1 -> @v10. @v11*2 -> @v11.
+       ]
+      ]
+      @v6+1 -> @v6.
+     ]
+     0 -> @v6. 1 -> @v7.
+     ?? @v6 < 7 [
+      ? :bitand[:load64[@web+739656]|@v7] [ !store64[@v3+@v6*8|:load64[@web+739600+@v6*8]]. ]
+      @v6+1 -> @v6. @v7*2 -> @v7.
+     ]
+    ]
+    ? :load64[@v2] [
+     ? :load64[@v2] < @v1 [
+      ? :load64[@web+540672+(:load64[@v2]-1)*64+24] == 0 [ !store64[@v3+24|0]. ]
+     ]
+    ]
+    ? (:load64[@v2+8] == 3)+(:load64[@v2+8] == 4) [ !store64[@v3+24|0]. ]
+    @v1+1 -> @v1.
+   ]
+  ]
+  !switch[@web+1280|@web+1024].
+ ]
+]
+!switch[@web+1024|@web+1280].
+1 -> @t_case. 0x1234abcd -> @t_seed.
+?? @t_case <= 151 [
+ 0 -> @t_i. ?? @t_i < 1024 [ !store8[@web+@t_i|0]. @t_i+1 -> @t_i. ]
+ 0 -> @t_i. ?? @t_i < 4096 [ !store8[@web+4096+@t_i|0]. @t_i+1 -> @t_i. ]
+ !store64[@web|@web+1507328]. !store64[@web+32|4].
+ !store64[@web+4096+8|1]. !store32[@web+4096+16|0x79646f62].
+ !store64[@web+5120|1]. !store64[@web+5120+8|1].
+ !store64[@web+6144|2]. !store64[@web+6144+8|2].
+ !store64[@web+7168+8|3]. !store64[@web+7168+480|@web+1507328].
+ "div" -> @t_tag. "main" -> @t_id. "one chosen two" -> @t_class.
+ "" -> @t_css. "" -> @t_inline. 0x1f2937 -> @t_color. -1 -> @t_bg.
+ 16 -> @t_font. 1 -> @t_display. 0 -> @t_padding. 0 -> @t_margin.
+ 0 -> @t_width. 0 -> @t_warning. 0 -> @t_error.
+ ? @t_case == 2 [ "div { color: red; }" -> @t_css. 0xff0000 -> @t_color. ]
+ ? @t_case == 3 [ "DIV { COLOR: #AbC; }" -> @t_css. 0xaabbcc -> @t_color. ]
+ ? @t_case == 4 [ "div{color:#a1B2c3}" -> @t_css. 0xa1b2c3 -> @t_color. ]
+ ? @t_case == 5 [ ".chosen{color:blue}" -> @t_css. 0x0000ff -> @t_color. ]
+ ? @t_case == 6 [ "#main{color:green}" -> @t_css. 0x008000 -> @t_color. ]
+ ? @t_case == 7 [ "*{color:gray}" -> @t_css. 0x808080 -> @t_color. ]
+ ? @t_case == 8 [ "#main{color:blue}.chosen{color:red}div{color:green}" -> @t_css. 0x0000ff -> @t_color. ]
+ ? @t_case == 9 [ ".chosen{color:red}.one{color:blue}" -> @t_css. 0x0000ff -> @t_color. ]
+ ? @t_case == 10 [ "#main{color:red}" -> @t_css. "color:blue" -> @t_inline. 0x0000ff -> @t_color. ]
+ ? @t_case == 11 [ "div{color:red;color:green;color:#ggg}" -> @t_css. 0x008000 -> @t_color. 2 -> @t_warning. ]
+ ? @t_case == 12 [ "body{color:purple;font-size:24px}" -> @t_css. 0x800080 -> @t_color. 24 -> @t_font. ]
+ ? @t_case == 13 [ "div{background-color:#123456;padding:12px;margin:8px;width:300px;font-size:32px}" -> @t_css. 0x123456 -> @t_bg. 12 -> @t_padding. 8 -> @t_margin. 300 -> @t_width. 32 -> @t_font. ]
+ ? @t_case == 14 [ "div{display:none}" -> @t_css. 0 -> @t_display. ]
+ ? @t_case == 15 [ "body{display:none}div{display:block}" -> @t_css. 0 -> @t_display. ]
+ ? @t_case == 16 [ "div{display:inline}" -> @t_css. 2 -> @t_display. ]
+ ? @t_case == 17 [ "/* A */ div /*B*/ { color: /*C*/ blue; }" -> @t_css. 0x0000ff -> @t_color. ]
+ ? @t_case == 18 [ "div{font-family:'; } /* not a comment */';color:red}" -> @t_css. 0xff0000 -> @t_color. 2 -> @t_warning. ]
+ ? @t_case == 19 [ "@media x { div { color:red } } div {color:blue}" -> @t_css. 0x0000ff -> @t_color. 2 -> @t_warning. ]
+ ? @t_case == 20 [ "@import 'x'; div{color:blue}" -> @t_css. 0x0000ff -> @t_color. 2 -> @t_warning. ]
+ ? @t_case == 21 [ "div p {color:red}div{color:blue}" -> @t_css. 0x0000ff -> @t_color. 2 -> @t_warning. ]
+ ? @t_case == 22 [ "div{color:red!important}" -> @t_css. 2 -> @t_warning. ]
+ ? @t_case == 23 [ "div{color:rgb(1,2,3)}" -> @t_css. 2 -> @t_warning. ]
+ ? @t_case == 24 [ "div{padding:999999999999999999999999px;color:blue}" -> @t_css. 0x0000ff -> @t_color. 2 -> @t_warning. ]
+ ? @t_case == 25 [ "div{padding:0;margin:0;width:0}" -> @t_css. ]
+ ? @t_case == 26 [ "div{padding:-1px;margin:1;width:100%;font-size:0}" -> @t_css. 2 -> @t_warning. ]
+ ? @t_case == 27 [ "div{color:red" -> @t_css. 2 -> @t_warning. ]
+ ? @t_case == 28 [ "div{color:red}/*never closed" -> @t_css. 0xff0000 -> @t_color. 2 -> @t_warning. ]
+ ? @t_case == 29 [ ".Chosen{color:red}#Main{color:green}DIV{color:blue}" -> @t_css. 0x0000ff -> @t_color. ]
+ ? @t_case == 30 [ "span" -> @t_tag. 2 -> @t_display. "span{color:red}" -> @t_css. 0xff0000 -> @t_color. ]
+ ? @t_case == 31 [ "head" -> @t_tag. 0 -> @t_display. ]
+ ? @t_case == 32 [ "div{color:red;font-size:18PX;padding:4096px;width:4096px}" -> @t_css. 0xff0000 -> @t_color. 18 -> @t_font. 4096 -> @t_padding. 4096 -> @t_width. ]
+ ? @t_case == 33 [ "div{color:REBECCAPURPLE;background-color:grey}" -> @t_css. 0x663399 -> @t_color. 0x808080 -> @t_bg. ]
+ ? @t_case == 34 [ "div{color:#12;color:#1234;color:#12345;color:#1234567}" -> @t_css. 2 -> @t_warning. ]
+ ? @t_case == 35 [ "div{unknown:foo(a;b;c);color:red}" -> @t_css. 0xff0000 -> @t_color. 2 -> @t_warning. ]
+ ? @t_case == 36 [ "div{color:blue;}" -> @t_css. "background-color:black;font-size:20px;display:inline;padding:3px;margin:5px;width:200px" -> @t_inline. 0x0000ff -> @t_color. 0 -> @t_bg. 20 -> @t_font. 2 -> @t_display. 3 -> @t_padding. 5 -> @t_margin. 200 -> @t_width. ]
+ ? @t_case == 37 [ "div{color:red}" -> @t_css. !store64[@web+5120|2]. 70 -> @t_error. ]
+ ? @t_case == 38 [ !store64[@web+32|513]. 70 -> @t_error. ]
+ ? @t_case == 39 [ !store64[@web+16|65]. 65 -> @t_error. ]
+ ? @t_case == 40 [ !store64[@web+7168+480|-16]. ]
+ 0 -> @t_i. ?? :load8[@t_tag+@t_i] [ !store8[@web+5120+16+@t_i|:load8[@t_tag+@t_i]]. @t_i+1 -> @t_i. ]
+ 0 -> @t_i. ?? :load8[@t_id+@t_i] [ !store8[@web+5120+32+@t_i|:load8[@t_id+@t_i]]. @t_i+1 -> @t_i. ]
+ 0 -> @t_i. ?? :load8[@t_class+@t_i] [ !store8[@web+5120+96+@t_i|:load8[@t_class+@t_i]]. @t_i+1 -> @t_i. ]
+ 0 -> @t_i. ?? :load8[@t_inline+@t_i] [ !store8[@web+5120+224+@t_i|:load8[@t_inline+@t_i]]. @t_i+1 -> @t_i. ]
+ 0 -> @t_n. ?? :load8[@t_css+@t_n] [ !store8[@web+1507328+@t_n|:load8[@t_css+@t_n]]. @t_n+1 -> @t_n. ]
+ ? @t_case == 40 [ !store8[@web+1507328|120]. 1 -> @t_n. 70 -> @t_error. ]
+ ? (@t_case == 41)+(@t_case == 42) [
+  "div{color:red}" -> @t_css. 128 -> @t_count. ? @t_case == 42 [ 129 -> @t_count. 28 -> @t_error. ]
+  0 -> @t_n. 0 -> @t_j. ?? @t_j < @t_count [ 0 -> @t_i. ?? :load8[@t_css+@t_i] [ !store8[@web+1507328+@t_n|:load8[@t_css+@t_i]]. @t_n+1 -> @t_n. @t_i+1 -> @t_i. ] @t_j+1 -> @t_j. ] 0xff0000 -> @t_color.
+ ]
+ ? @t_case == 43 [ "div{color:red;background-color:transparent}" -> @t_css. 0xff0000 -> @t_color. ]
+ ? @t_case == 44 [ "div{color:transparent}" -> @t_css. 2 -> @t_warning. ]
+ ? @t_case == 45 [ "div{color:red;}" -> @t_css. !store64[@web+7168+480|@web+1507327]. 70 -> @t_error. ]
+ ? @t_case == 46 [ "div{color:red;}" -> @t_css. !store64[@web+7168+480|@web+1572864]. 70 -> @t_error. ]
+ ? @t_case == 47 [ "* { color:red } div,span { color:blue }" -> @t_css. 0xff0000 -> @t_color. 2 -> @t_warning. ]
+ ? @t_case == 48 [ "div{color:purple}*{color:red}" -> @t_css. 0x800080 -> @t_color. ]
+ ? @t_case == 49 [ "div{font-size:96px;padding:4097px;width:4.5px;margin:12em}" -> @t_css. 96 -> @t_font. 2 -> @t_warning. ]
+ ? @t_case == 50 [ "div{font-size:97px}" -> @t_css. 2 -> @t_warning. ]
+ ? @t_case == 51 [ ".1{color:red}#-1{color:blue}123{color:green}div{color:purple}" -> @t_css. 0x800080 -> @t_color. 2 -> @t_warning. ]
+ ? (@t_case >= 43)*(@t_case <= 51) [
+  0 -> @t_n. ?? :load8[@t_css+@t_n] [ !store8[@web+1507328+@t_n|:load8[@t_css+@t_n]]. @t_n+1 -> @t_n. ]
+ ]
+ ? @t_case > 51 [
+  "{}:;/*'\" abcdefghijklmnopqrstuvwxyz0123456789#.-()" -> @t_css.
+  0 -> @t_count. ?? :load8[@t_css+@t_count] [ @t_count+1 -> @t_count. ]
+  0 -> @t_n. ?? @t_n < 512 [
+   :bitand[@t_seed*1664525+1013904223|0xffffffff] -> @t_seed. :bitand[:shr[@t_seed|16]|255] -> @t_i.
+   ?? @t_i >= @t_count [ @t_i-@t_count -> @t_i. ]
+   !store8[@web+1507328+@t_n|:load8[@t_css+@t_i]]. @t_n+1 -> @t_n.
+  ]
+ ]
+ !store64[@web+8|@t_n]. !store64[@web+7168+488|@t_n].
+ 0 -> @t_k. ?? @t_k < 4 [
+  540656 -> @t_guard. ? @t_k == 1 [ 573440 -> @t_guard. ] ? @t_k == 2 [ 639984 -> @t_guard. ] ? @t_k == 3 [ 740000 -> @t_guard. ]
+  0 -> @t_i. ?? @t_i < 16 [ !store8[@web+@t_guard+@t_i|165]. @t_i+1 -> @t_i. ] @t_k+1 -> @t_k.
+ ]
+ 2166136261 -> @t_hash. 0 -> @t_i. ?? @t_i < @t_n [ :bitand[(@t_hash*16777619)+:load8[@web+1507328+@t_i]|0xffffffff] -> @t_hash. @t_i+1 -> @t_i. ]
+ !switch[@web+1024|@web+1280].
+ 0 -> @t_j.
+ ? :load64[@web+16] != @t_error [ 1 -> @t_j. ]
+ ? (@t_error == 0)*(@t_case <= 51) [
+  @web+540736 -> @t_p.
+  ? :load64[@t_p] != @t_color [ 1 -> @t_j. ]
+  ? :load64[@t_p+8] != @t_bg [ 1 -> @t_j. ]
+  ? :load64[@t_p+16] != @t_font [ 1 -> @t_j. ]
+  ? :load64[@t_p+24] != @t_display [ 1 -> @t_j. ]
+  ? :load64[@t_p+32] != @t_padding [ 1 -> @t_j. ]
+  ? :load64[@t_p+40] != @t_margin [ 1 -> @t_j. ]
+  ? :load64[@t_p+48] != @t_width [ 1 -> @t_j. ]
+  ? :load64[@web+24] != @t_warning [ 1 -> @t_j. ]
+  ? (:load64[@t_p+64] != @t_color)+(:load64[@t_p+64+16] != @t_font) [ 1 -> @t_j. ]
+  ? (:load64[@t_p+64+24] == 0) != (@t_display == 0) [ 1 -> @t_j. ]
+ ]
+ 0 -> @t_i. ?? @t_i < 64 [
+  ? (:load8[@web-64+@t_i] != 165)+(:load8[@web+4194304+@t_i] != 165) [ 1 -> @t_j. ] @t_i+1 -> @t_i.
+ ]
+ 0 -> @t_k. ?? @t_k < 4 [
+  540656 -> @t_guard. ? @t_k == 1 [ 573440 -> @t_guard. ] ? @t_k == 2 [ 639984 -> @t_guard. ] ? @t_k == 3 [ 740000 -> @t_guard. ]
+  0 -> @t_i. ?? @t_i < 16 [ ? :load8[@web+@t_guard+@t_i] != 165 [ 1 -> @t_j. ] @t_i+1 -> @t_i. ] @t_k+1 -> @t_k.
+ ]
+ 2166136261 -> @t_after. 0 -> @t_i. ?? @t_i < @t_n [ :bitand[(@t_after*16777619)+:load8[@web+1507328+@t_i]|0xffffffff] -> @t_after. @t_i+1 -> @t_i. ]
+ ? @t_after != @t_hash [ 1 -> @t_j. ]
+ ? @t_j [
+  "CSS check failed: " -> @t_css. 0 -> @t_i. ?? :load8[@t_css+@t_i] [ !put[:load8[@t_css+@t_i]]. @t_i+1 -> @t_i. ]
+  @t_case -> @t_n. 0 -> @t_i. ?? @t_n >= 100 [ @t_n-100 -> @t_n. @t_i+1 -> @t_i. ] !put[48+@t_i].
+  0 -> @t_i. ?? @t_n >= 10 [ @t_n-10 -> @t_n. @t_i+1 -> @t_i. ] !put[48+@t_i]. !put[48+@t_n]. !put[10].
+  @t_fail+1 -> @t_fail.
+ ] ~ [ @t_pass+1 -> @t_pass. ]
+ @t_case+1 -> @t_case.
+]
+? @t_fail [ !exit[1]. ]
+"PASS 51 CSS semantic/boundary cases and 100 malformed probes; guards and immutable input checked.\n" -> @t_css.
+0 -> @t_i. ?? :load8[@t_css+@t_i] [ !put[:load8[@t_css+@t_i]]. @t_i+1 -> @t_i. ] !exit[0].

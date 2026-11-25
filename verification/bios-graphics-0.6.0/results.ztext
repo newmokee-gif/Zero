@@ -1,0 +1,80 @@
+ZTEXT001000011e8075dd1340000000
+Zero BIOS VBE graphics - independent component checks
+Date: 2026-11-15
+
+Implementation
+bios.zero now queries VBE2/3, follows the actual far mode list, validates a
+32-bit RGB/BGR linear mode, prefers800x600 and falls back to640..800 by480..600.
+Unsupported firmware preserves a VGA text handoff. BIOS64 maps the first4GiB
+using page directories3000/4000/5000/c000; no real-mode table store exceeds
+64KiB. The shared128-byte handoff also provides stack pool40000..8ffff.
+BIOS-GRAPHICS.txt specifies the constraints and memory layout.
+
+Final component binary
+The latest compiler candidate build/selfhost-core-threads-stage2 includes the
+physical-address guard in far16. It compiled current bios.zero to10947 bytes,
+within the16384-byte El Torito slot. Exact source/compiler/binary/probe-ISO
+hashes are in final-input-sha256.txt. The private probe ISO is not the release
+ISO: it contains the standalone pixel probe as both raw kernel payloads.
+No assembler or linker was invoked. The probe and loader are Zero source;
+the existing own Zero ISO writer built the optical container.
+
+PASS final BIOS32
+SeaBIOS/stdVGA, CPU qemu64,-lm,-pae: entered protected32 mode, obtained800x600
+BGR framebuffer, and wrote every pixel using the supplied stride. Only after
+all writes finished did the Zero probe report BIOS GRAPHICS PROBE PASS.
+Evidence: final32.serial, final32.png.
+
+PASS final BIOS64
+SeaBIOS/stdVGA, CPU qemu64: entered long mode and completed the same800x600
+pixel writes. final64-handoff.txt records framebuffer0xfd000000, beyond the
+old1GiB identity mapping, stride800, format1BGR and architecture64. It also
+records the stack pool base40000 and size50000. The final32/final64 raw PPM
+screen captures are byte-identical; their PNGs were viewed and show the
+expected independently colored horizontal/vertical gradient.
+Evidence: final64.serial, final64.png, final64-handoff.txt.
+
+Additional development checks
+The first VBE implementation selected640x480; the same full-pixel probe passed
+in both BIOS32 and BIOS64, with identical screens. Those results are retained
+as bios32/bios64.*. The subsequent800x600 preference passed both modes as
+preferred32/preferred64.* before the final far16-guard candidate was retested
+above. Both tested resolutions use the same kernel-side pixel ABI.
+
+ISA VGA fallback
+A separate private ISO combined the initial new BIOS component with the
+unchanged0.5 kernel. SeaBIOS with ISA VGA and the ISA VGA option ROM had no
+eligible32-bit linear mode; the loader retained kind1,baseb8000,stride80.
+The existing visible VGA terminal booted, mounted ZeroFS and reached zero>.
+Evidence: text-fallback.serial, text-fallback.png, text-fallback-handoff.txt.
+The only writable data disk was a private copy of build/data.img.
+
+VirtualBox-firmware limitation observed
+Official VirtualBox7.2 PC BIOS and VGA ROMs were also run on QEMU stdVGA
+hardware. In that combination VBE4F00 left the request buffer unchanged,
+so no VESA controller response existed and the loader correctly retained
+text mode. The framebuffer-only probe therefore reported FAIL, as expected
+for a non-framebuffer handoff. This is NOT a VirtualBox graphics success and
+is not native VirtualBox testing. Evidence: vbox32-video-query.txt and
+vbox32.serial. The ROM/device mismatch must not be represented as proof of
+native VirtualBox VBE behavior. The standard SeaBIOS/stdVGA paths passed.
+
+Environment and reproduction
+QEMU10.0.13, pc machine, TCG,128MiB, one CPU, no network. External test tools:
+/workspace/qemu-local/root/usr/bin/qemu-system-x86_64
+/workspace/qemu-local/root/usr/share/qemu
+/workspace/qemu-local/root/usr/share/seabios/bios-256k.bin
+/workspace/qemu-local/root/usr/share/seabios/vgabios-stdvga.bin
+LD_LIBRARY_PATH=/workspace/qemu-local/root/usr/lib/x86_64-linux-gnu
+
+Compile bios.zero with --real and pixel-probe.zero with --raw/--raw32. Pad
+BIOS to16384 bytes and each raw probe to131072 bytes. Pipe these three slots
+and the existing16777216-byte system.img to build/iso. Attach the resulting
+private image read-only as IDE secondary-master CD-ROM, no data disk:
+-machine pc -accel tcg -m128 -display none -nic none -no-reboot -boot order=d
+-bios BIOS_ROM -vga none -device VGA,romfile=VGA_ROM -cpu CPU
+-serial file:TRANSCRIPT -monitor tcp:127.0.0.1:PORT,server=on,wait=off
+-drive file=PROBE_ISO,format=raw,media=cdrom,if=ide,index=2,readonly=on
+After PASS, the monitor screendump command captured the image and quit ended
+each process. All test VMs are stopped. Original data.img/data.vdi were not
+modified. The final integrated operating-system release has separate tests.

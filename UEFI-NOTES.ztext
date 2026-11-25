@@ -1,0 +1,173 @@
+ZTEXT00100002684deeac0ae0000000
+Zero OS loader implementation notes - AMD64 UEFI ABI
+
+This file describes loader.zero and the x86-64 ABI. loader32.zero uses
+different pointer widths, structure offsets and calling conventions documented
+in UEFI32.ztext. Compile the AMD64 loader with the unified compiler:
+build/zero --efi < loader.zero > build/BOOTX64.EFI
+
+Both loaders use the shared 256-byte u64 handoff described in
+UEFI-CONSOLE.ztext, including execution architecture at offset 104 and owned
+stack-pool base/size at offsets112/120, native compiler bundle base/size at
+128/136 and workspace base/size at144/152.
+
+Reference interfaces only; no implementation copied
+https://uefi.org/specs/UEFI/2.10/04_EFI_System_Table.html
+https://uefi.org/specs/UEFI/2.10/07_Services_Boot_Services.html
+https://uefi.org/specs/UEFI/2.10/09_Protocols_EFI_Loaded_Image.html
+https://uefi.org/specs/UEFI/2.10/12_Protocols_Console_Support.html
+https://uefi.org/specs/UEFI/2.10/13_Protocols_Media_Access.html
+https://learn.microsoft.com/en-us/windows/win32/debug/pe-format
+
+Widths and status
+Offsets below are bytes with AMD64 natural alignment and 8-byte pointers.
+EFI_STATUS is u64; bit 63 denotes an error. Zero is EFI_SUCCESS, while positive
+nonzero values are warnings. The loader requires exact success before using
+outputs; warnings never stand for internal completion.
+EFI_BUFFER_TOO_SMALL=8000000000000005.
+EFI_INVALID_PARAMETER=8000000000000002.
+
+System table and boot-service offsets
+Entry RCX is ImageHandle; RDX points to EFI_SYSTEM_TABLE.
+SystemTable: Header0..23, FirmwareVendor24, FirmwareRevision32,
+ConsoleInHandle40, ConIn48, ConsoleOutHandle56, ConOut64,
+StandardErrorHandle72, StdErr80, RuntimeServices88, BootServices96,
+NumberOfTableEntries104, ConfigurationTable112.
+
+BootServices: AllocatePages40, FreePages48, GetMemoryMap56, AllocatePool64,
+FreePool72, HandleProtocol152, ExitBootServices232, SetWatchdogTimer256,
+LocateProtocol320, CopyMem352, SetMem360. The reserved slot at160 must be
+counted. In current Zero syntax a five-argument ABI operation has this form:
+:call[@function | @a1 | @a2 | @a3 | @a4 | @a5] -> @status.
+
+Loaded image and filesystem
+LoadedImage GUID: 5B1B31A1-9562-11D2-8E3F-00A0C969723B.
+GUID memory: u32 5b1b31a1, u16 9562, u16 11d2,
+then bytes 8e 3f 00 a0 c9 69 72 3b.
+HandleProtocol receives ImageHandle, GUID address and output-pointer address.
+LoadedImage offsets: Revision0, ParentHandle8, SystemTable16, DeviceHandle24,
+FilePath32, Reserved40, LoadOptionsSize48, LoadOptions56, ImageBase64,
+ImageSize72, ImageCodeType80, ImageDataType84, Unload88. Total size 96.
+
+SimpleFileSystem GUID: 964E5B22-6459-11D2-8E39-00A0C969723B.
+Revision is at0; OpenVolume at8. Obtain the protocol through the loaded
+image's DeviceHandle. OpenVolume receives the protocol and root-output
+pointer. The AMD64 loader opens UTF-16 \kernel.bin from that root. IA32 opens
+\kernel32.bin through its own ABI; the shared FAT image contains both.
+
+EFI_FILE_PROTOCOL: Revision0, Open8, Close16, Delete24, Read32, Write40,
+GetPosition48, SetPosition56, GetInfo64, SetInfo72, Flush80.
+Open receives root, new-file-output, UTF16 path, mode1 and attributes0.
+Read receives file, byte-count-pointer and destination. It can return fewer
+bytes than requested; zero progress is rejected before kernel completion.
+Close the file and root before final memory-map acquisition.
+
+EFI_FILE_INFO GUID: 09576E92-6D3F-11D2-8E39-00A0C969723B.
+Layout: Size0, FileSize8, PhysicalSize16 (u64); EFI_TIME fields24/40/56;
+Attribute72; UTF16 FileName80. Bounds/status must be validated before outputs
+are used. Successful GetInfo must report80..512 bytes before FileSize is read.
+The loader rejects an empty or larger-than491520-byte kernel and accumulates
+validated partial reads with a separate completion flag.
+
+Allocation
+AllocatePages receives allocation type, memory type, page count and output
+physical-address pointer. Types0/1/2 mean any/max/fixed address; pages are 4096
+bytes. EfiLoaderCode=1 holds executable kernel pages; EfiLoaderData=2 holds
+stack, handoff and memory map. Initialize output storage and check status
+before using it; do not assume a fixed physical address is free.
+The AMD64 loader allocates120 code pages (480KiB),256 stack-pool pages (1MiB) and
+17 handoff/map pages. The main entry uses the pool's upper end; its base and
+size are handed to the kernel for two cooperative worker stacks. The handoff
+is explicitly cleared for 256 bytes. Its final map buffer is 64 KiB.
+IA32 uses bounded below-4 GiB allocations
+described in UEFI32.ztext.
+
+GOP
+GraphicsOutput GUID: 9042A9DE-23DC-4A38-96FB-7ADED080516A.
+GOP methods: QueryMode0, SetMode8, Blt16, Mode24.
+Mode: MaxMode0, Mode4, Info8, SizeOfInfo16, FrameBufferBase24,
+FrameBufferSize32.
+Info: Version0, HorizontalResolution4, VerticalResolution8, PixelFormat12,
+RedMask16, GreenMask20, BlueMask24, ReservedMask28, PixelsPerScanLine32.
+Pixel formats are RGB0, BGR1, bit-mask2 and BltOnly3. The kernel supports the
+first two 32-bit layouts. Stride is PixelsPerScanLine, not visible width.
+Validate geometry, stride, size and pointer arithmetic, then copy metadata
+before exit. UEFI need not expose legacy VGA text memory at B8000.
+The loader prefers an eligible1920x1080 mode, retains800x600/640x480 or another
+compatible fallback, then validates the actual current
+mode even if selection failed. See UEFI-CONSOLE.ztext for implemented mode
+selection and shared handoff.
+
+Exit sequence
+1. Disable the firmware watchdog and retain any failure status.
+2. Load the complete kernel, allocate its stack and handoff/map storage,
+   establish display metadata, release queried mode buffers, close files.
+3. Restore map capacity and obtain size, key, descriptor stride and version.
+   Validate that returned data fits the preallocated buffer and at least one
+   descriptor fits; stride must be at least 40 bytes.
+4. Immediately call ExitBootServices with the acquired key. No intervening
+   firmware console, allocation, protocol or file operation is allowed.
+5. Retry only EFI_INVALID_PARAMETER, acquiring a fresh map each time. At
+   most four exit attempts are made. After the first attempt, only the two
+   map/exit services are used; diagnostics are direct UART output.
+6. On success, !enter[@entry | @handoff | @stack_top]. disables maskable
+   interrupts, sets the dedicated stack and jumps to the kernel. It never
+   returns to firmware. On failure, a bounded diagnostic path halts.
+
+EFI_MEMORY_DESCRIPTOR minimum fields: Type0, PhysicalStart8, VirtualStart16,
+NumberOfPages24, Attribute32. Actual stride comes from firmware and can
+exceed 40. The descriptor-version field is 32 bits; the cleared handoff leaves
+its upper32 bits zero.
+
+Microsoft x64 call ABI
+First four integer/pointer arguments use RCX/RDX/R8/R9; remaining arguments
+are on the stack. Before CALL, RSP is 16-byte aligned and 32 shadow bytes are
+reserved. The compiler's five-argument primitive subtracts 48 bytes and places
+argument 5 at [RSP+32]; the callee sees it at [RSP+40].
+RAX is the result. RCX/RDX/R8-R11 and XMM0-5 are volatile; RBX/RBP/RDI/RSI/RSP/
+R12-R15 are nonvolatile. The compiler preserves its previous RSP in R12
+across the conforming firmware call, and protects nested expression values.
+Entry RCX/RDX are captured before the generic program frame is initialized.
+
+PE32+ image contract
+DOS header has MZ and e_lfanew at60; PE signature is at offset 64.
+COFF machine8664, two sections, optional-header size 240, characteristics22.
+Optional magic20b, entry RVA1000, ImageBase100000, section/file alignment
+4096/512, EFI subsystem10 and 16 data directories. Header size 512.
+.text starts at RVA1000/file offset 512; characteristics60000020.
+.reloc follows aligned code; characteristics42000040, virtual size 12, raw
+size 512. The base-relocation directory points to a valid no-op ABSOLUTE block.
+Generated code is position-independent and has no import table or runtime.
+All section/directory RVAs are relative to ImageBase. IA32 PE32 uses its
+separate machine/header values in X86.ztext, not these AMD64 values.
+
+Historical 0.4.0 verification
+Matching AMD64 and IA32 OVMF firmware are external testing dependencies.
+The final 0.4.0 ISO reached both UEFI kernels and their visible terminals in
+QEMU, with PS/2 and shared-disk persistence checks. Exact release hashes,
+commands, logs and remaining limitations for the current release are in
+verification.ztext. Neither
+native VirtualBox nor physical-hardware operation is established by that test.
+
+Historical384KiB growth validation is recorded in
+verification/boot-growth-0.7.0/results.ztext. Both OVMF architectures completed
+the full-slot tail/arena/pool probe after ExitBootServices. The probe checks
+markers across the128KiB boundaries and at final byte393215; it does not
+infer a complete load merely from reaching the first kernel instructions.
+
+The historical 448 KiB capacity-only probes remain in
+verification/boot-capacity-448k/. Current 480 KiB slots and the native compiler
+bundle are checked in verification/guest-bundle-480k/; the probe verifies the
+whole 1 MiB loaded bundle, every 8 MiB workspace page and the final kernel
+byte on BIOS/UEFI, both 32- and 64-bit. Native compiler execution evidence is
+separate in verification/guest-app/bundle/. Final OS integration results
+remain separate in verification.ztext.
+
+Native guest compilers
+Both UEFI loaders load an exact1MiB TOOLS.BIN from the boot filesystem and
+validate ZRBNDL01/version1/size1048576/count6. They allocate256 LoaderCode pages
+for it and2048 LoaderCode pages (8MiB) for the compiler workspace and generated
+programs. These are separate from kernel code, stack and the handoff/map.
+IA32 allocations retain explicit below4GiB limits. The files are closed before
+GetMemoryMap/ExitBootServices; no runtime compiler accesses firmware. Bundle
+construction and six app slots are documented in portability/guest/BUNDLE.ztext.

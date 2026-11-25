@@ -1,0 +1,57 @@
+ ? @t_case == 69 [ @t_work+65728 -> @h_output. ]
+ ? @t_case == 70 [ @t_work+98624 -> @h_title. ]
+ ? (@t_expectederror != -1)*(@h_error != @t_expectederror) [ 1 -> @t_failed. ]
+ ? (@h_error != 0)*(@h_error != 28)*(@h_error != 65) [ 1 -> @t_failed. ]
+ ? (@t_expectedflags != -1)*(@h_flags != @t_expectedflags) [ 1 -> @t_failed. ]
+ ? (@t_expectedlinks != -1)*(@h_linkcount != @t_expectedlinks) [ 1 -> @t_failed. ]
+ ? (@h_written >= @h_capacity)+(@h_linkcount > 32) [ 1 -> @t_failed. ]
+ ? @h_error [ ? @h_written+@h_linkcount [ 1 -> @t_failed. ] ]
+ ? @t_expected [
+  0 -> @t_i. ?? :load8[@t_expected+@t_i] [
+   ? @t_i >= @h_written [ 1 -> @t_failed. ] ~ [ ? :load8[@t_expected+@t_i] != :load8[@h_output+@t_i] [ 1 -> @t_failed. ] ] @t_i+1 -> @t_i.
+  ] ? @t_i != @h_written [ 1 -> @t_failed. ]
+ ]
+ ? @t_expectedtitle [
+  0 -> @t_i. ?? :load8[@t_expectedtitle+@t_i] [ ? :load8[@t_expectedtitle+@t_i] != :load8[@h_title+@t_i] [ 1 -> @t_failed. ] @t_i+1 -> @t_i. ]
+  ? :load8[@h_title+@t_i] != 0 [ 1 -> @t_failed. ]
+ ]
+ ? @t_expectedhref [
+  0 -> @t_i. ?? :load8[@t_expectedhref+@t_i] [ ? :load8[@t_expectedhref+@t_i] != :load8[@h_links+@t_i] [ 1 -> @t_failed. ] @t_i+1 -> @t_i. ]
+  ? :load8[@h_links+@t_i] != 0 [ 1 -> @t_failed. ]
+ ]
+ ? @t_expectedlabel [
+  0 -> @t_i. ?? :load8[@t_expectedlabel+@t_i] [ ? :load8[@t_expectedlabel+@t_i] != :load8[@h_links+256+@t_i] [ 1 -> @t_failed. ] @t_i+1 -> @t_i. ]
+  ? (:load8[@h_links+256+@t_i] != 0)+(:load64[@h_links+384] != @t_i) [ 1 -> @t_failed. ]
+ ]
+ ? @t_case == 57 [ ? (:load8[@h_links+254] != 120)+(:load8[@h_links+255] != 0) [ 1 -> @t_failed. ] ]
+ ? @t_case == 59 [ ? (:load8[@h_title+126] != 84)+(:load8[@h_title+127] != 0) [ 1 -> @t_failed. ] ]
+ ? @t_case == 60 [ ? (:load64[@h_links+384] != 127)+(:load8[@h_links+383] != 0) [ 1 -> @t_failed. ] ]
+ ? :load8[@h_output+@h_written] != 0 [ 1 -> @t_failed. ]
+ # Each destination has independent guards before and at its declared boundary.
+ 0 -> @t_k. ?? @t_k < 5 [
+  @h_input -> @t_j. @h_length -> @t_n.
+  ? @t_k == 1 [ @h_output -> @t_j. @h_capacity -> @t_n. ]
+  ? @t_k == 2 [ @h_title -> @t_j. 128 -> @t_n. ]
+  ? @t_k == 3 [ @h_links -> @t_j. 16384 -> @t_n. ]
+  ? @t_k == 4 [ @h_scratch -> @t_j. 512 -> @t_n. ]
+  0 -> @t_i. ?? @t_i < 16 [
+   ? (:load8[@t_j-16+@t_i] != 165)+(:load8[@t_j+@t_n+@t_i] != 165) [ 1 -> @t_failed. ] @t_i+1 -> @t_i.
+  ] @t_k+1 -> @t_k.
+ ]
+ 2166136261 -> @t_after. 0 -> @t_i.
+ ?? @t_i < @h_length [ :bitand[(@t_after*16777619)+:load8[@h_input+@t_i]|0xffffffff] -> @t_after. @t_i+1 -> @t_i. ]
+ ? @t_after != @t_hash [ 1 -> @t_failed. ]
+ ? @t_failed [
+  @t_failures+1 -> @t_failures. "FAIL HTML case " -> @t_message.
+  0 -> @t_i. ?? :load8[@t_message+@t_i] [ !put[:load8[@t_message+@t_i]]. @t_i+1 -> @t_i. ]
+  @t_case -> @t_n. 0 -> @t_i. ?? @t_n >= 100 [ @t_n-100 -> @t_n. @t_i+1 -> @t_i. ] !put[48+@t_i].
+  0 -> @t_i. ?? @t_n >= 10 [ @t_n-10 -> @t_n. @t_i+1 -> @t_i. ] !put[48+@t_i]. !put[48+@t_n].
+  " error=" -> @t_message. 0 -> @t_i. ?? :load8[@t_message+@t_i] [ !put[:load8[@t_message+@t_i]]. @t_i+1 -> @t_i. ]
+  @h_error -> @t_n. 0 -> @t_i. ?? @t_n >= 10 [ @t_n-10 -> @t_n. @t_i+1 -> @t_i. ] !put[48+@t_i]. !put[48+@t_n]. !put[10].
+  ? @h_written [ :write[@h_output|@h_written] -> @t_n. !put[10]. ]
+ ]
+ @t_case+1 -> @t_case.
+]
+? @t_failures [ !exit[1]. ]
+"PASS 70 HTML/plain boundary/semantic cases and 100 deterministic malformed probes; guards and immutable input checked.\n" -> @t_message.
+0 -> @t_i. ?? :load8[@t_message+@t_i] [ !put[:load8[@t_message+@t_i]]. @t_i+1 -> @t_i. ]

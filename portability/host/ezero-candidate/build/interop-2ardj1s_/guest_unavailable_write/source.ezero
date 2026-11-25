@@ -1,0 +1,1 @@
+writefile(example.txt | Hello) => show

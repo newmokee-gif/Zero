@@ -1,0 +1,5 @@
+:reserve[160] => @contexts.
+0x40000 => @stack.
+:fork[@contexts + 8 | @stack | 81920] => @result.
+!switch[@contexts | @contexts + 8].
+!out16[0xf4 | 99]. !halt.

@@ -1,0 +1,47 @@
+# Worker outer-loop start: preserve the overlay during genuinely idle frames.
+# No cooperative switch may occur inside save/restore/draw cursor operations.
+? :load64[@console + 2584] * (:load64[@console] == 2) [
+ 0 -> @c4.
+ ? (:load64[@console + 2576] != :load64[@console + 2608]) + (:load64[@console + 2088] != @status) + (:load64[@console + 336] != @timeout) + (:load64[@console + 328] == 0) [ 1 -> @c4. ]
+ 1 -> @c0. ? :load64[@console + 320] [ 1 - :bitand[:shr[:load64[@console + 440]|2]|1] -> @c0. ]
+ ? (@c0 != :load64[@console + 2384]) * (:load64[@console + 2416] == 0) [ 1 -> @c4. ]
+ # If layout generation is unchanged, prior focus ordinals remain valid.
+ # Inspect every visible ring; hidden dirty windows must not erase the cursor.
+ 0 -> @i. 0 -> @j.
+ ?? (@c4 == 0) * (@i < :load64[@console + 2056]) [
+  :load64[@console + 2048] + @i * 8192 -> @c0.
+  ? :load64[@c0] [
+   0 -> @c1.
+   ? :load64[@console + 2416] [
+    ? @i == :load64[@console + 2424] [ 1 -> @c1. ]
+   ] ~ [
+    ? :load64[@console + 2080] == 0 [
+     ? (@j >= @good_a) * (@j < @good_a + 3) [ 1 -> @c1. ]
+    ] ~ [
+     ? (@j + 1 >= @active_bank) * (@j <= @active_bank + 1) [ 1 -> @c1. ]
+    ]
+   ]
+   ? @c1 * (:load64[@c0 + 64] != :load64[@c0 + 72]) [ 1 -> @c4. ]
+   @j + 1 -> @j.
+  ]
+  @i + 1 -> @i.
+ ]
+ ? @c4 [
+ 0 -> @i. 0 -> @c5.
+ ?? @i < 17 [
+  0 -> @j.
+  ?? @j < 12 [
+   ? :load8[:load64[@console + 2648] + @i * 12 + @j] != 48 [
+    :load64[@console + 2592] + @j -> @c0. :load64[@console + 2600] + @i -> @c1.
+    ? (@c0 < :load64[@console + 16]) * (@c1 < :load64[@console + 24]) [
+     !store32[:load64[@console + 8] + (@c1 * :load64[@console + 32] + @c0) * 4|:load32[@console + 2656 + @c5 * 4]].
+    ]
+    @c5 + 1 -> @c5.
+   ]
+   @j + 1 -> @j.
+  ]
+  @i + 1 -> @i.
+ ]
+ !store64[@console + 2584|0].
+ ]
+]

@@ -1,0 +1,78 @@
+ZTEXT001000010ecdb1452760000000
+ZERO BROWSER NAVIGATION, EVENTS AND FRAME CHECKS
+Date: 2026-11-18
+
+Result: 76 executable original Zero cases passed; checker exit status0.
+Product source: browser/navigation-check.zero.
+Compiler: original Zero0.13 desktop-hooks candidate, Linux x64 host output.
+The resulting executable is79839 bytes. Fixture data and assertions are Zero;
+no browser-engine or third-party source was copied into the project.
+
+Scope
+The checker composes browser/address.zero.part, ui.zero.part and
+render.zero.part into native executable code, with fake caller-owned memory
+and injected input events. It also composes parse.zero.part unchanged, but
+does not execute the separate HTML-reader application; that is tested by its
+own checks and the actual VM. These tests do not simulate successful TCP.
+
+Coverage
+Bare hosts and ports; absolute, relative and root-relative links; scheme-
+relative links; query replacement and fragment-only navigation; colons in
+query/fragment; case-insensitive HTTP; literal percent escapes; dot and parent
+path segments; trailing dot/parent directories; bare host/port query handling.
+Unsafe schemes, HTTPS, backslashes, spaces, CRLF, empty authority, empty input,
+256-byte input and normalized-address overflow are rejected. A255-byte final
+URL succeeds. Parent segments cannot climb above the URL authority.
+
+Real UI branches cover back, reload, history underflow, full-history rollover,
+new navigation after going back, link selection/wrap/follow, unsafe links,
+Up/Down scrolling, opening the address field while loading, keyboard input
+limit, empty/ordinary Backspace, Enter and Escape during an active request.
+Root-relative redirects, blocked HTTPS redirects, five-redirect limit,
+missing Location, compressed-response errors, unsupported MIME and stale
+request generations are checked. No successful page execution is fabricated.
+
+Frame checks cover the maximum32768-byte document, all32 link slots, the end
+of the document, the input caret,127-byte errors and control/high-byte output
+sanitization. Canary bytes surround the65536-byte session,1296-byte frame,
+256-byte normalized-address scratch and256-byte network request. Hashes check
+that original fixture input, all link records and Location input are unchanged.
+Back/reload preserve the complete history byte-for-byte. Reload preserves an
+input URL that aliases the current URL buffer. A separate shell-input sentinel
+remains unchanged for every case, including command-like page/address bytes.
+These are deterministic bounded checks, not a formal proof of memory safety.
+
+Regressions fixed in address.zero.part
+The first54-case run exposed11 failures: fragment-only links lost the base
+query; query/fragment colons were mistaken for schemes; dot segments remained
+unresolved; uppercase HTTP failed; and an authority followed by a query lacked
+the required slash. The implementation now normalizes these within255 bytes.
+Subsequent port/query and port/fragment cases were added and passed. The source
+URL/link is read-only; normalized output is completed in private scratch
+before publishing a new request generation.
+
+Verified source SHA-256 values
+address.zero.part
+d0f7ee9cdfd121c6425e5f42ceee6ae8e8ee496c10229268ad0bc76ece28525b
+ui.zero.part
+24aba9a0fa95a9bb734ec267d4cd803e6864d7233616f9c18ba9b829668bea09
+render.zero.part
+6b547216357070857fb403bbc080f44415d3a642627f7355ee1a5b2b7242e817
+parse.zero.part
+f86bff9e3a3db16438df84b951ff93eadeb8519be75a0234c6535038d12126b4
+navigation-check.zero
+379bdec5526b1dde22726af56b25c2ec20cd56394214225e0423e8348460cc00
+
+Reproduction
+Compile browser/navigation-check.zero with the original Zero compiler --host
+and execute it. Each case prints PASS or FAIL; a failed assertion exits1.
+The checked source is embedded between BROWSER ADDRESS CHECK, BROWSER UI CHECK
+and BROWSER RENDER CHECK markers. Refresh the copies from their production
+fragments after edits; UI includes the actual address, parse and render parts.
+
+Remaining limits
+Fragments currently preserve the URL and refetch; in-page anchor scrolling is
+not implemented. DNS/host validation and connection errors belong to the
+transport. TLS, CSS, JavaScript, browser security isolation and full website
+compatibility are not established by this report. Native checks supplement,
+rather than replace, the BIOS/UEFI and actual keyboard/display VM tests.

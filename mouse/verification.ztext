@@ -1,0 +1,17 @@
+ZTEXT001000009fcb433ec940000000
+ZERO POINTER VERIFICATION 0.13
+
+Release ISO SHA256
+a95ac7d301c08e4e4dd100cdd4c6e4d1786635199bb1d0f60319aa95eb90dac5
+
+PASS: native tests built and executed by the original Zero compiler. Signed packet movement, both coordinate bounds, movement-overflow handling, button edges, keyboard-byte isolation, parity/timeout packet reset, exact background restoration, clipped restoration, explicit pixel preservation, and eleven clean/dirty visibility cases were checked. Visibility cases include hidden and visible windows, tiles, scrolling, modal owners and other windows, caret changes, layout changes, theme changes, and pointer generations.
+
+PASS: actual release ISO boot and browser/file/device regression in BIOS64, BIOS32 with long mode and PAE disabled, UEFI64 and UEFI32. Each mode passed 36 checks. Mouse initialization, relative motion from (960,540) to (1060,620), all 92 opaque pointer pixels, absence of a previous pointer trail, and real keyboard input after auxiliary-device traffic passed in every mode. Every mode also read and wrote private disk files and verified persistence after restarting its VM.
+
+PASS: focused actual framebuffer regression at 1920 by 1080. Four idle captures retained all 92 pointer pixels. Repeated bounded device motions reached the bottom-right corner (1919,1079), where clipping left one visible pixel, and the top-left corner (0,0), where all 92 pixels remained visible. A pixel set to RGB 17,34,51 while the renderer was paused retained that value after rendering resumed and the pointer moved away. A new window, focus change and theme change retained a complete pointer. Pausing the renderer during an unfinished repaint may temporarily hide its overlay; this is not recorded as a completed frame.
+
+All screenshots were captured from the running VM framebuffer and encoded and verified by the original Zero picture tool as ZPIX0001. They are not mockups.
+
+The emulator, deterministic HTTP fixture server and private test orchestration were external validation infrastructure. No third-party source, emulator or test server is included in the product. Tests used new private 16 MiB virtual disks. The original storage.zdrive remained SHA256 c730241fb30f5516867c751006951a2878f360319195ee975411a05f040f27e8. The original data.vdi remained SHA256 7f58fb36c934405757da797ca65f2dddef3858e69107f43e2cae59d14c89bc5f.
+
+These checks establish the tested QEMU BIOS/UEFI and standard PS/2 configurations. They do not establish support for USB-only pointers, all physical controllers or every virtual-machine configuration.

@@ -1,0 +1,5 @@
+]
+? :load64[@memory + 24640] [ !exit[:load64[@memory + 24640]]. ]
+:write[:load64[@memory + 24616]| :load64[@memory + 24632]] -> @status.
+? @status != :load64[@memory + 24632] [ !exit[71]. ]
+!exit[0].

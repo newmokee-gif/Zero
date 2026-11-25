@@ -1,0 +1,5 @@
+arguments() => args
+args => each item [
+ item => show
+]
+size(args[2]) => show

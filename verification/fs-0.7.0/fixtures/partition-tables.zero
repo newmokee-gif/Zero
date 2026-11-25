@@ -1,0 +1,75 @@
+# Original Zero integration-fixture partition-table builder.
+# FD3 is a newly truncated private test image. stdin byte0=MBR,1=GPT.
+:reserve[32768] => @memory.
+0 => @mode.
+0 => @i.
+0 => @j.
+0 => @k.
+0 => @pointer.
+0 => @length.
+0 => @round.
+0 => @checksum.
+0 -> @i. ?? @i < 32768 [ !store8[@memory + @i| 0]. @i + 1 -> @i. ]
+? :read[@memory + 32760| 1] != 1 [ !exit[70]. ]
+:load8[@memory + 32760] -> @mode.
+? @mode > 1 [ !exit[71]. ]
+!store16[@memory + 510| 0xaa55].
+? @mode == 0 [
+ !store32[@memory + 440| 0x5a45524f].
+ !store8[@memory + 450| 0x83]. !store32[@memory + 454| 2048]. !store32[@memory + 458| 65536].
+ !store8[@memory + 466| 7]. !store32[@memory + 470| 67584]. !store32[@memory + 474| 131072].
+ !store8[@memory + 482| 0x83]. !store32[@memory + 486| 198656]. !store32[@memory + 490| 524288].
+ # CHS fields are saturated; authoritative addressing uses LBA fields.
+ 0 -> @i. ?? @i < 3 [
+  @memory + 446 + @i * 16 -> @pointer.
+  !store8[@pointer + 1| 254]. !store16[@pointer + 2| 65535].
+  !store8[@pointer + 5| 254]. !store16[@pointer + 6| 65535]. @i + 1 -> @i.
+ ]
+] ~ [
+ !store8[@memory + 450| 238]. !store32[@memory + 454| 1]. !store32[@memory + 458| 73727].
+ !store8[@memory + 447| 0]. !store16[@memory + 448| 2].
+ !store8[@memory + 451| 254]. !store16[@memory + 452| 65535].
+ 0 -> @i. ?? @i < 2 [
+  @memory + 512 + @i * 512 -> @pointer.
+  !store64[@pointer| 0x5452415020494645]. !store32[@pointer + 8| 0x10000]. !store32[@pointer + 12| 92].
+  !store64[@pointer + 24| 1]. !store64[@pointer + 32| 73727].
+  !store64[@pointer + 40| 34]. !store64[@pointer + 48| 73694].
+  !store64[@pointer + 56| 0x475054304f52455a]. !store64[@pointer + 64| 0x0000000000000007].
+  !store64[@pointer + 72| 2]. !store32[@pointer + 80| 128]. !store32[@pointer + 84| 128].
+  ? @i [
+   !store64[@pointer + 24| 73727]. !store64[@pointer + 32| 1]. !store64[@pointer + 72| 73695].
+  ] @i + 1 -> @i.
+ ]
+ # Standard Linux filesystem data type GUID0fc63daf-8483-4772-8e79-3d69d8477de4.
+ @memory + 4096 -> @pointer.
+ !store64[@pointer| 0x477284830fc63daf]. !store64[@pointer + 8| 0xe47d47d8693d798e].
+ !store64[@pointer + 16| 0x524f45584f52455a]. !store64[@pointer + 24| 0x0000000000000007].
+ !store64[@pointer + 32| 2048]. !store64[@pointer + 40| 67583].
+ !store64[@pointer + 48| 0x1000000000000000].
+ 0 -> @i. ?? @i < 12 [
+  !store16[@pointer + 56 + @i * 2| :load8["ZERO_READONLY" + @i]]. @i + 1 -> @i.
+ ]
+ 0 -> @round. ?? @round < 3 [
+  @memory + 4096 -> @pointer. 16384 -> @length.
+  ? @round [ @memory + @round * 512 -> @pointer. 92 -> @length. ]
+  0xffffffff -> @checksum. 0 -> @i.
+  ?? @i < @length [
+   :bitxor[@checksum| :load8[@pointer + @i]] -> @checksum.
+   0 -> @j. ?? @j < 8 [
+    :bitand[@checksum| 1] -> @k. :shr[@checksum| 1] -> @checksum.
+    ? @k [ :bitxor[@checksum| 0xedb88320] -> @checksum. ] @j + 1 -> @j.
+   ] @i + 1 -> @i.
+  ]
+  :bitxor[@checksum| 0xffffffff] -> @checksum.
+  ? @round == 0 [
+   !store32[@memory + 600| @checksum]. !store32[@memory + 1112| @checksum].
+  ] ~ [ !store32[@pointer + 16| @checksum]. ]
+  @round + 1 -> @round.
+ ]
+ ? :pwrite[3| @memory + 512| 512| 512] != 512 [ !exit[72]. ]
+ ? :pwrite[3| @memory + 1024| 512| 73727 * 512] != 512 [ !exit[72]. ]
+ ? :pwrite[3| @memory + 4096| 16384| 1024] != 16384 [ !exit[72]. ]
+ ? :pwrite[3| @memory + 4096| 16384| 73695 * 512] != 16384 [ !exit[72]. ]
+]
+? :pwrite[3| @memory| 512| 0] != 512 [ !exit[72]. ]
+? :fsync[3] != 0 [ !exit[73]. ]

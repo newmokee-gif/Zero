@@ -1,0 +1,21 @@
+ZTEXT001000004abbd4c8abc0000000
+ZERO/EZERO0.11 EXACT LINUX TOOLKIT IN ARCH USERSPACE
+
+27a20a26f2c51e77fde4f5c488feba0cf55ebe8739f526722799ec9117fd638f  /workspace/zero-foundation/build/native-0.11/zero-ezero-linux-x64-0.11.0.tar.gz
+2c15dbc7e8f058c5ba07024c4c6c1ddd1ffcfcd86d15a2cc7c49ca7fbfd4a3df  /workspace/zero-foundation/build/zero.iso
+Archive bytes: 174863
+Image ID: sha256:ad77cf4a18d84f94e1e678496f9f5a5f2adc8bd2a62d2f13bf15598c2b214b1b
+Repository digests: ["archlinux@sha256:d4594bb2300cba11f41c2f27923eb56f63d9988909c402f9c95517d1e362c899"]
+
+Native Arch userspace package checks: 23/23 PASS
+
+Actual native ELF programs ran in cached Arch Linux userspace with no
+network, no capabilities, a read-only root, no-new-privileges, UID65534,
+and private tmpfs. Package/ISO/test script were streamed through stdin;
+no host directories were mounted and no container image was downloaded.
+Arch userspace shares the Debian host Linux kernel; no separate Arch
+kernel boot or physical Arch installation is claimed.
+
+All product commands ran with PATH=/no-external-tools. Bash/coreutils/
+Docker are external verification infrastructure, not toolkit runtime.
+Source ISO and exact toolkit archive remained hash-identical after tests.

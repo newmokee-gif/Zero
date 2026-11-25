@@ -1,0 +1,110 @@
+ZTEXT001000019cc3711f9480000000
+Zero pixel desktop, visible console and keyboard
+
+kernel.zero implements the display and keyboard protocol logic in Zero.
+No assembly driver, external font file, terminal library or runtime is used.
+The original framebuffer glyph table contains seven five-bit rows per ASCII
+character 32..126, stored as byte values 48+row. Its renderer scales rows twice
+vertically and adds margins to form8x16 logical cells. At1920x1080 the
+window compositor doubles both axes to produce16x32 physical cells.
+
+BIOS first attempts VBE true-color graphics and otherwise uses VGA text
+memory at 0xb8000 in 80x25 mode. UEFI supplies a validated GOP framebuffer.
+Both pixel paths use 32-bit RGB/BGR words and honor stride; the reserved
+fourth byte is not an alpha-compositing interface. The preferred mode is
+1920x1080. BIOS next tries800x600, then a supported640..800 by480..600
+fallback. GOP ranks800x600,640x480 and other validated smaller modes after
+Full HD; it revalidates the actual current mode after selection.
+See BIOS-GRAPHICS.ztext/UEFI-CONSOLE.ztext.
+
+The window compositor draws terminal frames, a focus border, titles and
+keyboard hints. Tile mode lays out groups of up to three terminals; scroll
+mode centers the focused column and clips its neighbors. See WINDOWS.ztext.
+Each window has a7168-byte output ring and its own input/selected volume.
+The compositor reflows each visible ring into an at-most96x48 character grid
+and draws bounded8x16 logical cells. Exact1920x1080 uses a960x540 logical
+workspace with2x2 physical pixels per logical pixel; other modes retain1x.
+Font/background fills respect the physical stride and RGB/BGR order; the
+glyph itself is5x7 with doubled logical scanlines. A caret marks focus.
+Dirty windows repaint as needed; layout generation checks prevent a yielded
+renderer from continuing to paint a closed or reused slot. The old single
+terminal is retained as a fallback if no safe session pool can be allocated.
+VGA fallback presents only the focused session, with a title and80x24 body.
+No firmware service is called by the kernel after entry.
+
+CR, LF, backspace, printable ASCII, wrapping, scrolling and clear are handled
+directly. LF starts a new line at column0; existing CRLF does the same. COM1
+adds CR before a lone LF and preserves existing CRLF, including across message
+boundaries. VGA text mode also updates the hardware cursor. The framebuffer
+renderer can blink its focused caret using the polled clock. Mouse input
+and a general application graphics API are not implemented.
+
+animate and theme toggle caret blinking and desktop colors. pixel
+X Y R G B writes one pixel with bounded decimal coordinates and 0..255 RGB
+values. These coordinates are physical pixels even with2x interface scaling.
+pause 2 freezes the graphics worker; resume 2 lets it continue.
+Input/commands still run while that worker is paused; buffered output becomes
+visible after resume. Manual pixels are
+temporary and can be covered by future drawing. In VGA or serial fallback,
+pixel commands report that no supported linear framebuffer is available.
+
+The kernel initializes the 8042 controller and the first PS/2 port, selects
+keyboard scan set 2 and controller translation to set 1, and polls events.
+The US ASCII layout supports both Shift keys, Caps Lock, ordinary Enter,
+keypad Enter, Backspace and Tab as one space. F1 creates a window, F2 closes,
+F3/F4 changes focus and F5 toggles layouts. Function-key repeats are latched
+until key release. Pause and unsupported extended
+keys are ignored. The auxiliary PS/2 port is disabled; mouse input is not
+implemented. Controller waits are bounded, so absence/failure does not block
+the kernel indefinitely. No keyboard interrupt handler is required.
+
+COM1 at 115200 baud, 8N1 remains an optional mirrored output and input source.
+The UART scratch register is probed first. Absent or stalled UART output is
+disabled without stopping the visible terminal. The serial and PS/2 inputs
+feed the same command parser and preserve its line-length and CRLF behavior.
+Serial CRLF framing and keyboard modifiers remain global across focus; input
+line contents and the overflow flag remain private to the selected session.
+
+Loader handoff, all u64 fields at these byte offsets:
++48 display kind: 0 serial only, 1 VGA text, 2 linear framebuffer
++56 framebuffer address (0xb8000 for VGA text)
++64 framebuffer width in pixels
++72 framebuffer height in pixels
++80 framebuffer stride in pixels
++88 framebuffer pixel format: 0 RGB, 1 BGR
++96 boot platform: 1 BIOS, 2 UEFI (reserved for diagnostics)
++104 execution architecture: 32 or 64
++112 loader-owned kernel stack-pool base
++120 stack-pool size in bytes
++128/+136 native compiler bundle address/size
++144/+152 native compiler workspace address/size
+
+The loader must ensure the framebuffer address is mapped, the reported size
+covers stride*height*4, and the supplied mode remains active after firmware
+services end. Kernel checks restrict accepted framebuffer dimensions to
+640..8192 by 400..8192, stride between width and 16384, and format 0 or 1.
+The kernel arena is64KiB; display/input state follows the unchanged ZeroFS,
+line and listing buffers. Thread contexts and desktop counters also
+live in shared console state. The first24KiB layout and ZeroFS format remain
+unchanged; the remaining40KiB holds the filesystem request/workspace and
+two16KiB metadata buffers. The prompt identifies the selected root, A:|>.
+GO changes roots; paths use a vertical bar, not a slash. See DRIVES.ztext.
+
+See verification.ztext for the final integrated BIOS/UEFI/VirtualBox test scope.
+
+The wifi command temporarily uses the focused window for wireless setup.
+Up/Down selects, Enter advances, Backspace edits the masked password and Esc
+closes the app. Closing restores the window history and erases the password.
+Function keys do not create or switch windows while this modal app is open.
+Detection currently reports unsupported or absent PCI wireless adapters;
+there is no native radio connection driver yet. net/wifi-fixtures images
+are labeled simulations, separate from real no-adapter VM captures.
+
+The pixel command uses one-based physical coordinates: X1..width and
+Y1..height. RGB values remain0..255. Internal framebuffer offsets remain
+zero-based; this user-facing change begins in0.9.0.
+
+apps, system, storage and network use the same bounded modal frame. Selection
+starts at1. Enter opens/toggles/selects the displayed action; Backspace returns
+to the application menu, Esc restores terminal history. Network addresses are
+read from the actual DHCP state. Storage lists actual discovered volume roots.

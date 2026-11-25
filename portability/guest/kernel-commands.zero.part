@@ -1,0 +1,150 @@
+# BEGIN GUEST COMPILER COMMANDS
+# Native, cooperative memory-stream applications; no host compilation.
+? (@operation == 25) + (@operation == 26) [
+ 0 -> @valid. 0 -> @c0. 0 -> @c1. 0 -> @c2.
+ "Compilers unavailable: boot with the current complete ISO.\r\n" -> @message.
+ ? @boot_information [
+  :load64[@boot_information+128] -> @c0.
+  :load64[@boot_information+144] -> @c1.
+  :load64[@boot_information+104] -> @c2.
+  ? (@c0 != 0)*(@c1 != 0)*((@c2 == 32)+(@c2 == 64)) [
+   ? (:load64[@boot_information+136] == 1048576)*(:load64[@boot_information+152] == 8388608) [
+    ? (@c0+1048576 > @c0)*(@c1+8388608 > @c1) [
+     ? (@c0+1048576 <= @c1)+(@c1+8388608 <= @c0) [ 1 -> @valid. ]
+    ]
+   ]
+  ]
+ ]
+ ? @c2 == 32 [ ? (@c0+1048576 > 4294967295)+(@c1+8388608 > 4294967295) [ 0 -> @valid. ] ]
+ ? @valid [
+  "Compiler package is invalid.\r\n" -> @message.
+  ? (:load64[@c0] != 0x31304c444e42525a)+(:load64[@c0+8] != 1)+(:load64[@c0+16] != 1048576)+(:load64[@c0+24] != 8) [ 0 -> @valid. ]
+  ? (:load64[@c0+32] != 962560)+(:load64[@c0+48] != 966656) [ 0 -> @valid. ]
+  ? (:load64[@c0+40] == 0)+(:load64[@c0+40] >= 4096)+(:load64[@c0+56] == 0)+(:load64[@c0+56] >= 65536) [ 0 -> @valid. ]
+ ]
+ ? @valid [
+  0 -> @k. ? @c2 == 32 [ 3 -> @k. ] 0 -> @j.
+  ?? (@j < 3)*@valid [
+   @c0+128+(@k+@j)*32 -> @pointer.
+   4096+(@k+@j)*159744 -> @temporary.
+   ? (:load64[@pointer] != @temporary)+(:load64[@pointer+16] != @c2)+(:load64[@pointer+24] != @j+1) [ 0 -> @valid. ]
+   :load64[@pointer+8] -> @text_length.
+   ? (@text_length <= 64)+(@text_length > 159744) [ 0 -> @valid. ]
+   ? (@j == 2)*(@text_length > 16384) [ 0 -> @valid. ]
+   @c0+@temporary -> @c4.
+   ? (:load64[@c4] != 0x315050414f52455a)+(:load64[@c4+8] != @c2)+(:load64[@c4+16] != @text_length)+(:load64[@c4+24] != 64) [ 0 -> @valid. ]
+   ? (:load64[@c4+32] != 4198400)+(:load64[@c4+40] != 1)+(:load64[@c4+48] != 0)+(:load64[@c4+56] != 0) [ 0 -> @valid. ]
+   @j+1 -> @j.
+  ]
+ ]
+ ? @valid [
+  0 -> @text_length.
+  ?? (:load8[@arguments+@text_length] != 0)*(@text_length < 480) [ @text_length+1 -> @text_length. ]
+  ? (@text_length == 0)+(@text_length >= 480) [
+   0 -> @valid. "Use zero SOURCE_TEXT or ezero SOURCE_TEXT. Command line: at most480 bytes.\r\nZero example: zero !put[72].!put[105].\r\nEzero example: ezero Hello from Ezero => show\r\n" -> @message.
+  ]
+ ]
+ ? @valid [
+  @c1+4096 -> @text. 0 -> @i.
+  ?? @i < @text_length [ !store8[@text+@i|:load8[@arguments+@i]]. @i+1 -> @i. ]
+  2 -> @c3. ? @operation == 26 [ 0 -> @c3. ]
+  ?? (@c3 < 4)*@valid [
+   0 -> @i. ?? @i < 192 [ !store64[@c1+@i|0]. @i+8 -> @i. ]
+   !store64[@c1|1]. !store64[@c1+8|@c1+8388608].
+   !store64[@c1+168|@c1+2097152]. !store64[@c1+176|6291456].
+   !store64[@c1+64|1]. !store64[@c1+72|"zero-guest"].
+   @c0+4096+@k*159744 -> @c4.
+   !store64[@c1+40|@c1+1048576]. !store64[@c1+48|524288].
+   "Zero compilation failed. Check the source syntax and supported operations.\r\n" -> @message.
+   ? @c3 == 0 [
+    @c4+159744 -> @c4.
+    !store64[@c1+40|@c1+270336]. !store64[@c1+48|70000].
+    "Ezero compilation failed. Check the source syntax.\r\n" -> @message.
+   ]
+   ? @c3 == 1 [
+    @c4+319488 -> @c4. @c1+270336 -> @text.
+    !store64[@c1+40|@c1+393216]. !store64[@c1+48|196608].
+    "Ezero program packing failed.\r\n" -> @message.
+   ]
+   ? @c3 == 2 [
+    ? @operation == 26 [
+     :load64[@c0+40] -> @temporary.
+     ? @temporary+@text_length+:load64[@c0+56] > 262144 [ 0 -> @valid. ]
+     ? @valid [
+      @c1+589824 -> @text. 0 -> @i.
+      ?? @i < @temporary [ !store8[@text+@i|:load8[@c0+962560+@i]]. @i+1 -> @i. ]
+      0 -> @i. ?? @i < @text_length [ !store8[@text+@temporary+@i|:load8[@c1+393216+@i]]. @i+1 -> @i. ]
+      @temporary+@text_length -> @text_length. 0 -> @i.
+      ?? @i < :load64[@c0+56] [ !store8[@text+@text_length+@i|:load8[@c0+966656+@i]]. @i+1 -> @i. ]
+      @text_length+@i -> @text_length.
+     ]
+    ]
+    !store64[@c1+64|2]. !store64[@c1+80|"--app64"].
+    ? @c2 == 32 [ !store64[@c1+80|"--app32"]. ]
+   ]
+   ? @c3 == 3 [
+    "Generated program is invalid.\r\n" -> @message.
+    @c1+1048576 -> @c4.
+    ? (@text_length <= 64)+(@text_length > 524288) [ 0 -> @valid. ]
+    ? (:load64[@c4] != 0x315050414f52455a)+(:load64[@c4+8] != @c2)+(:load64[@c4+16] != @text_length)+(:load64[@c4+24] != 64) [ 0 -> @valid. ]
+    ? (:load64[@c4+32] != 4198400)+(:load64[@c4+40] != 1)+(:load64[@c4+48] != 0)+(:load64[@c4+56] != 0) [ 0 -> @valid. ]
+    @c1+4096 -> @text. 0 -> @text_length.
+    !store64[@c1+40|@c1+1572864]. !store64[@c1+48|4095].
+   ]
+   !store64[@c1+16|@text]. !store64[@c1+24|@text_length].
+   ? (@c3 == 3)*@valid [
+    @c1+256 -> @c5. 0 -> @i.
+    ?? @i < 512 [ !store64[@c5+@i|0]. @i+8 -> @i. ]
+    !store64[@c5|0x313053464f52455a]. !store64[@c5+8|1].
+    !store64[@c5+16|@c5+256]. !store64[@c5+24|@c5+352].
+    !store64[@c5+120|@fs_ready]. !store64[@c5+128|@active_bank].
+    !store64[@console+2496|@c5].
+    :fork[@c5+256|@c1+1703936|81920] -> @ready.
+    ? @ready == 1 [
+     0 -> @boot_information. 700 -> @state. 0 -> @operation.
+     0 -> @message. 0 -> @valid. 4 -> @c3.
+    ] ~ [ !store64[@c1+184|@c5]. ]
+   ]
+   ? @valid [
+    :call[@c4+64|@c1|0|0|0|0] -> @status.
+    ? @c3 == 3 [
+     :load64[@console+2496] -> @c5.
+     :load64[@c5+120] -> @fs_ready. :load64[@c5+128] -> @active_bank.
+    ]
+    :load64[@c1+56] -> @text_length.
+    ? (@status != :load64[@c1+88])+(@text_length > :load64[@c1+48])+(:load64[@c1+32] > :load64[@c1+24]) [ 0 -> @valid. ]
+    ? @valid*(@c3 == 0)*(@status != 0)*(@text_length > 0)*(@text_length <= 1024) [
+     :load64[@c1+40] -> @pointer. 1 -> @ready. 0 -> @i.
+     ?? @i < @text_length [
+      :load8[@pointer+@i] -> @character.
+      ? ((@character < 32)*(@character != 9)*(@character != 10)*(@character != 13))+(@character > 126) [ 0 -> @ready. ]
+      @i+1 -> @i.
+     ]
+     ? @ready [ !store8[@pointer+@text_length|0]. @pointer -> @message. ]
+    ]
+    ? @c3 < 3 [ ? @status != 0 [ 0 -> @valid. ] ]
+   ]
+   @c3+1 -> @c3.
+  ]
+  ? @valid [
+   @c1+1572864 -> @text. 0 -> @i.
+   ?? @i < @text_length [
+    :load8[@text+@i] -> @character.
+    ? (@character < 32)*(@character != 9)*(@character != 10)*(@character != 13) [ !store8[@text+@i|63]. ]
+    @i+1 -> @i.
+   ]
+   ? @status [
+    "\r\nProgram exit: " -> @pointer. 0 -> @j.
+    ?? :load8[@pointer+@j] [ !store8[@text+@i|:load8[@pointer+@j]]. @i+1 -> @i. @j+1 -> @j. ]
+    100 -> @temporary. 0 -> @ready. 0 -> @j.
+    ?? @j < 3 [
+     0 -> @character. ?? @status >= @temporary [ @status-@temporary -> @status. @character+1 -> @character. ]
+     ? @character+@ready+(@j == 2) [ !store8[@text+@i|48+@character]. @i+1 -> @i. 1 -> @ready. ]
+     ? @j == 0 [ 10 -> @temporary. ] ~ [ 1 -> @temporary. ] @j+1 -> @j.
+    ]
+   ]
+   !store8[@text+@i|0]. @text -> @message. 12 -> @state.
+  ]
+ ]
+]
+# END GUEST COMPILER COMMANDS

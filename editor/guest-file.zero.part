@@ -1,0 +1,53 @@
+# Original service client: fresh child continuation; file service owns all writes.
+# The source and pending filename stay outside the compiler/service workspace.
+? :load64[@c5+80] [
+ :load64[@boot_information+144] -> @c1. 1 -> @valid.
+ ? (@c1 == 0)+(:load64[@boot_information+152] != 8388608) [ 0 -> @valid. ]
+ ? @valid [
+  @c1+256 -> @c2. 0 -> @i. ?? @i < 512 [ !store64[@c2+@i|0]. @i+8 -> @i. ]
+  !store64[@c2|0x313053464f52455a]. !store64[@c2+8|1].
+  !store64[@c2+16|@c2+256]. !store64[@c2+24|@c2+352].
+  !store64[@c2+32|:load64[@c5+80]]. !store64[@c2+40|@c5+192].
+  !store64[@c2+48|@c5+2048]. !store64[@c2+56|400].
+  ? :load64[@c5+80] == 2 [ !store64[@c2+48|@c5+512]. !store64[@c2+56|:load64[@c5+16]]. ]
+  !store64[@c2+64|-1]. !store64[@c2+80|1].
+  !store64[@c2+120|@fs_ready]. !store64[@c2+128|@active_bank]. !store64[@console+2496|@c2].
+  :fork[@c2+256|@c1+1703936|81920] -> @ready.
+  ? @ready == 1 [
+   0 -> @boot_information. 700 -> @state. 0 -> @operation. 0 -> @message. 0 -> @valid.
+  ] ~ [
+   !switch[@c2+352|@c2+256].
+   :load64[@console+2496] -> @c2.
+   :load64[@c2+120] -> @fs_ready. :load64[@c2+128] -> @active_bank.
+   :load64[@console+2400]+163840 -> @c5.
+   :load64[@c2+72] -> @status. !store64[@c5+64|4].
+   ? (:load64[@c2+80] == 2)*((@status == 0)+((@status == 4)*(:load64[@c5+80] == 1))) [
+    ? :load64[@c5+80] == 1 [
+     0 -> @j. ? @status == 0 [ :load64[@c2+64] -> @j. ]
+     @j <= 400 -> @valid. 0 -> @i.
+     ?? @valid*(@i < @j) [
+      :load8[@c5+2048+@i] -> @character.
+      ? ((@character < 32)*(@character != 9)*(@character != 10)*(@character != 13))+(@character > 126) [ 0 -> @valid. ]
+      @i+1 -> @i.
+     ]
+     ? @valid [
+      0 -> @i. 0 -> @k.
+      ?? @i < @j [
+       :load8[@c5+2048+@i] -> @character.
+       ? @character == 13 [
+        ? (@i+1 < @j)*(:load8[@c5+2049+@i] == 10) [ @i+1 -> @i. ] 10 -> @character.
+       ]
+       !store8[@c5+512+@k|@character]. @k+1 -> @k. @i+1 -> @i.
+      ]
+      !store8[@c5+512+@k|0]. !store64[@c5+16|@k]. !store64[@c5+24|0]. !store64[@c5+32|0]. !store64[@c5+104|0].
+      !store64[@c5+64|1]. ? @status == 4 [ !store64[@c5+64|3]. ]
+     ]
+    ] ~ [ !store64[@c5+64|2]. ]
+    ? :load64[@c5+64] != 4 [
+     0 -> @i. ?? @i < 36 [ !store8[@c5+128+@i|:load8[@c5+192+@i]]. @i+1 -> @i. ] !store64[@c5+40|0].
+    ]
+   ]
+  ]
+ ] ~ [ !store64[@c5+64|6]. ]
+ ? @boot_information [ !store64[@c5+80|0]. !store64[@c5+56|1]. ]
+]

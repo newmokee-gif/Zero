@@ -1,0 +1,27 @@
+ZTEXT001000006772e9213f00000000
+LINUX COMPILER TOOLKIT VERIFICATION
+
+88989a3a766159f9b56088b8a5c88fc743a2d16cd6236a25e3e525ee940fc016  /workspace/zero-foundation/build/linux-dist/zero-ezero-linux-x86_64.tar.gz
+Archive bytes: 132095
+
+Native host package suite: PASS (see host-smoke.txt for platform and cases).
+Arch userspace package suite: PASS (see arch-smoke.txt).
+Image ID: sha256:ad77cf4a18d84f94e1e678496f9f5a5f2adc8bd2a62d2f13bf15598c2b214b1b
+Repository digests: ["archlinux@sha256:d4594bb2300cba11f41c2f27923eb56f63d9988909c402f9c95517d1e362c899"]
+Arch ran as UID65534 with read-only root, no network/capabilities,
+no-new-privileges and temporary storage; no host directories were mounted.
+It shared the host Linux kernel; no separate Arch kernel boot is claimed.
+
+All three native ELF files lack PT_INTERP and PT_DYNAMIC.
+Language parsing/execution uses own Zero code; Bash/coreutils are orchestration.
+The public examples, exact compiler/source rebuilds, clean-environment execution,
+paths with spaces, emitted Zero, failed-build preservation and user-prefix
+installation passed. Windows/Zero OS guest execution is outside this scope.
+
+Exact source/compiler inputs:
+01ee47113ab98da6ea4d84c042e570d4080a7ab69473acc205923bd6ba7839fc  compiler.zero
+7a24c5e3d23bbeb6df6b25a30f99efe26e82aa9f9c835d4aba45000a61d75cb6  build/zero
+4ca4ac45dee033db6985be99d5305c8292b33c0578cafd2d5d1d503ee272cc71  ezero/compiler.zero
+4ad3a2a36cecd23c9bc3fe120097c2239a5c6bc8c3b82ee6028d3464d2158b11  ezero/pack.zero
+d8e3150d894ab806ace33e90b49beb65b622266345d28777c73beb0eca63b948  ezero/runtime-prefix.zero.part
+efccce6e555a6b7504a276bc7835300148d2e25acc3e5be8b29b4aef0f7fae5b  ezero/runtime.zero.part

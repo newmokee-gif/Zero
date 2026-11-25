@@ -1,0 +1,44 @@
+ZTEXT00100000a8053bc26e00000000
+Zero OS0.10.0 final integrated image: PASS on all four boot paths.
+
+ISO: build/zero.iso, 18890752 bytes
+SHA256:8f31413952cbac47c16074ef6fb6534ada173246f822916e54d79b35d9ffb129
+Modes: BIOS64, BIOS32 without LM/PAE, UEFI64, UEFI32 without LM.
+All tests used actual emulated PS/2 keyboard input; no guest code injection.
+All four VMs stopped. Canonical ISO/user images and all eight private storage
+fixture copies retained their complete hashes. See results.json and each
+mode's result.json, actions.jsonl, session.txt, argv.json and disk hash lists.
+
+Baseline includes automatic DHCP before any input, actual PCnet packets,
+one-based thread/pixel bounds, independent graphics pause/resume, cable-loss
+address clearing and automatic recovery while computation is paused, local
+HTTP, public DNS resolving the local HTTP fixture, independent IPv4/TCP
+checksums, real no-adapter WiFi modal input/Escape, native Zero/Ezero bundled
+compile-and-run, error recovery,4095-byte output cap,64-bit integer semantics,
+and read-only ZeroFS/ext4 volume access with one-based disk labels.
+
+Sixteen additional checks per mode passed (0.10-extra.json): Ezero host()==0;
+Zero guest argcount/argument primitives return0; Ezero arguments/read/write/
+exists each report line1 and exit65 because host APIs are unavailable;
+guarded portable branch and subsequent normal arithmetic work. Actual apps
+menu, system monitor, volume selection and network applications work through
+arrow/Enter/Backspace/Escape, including DHCP reconnection while computation
+is paused, WiFi handoff, worker resume, direct commands, bad arguments and
+preservation of terminal history/selected volume.
+
+Nineteen actual1920x1080 PNG captures per mode are retained. Representative
+UEFI64 images: applications-menu.png, system-computation-paused.png,
+storage-selected-b.png, network-app-connected.png, wifi-real-status.png.
+Menu and BIOS32 network images were also visually inspected: final KEYBOARD
+APPS label, one-based entries, readable bounds, actual leased addresses.
+
+Scope: QEMU/SeaBIOS/OVMF, not physical hardware or native VirtualBox. Wireless
+tests cover honest no-radio handling, not association with real WiFi hardware.
+HTTP peer is the local test server; public DNS itself is exercised. Guest
+programs remain cooperative in the kernel address space; no isolation claim.
+
+Two preliminary attempts are preserved separately. One corrected a missing
+tilde mapping in the external PS/2 helper; the other replaced an invalid
+unquoted phrase containing reserved builtin name host with valid arithmetic.
+No product code or ISO changed during those fixture corrections. The final
+complete rerun above passed on the exact same frozen ISO.

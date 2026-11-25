@@ -1,0 +1,54 @@
+ZTEXT00100000c1067d20cc80000000
+Original Zero picture decoder regression and independent review
+
+Run zero-picture-check without arguments. It builds fixtures in memory in
+original Zero and invokes the actual shared decoder; no fixture files, foreign
+codec or subprocess is needed. Recompose with:
+  zero-integrate PROJECT NEW_CHECK.zero --picture-check
+Its decoder region must exactly match media/zpix-decoder.zero.part. The native
+checker uses 46 variables and a 67112960-byte workspace.
+
+Completed 2026-11-17:
+Linux memory checker: 42/42 passed.
+Windows PE memory checker under Wine: 42/42 passed.
+Independent native CLI alias/publication checks: 5/5 passed.
+
+36 malformed cases vary input bounds, signature, zero/oversized/full-u32
+dimensions, channels, encoding, pixel/payload/total counts and their high words,
+checksum, reserved fields, zero/excessive runs, changed RGB, short raster and
+an extra record after completion. Six valid cases cover binary RGB, runs255/256,
+1080p, 4K uniform and worst-case 4K alternating pixels. Every successful RGB
+pixel is compared with an independently constructed expectation. Every case
+checks unchanged input hash and output prefix/suffix guard values.
+
+No unresolved correctness defect was found in the reviewed native pipeline.
+The reviewed fragment includes the builder's explicit upper-word/input-cap
+guards for 32-bit reuse. These checks executed on native64, not an actual32 VM.
+Exact four-byte records bound input loads. count<=pixels and run<=pixels-count
+prevent count wrap and decoded overrun. Maximum decoded memory is 24883264
+bytes including its64-byte prefix. Worst-case encoded length is33177664,
+below its33554432-byte region. CLI input/output regions are disjoint; the
+reusable decoder explicitly requires disjoint caller-owned buffers.
+
+The complete RGB FNV checksum is checked before any destination open. It is a
+corruption checksum, not authentication. Invalid input may dirty the private
+output buffer; callers must not consume it. CLI writes are exclusive and use
+complete writes, flush and close, with failed-new-output cleanup. They are not
+an atomic publication guarantee against crashes/concurrent filesystem edits.
+
+Independent probes confirmed source==destination, hardlinked output and symlink
+output are refused without changing source contents. A bad checksum neither
+creates a missing destination nor modifies an existing one. Its syscall trace
+contains only the input open and exit65, with no destination open/create.
+
+External evidence:
+/tmp/zero-support/validation-0.12/ezero/picture-check-wine.txt
+/tmp/zero-support/validation-0.12/ezero/picture-checksum.trace
+/tmp/zero-support/validation-0.12/ezero/picture-review-6zbpjr0b/
+These checks supplement the separate61-case CLI suite; they do not claim a
+physical Windows test or prove the absence of every defect.
+
+SHA256:
+6b7626cd70a200e3d98f41a9967463cb196c45b60a91374f7ae3da2ef5122b88  media/zpix-decoder.zero.part
+fde50bf84d4ca86dc0d165e0db4849f0e49999c28103273369bfc779f7c71b50  media/picture-check.zero
+7fdf0c50d206073478550366469f1c0c2311a2e28236150a48b917485b3c74d4  tools/picture.zero

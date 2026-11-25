@@ -1,0 +1,234 @@
+ZTEXT001000037a72c40bdfd0000000
+Current original Zero workflow (0.12)
+
+Use the native tools on Linux or their .exe versions on Windows:
+  zero-integrate PROJECT_DIRECTORY NEW_KERNEL.zero
+  zero-build PROJECT_DIRECTORY NEW_OUTPUT_DIRECTORY NEW_KERNEL.zero
+  zero-check PROJECT_DIRECTORY NEW_TEST_DIRECTORY
+All destination paths must be new. The integrator preserves authored sources;
+the builder checks its compiler fixed point and builds the original targets;
+the verifier checks language behavior and host file operations in process.
+See tools/integrate.ztext, tools/build.ztext and checks/README.ztext.
+Read these documents with zero-text read FILE.
+
+The notes below preserve earlier implementation and test history. Any old
+shell/Python runner names, generated artifacts, JSON reports or commands are
+historical references: they were removed from the active project and are not
+current runnable instructions or current-release validation. Native host
+checks do not replace BIOS/UEFI, persistence or physical-hardware testing.
+
+Historical implementation notes
+
+Zero OS monolithic kernel - shared x86/x64 contract
+
+All kernel code is in kernel.zero. There is no assembly driver, filesystem,
+terminal implementation or borrowed runtime. Compiler intrinsics provide
+individual memory/port operations, while all device protocol and command
+logic is written explicitly in Zero.
+
+Entry contract
+The same kernel.zero compiles to 32-bit protected mode and 64-bit long mode.
+Both enter at privilege level 0 with maskable interrupts disabled and a
+loader-owned stack pool. Raw64 requires valid mappings; raw32 requires flat
+code/data segments and may run without paging. Its full u64 value semantics
+do not require PAE or long mode. The x64 entry receives the handoff in RCX;
+IA32 receives it as cdecl arg0 at [ESP+4]. Source reads it through :arg0[].
+
+The shared 256-byte handoff consists of u64 fields, with display metadata at
++48, boot kind at +96, execution architecture at +104, and owned stack-pool
+base/size at +112/+120, native tool bundle base/size at +128/+136, and
+compiler workspace base/size at +144/+152. BIOS supplies a validated VBE framebuffer or VGA text;
+either UEFI loader supplies a validated GOP framebuffer when available.
+UEFI allocates1MiB for the stack pool; BIOS verifies usable E820 RAM covering
+0x100000..0x1000000, using1..4MiB as its3MiB kernel pool,4..5MiB for
+the compiler bundle and8..16MiB for its8MiB workspace. UEFI allocates these
+regions independently; see portability/guest/BUNDLE.ztext.
+See BIOS.ztext, UEFI32.ztext and UEFI-CONSOLE.ztext. The kernel reserves
+64KiB from the compiler arena. The first24KiB hold disk snapshots, line I/O
+and console state; the remaining40KiB hold the common filesystem workspace
+and two16KiB buffers. Source uses the data-first grammar in SYNTAX.ztext.
+
+Terminal
+The normal desktop has independent terminal windows managed by wm/*.zero.part.
+Tiled pages and a horizontally scrolling strip share the original glyph
+renderer. Exact1920x1080 uses2x interface scaling and16x32 physical cells;
+other modes use1x. Output is buffered per window and reflowed to its bounds.
+VGA fallback shows the focused session in80x24 cells below a title row;
+serial output remains available. The kernel owns rendering and PS/2 input
+and calls no BIOS or UEFI service after entry. See WINDOWS.ztext.
+The keyboard uses a US ASCII layout, with Shift, Caps Lock, Enter and
+Backspace. Tab inserts a space. It is not a USB keyboard driver.
+COM1 UART at 115200 baud, 8N1 is optional for mirrored output and serial input.
+Use an external serial terminal or QEMU serial stdio when desired. Missing or
+stalled serial hardware disables serial I/O without stopping the visible
+terminal. If no supported display is supplied, serial remains the output
+fallback. See CONSOLE.ztext for detailed console and keyboard limits.
+All characters are ASCII. CR and LF are accepted as serial line endings;
+CRLF is treated as one Enter. Backspace and serial DEL erase one character.
+Input limit: 480 bytes. If exceeded, the entire command is rejected even if
+characters are subsequently erased. There is no command recall or mouse
+input. Output history is a7168-byte ring per session.
+
+Cooperative scheduling
+There are three native kernel threads, displayed as1 terminal,2 graphics
+and3 computation. Internal scheduler slots remain0..2.
+Each has its own native stack, local frame and saved continuation. fork copies
+the initial frame/live operands and preserves pointers to explicitly shared
+buffers. The two child stacks occupy 81920-byte regions at the lower end of
+the loader's owned pool; the original frame/arena remains at the top.
+If the handoff does not provide a valid pool, worker creation is skipped and
+tasks reports that failure while the terminal remains available.
+
+The terminal performs a cooperative round-robin pass at its yield point,
+switching to each runnable worker. The graphics worker yields during drawing;
+the computation worker executes a block of 1024 linear-congruential steps,
+publishes its u64 checksum and yields. This worker polls the network even
+when computation is paused, so pause3 does not disable DHCP or HTTP. The
+terminal thread stays runnable.
+This is one CPU, one shared kernel address space and no timer preemption.
+A worker that never yields would prevent the other threads from advancing.
+Disk operations and output-ring writes remain in the terminal thread; no
+filesystem locking or simultaneous ATA requests are introduced. Sessions
+share this engine and do not become isolated processes. Focus changes only
+at idle shell state10. Windows use8KiB slots in the owned stack-pool middle;
+see wm/SESSION.ztext for exact ownership boundaries.
+
+PIT channel 0 is polled with its IRQ masked to pace animation. Tick values
+and worker counters are observability data, not a wall clock or scheduling
+deadline guarantee. Device/output work can delay yields and animation.
+
+Commands
+search [ROOT|]PATTERN   list matching names; * matches any text, ? one character
+del NAME              remove a file; rm remains an alias
+net                   show automatic wired DHCP state and IP configuration
+fetch HOST[:PORT][/PATH] bounded plain HTTP request, with DNS for hostnames
+wifi                  open the keyboard-operated WiFi status/selection UI
+apps                  open the keyboard application menu
+system                live thread monitor; Enter toggles computation
+storage               choose a volume root with arrows and Enter
+network               live wired status and addresses; Enter opens WiFi
+help                  list available commands
+info                  describe the system and identify 32-bit/64-bit execution
+clear                 clear only the focused terminal; ANSI clear on COM1
+windows               list live terminal IDs, roots, focus and capacity
+window ACTION|ID      create/close/focus or select tile/scroll; see WINDOWS.ztext
+zero SOURCE           compile and run a short Zero program
+ezero SOURCE          compile and run a short Ezero program
+net                   show wired connection and DHCP addresses
+wifi                  open the keyboard wireless setup interface
+fetch HOST[:PORT]/PATH fetch bounded ASCII HTTP/1.0 content
+write TEXT            print text
+disks                 list independent volumes, sizes and formats
+GO B:|                select a volume root; lowercase go also works
+watch [B:|]           list names in the current or explicitly selected root
+create NAME           create an empty file; an existing file is preserved
+save NAME TEXT        create or replace a file; empty TEXT empties the file
+read NAME             read a file
+rm NAME               delete a file
+format ZERO           erase the selected dedicated raw primary ZeroFS disk
+tasks                 show thread states, progress, checksum and sampled ticks
+pause 2|3             pause graphics (2) or computation (3)
+resume 2|3            resume the selected worker
+animate               toggle focused terminal caret blink
+theme                 switch between the desktop color themes
+pixel X Y R G B       write one framebuffer pixel; decimal RGB values 0..255
+reset                 reset the computation counter and request a new sequence
+
+Graphics commands need a supported linear framebuffer. Coordinates must lie
+inside it; coordinates refer to physical pixels, independent of UI scale.
+A manually written pixel can be overwritten by later drawing;
+pause 2 freezes the entire display while input/commands continue and their
+output is buffered. resume 2 displays the latest contents. Changes
+requested by animate/theme appear when that worker runs again.
+These display and scheduler settings are volatile and do not change files.
+reset is a background-computation command, not reboot or disk formatting.
+
+Names are case-sensitive, 1..31 characters from A-Z a-z 0-9 . _ -.
+Commands without operands reject extra arguments. format requires the exact
+argument ZERO; incomplete or additional arguments never initialize the disk.
+ZeroFS has8 files with up to400 ASCII bytes of text each. Foreign formats have
+their own bounded capacities, documented in fs/*-profile.txt. Paths may be
+relative names or absolute A:|NAME. Dot and dot-dot are rejected. Directories, rename,
+append, binary files and permissions are not implemented in this version.
+After the one name/text separating space, additional spaces are preserved.
+
+Storage
+Four primary/secondary master/slave ATA PIO positions are scanned. The boot
+medium remains separate. Read-only IDENTIFY validation requires an ATA disk
+with LBA28, at least 18 sectors, 512-byte logical sectors and valid FLUSH CACHE
+support before any filesystem-sector access. Capacity is capped at the
+LBA28 address limit. Commands wait for both BSY and
+DRQ to clear before the next operation and after a data transfer.
+A blank data.img is deliberately not autoformatted.
+The user must issue format ZERO to initialize it. That command erases both
+snapshots, so it is not a recovery operation. Never point this experimental
+filesystem at an unrelated disk containing data to preserve. This formatter
+is unavailable for foreign filesystems or partitioned volumes. See DRIVES.ztext
+for discovery, independent roots and filesystem dispatch. Each foreign driver
+reloads and validates metadata for every operation, including after changing
+volumes. The common disk layer checks physical capacity, request-buffer bounds
+and the selected volume bounds independently of each driver's checks.
+
+ZeroFS disk layout (512-byte sectors)
+The layout and full u64 generation/checksum arithmetic are identical in both
+kernel builds; switching CPU or firmware mode does not convert the data disk.
+Bank A: LBA 0 header, LBA 1..8 data.
+Bank B: LBA 9 header, LBA 10..17 data.
+Each record is one 512-byte sector:
+byte 0: used flag (0/1)
+bytes 1..32: NUL-terminated name
+bytes 34..35: little-endian content length (0..400)
+bytes 36 onward: ASCII text followed by NUL, remaining bytes zeroed.
+Header byte 0: 64-bit magic 0x31303053464f525a (ZROFS001)
+Header byte 8: nonzero 64-bit generation
+Header byte 16: weighted byte checksum of all 4096 data bytes
+Header byte 24: magic + generation + data checksum modulo 2^64
+Data checksum: sum(byte_at_bank_offset_i * (i + 1)), i=512..4607.
+
+Commit sequence: inactive-bank data, ATA FLUSH CACHE, inactive-bank header,
+ATA FLUSH CACHE. Only then is Saved to disk reported. On error, file access
+is disabled until restart because final commit outcome may be uncertain.
+Mount selects the highest-generation structurally valid checksummed copy.
+Duplicate file names invalidate a snapshot even if its checksum is valid.
+Generation wrap is refused. Unknown or doubly corrupt disks stay unavailable.
+The checksum detects ordinary damage; it is neither encryption nor protection
+against intentional forgery. Removing a file is not secure erasure.
+
+Kernel limitations
+The kernel polls devices and schedules cooperatively. There is no preemption,
+SMP, process isolation, IDT/exception recovery, arbitrary GUI applications,
+physical WiFi connection drivers, TLS, USB/SATA/AHCI drivers or dynamic
+partition resizing. Native Zero/Ezero apps use bounded memory streams but
+share kernel memory; unsafe stores or an infinite loop can damage or stall
+the system. Automatic PCnet/DHCP, DNS and bounded TCP/HTTP are implemented in
+net/*.zero.part. The modal WiFi UI reports unsupported hardware honestly;
+its test fixtures do not establish a physical radio connection.
+CPU usage while waiting for terminal input is expected.
+ATA, PS/2 setup and serial-transmit waits are bounded by iteration counts,
+not a calibrated physical timer. Serial-transmit failure disables COM1;
+visible output continues. Keyboard input requires a supported PS/2 controller.
+
+Historical 0.4.0 verification
+The final 0.4.0 ISO booted BIOS32 without LM/PAE, BIOS64, IA32 OVMF and AMD64
+OVMF. Visible-console/PS/2 checks passed, and one shared disk retained file
+contents through full process restarts across 32/64-bit firmware paths.
+Actual VirtualBox BIOS firmware under QEMU also booted the 32-bit path and
+preserved files. Native VirtualBox execution remains unverified because its
+host driver is unavailable. See verification.ztext for exact artifacts, logs,
+test scope and remaining limits.
+
+The pixel command uses one-based physical coordinates: X1..width and
+Y1..height. RGB values remain0..255. Internal framebuffer offsets remain
+zero-based; this user-facing change begins in0.9.0.
+
+Keyboard applications0.10
+The45x12 pseudo-graphic frame reuses the original renderer and focused-window
+modal ownership. console2472 is application kind(0 WiFi,1 menu,2 system,
+3 storage,4 network),2480 is one-based selection,2488 the last refresh tick.
+apps/*.zero.part provides behavior and labels; net/kernel-integrate.sh expands
+only whitelisted NET then APP includes. Application refresh does not append to
+the saved terminal ring. Esc restores the session; Backspace returns to menu.
+Storage selection changes only the selected volume index, never disk sectors.
+System Enter toggles computation state1/2; networking continues. The new host
+file primitives return explicit unavailable behavior in guest apps. host()=0;
+Ezero arguments/readfile/writefile/fileexists report a source-line error here.

@@ -1,0 +1,7 @@
+65 => @alpha.
+66 => @alphabet.
+67 => @_x1.
+!put[@alpha]. !put[@alphabet]. !put[@_x1].
+# comment with punctuation @ $ ! { } 
+!put[10].
+!exit[0].

@@ -1,0 +1,57 @@
+ZTEXT00100000ca73f2567c90000000
+ORIGINAL ZERO NETWORK COMPONENT PROBES
+Date:2026-11-16 UTC
+
+These are private BIOS64 development probes using the current network source
+parts and the frozen0.8.1 boot/image components. They are not the final0.9.0
+OS/ISO tests. Current source hashes are recorded in tested-inputs.sha256.
+Host script dependencies and paths refer to the retained local baseline.
+No foreign source was downloaded or incorporated. Python/QEMU/host HTTP
+server are external test infrastructure; every guest driver/protocol operation
+is compiled from the original Zero source parts.
+
+PASS Automatic PCnet discovery and DHCP with QEMU user networking:
+IPv4 address10.0.2.15,mask255.255.255.0,router10.0.2.2,DNS10.0.2.3,
+lease86400 seconds. DHCP completed before the first1-second memory snapshot.
+No command was entered to start DHCP. Actual OFFER and ACK entered DMA RX.
+
+PASS Own numeric-IP HTTP/TCP request to10.0.2.2:18080/zero.
+PASS Public DNS resolution of10.0.2.2.nip.io, then own HTTP/TCP request
+through the resolved address to the independent host fixture.
+The response was148 bytes:HTTP/1.0 200 OK, Content-Length35, and exact body:
+ZERO ORIGINAL NETWORK: HTTP works.\n
+The native receive path validated IPv4/TCP checksums and sequence numbers,
+assembled multiple packets, acknowledged the stream and completed its close.
+
+PASS Six sequential requests on the same virtual adapter:
+normal response:success2,error0,148 response bytes;
+Content-Length larger than actual body:error10;
+Transfer-Encoding chunked:error12 (unsupported explicitly);
+response above4095-byte bound:error9;
+response containing an ESC control byte:error11;
+https:// URL:error2 (TLS not implemented).
+See http-failure-results.json for exact captured guest result tuples.
+Failed responses are not published as successful or silently truncated.
+
+External connectivity boundary:
+Public DNS worked. Direct connections from the execution host itself to
+example.com:80 and neverssl.com:80 failed with ENETUNREACH. The guest public
+example.com attempt resolved the address but received a TCP reset. Therefore
+this report makes no claim of a successful external public HTTP fetch.
+The local fixture exercises the actual guest Ethernet/IP/TCP/HTTP stack;
+it does not use a host HTTP client on the guest's behalf.
+
+All probe VMs attach only their private read-only ISO. No original user disk
+or private writable data disk is attached. Probe firmware and ISO binaries,
+DMA memory snapshots and packet-capture binaries remain internal artifacts.
+Final integrated32/64-bit BIOS/UEFI results are owned by the separate
+verification/network-0.9.0 suite and must cite its exact final ISO hash.
+
+PASS Automatic lease renewal and cable-loss recovery in one further BIOS64
+probe. The test shortened only its own lease timer to request renewal after
+one second; the real server returned a fresh DHCPACK and renewed expiry.
+QMP then removed the link: public state became2 and the IPv4 address cleared.
+After restoring the link, without entering a command, the driver acquired a
+new DHCPACK and returned to state4/10.0.2.15; lease generation reached3.
+See recovery-results.json. This test-only timer adjustment is not production
+DHCP behavior; production timers use the actual advertised lease duration.

@@ -1,0 +1,22 @@
+# Host arena, allocator alignment, memory widths and stdin/stdout contract.
+:reserve[0] => @start.
+:reserve[0] => @again.
+? @again != @start [ !exit[10]. ]
+:reserve[1] => @small.
+:reserve[262144] => @large.
+? @small != @start [ !exit[11]. ]
+? @large != @start + 16 [ !exit[12]. ]
+!store64[@large + 262136 | 0xfedcba9876543210].
+? :load64[@large + 262136] != 0xfedcba9876543210 [ !exit[13]. ]
+!store8[@small | 65].
+!store16[@small + 1 | 0x4342].
+!store32[@small + 3 | 0x47464544].
+? :load8[@small] != 65 [ !exit[14]. ]
+? :load16[@small + 1] != 0x4342 [ !exit[15]. ]
+? :load32[@small + 3] != 0x47464544 [ !exit[16]. ]
+? :write[@small | 7] != 7 [ !exit[17]. ]
+? :read[@large | 4] != 4 [ !exit[18]. ]
+? :write[@large | 4] != 4 [ !exit[19]. ]
+? :read[@large | 1] != 0 [ !exit[20]. ]
+!put[10].
+!exit[0].

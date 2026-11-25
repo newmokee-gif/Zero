@@ -1,0 +1,113 @@
+ZTEXT00100001a35cb14deea0000000
+Zero Media 0.14 work state - 2026-11-20
+
+New implementation is exclusively original Zero. The new native image
+format is .zmedia (ZMEDIA01), with an exact bounded layout and an original
+SHA-256 implementation. It contains an independently built whole-disk
+payload, not an ISO. BIOS32/64 and UEFI32/64 loaders are provided.
+
+Native Linux x86-64 and Windows x64 programs: zero-media, zero-flash,
+zero-drives, zero-disk and zero-media-check. All new sources are in media/.
+The source snapshot is validated before a write target is opened. The
+native writer restricts targets to identified removable USB whole disks,
+requires explicit target confirmation, checks identity again, flushes and
+compares every written byte. Obsolete backup-GPT sectors beyond the image
+are cleared with bounds checks. It never silently unmounts filesystems.
+
+Zero's flash writer is an original UEFI application launched from the new
+media boot menu before the OS kernel. It reads system.zmedia from a
+firmware-readable volume, protects its boot/source disks, and writes only
+eligible USB destinations after confirmation. This does not implement a
+runtime USB driver in the Zero kernel; native in-kernel USB access remains
+unfinished. BIOS boots the system but does not run the UEFI flash utility.
+
+compiler.zero now supports existing call7 syntax for x64 raw/UEFI targets.
+Its IA32 ABI and other target restrictions are unchanged. The native own
+builder has70stages and produces66artifacts, including both host editions,
+both firmware editions, media menus and disk-building components.
+media/README.ztext gives the exact workflow and platform restrictions.
+media/VERIFICATION.ztext records the final artifact checks. Tests use
+private regular files and emulated USB devices; physical flash drives and
+native Windows hardware are not certified. User data disks are preserved.
+
+Previous baseline and retained capabilities follow (historical0.13 record):
+
+Zero OS 0.13 work state - 2026-11-18
+
+All new implementation is original Zero. Ezero remains the simpler language
+implemented on Zero, and the editors can edit and compile both languages.
+No Chromium source, foreign GUI toolkit, C, assembly or Python implementation
+was added. External firmware, emulators, host OS APIs and private validation
+tools are not project implementation. Human conversation is Russian; system
+messages are English. Visible indexes and line numbers begin at one.
+
+New complete components: bounded HTTP HTML/plain-text browser, original
+ZBROW001 page documents, navigation/history/relative URLs/redirects, guest
+Zero Studio editor and native Linux/Windows Zero Studio, actual PS/2 pointer.
+The browser is a text-oriented first version, not a full modern-web engine.
+HTTPS, CSS layout, JavaScript/DOM, forms and browser media remain absent.
+Native editor holds one ASCII document up to65535bytes and builds both
+languages using the original compiler apps. Guest editor holds400bytes,
+uses actual filesystem operations, and builds/runs both languages in the OS.
+
+Source regeneration is original Zero: tools/integrate.zero composes kernel,
+Ezero, picture and browser sources; editor/host/compose.zero composes Studio.
+tools/build.zero produces49artifacts, requiring an own compiler fixed point.
+Bootstrap remains the earlier Zero-built bootstrap/zero64.zapp application.
+Compiler source limit524288, token limit240000, output limit524288,64locals.
+IA32 short literals and local addresses preserve full64-bit arithmetic.
+
+ISO remains18890752bytes; kernel64slot475136, kernel32slot507904.
+Current kernels418178/506839bytes; IA32 has1065bytes spare. Do not grow the
+BIOS slot into EBDA/VGA memory. Bundle has8apps in1MiB:6compiler pipeline apps
+plus readers at339968/819200. Packer slots16384, reader slots143360;
+runtimeprefix962560/body966656 remain unchanged.
+Netbase=pool+163840. RawHTTPnet+32768/65536, decodednet+98304/65536,
+browser/editor sharedmodalstate net+163840/65536. WM starts pool+393216,
+count=(poolbytes-524288)>>13, minimum532480. Main stack remains disjoint.
+Legacy fetch wait740; file service700 is child-only; editor compile760.
+Console2416:1system/WiFi,2browser,3editor. Mouse2520..3055, framegrid3072.
+
+Release ISO SHA256:
+a95ac7d301c08e4e4dd100cdd4c6e4d1786635199bb1d0f60319aa95eb90dac5
+compiler.zero SHA256:
+cd654b115508bba5647d5106e233a0ac36a375d28d83d7bb896654d1f0de65b4
+kernel.zero SHA256:
+3574d816a36c1188709270e7a7a49b473c367e4672c4d4cd76ac7389305a11ab
+
+Verification and exact publication receipts are in verification.ztext and
+the separate release package receipt. Physical Windows/VirtualBox/hardware
+tests are not inferred from Windows/Wine or QEMU BIOS/UEFI checks.
+
+Protected original disk hashes, unchanged by development:
+raw c730241fb30f5516867c751006951a2878f360319195ee975411a05f040f27e8
+VDI 7f58fb36c934405757da797ca65f2dddef3858e69107f43e2cae59d14c89bc5f
+Tests use separate disposable disks. Source archives exclude private disks
+and screenshots; own .zpix evidence is distributed separately.
+
+Still unfinished: physical Wi-Fi, TLS, full web standards and multimedia,
+preemption/SMP/process isolation, general filesystem feature sets, installed
+boot registration, authenticated Internet updates, large guest files and a
+full IDE debugger/project system. Do not claim ideal or universal operation.
+
+25NOVEMBER2026 - ZERO WEB0.15PREVIEW
+
+Completed: original Zero HTML tree, CSS cascade, bounded JavaScript profile,
+block/inline rasterizer, own Zpix export and Linux/Windows GUI local preview.
+Own checks: DOM170, CSS151, JavaScript320, pipeline35;676per host passed native
+Linux and Windows/Wine. Independent integration67assertions passed. GUI10cases
+per host plus actual final-browser scrolling/close and exact pixel comparison.
+76build stages/72artifacts reproduced exactly by the freshly built builder.
+Unchanged0.14boot/guest assets are identical; user data disk hashes unchanged.
+Source browser/engine/web.zero is generated by own compose.zero. All new
+implementation and project tests are Zero; cancelled Python worker removed.
+
+Not done: Internet fetching/TLS for the new engine, full HTML/CSS/ECMAScript,
+external scripts/styles, media, guest runtime integration, native Windows
+hardware. This is not an all-sites browser or completed Chromium rewrite.
+Shared-chat snapshot currently exposes material gathering, not a final idea
+list. The new personal library link requires sign-in and supplies no readable
+file in this workspace; its contents have not been claimed read or implemented.
+GitHub publication is requested for newmokee-gif/zero-os. Repository creation
+was refused with HTTP403 by the connected integration; local upload materials
+are being prepared while the owner enables a repository destination.

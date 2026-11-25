@@ -1,0 +1,93 @@
+ZTEXT001000013d8e2294c040000000
+Zero OS0.7 final three-mode integration verification
+2026-11-15 UTC
+
+Exact final ISO
+SHA256 6af39753816e30ab40e77cf56af4a8edce4de20abb30ef09d722884c217a5f3b
+Size17645568 bytes. The tested private copy and build/zero.iso match.
+The parent owns the separate final BIOS64 verification.
+
+Modes: all PASS
+BIOS32: QEMU pc/TCG, qemu64,-lm,-pae, SeaBIOS,128MiB RAM.
+UEFI32: QEMU pc/TCG, qemu64,-lm, IA32 OVMF4M,128MiB RAM.
+UEFI64: QEMU pc/TCG, qemu64, AMD64 OVMF4M,128MiB RAM.
+Every mode uses standard VGA and its own writable data, MBR and GPT copies.
+UEFI uses private variable stores. The ISO is read-only on IDE index2.
+Full commands and VM arguments are retained in run-vms.sh and each mode's
+first.commands, first.serial, first.qemu and first.keyboard files.
+
+Inventory and UI
+Every boot reached A:|> within40 seconds and showed exactly:
+ A:| physical0 raw ZeroFS,1MiB
+ B:| physical1 MBR ext4,32MiB, start2048/count65536
+ C:| physical1 MBR NTFS,64MiB, start67584/count131072
+ D:| physical1 MBR Btrfs,256MiB, start198656/count524288
+ E:| physical3 GPT ext4,32MiB, explicitly labelled read-only
+The ATAPI optical drive is not exposed as a writable volume.
+All three800x600 first.png screenshots were visually inspected: pixel portrait,
+desktop, visible terminal, new paths and native worker status are present.
+PS/2 entered all62 commands per mode. GO changed roots and absolute reads
+selected the requested volume without merging same-named files.
+Prompts stay in column0 after LF-only listings; the earlier indentation bug
+is resolved. Missing-file and already-exists results do not mark healthy
+volumes limited/unavailable in disks.
+
+Filesystem operations: all PASS on each of ext4, NTFS and Btrfs in every mode
+Create scratch; save/read mode-specific text; delete scratch; verify missing.
+Create same; save/read first contents; overwrite with final contents; attempt
+duplicate create and verify existing contents remain; list the root.
+Each backend's final same file contains a distinct value:
+ MODE ext4 final
+ MODE ntfs final
+ MODE btrfs final
+The separate ZeroFS A:|same contains MODE zero separate. Cross-volume reads
+from A confirm all four same names retain independent contents. MODE is
+bios32,uefi32 oruefi64. All command responses are checked by the runner.
+
+Read-only enforcement: all PASS
+Read/list E:|welcome, then attempt save, create and remove on E. All three
+mutations are refused. GO E:| followed by format ZERO is also refused. The
+original welcome content is read again. Each complete37,748,736-byte private
+GPT image compares byte-for-byte with the immutable fixture afterward.
+
+Threads after disk operations: both counters grow
+Mode       Graphics frames       Compute blocks (hex)
+BIOS32     01e9 -> 01fa           1227e7 -> 12cddd
+UEFI32     01e9 -> 01f9           1255dc -> 130f81
+UEFI64     01e1 -> 01f1           257f99 -> 26d7bf
+Both workers remain state1. This establishes cooperative thread progress;
+it does not claim preemptive scheduling or multiple CPU execution.
+
+Independent filesystem inspection after VM shutdown: all PASS
+The runner sends monitor quit and waits for process completion before these
+checks. check-filesystems.sh records exact extraction and checker commands.
+partx confirms all three MBR extents. Each mode's partition copies were tested:
+ e2fsck -fn: exit0
+ ntfsfix -n: exit0
+ btrfs check --readonly: exit0, no error found
+debugfs, ntfscat and btrfs restore independently extract same and match every
+expected final byte sequence. Btrfs restore also confirms scratch is absent.
+The first/last1MiB gaps, including the MBR, are unchanged. Per-mode checker
+logs, readback/expected files and external.status preserve the evidence.
+ntfsfix -n is a limited independent consistency check, not Windows chkdsk.
+
+UEFI64 full new-process restart: PASS
+After the first VM exited and the external checks completed, a new QEMU
+process booted the same ISO using the same private disks/variables. It
+rediscovered A-E and read all three final foreign-filesystem contents plus
+the separate ZeroFS content. E:|welcome remained unchanged. Root listings,
+info and tasks completed. restart.png was visually inspected. The whole
+data, MBR and GPT image hashes remain identical to their post-first-run
+values, recorded in restart-disks-unchanged.txt. This proves persistence
+across a full guest process restart; the restart performs reads, not CRUD.
+
+Preservation and limits
+build/data.img and build/data.vdi retain their pre-task hashes. Original
+multi-mbr.img/readonly-gpt.img fixtures remain unchanged. inputs.sha256 and
+original-inputs-unchanged.txt record this. All four test VM processes, including
+the restart, have stopped. No implementation source was changed during these
+final tests. The supported filesystems are their explicitly documented bounded
+profiles, with flat names and small files; these tests do not establish full
+general-purpose ext4/NTFS/Btrfs compatibility. QEMU/firmware/filesystem tools
+are external testing dependencies, not guest implementations. Native
+VirtualBox execution and physical hardware were not tested here.

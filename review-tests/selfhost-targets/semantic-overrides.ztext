@@ -1,0 +1,25 @@
+ZTEXT00100000561d594857e0000000
+# target	fixture	reason
+elf	positive/name-bios.zero	unified_reserved_namespace
+host	positive/name-bios.zero	unified_reserved_namespace
+raw	positive/name-bios.zero	unified_reserved_namespace
+efi	positive/name-bios.zero	unified_reserved_namespace
+raw32	positive/name-bios.zero	unified_reserved_namespace
+efi32	positive/name-bios.zero	unified_reserved_namespace
+elf	positive/name-protectedjump.zero	unified_reserved_namespace
+host	positive/name-protectedjump.zero	unified_reserved_namespace
+raw	positive/name-protectedjump.zero	unified_reserved_namespace
+efi	positive/name-protectedjump.zero	unified_reserved_namespace
+raw32	positive/name-protectedjump.zero	unified_reserved_namespace
+efi32	positive/name-protectedjump.zero	unified_reserved_namespace
+elf	positive/name-enable.zero	unified_reserved_namespace
+host	positive/name-enable.zero	unified_reserved_namespace
+raw	positive/name-enable.zero	unified_reserved_namespace
+efi	positive/name-enable.zero	unified_reserved_namespace
+raw32	positive/name-enable.zero	unified_reserved_namespace
+efi32	positive/name-enable.zero	unified_reserved_namespace
+elf	positive/name-call7.zero	unified_reserved_namespace
+host	positive/name-call7.zero	unified_reserved_namespace
+raw	positive/name-call7.zero	unified_reserved_namespace
+efi	positive/name-call7.zero	unified_reserved_namespace
+real	positive/name-call7.zero	unified_reserved_namespace

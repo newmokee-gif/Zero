@@ -1,0 +1,15 @@
+
+:hostalloc[4096] => @p. 0 => @r.
+? @p == 0 [ !exit[1]. ]
+!store32[@p | 0x00002ab8]. !store16[@p + 4 | 0xc300].
+? :hostprotect[@p | 4096 | 2] != -1 [ !exit[2]. ]
+? :hostprotect[@p | 4096 | 1] != 0 [ !exit[3]. ]
+:call[@p | 0 | 0 | 0 | 0 | 0] -> @r.
+? @r != 42 [ !exit[4]. ]
+? :hostprotect[@p | 4096 | 0] != 0 [ !exit[5]. ]
+!store8[@p + 1 | 43].
+? :hostprotect[@p | 4096 | 1] != 0 [ !exit[6]. ]
+? :call[@p | 0 | 0 | 0 | 0 | 0] != 43 [ !exit[7]. ]
+? :hostfree[@p | 4096] != 0 [ !exit[8]. ]
+? :hostalloc[0] != 0 [ !exit[9]. ]
+? :hostfree[1 | 4096] != -1 [ !exit[10]. ] !exit[0].

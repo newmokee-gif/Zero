@@ -1,0 +1,13 @@
+10 => count
+count + 5 => count
+count => show
+
+Mira => name
+Hello name => show
+Count count => show
+
+count > 10 => when [
+    More than ten => show
+] ~ [
+    Ten or less => show
+]

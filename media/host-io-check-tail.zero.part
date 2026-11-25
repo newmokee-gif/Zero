@@ -1,0 +1,14 @@
+ ? (:load64[@mh+40] != @re)+(:load64[@mh+88] != @rc) [
+  "Host I/O check failed at case " -> @rr. 0 -> @ri.
+  ?? :load8[@rr+@ri] [ !put[:load8[@rr+@ri]]. @ri+1 -> @ri. ]
+  ? @rt < 9 [ !put[49+@rt]. ] ~ [ !put[49]. !put[48+@rt-9]. ] !put[10].
+  !exit[1].
+ ]
+ ? @rt == 1 [
+  0 -> @ri. ?? @ri < 512 [
+   ? :load8[@rb+@ri] != :bitand[@ri*7+17|255] [ !exit[1]. ] @ri+1 -> @ri.
+  ]
+ ]
+ @rt+1 -> @rt.
+]
+!store64[@mh+16|@rf]. !store64[@mh+96|:host[]]. !store64[@mh+40|87].

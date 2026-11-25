@@ -1,0 +1,1433 @@
+# Own Zero kernel: native cooperative threads, pixel desktop and persistent files.
+:reserve[65536] => @memory.
+@memory => @bank_a.
+@memory + 4608 => @bank_b.
+@memory + 9216 => @work.
+@memory + 13824 => @line.
+@memory + 14336 => @listing.
+@memory + 16380 => @echo_byte.
+0 => @state.
+0 => @current.
+0 => @message.
+0 => @pointer.
+0 => @character.
+0 => @i.
+0 => @j.
+0 => @k.
+0 => @temporary.
+0 => @status.
+0 => @timeout.
+0 => @ready.
+0 => @valid.
+0 => @done.
+0 => @io_lba.
+0 => @io_buffer.
+0 => @io_count.
+0 => @io_write.
+0 => @io_return.
+0 => @io_ok.
+0 => @sector_index.
+0 => @word_index.
+0 => @command_status.
+0 => @validate_ptr.
+0 => @validate_return.
+0 => @validate_good.
+0 => @checksum.
+0 => @good_a.
+0 => @good_b.
+0 => @active_bank.
+0 => @fs_ready.
+0 => @disk_ready.
+0 => @disk_select.
+0 => @line_length.
+0 => @overflow.
+0 => @ignore_lf.
+0 => @arguments.
+0 => @command.
+0 => @operation.
+0 => @wanted.
+0 => @equal.
+0 => @name.
+0 => @text.
+0 => @name_length.
+0 => @file.
+0 => @free_file.
+0 => @text_length.
+0 => @slot.
+:arg0[] => @boot_information.
+@memory + 16384 => @console.
+# Original 5x7 ASCII glyph rows. Each character stores seven masks as 48+mask.
+"00000004444404:::0000:O::O:04?D>5N4IJ248;C<BD8EB=44800002488842842224804E>E40044O4400000448000O0000000004122488@>ACEIA>4<4444>>A1248ON11611N26:BO22O@@N11N68@NAA>O124888>AA>AA>>AA?12<04004000400448124842100O0O00@84248@>A12404>AGEG@>>AAOAAANAANAAN?@@@@@?NAAAAANO@@N@@OO@@N@@@?@@GAA?AAAOAAA>44444>72222B<ABDHDBA@@@@@@OAKEEAAAAIIECCA>AAAAA>NAAN@@@>AAAEB=NAANDBA?@@>11NO444444AAAAAA>AAAAA:4AAAEEKAAA:4:AAAA:4444O1248@O>88888>@884221>22222>4:A0000000000O842000000>1?A?@@NAAAN00?@@@?11?AAA?00>AO@?698N8880?AA?1>@@NAAAA40<444>20622B<@@BDHDB<44444>00JEEEE00NAAAA00>AAA>0NAAN@@0?AA?1100FI@@@00?@>1N88N889600AAAA?00AAA:400AAEE:00A:4:A0AAA?1>00O248O34484434444444H44244H009F000" => @font.
+0 => @c0.
+0 => @c1.
+0 => @c2.
+0 => @c3.
+0 => @c4.
+0 => @c5.
+0 -> @i.
+?? @i < 65536 [ !store8[@memory + @i| 0]. @i + 1 -> @i. ]
+?? 1 [
+ @state -> @current.
+ ? @current == 0 [
+  # Copy only display fields from the firmware-neutral loader handoff.
+  ? @boot_information [
+   0 -> @i.
+   ?? @i < 48 [
+    !store64[@console + @i| :load64[@boot_information + 48 + @i]]. @i + 8 -> @i.
+   ]
+  ]
+  ? :load64[@console] == 1 [
+   ? :load64[@console + 8] != 0xb8000 [ !store64[@console| 0]. ]
+  ] ~ [
+   ? :load64[@console] == 2 [
+    ? :load64[@console + 8] == 0 [ !store64[@console| 0]. ]
+    ? :load64[@console + 16] < 640 [ !store64[@console| 0]. ]
+    ? :load64[@console + 24] < 400 [ !store64[@console| 0]. ]
+    ? :load64[@console + 16] > 8192 [ !store64[@console| 0]. ]
+    ? :load64[@console + 24] > 8192 [ !store64[@console| 0]. ]
+    ? :load64[@console + 32] < :load64[@console + 16] [ !store64[@console| 0]. ]
+    ? :load64[@console + 32] > 16384 [ !store64[@console| 0]. ]
+    ? :load64[@console + 40] > 1 [ !store64[@console| 0]. ]
+   ] ~ [ !store64[@console| 0]. ]
+  ]
+  !store64[@console + 184| 80]. !store64[@console + 192| 25].
+  ? :load64[@console] == 2 [
+   !store64[@console + 184| 46].
+   !store64[@console + 200| 16]. !store64[@console + 208| 80].
+   !store64[@console + 232| 2].
+   !store64[@console + 240| :load64[@console + 16] - 208].
+   !store64[@console + 248| 80].
+   ? (:load64[@console + 16] >= 800) * (:load64[@console + 24] >= 600) [
+    !store64[@console + 184| 52].
+    !store64[@console + 200| 24]. !store64[@console + 208| 104].
+    !store64[@console + 232| 3].
+    !store64[@console + 240| :load64[@console + 16] - 312].
+    !store64[@console + 248| 104].
+   ]
+   0 -> @c0.
+   ?? :load64[@console + 208] + (@c0 + 1) * 16 <= :load64[@console + 24] - 48 [ @c0 + 1 -> @c0. ]
+   !store64[@console + 192| @c0].
+   !store64[@console + 216| :load64[@console + 184] * 8].
+   !store64[@console + 224| @c0 * 16].
+  ]
+  !store64[@console + 120| 1].
+  # COM1 is optional. A missing or stalled UART must not stop visible output.
+  !out8[0x3f9| 0]. !out8[0x3fb| 0x80]. !out8[0x3f8| 1].
+  !out8[0x3f9| 0]. !out8[0x3fb| 3]. !out8[0x3fa| 7]. !out8[0x3fc| 3].
+  !out8[0x3ff| 0x5a].
+  ? :in8[0x3ff] == 0x5a [ !store64[@console + 80| 1]. ]
+  !out8[0x3ff| 0].
+  # Own 8042 setup: disable both ports, set translation/no IRQs, enable port 1.
+  # Keyboard is set to scan set 2; the controller translates it to set 1.
+  ? :in8[0x64] != 255 [ !store64[@console + 160| 1]. ]
+  0 -> @c0.
+  ?? @c0 < 32 [
+   :in8[0x64] -> @c1.
+   ?? @c1 >= 2 [ @c1 - 2 -> @c1. ]
+   ? @c1 [ :in8[0x60] -> @c2. ] ~ [ 32 -> @c0. ]
+   @c0 + 1 -> @c0.
+  ]
+  0 -> @c0.
+  ?? @c0 < 9 [
+   ? :load64[@console + 160] [
+    0x64 -> @c1. 0xad -> @c2.
+    ? @c0 == 1 [ 0xa7 -> @c2. ]
+    ? @c0 == 2 [ 0x60 -> @c2. ]
+    ? @c0 == 3 [ 0x60 -> @c1. 0x64 -> @c2. ]
+    ? @c0 == 4 [ 0xae -> @c2. ]
+    ? @c0 == 5 [ 0x60 -> @c1. 0xf5 -> @c2. ]
+    ? @c0 == 6 [ 0x60 -> @c1. 0xf0 -> @c2. ]
+    ? @c0 == 7 [ 0x60 -> @c1. 2 -> @c2. ]
+    ? @c0 == 8 [ 0x60 -> @c1. 0xf4 -> @c2. ]
+    0 -> @ready. 0 -> @timeout.
+    ?? @ready == 0 [
+     :in8[0x64] -> @status.
+     ?? @status >= 4 [ @status - 4 -> @status. ]
+     ? @status < 2 [ 1 -> @ready. ]
+     @timeout + 1 -> @timeout.
+     ? @timeout == 100000 [ 1 -> @ready. !store64[@console + 160| 0]. ]
+    ]
+    ? :load64[@console + 160] [
+     !out8[@c1| @c2].
+     ? @c0 >= 5 [
+      0 -> @ready. 0 -> @timeout.
+      ?? @ready == 0 [
+       :in8[0x64] -> @status.
+       ?? @status >= 2 [ @status - 2 -> @status. ]
+       ? @status [
+        :in8[0x60] -> @c3. 1 -> @ready.
+        ? @c3 != 0xfa [ !store64[@console + 160| 0]. ]
+       ]
+       @timeout + 1 -> @timeout.
+       ? @timeout == 100000 [ 1 -> @ready. !store64[@console + 160| 0]. ]
+      ]
+     ]
+    ]
+   ]
+   @c0 + 1 -> @c0.
+  ]
+  # Two private native stacks live in the lower part of the loader-owned pool.
+  # The original kernel frame/arena remain at its top, at least80KiB away.
+  !store64[@console + 312| 1]. !store64[@console + 320| 1].
+  !store64[@console + 304| 1].
+# Original Zero portrait: 96x128, 32 colors, four banks of 32 rows.
+!store64[@console + 1280 | 0x101a35].
+!store64[@console + 1288 | 0x182b49].
+!store64[@console + 1296 | 0x283c60].
+!store64[@console + 1304 | 0x111329].
+!store64[@console + 1312 | 0x303057].
+!store64[@console + 1320 | 0x4e477c].
+!store64[@console + 1328 | 0x7566ad].
+!store64[@console + 1336 | 0xa393d4].
+!store64[@console + 1344 | 0xd8c8ef].
+!store64[@console + 1352 | 0x6fa9ce].
+!store64[@console + 1360 | 0xc77e91].
+!store64[@console + 1368 | 0xe5a0aa].
+!store64[@console + 1376 | 0xf5c0b6].
+!store64[@console + 1384 | 0xffe0c7].
+!store64[@console + 1392 | 0xef96a6].
+!store64[@console + 1400 | 0xfff0dd].
+!store64[@console + 1408 | 0x17435f].
+!store64[@console + 1416 | 0x278fa6].
+!store64[@console + 1424 | 0x67d8df].
+!store64[@console + 1432 | 0xbdfff0].
+!store64[@console + 1440 | 0x182239].
+!store64[@console + 1448 | 0x283b55].
+!store64[@console + 1456 | 0x435c77].
+!store64[@console + 1464 | 0x55b8c9].
+!store64[@console + 1472 | 0xa6eeea].
+!store64[@console + 1480 | 0xc579b4].
+!store64[@console + 1488 | 0xeab4df].
+!store64[@console + 1496 | 0xf4cd89].
+!store64[@console + 1504 | 0x96afd9].
+!store64[@console + 1512 | 0x3a486d].
+!store64[@console + 1520 | 0xfff0d2].
+!store64[@console + 1528 | 0x251b3c].
+!store64[@console + 1536 | "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000L0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000H000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003000000000000000000000000000000000000000000000000000000000000000000000000000000000000003333333336333333333000000000000000000000000000000000000000000000000000000M0000000000000000003333666666666666666666633330000000000000000000000000000000000000000000000000000000000000000003336666666666666666666666666663330000000000000000000000000000000000000000000000000000000000000333666666666666666766666666666666633300000000000000000H00000000000000000000000000000000000000033666666666777777777777777777766666666633000000000000000H000000000000000000000000000000000000033366666677777777777777777777777777766666633300000000000HHHHH000000000000000000000000000000000033666666777777777777777777777777777777766666633000000000000H00000000000000000000000000000000003336666777777777777777777777777777777777777766663330000000000H0000000000000000000000000000000003366666777777777777777777777777777777777777777666663300000000000000000000000000000000000000000033666677777777777777777777777777777777777777777776666330000000000000000000000000000000L00000000336666777777777777777777777777777777777777777777777666633000000000000000000000000000000L000000033666777777777777777777777777777777777777777777777777766633000000000000000000000000000LLLLL000033666777777777777777733333333333333333333333333337777777666330000000000000000000000000000L000000336667777777777777777737777777777777777777777773777777K7666330000000000000000000000000000L000003366677777777777777777737777777777777777777777777777777K7766633000000000000000000000000000000003366676666666666666666666377777777777777777777773777777???7766633000000000000000000000000000000033663366666666666666666663777788887777777733333333333KK???KK3333330000000000000000000000000000003366733666777777777666666637777888877777777336666666666???6666663300000000000000000000000000000336677336667777777777666666377778888777777773366666666666K66666663300000000000000000000000000000336677336666777777777666666337777888777777773366666666666K6666666330000000000000000000000000000133667773366677777777766666663777788887777777733666666666666666666331000000000000000000000000000133666663366677777777776666663777788887777777733666667777I6666J6633310000000000000000000000000011336666633666677777777766666663777788887777777336666677777I66J666333110000000000000000000000001133666666633666777777777666666337777888877777776336666777777IJ666636331100000000000"].
+!store64[@console + 1544 | "0000000000011113366666633666777777777766666363777788887777736336666677777JI666633311110000000000000000000001111335555555556667777777776666336377778888777736633666667777J66I6633331111000000000000000000001111333555555555666777777777666336633777788877773666336666777J7766I63333311110000000000000000000111133355555555566677777777776636666377778888773666633666667755555555533311110000000000000000001111133355555555566667777777776336666377778888776666633666667755555555533311111000000000000000001111334355777755536667777777773333333337777888833333333366667755555555534331111000000000000000011111334455777755536667777777777=======377777777=======3366666755555555544331111100000000000000011111344455777755536666777777777========37777773=======3366666755577755544431111100000000000000111113344455777755533666777777777========3777773=========3366667555777555444331111100000000000001111133444557777555336667777777777=======3377773=========3366666555777555444331111100000011111111111133444557777555336666777777777========37773==========3366666555777555444331111111111111111111111133444557977555<33666777777777========3777555555555555336666555777555444331111111111111111111111134444557977555<336667777777777========373============336666555777555444431111111111111111111111334444557977555<336666633==============37=============336666555777555444433111111111111111111111334444557977555<<3366633================3==============336665557775554444331111111111111111111113344445579775553<336663333333=================3333333==33666555779555444433111111111111111111111334444557977555<333663333333333============33333333333333666555779555444433111111111111111111111334444557977555<<<3333?@@@@@@@?33=========33???@@@@@@@?33366555779555444433111111111111111111111334444557977555<<3333?@??33@@@@??3=======3????@??33@@@@?3366555779555444433111111111111111111111334444557977555<3?333?@??33AA@@???3=====3?????@??33AA@@?3366555779555444433111L11111111111111111334444557977555<3??3??@AA33AAA@???3=====3?????@AA33AAA@??3335557795554444331111111111111111111113344445579775553?????@@AA33AAA@@???3===3?????@@AA33AAA@@?333555779555444433111111111111111111111344444557977555<3?????AAB33BCAA???3=====3?????AAB33BCAA??333555779555444443111111111111111111113334444557977555<3?????@ABBBBBA@???3=====3?????@ABBBBBA@???33555779555444433311111111111111111111334444557977555<<3????@ABBBBBA@??3=======3????@ABBBBBA@??3==555779555444433111111111111111111111334444557977555<<<33???@AAAAA@?33=========33???@AAAAA@?33===555779555444433111111111111111111111334444557977555<<<<<33333?A3333=============33333?A3333====<555779555444433111111111111111111111334444557977555<<<<<=====3=======================3=========<555779555444433111111111111111111111334444557977555<<<<<=======================================<555779555444433111111111111111111111334444557977555<<<<<<================;====================<<555779555444433111111111111111111111334444557977555<<<>>>>>>>============;============>>>>>>>=<<555779555444433111111111111111111111334444557977555;<<>><>>>>============;?===========>>>><>><<<5557795554444331111111111"].
+!store64[@console + 1552 | "11111111111334444557977555;<<>>>>>>>=========================>>>>>>><<<555779555334433111111111111111111111333444557977555;<<<<<<<=================================<<<<555779555334333111111111111111111L11133444557977555;;<<<<<<<===============================<<<<<555779555334331111111111111111111111133444557777555;;<<<<<<<<=============================<<<<<<555779555334331111111111111111111111133444557777555;;;<<<<<<<<===========================<<<<<<;555779555334331111111111111111111111133444557777555;;;<<<<<<<<<=========================<<<<<<<;5557795553343311111111111111111111111333445577775553;;;<<<<<<<<<=====:::::::::=========<<<<<<<;35557775553333311111111111111111111111133445577775553;;;<<<<<<<<<<<=====;;;;;=========<<<<<<<<<;355577755533331111111111111111111111111334455777755553;;;<<<<<<<<<<<=================<<<<<<<<<;35555777555333311111111111111111111111113334557777555553;;;<<<<<<<<<<<<<===========<<<<<<<<<<<;335555777555333311111111111111111111111111334557777555553;;;<<<<<<<<<<<<<<<<<<=<<<<<<<<<<<<<<<<;3355557775553331111111111111111111111111113345577775555533;;;<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<;333555577755533311111111111111111111111111133355777755555333;;;<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<;33335555777555333111111111111111111111111111133557777555553333;;;<<<<<<<<<<<<<<<<<<<<<<<<<<<<<;3333355557775553311111111111111111111111111111335577775555533333;;;<<<<<<<<<<<<<<<<<<<<<<<<<<<;334333555577755533111111111111111111111111111111355555555555333433;;;;<<<<<<<<<<<<<<<<<<<<<<<;;33443335555777555331111111111111111111111111111113555555555553334433;;;;<<<<<<<<<<<<<<<<<<<<<;;3344433355557775553311111111111111111111111111111115555555555533344443;;;;;<<<<<<<<<<<<<<<<<;;;3444443335555555555331111111111111111111111111111111555555555553334444433;;;;;<<<<<<<<<<<<<;;;33444444333555555555533111111111111111111111111111111155555555555333444444433;;;;;;;;;<;;;;;;;33444444443335555555555331111111111111111111111111111111555555555553334444444::33;;;;;;;;;;;;;33::444444443335555555555331111111111111111111111111111111335555555553334444444::<<333333;333333=<::444444443335555555555331111111111111111111111111111111335555555553334444444::<<<=====3=======<::444444443335555555555331111111111111111111111111111111335555555553334444444::<<<=============<::444444443335555555555331111111119111111111111111111111335555555553334444444::<<<=============<::444444443335555555555331111111111111122222222222222222335555555553334444444::<<<=============<::444444443335555555555332222222222222222222222222222222335555555553334444444::<<<=============<::4444444433355555555553322222222222222222222222222222223355555555533344FFFFFFFFFFFFFFF=FFFFFFFFFFFFFFF4443335555555555332222222222222222222222222222222335555555553334FF?????????????F=F?????????????FF44333555555555533222222222222222222222222222222233555555555333FF??????????????F=F??????????????FF333355555555553322222222222222222222922222222223355555555533FF???????????????F=F???????????????FF3335555555555332222222222222222222222222222222335555555533FF????????????????F<F????????????????FF3355555555553322222222222222"].
+!store64[@console + 1560 | "22222222222222222335555553333FF????????????????F:F????????????????FF3333555555553322222222222222222222222222222223355555333EEFF????????????????FEF????????????????FFEE3335555555332222222222222222222222222222222335553333EEEFF??????????IIIIIIIEIIIIIII??????????FFEEE3333555553322222222222222222222222222222223355333EEEEEFF?????????IIIIIIJJJJJIIIIII?????????FFEEEEE3335555332222222222222222222222222222222335333EEEEEEFF????????IIIIIIIJJJJJIIIIIII????????FFEEEEEE33355533222222222222222222222222222222233333EEEEEEEFF???????IIIIIIIIJJJJJIIIIIIII???????FFEEEEEEE333553322222222222222222222222222222223333EEEEEEEEFF??????IIIIIIIIIJJJJJIIIIIIIII??????FFEEEEEEEE3335332222222222222222222222222222222333EEEEEEEEDFF??????IIIIIIIIIJJJJJIIIIIIIII??????FFDEEEEEEEE33333222222222222222222222222222222333EEEEEEEEEDFFFFFFFFIIIIIIIIIIIJIIIIIIIIIIIFFFFFFFFDEEEEEEEEE333322222222222222222222222222222333EEEEEEEEEEDFFFFFFFFIIIIIIIIIIIJIIIIIIIIIIIFFFFFFFFDEEEEEEEEEE3332222222222222222222222222222333EEEEEEEEEEEDDDDDDDDDDDDDDDDDIIJJJIIDDDDDDDDDDDDDDDDDEEEEEEEEEEE33322222222222222222222222222233EEEEEEEEEEEEDDDDDDDDDDDDDDDDDIIJJJIIDDDDDDDDDDDDDDDDDEEEEEEEEEEEE332222222222222222222222222233EEEEEEEEEEEEEDDDDDDDDDDDDDDDDDIIJJJIIDDDDDDDDDDDDDDDDDEEEEEEEEEEEEE33222222222222222222222222333EEEEEEEEEEEEEDGDDDDDDDDDDDDDDDIIJJJIIDDDDDDDDDDDDDDDGDEEEEEEEEEEEEE3332222222222222222222222233EEEEEEEEEEEEEEDGDDDDDDDDDDDDDDDIIJJJIIDDDDDDDDDDDDDDDGDEEEEEEEEEEEEEE33222222222222222222222233EEEEEEEEEFFFFEEDGDDDDDDDDDDDDDDDIIJJJIIDDDDDDDDDDDDDDDGDEEEFFFF3EEEEEEE3322222222222222222222333EEEEEEEEEFFFFEEDGDDDDDDDDDDDDDDDIIJJJIIDDDDDDDDDDDDDDDGDEEEF333K333EEEE333222222222222222222233EEEEEEEEEEFFFFEEDGDDDDDDDDDDDDDDDIIJJJIIDDDDDDDDDDDDDDDGDEEE33KK?KK33EEEE33222222222222222222333EEEEEEEEEEFFFFEEDGDDDDDDDDDDDDDDDIIJJJIIDDDDDDDDDDDDDDDGDEEE3KKK?KKK3EEEE3332222222222222222233EEEEEEEEEEEFFFFEEDGDDDDDDDDDDDDDDDIIJJJIIDDDDDDDDDDDDDDDGDEEE3KKK?KKK3EEEEE332222222222222222233EEEEEEEEEEEFFFFEEDGDDDDDDDDDDDDDDDIIIIIIIDDDDDDDDDDDDDDDGDEE3K???????K3EEEE33222222222222222233EEEEEEEEEEEEFFFFEEDGDDDDDDDDDDDDDDDIIIIIIIDDDDDDDDDDDDDDDGDEEE3KKK?KKK3EEEEEE3322222222222222233EEEEEEEEEEEEFFFFEEDGDDDDDDDDDDDDDDDIIIIIIIDDDDDDDDDDDDDDDGDEEE3KKK?KKK3EEEEEE3322222222222222233EEEEEEEEEEEEFFFFEEDGDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDGDEEE33KK?KK33EEEEEE332222222222222233EEEEEEEEEEEEEFFFFEEDGDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDGDEEEF333K333EEEEEEEE33222222222222233EEEEEEEEEEEEEFFFFEEDGDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDGDEEEFFFF3EEEEEEEEEEE33222222222222233EEEEEEEEEEEEEFFFFEEDGDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDGDEEEFFFFEEEEEEEEEEEE3322222222222233EEEEEEEEEEEEEEFFFFEEDGDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDGDEEEFFFFEEEEEEEEEEEEE332222222222233EEEEEEEEEEEEEEFFFFEEDGDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDGDEEEFFFFEEEEEEEEEEEEE332222222222233EEEEEEEEEEEEEEFFFFEEDGDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDGDEEEFFFFEEEEEEEEEEEEE332222222222233EEEEEEEEEEEEEEFFFFEEDGDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDGDEEEFFFFEEEEEEEEEEEEE332222222222233EEEEEEEEEEEEEEFFFFEEDGDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDGDEEEFFFFEEEEEEEEEEEEE3322222"].
+  :load64[@boot_information + 112] -> @c0.
+  :load64[@boot_information + 120] -> @c1.
+  ? (@c0 > 0) * (@c1 >= 262144) [
+   ? @c0 + @c1 > @c0 [
+    !store64[@console + 264| 1]. !store64[@console + 272| 1].
+    :fork[@console + 608| @c0| 81920] -> @c2.
+    ? @c2 == 1 [
+# Stackful graphics worker. All variables are private copies except shared buffers.
+-1 -> @status. -1 -> @timeout. 10 -> @ignore_lf.
+?? 1 [
+ ? :load64[@console] != 2 [ !store64[@console + 328 | 1]. ] ~ [
+  ? :load64[@console + 264] == 1 [
+   0 -> @state.
+   ? :load64[@console + 304] != @status [ 1 -> @state. ]
+   ? :load64[@console + 328] == 0 [ 1 -> @state. ]
+   ? (@state == 1) + (:load64[@console + 440] != @timeout) [
+    :load64[@console + 304] -> @current.
+    ? :load64[@console + 440] != @timeout [
+     ? :load64[@console + 320] [ @ignore_lf + 1 -> @ignore_lf. ? @ignore_lf >= 40 [ 0 -> @ignore_lf. ] ]
+    ]
+    ? :load64[@console + 320] == 0 [ 10 -> @ignore_lf. ]
+    :load64[@console + 440] -> @timeout.
+    :load64[@console + 8] -> @file.
+    :load64[@console + 16] -> @wanted.
+    :load64[@console + 24] -> @name.
+    :load64[@console + 32] -> @slot.
+    :load64[@console + 40] -> @free_file.
+    :load64[@console + 336] -> @operation.
+    ? @state == 1 [
+     # Row gradient. Never paint over the terminal's live text rectangle.
+     0 -> @io_lba.
+     ?? @io_lba < @name [
+      @io_lba -> @c0. 0 -> @c1. 0 -> @c2.
+      ?? @c0 >= 32 [ @c0 - 32 -> @c0. @c1 + 1 -> @c1. ]
+      @io_lba -> @c0.
+      ?? @c0 >= 64 [ @c0 - 64 -> @c0. @c2 + 1 -> @c2. ]
+      12 + @c2 -> @c3. 18 + @c1 -> @c4. 35 + @c1 -> @c5.
+      ? @operation [ 9 + @c2 -> @c3. 29 + @c1 -> @c4. 40 + @c1 -> @c5. ]
+      @c3 * 65536 + @c4 * 256 + @c5 -> @character.
+      ? @free_file == 0 [ @c5 * 65536 + @c4 * 256 + @c3 -> @character. ]
+      @file + @io_lba * @slot * 4 -> @temporary. 0 -> @io_count.
+      ?? @io_count < @wanted [
+       0 -> @equal.
+       ? (@io_count >= :load64[@console + 200]) * (@io_count < :load64[@console + 200] + :load64[@console + 216]) * (@io_lba >= :load64[@console + 208]) * (@io_lba < :load64[@console + 208] + :load64[@console + 224]) [ 1 -> @equal. ]
+       ? @equal == 0 [ !store32[@temporary + @io_count * 4 | @character]. ]
+       @io_count + 1 -> @io_count.
+      ]
+      @io_lba + 1 -> @io_lba.
+      !switch[@console + 608 | @console + 512].
+     ]
+    ]
+    # Bounded panels, borders and status bars. Geometry is clipped per pixel.
+    0 -> @io_lba. ? @state == 0 [ 5 -> @io_lba. ]
+    ?? @io_lba < 10 [
+     :load64[@console + 200] - 8 -> @i. :load64[@console + 208] - 8 -> @j.
+     :load64[@console + 216] + 16 -> @k. :load64[@console + 224] + 16 -> @pointer.
+     0x1b2841 -> @character. ? @operation [ 0x183b47 -> @character. ]
+     ? @io_lba == 1 [
+      :load64[@console + 240] - 8 -> @i. :load64[@console + 248] - 8 -> @j.
+      96 * :load64[@console + 232] + 16 -> @k. 128 * :load64[@console + 232] + 16 -> @pointer.
+     ]
+     ? @io_lba == 2 [
+      :load64[@console + 200] -> @i. :load64[@console + 208] - 32 -> @j.
+      @wanted - @i * 2 -> @k. 1 -> @pointer. 0x39465e -> @character.
+     ]
+     ? @io_lba == 3 [ 1 -> @pointer. 0xa394d6 -> @character. ? @operation [ 0x76c8c8 -> @character. ] ]
+     ? @io_lba == 4 [
+      :load64[@console + 240] - 8 -> @i. :load64[@console + 248] - 8 -> @j.
+      96 * :load64[@console + 232] + 16 -> @k. 1 -> @pointer.
+      0xa394d6 -> @character. ? @operation [ 0x76c8c8 -> @character. ]
+     ]
+     ? @io_lba == 5 [
+      :load64[@console + 240] -> @i. :load64[@console + 248] + 128 * :load64[@console + 232] + 24 -> @j.
+      96 * :load64[@console + 232] -> @k. 4 -> @pointer. 0x34465f -> @character.
+     ]
+     ? @io_lba == 6 [
+      :load64[@console + 200] -> @i. @name - 40 -> @j.
+      @wanted - @i * 2 -> @k. 1 -> @pointer. 0x39465e -> @character.
+     ]
+     ? @io_lba == 7 [
+      :load64[@console + 240] -> @i. :load64[@console + 248] + 128 * :load64[@console + 232] + 24 -> @j.
+      @ignore_lf * 96 * :load64[@console + 232] -> @c0. 0 -> @k.
+      ?? @c0 >= 40 [ @c0 - 40 -> @c0. @k + 1 -> @k. ]
+      4 -> @pointer. 0xb2a0e9 -> @character. ? @operation [ 0x76d8d0 -> @character. ]
+     ]
+     ? @io_lba == 8 [
+      :load64[@console + 200] -> @i. @name - 28 -> @j.
+      208 -> @k. 16 -> @pointer. 0x1b2841 -> @character.
+      ? @operation [ 0x183b47 -> @character. ]
+     ]
+     ? @io_lba == 9 [
+      :load64[@console + 240] -> @i. :load64[@console + 248] + 128 * :load64[@console + 232] + 36 -> @j.
+      80 -> @k. 16 -> @pointer. 0x1b2841 -> @character. ? @operation [ 0x183b47 -> @character. ]
+     ]
+     ? @name < 440 [
+      ? (@io_lba == 5) + (@io_lba == 7) + (@io_lba == 9) [ 0 -> @pointer. ]
+     ]
+     ? @free_file == 0 [
+      0 -> @c0. 0 -> @c1.
+      ?? @character >= 65536 [ @character - 65536 -> @character. @c0 + 1 -> @c0. ]
+      ?? @character >= 256 [ @character - 256 -> @character. @c1 + 1 -> @c1. ]
+      @character * 65536 + @c1 * 256 + @c0 -> @character.
+     ]
+     0 -> @c0.
+     ?? @c0 < @pointer [
+      ? @j + @c0 < @name [
+       @file + ((@j + @c0) * @slot + @i) * 4 -> @temporary. 0 -> @c1.
+       ?? @c1 < @k [
+        ? @i + @c1 < @wanted [
+         0 -> @equal.
+         ? (@i + @c1 >= :load64[@console + 200]) * (@i + @c1 < :load64[@console + 200] + :load64[@console + 216]) * (@j + @c0 >= :load64[@console + 208]) * (@j + @c0 < :load64[@console + 208] + :load64[@console + 224]) [ 1 -> @equal. ]
+         ? @equal == 0 [ !store32[@temporary + @c1 * 4 | @character]. ]
+        ]
+        @c1 + 1 -> @c1.
+       ]
+      ]
+      @c0 + 1 -> @c0.
+      !switch[@console + 608 | @console + 512].
+     ]
+     @io_lba + 1 -> @io_lba.
+    ]
+    # Independently colored portrait pixels. Blink changes only the eye band.
+    ? :load64[@console + 312] [
+     ? (@state == 1) + :load64[@console + 320] [
+      :load64[@console + 240] -> @i. :load64[@console + 248] -> @j. :load64[@console + 232] -> @k.
+      0 -> @c0. 128 -> @io_count.
+      ? @state == 0 [ 47 -> @c0. 60 -> @io_count. ]
+      ?? @c0 < @io_count [
+       0 -> @c1.
+       ?? @c1 < 96 [
+        @c0 -> @c2. 1536 -> @c3.
+        ?? @c2 >= 32 [ @c2 - 32 -> @c2. @c3 + 8 -> @c3. ]
+        :load8[:load64[@console + @c3] + @c2 * 96 + @c1] - 48 -> @c3.
+        ? @ignore_lf < 2 [
+         0 -> @equal.
+         ? (@c1 >= 27) * (@c1 <= 45) * (@c0 >= 49) * (@c0 <= 59) [ 1 -> @equal. ]
+         ? (@c1 >= 51) * (@c1 <= 69) * (@c0 >= 49) * (@c0 <= 59) [ 1 -> @equal. ]
+         ? @equal [
+          ? (@c3 == 3) + ((@c3 >= 15) * (@c3 <= 19)) [ 13 -> @c3. ]
+          ? (@c0 == 54) * (((@c1 >= 29) * (@c1 <= 43)) + ((@c1 >= 53) * (@c1 <= 67))) [ 3 -> @c3. ]
+          ? (@c0 == 55) * (((@c1 >= 32) * (@c1 <= 40)) + ((@c1 >= 56) * (@c1 <= 64))) [ 3 -> @c3. ]
+         ]
+        ]
+        :load64[@console + 1280 + @c3 * 8] -> @c4.
+        ? @free_file == 0 [
+         0 -> @c2. 0 -> @c3.
+         ?? @c4 >= 65536 [ @c4 - 65536 -> @c4. @c2 + 1 -> @c2. ]
+         ?? @c4 >= 256 [ @c4 - 256 -> @c4. @c3 + 1 -> @c3. ]
+         @c4 * 65536 + @c3 * 256 + @c2 -> @c4.
+        ]
+        0 -> @c5.
+        ?? @c5 < @k [
+         ? @j + @c0 * @k + @c5 < @name [
+          @file + ((@j + @c0 * @k + @c5) * @slot + @i + @c1 * @k) * 4 -> @temporary.
+          0 -> @c2.
+          ?? @c2 < @k [
+           ? @i + @c1 * @k + @c2 < @wanted [ !store32[@temporary + @c2 * 4 | @c4]. ]
+           @c2 + 1 -> @c2.
+          ]
+         ]
+         @c5 + 1 -> @c5.
+        ]
+        @c1 + 1 -> @c1.
+       ]
+       @c0 + 1 -> @c0.
+       !switch[@console + 608 | @console + 512].
+      ]
+     ]
+    ]
+    # Live fixed-width decimal counters, six digits each.
+    "FRAMES 000000  WORK 000000" -> @message. 0 -> @i.
+    ?? @i < 27 [ !store8[@console + 1600 + @i | :load8[@message + @i]]. @i + 1 -> @i. ]
+    0 -> @io_lba.
+    ?? @io_lba < 2 [
+     :load64[@console + 280] + 1 -> @c0. 1607 -> @pointer.
+     ? @io_lba [ :load64[@console + 288] -> @c0. 1620 -> @pointer. ]
+     ?? @c0 >= 1000000 [ @c0 - 1000000 -> @c0. ]
+     100000 -> @c1. 0 -> @i.
+     ?? @i < 6 [
+      0 -> @c2. ?? @c0 >= @c1 [ @c0 - @c1 -> @c0. @c2 + 1 -> @c2. ]
+      !store8[@console + @pointer + @i | @c2 + 48].
+      ? @c1 == 100000 [ 10000 -> @c1. ] ~ [
+       ? @c1 == 10000 [ 1000 -> @c1. ] ~ [
+        ? @c1 == 1000 [ 100 -> @c1. ] ~ [ ? @c1 == 100 [ 10 -> @c1. ] ~ [ 1 -> @c1. ] ]
+       ]
+      ]
+      @i + 1 -> @i.
+     ]
+     @io_lba + 1 -> @io_lba.
+    ]
+    # Own 5x7 font; labels are pixels, with no firmware text service.
+    0 -> @io_lba. ? @state == 0 [ 8 -> @io_lba. ]
+    ?? @io_lba < 10 [
+     :load64[@console + 200] -> @i. 20 -> @j. 2 -> @k.
+     "ZERO / WORKSPACE" -> @message. 0xc9b9f3 -> @character.
+     ? @operation [ 0xa1e8df -> @character. ]
+     ? :load64[@console + 208] < 100 [ 10 -> @j. 1 -> @k. ]
+     ? @io_lba == 1 [
+      58 -> @j. ? :load64[@console + 208] < 100 [ 30 -> @j. ] 1 -> @k.
+      "OWN LANGUAGE. REAL THREADS. TRUE PIXELS." -> @message. 0x93a9c8 -> @character.
+     ]
+     ? @io_lba == 2 [ :load64[@console + 208] - 24 -> @j. 1 -> @k. "TERMINAL" -> @message. 0xe2e7f0 -> @character. ]
+     ? @io_lba == 3 [
+      :load64[@console + 240] -> @i. :load64[@console + 248] - 24 -> @j. 1 -> @k.
+      "ORIGINAL PORTRAIT" -> @message. ? :load64[@console + 312] == 0 [ "PORTRAIT HIDDEN" -> @message. ] 0xe2e7f0 -> @character.
+     ]
+     ? @io_lba == 4 [ :load64[@console + 240] -> @i. 1 -> @k. "COOPERATIVE" -> @message. 0x93a9c8 -> @character. ]
+     ? @io_lba == 5 [
+      :load64[@console + 240] -> @i. 40 -> @j. ? :load64[@console + 208] < 100 [ 26 -> @j. ]
+      1 -> @k. "3 KERNEL THREADS" -> @message. 0x93a9c8 -> @character.
+     ]
+     ? @io_lba == 6 [
+      :load64[@console + 240] -> @i. :load64[@console + 248] + 128 * :load64[@console + 232] + 8 -> @j.
+      1 -> @k. "PIXEL / 24-BIT COLOR" -> @message. 0x93a9c8 -> @character.
+     ]
+     ? @io_lba == 7 [ :load64[@console + 240] -> @i. @name - 28 -> @j. 1 -> @k. "ZERO / PIXEL ENGINE" -> @message. 0x93a9c8 -> @character. ]
+     ? @io_lba == 8 [ @name - 28 -> @j. 1 -> @k. @console + 1600 -> @message. 0xd9e5ef -> @character. ]
+     ? @io_lba == 9 [
+      :load64[@console + 240] -> @i. :load64[@console + 248] + 128 * :load64[@console + 232] + 36 -> @j.
+      1 -> @k. "CPU ACTIVE" -> @message. 0x8bd7bd -> @character.
+      ? :load64[@console + 272] == 2 [ "CPU PAUSED" -> @message. 0xe4bc8b -> @character. ]
+      ? @name < 440 [ "" -> @message. ]
+     ]
+     ? @free_file == 0 [
+      0 -> @c0. 0 -> @c1.
+      ?? @character >= 65536 [ @character - 65536 -> @character. @c0 + 1 -> @c0. ]
+      ?? @character >= 256 [ @character - 256 -> @character. @c1 + 1 -> @c1. ]
+      @character * 65536 + @c1 * 256 + @c0 -> @character.
+     ]
+     0 -> @line_length.
+     ?? :load8[@message + @line_length] != 0 [
+      :load8[@message + @line_length] -> @c0. 0 -> @c1.
+      ?? @c1 < 7 [
+       :load8[@font + (@c0 - 32) * 7 + @c1] - 48 -> @c2. 16 -> @c3. 0 -> @c4.
+       ?? @c4 < 5 [
+        0 -> @equal.
+        ? @c2 >= @c3 [ @c2 - @c3 -> @c2. 1 -> @equal. ]
+        ? @equal [
+         0 -> @c5.
+         ?? @c5 < @k * 2 [
+          @j + @c1 * @k * 2 + @c5 -> @io_buffer.
+          0 -> @io_write.
+          ?? @io_write < @k [
+           @i + @line_length * 8 * @k + @c4 * @k + @io_write -> @io_ok.
+           ? (@io_ok < @wanted) * (@io_buffer < @name) [
+            0 -> @equal.
+            ? (@io_ok >= :load64[@console + 200]) * (@io_ok < :load64[@console + 200] + :load64[@console + 216]) * (@io_buffer >= :load64[@console + 208]) * (@io_buffer < :load64[@console + 208] + :load64[@console + 224]) [ 1 -> @equal. ]
+            ? @equal == 0 [ !store32[@file + (@io_buffer * @slot + @io_ok) * 4 | @character]. ]
+           ]
+           @io_write + 1 -> @io_write.
+          ]
+          @c5 + 1 -> @c5.
+         ]
+        ]
+        ? @c3 == 16 [ 8 -> @c3. ] ~ [ ? @c3 == 8 [ 4 -> @c3. ] ~ [ ? @c3 == 4 [ 2 -> @c3. ] ~ [ 1 -> @c3. ] ] ]
+        @c4 + 1 -> @c4.
+       ]
+       @c1 + 1 -> @c1.
+      ]
+      @line_length + 1 -> @line_length.
+      !switch[@console + 608 | @console + 512].
+     ]
+     @io_lba + 1 -> @io_lba.
+    ]
+    ? @state == 1 [ @current -> @status. ]
+    !store64[@console + 280 | :load64[@console + 280] + 1].
+    !store64[@console + 328 | 1].
+   ]
+  ]
+ ]
+ !switch[@console + 608 | @console + 512].
+]
+     !halt.
+    ]
+    :fork[@console + 704| @c0 + 81920| 81920] -> @c2.
+    ? @c2 == 1 [
+     1 -> @checksum.
+     ?? 1 [
+      ? :load64[@console + 384] [
+       1 -> @checksum. !store64[@console + 384| 0].
+      ]
+      0 -> @i.
+      ?? @i < 1024 [ @checksum * 1664525 + 1013904223 -> @checksum. @i + 1 -> @i. ]
+      !store64[@console + 288| :load64[@console + 288] + 1].
+      !store64[@console + 392| @checksum].
+      !switch[@console + 704| @console + 512].
+     ]
+    ]
+    !store64[@console + 256| 1].
+    ?? :load64[@console + 328] == 0 [ !switch[@console + 512| @console + 608]. ]
+   ]
+  ]
+  # PIT0 runs freely with its IRQ masked; polling supplies animation time.
+  !out8[0x43| 0x34]. !out8[0x40| 0]. !out8[0x40| 0].
+  !out8[0x43| 0]. :in8[0x40] -> @c0. :in8[0x40] -> @c1.
+  !store64[@console + 424| @c0 + @c1 * 256].
+  "\r\nZERO OS 0.7 / OWN LANGUAGE\r\nNative threads. Pixel graphics. Independent volumes.\r\nType help, disks or tasks.\r\n" -> @message.
+  !out8[0x3f6| 2].
+  !out8[0x376| 2].
+  80 -> @state.
+ ]
+ ? @current == 1 [
+  0 -> @io_lba. @bank_a -> @io_buffer. 9 -> @io_count.
+  0 -> @io_write. 2 -> @io_return. 90 -> @state.
+ ]
+ ? @current == 2 [
+  0 -> @good_a.
+  ? @io_ok [ @bank_a -> @validate_ptr. 3 -> @validate_return. 50 -> @state. ]
+  ~ [ 4 -> @state. ]
+ ]
+ ? @current == 3 [ @validate_good -> @good_a. 4 -> @state. ]
+ ? @current == 4 [
+  9 -> @io_lba. @bank_b -> @io_buffer. 9 -> @io_count.
+  0 -> @io_write. 5 -> @io_return. 90 -> @state.
+ ]
+ ? @current == 5 [
+  0 -> @good_b.
+  ? @io_ok [ @bank_b -> @validate_ptr. 6 -> @validate_return. 50 -> @state. ]
+  ~ [ 7 -> @state. ]
+ ]
+ ? @current == 6 [ @validate_good -> @good_b. 7 -> @state. ]
+ ? @current == 7 [
+  0 -> @fs_ready. 0 -> @pointer.
+  ? @good_a [ @bank_a -> @pointer. 0 -> @active_bank. ]
+  ? @good_b [
+   ? @good_a [
+    ? :load64[@bank_b + 8] > :load64[@bank_a + 8] [ @bank_b -> @pointer. 9 -> @active_bank. ]
+   ] ~ [ @bank_b -> @pointer. 9 -> @active_bank. ]
+  ]
+  ? @pointer [
+   0 -> @i.
+   ?? @i < 4608 [ !store8[@work + @i| :load8[@pointer + @i]]. @i + 1 -> @i. ]
+   1 -> @fs_ready.
+   "ZeroFS mounted. Files survive restart. Type help.\r\n" -> @message.
+  ] ~ [
+   ? @disk_ready [
+    "Primary disk is not a valid ZeroFS volume. Detecting other formats.\r\n" -> @message.
+   ] ~ [
+    "No compatible primary-master disk. Scanning other ATA positions.\r\n" -> @message.
+   ]
+  ]
+  100 -> @state.
+ ]
+ ? @current == 9 [
+  0 -> @line_length. 0 -> @overflow.
+  !store8[@listing| 65 + :load64[@memory + 24688]].
+  !store8[@listing + 1| 58]. !store8[@listing + 2| 124].
+  !store8[@listing + 3| 62]. !store8[@listing + 4| 32]. !store8[@listing + 5| 0].
+  @listing -> @message. 10 -> @state.
+  ? :load64[@memory + 24704] == 0 [ "zero> " -> @message. ]
+ ]
+ ? @current == 10 [
+  0 -> @character.
+  ? :load64[@console + 80] [
+   :in8[0x3fd] -> @status.
+   ? @status == 255 [ !store64[@console + 80| 0]. ]
+   ~ [
+    ?? @status >= 2 [ @status - 2 -> @status. ]
+    ? @status [ :in8[0x3f8] -> @character. ]
+   ]
+  ]
+  ? @character == 0 [
+   ? :load64[@console + 160] [
+    :in8[0x64] -> @c0. @c0 -> @c1.
+    ?? @c1 >= 2 [ @c1 - 2 -> @c1. ]
+    ? @c1 [
+     :in8[0x60] -> @c1.
+     # Discard auxiliary-port bytes and controller parity/timeout errors.
+     ? @c0 < 32 [
+      @c1 -> @c0.
+      ? @c0 == 0xe0 [ !store64[@console + 112| 1]. ]
+      ~ [
+       ? @c0 == 0xe1 [ !store64[@console + 168| 5]. ]
+       ~ [
+        ? :load64[@console + 168] [
+         !store64[@console + 168| :load64[@console + 168] - 1].
+        ] ~ [
+         ? @c0 >= 128 [
+          ? @c0 == 170 [ !store64[@console + 88| 0]. ]
+          ? @c0 == 182 [ !store64[@console + 96| 0]. ]
+          ? @c0 == 186 [ !store64[@console + 176| 0]. ]
+          !store64[@console + 112| 0].
+         ] ~ [
+          ? @c0 == 42 [ !store64[@console + 88| 1]. ]
+          ? @c0 == 54 [ !store64[@console + 96| 1]. ]
+          ? @c0 == 58 [
+           ? :load64[@console + 176] == 0 [
+            !store64[@console + 104| 1 - :load64[@console + 104]].
+            !store64[@console + 176| 1].
+           ]
+          ]
+          ? :load64[@console + 112] [
+           ? @c0 == 28 [ 13 -> @character. ]
+           !store64[@console + 112| 0].
+          ] ~ [
+           0 -> @c1. 0 -> @c2. 0 -> @c4.
+           (:load64[@console + 88] + :load64[@console + 96]) > 0 -> @c3.
+           ? (@c0 >= 2) * (@c0 <= 13) [
+            "1234567890-=" -> @c1. "!@#$%^&*()_+" -> @c2. @c0 - 2 -> @c4.
+           ]
+           ? (@c0 >= 16) * (@c0 <= 27) [
+            "qwertyuiop[]" -> @c1. "QWERTYUIOP{}" -> @c2. @c0 - 16 -> @c4.
+           ]
+           ? (@c0 >= 30) * (@c0 <= 41) [
+            "asdfghjkl;'`" -> @c1. "ASDFGHJKL:\"~" -> @c2. @c0 - 30 -> @c4.
+           ]
+           ? (@c0 >= 43) * (@c0 <= 53) [
+            "\\zxcvbnm,./" -> @c1. "|ZXCVBNM<>?" -> @c2. @c0 - 43 -> @c4.
+           ]
+           ? @c1 [
+            :load8[@c1 + @c4] -> @character.
+            ? (@character >= 97) * (@character <= 122) [
+             ? @c3 != :load64[@console + 104] [ @character - 32 -> @character. ]
+            ] ~ [ ? @c3 [ :load8[@c2 + @c4] -> @character. ] ]
+           ]
+           ? @c0 == 14 [ 8 -> @character. ]
+           ? @c0 == 15 [ 32 -> @character. ]
+           ? @c0 == 28 [ 13 -> @character. ]
+           ? @c0 == 57 [ 32 -> @character. ]
+          ]
+         ]
+        ]
+       ]
+      ]
+     ]
+    ]
+   ]
+  ]
+  ? @character [
+   1 -> @valid.
+   ? @character == 10 [
+    ? @ignore_lf [ 0 -> @valid. ]
+    0 -> @ignore_lf.
+   ] ~ [ 0 -> @ignore_lf. ]
+   ? @valid [
+    ? @character == 13 [ 1 -> @ignore_lf. 10 -> @character. ]
+    ? @character == 127 [ 8 -> @character. ]
+    ? @character == 10 [
+     !store8[@line + @line_length| 0]. "\r\n" -> @message.
+     ? @overflow [ 11 -> @state. ] ~ [ 20 -> @state. ]
+    ] ~ [
+     ? @character == 8 [
+      ? @line_length [ @line_length - 1 -> @line_length. !store8[@echo_byte| 8]. !store8[@echo_byte + 1| 32]. !store8[@echo_byte + 2| 8]. !store8[@echo_byte + 3| 0]. @echo_byte -> @message. ]
+     ] ~ [
+      ? @character >= 32 [
+       ? @character <= 126 [
+        ? @line_length < 480 [
+         !store8[@line + @line_length| @character]. @line_length + 1 -> @line_length.
+         !store8[@echo_byte| @character]. !store8[@echo_byte + 1| 0]. @echo_byte -> @message.
+        ] ~ [ 1 -> @overflow. ]
+       ]
+      ]
+     ]
+    ]
+   ]
+  ]
+ ]
+ ? @current == 11 [ "Command too long; nothing changed.\r\n" -> @message. 9 -> @state. ]
+ ? @current == 20 [
+  @line -> @command.
+  ?? :load8[@command] == 32 [ @command + 1 -> @command. ]
+  @command -> @arguments.
+  ?? :load8[@arguments] > 32 [ @arguments + 1 -> @arguments. ]
+  ? :load8[@arguments] == 32 [
+   !store8[@arguments| 0]. @arguments + 1 -> @arguments.
+   ?? :load8[@arguments] == 32 [ @arguments + 1 -> @arguments. ]
+  ]
+  0 -> @operation. 1 -> @k.
+  ?? @k < 21 [
+   ? @k == 1 [ "help" -> @wanted. ]
+   ? @k == 2 [ "info" -> @wanted. ]
+   ? @k == 3 [ "clear" -> @wanted. ]
+   ? @k == 4 [ "write" -> @wanted. ]
+   ? @k == 5 [ "watch" -> @wanted. ]
+   ? @k == 6 [ "save" -> @wanted. ]
+   ? @k == 7 [ "read" -> @wanted. ]
+   ? @k == 8 [ "rm" -> @wanted. ]
+   ? @k == 9 [ "format" -> @wanted. ]
+   ? @k == 10 [ "create" -> @wanted. ]
+   ? @k == 11 [ "tasks" -> @wanted. ]
+   ? @k == 12 [ "pause" -> @wanted. ]
+   ? @k == 13 [ "resume" -> @wanted. ]
+   ? @k == 14 [ "portrait" -> @wanted. ]
+   ? @k == 15 [ "animate" -> @wanted. ]
+   ? @k == 16 [ "theme" -> @wanted. ]
+   ? @k == 17 [ "pixel" -> @wanted. ]
+   ? @k == 18 [ "reset" -> @wanted. ]
+   ? @k == 19 [ "disks" -> @wanted. ]
+   ? @k == 20 [ "go" -> @wanted. ]
+   0 -> @i. 1 -> @equal. 0 -> @done.
+   ?? @done == 0 [
+    :load8[@command + @i] -> @character.
+    ? @character != :load8[@wanted + @i] [ 0 -> @equal. 1 -> @done. ]
+    ? @character == 0 [ 1 -> @done. ]
+    @i + 1 -> @i.
+   ]
+   ? @equal [ @k -> @operation. ]
+   @k + 1 -> @k.
+  ]
+  ? (:load8[@command] == 71) * (:load8[@command + 1] == 79) * (:load8[@command + 2] == 0) [ 20 -> @operation. ]
+  9 -> @state.
+  ? :load8[@command] [ ? @operation == 0 [ "Unknown command. Type help.\r\n" -> @message. ] ]
+  ? :load8[@arguments] [
+   ? @operation >= 1 [
+    ? @operation <= 3 [ 0 -> @operation. "This command takes no arguments. Type help.\r\n" -> @message. ]
+   ]
+   ? @operation == 11 [ 0 -> @operation. "This command takes no arguments. Type help.\r\n" -> @message. ]
+   ? (@operation >= 14) * (@operation <= 16) [ 0 -> @operation. "This command takes no arguments. Type help.\r\n" -> @message. ]
+   ? @operation == 18 [ 0 -> @operation. "This command takes no arguments. Type help.\r\n" -> @message. ]
+   ? @operation == 19 [ 0 -> @operation. "This command takes no arguments. Type help.\r\n" -> @message. ]
+  ]
+  ? @operation == 1 [
+   "help | info | disks | tasks | clear\r\nGO B:| - select a separate volume root\r\nwatch [B:|] - list the current/selected root\r\ncreate NAME / save NAME TEXT / read NAME / rm NAME\r\nPaths: NAME or A:|NAME; names <=31, text <=400.\r\nwrite TEXT - print text\r\npause 1|2 / resume 1|2 / reset - threads\r\nportrait / animate / theme - toggle display\r\npixel X Y R G B - draw a true-color pixel\r\nformat ZERO - erase the selected dedicated ZeroFS disk\r\n" -> @message.
+  ]
+  ? @operation == 2 [
+   "x86-64 monolithic kernel, entirely Zero.\r\n3 cooperative native threads; private stacks.\r\n32-bit pixel colors; original animated art.\r\nPS/2, COM1, ATA PIO and persistent ZeroFS.\r\nSingle CPU, shared kernel memory; no network.\r\n" -> @message.
+   ? :load64[@boot_information + 104] == 32 [
+    "x86-32 monolithic kernel, entirely Zero.\r\n3 cooperative native threads; private stacks.\r\n32-bit pixel colors; original animated art.\r\nPS/2, COM1, ATA PIO and persistent ZeroFS.\r\nSingle CPU, shared kernel memory; no network.\r\n" -> @message.
+   ]
+  ]
+  ? @operation == 3 [
+   !store64[@console + 120| 1]. !store64[@console + 128| 1].
+   !store8[@listing| 27]. !store8[@listing + 1| 91]. !store8[@listing + 2| 50].
+   !store8[@listing + 3| 74]. !store8[@listing + 4| 27]. !store8[@listing + 5| 91].
+   !store8[@listing + 6| 72]. !store8[@listing + 7| 0]. @listing -> @message.
+  ]
+  ? @operation == 4 [ @arguments -> @message. 12 -> @state. ]
+  ? @operation == 5 [ 120 -> @state. ]
+  ? @operation >= 6 [
+   ? @operation <= 8 [
+    120 -> @state.
+   ]
+  ]
+  ? @operation == 9 [
+   1 -> @valid. :load64[@memory + 24688] -> @i.
+   ? @i >= :load64[@memory + 24704] [ 0 -> @valid. ]
+   ? @valid [
+    @memory + 24832 + @i * 24 -> @pointer.
+    ? (:load8[@pointer + 16] != 0) + (:load64[@pointer] != 0) + ((:load8[@pointer + 17] != 0) * (:load8[@pointer + 17] != 4)) [ 0 -> @valid. ]
+    ? :load64[@pointer + 8] != :load64[@memory + 25472] [ 0 -> @valid. ]
+    ? :load8[@pointer + 19] [ 0 -> @valid. ]
+    ? (:load64[@memory + 25480] != 1) + (:load64[@memory + 25488] != 0) + (:load64[@memory + 25496] != 0) [ 0 -> @valid. ]
+   ]
+   ? @valid == 0 [
+    0 -> @operation. "format ZERO only supports the dedicated raw ZeroFS disk.\r\n" -> @message.
+   ]
+  ]
+  ? @operation == 9 [
+   0 -> @disk_select.
+   "ZERO" -> @wanted. 0 -> @i. 1 -> @equal. 0 -> @done.
+   ?? @done == 0 [
+    :load8[@arguments + @i] -> @character.
+    ? @character != :load8[@wanted + @i] [ 0 -> @equal. 1 -> @done. ]
+    ? @character == 0 [ 1 -> @done. ]
+    @i + 1 -> @i.
+   ]
+   ? @equal [
+    ? @disk_ready [ 60 -> @state. ]
+    ~ [ "No supported IDE disk; nothing changed.\r\n" -> @message. ]
+   ] ~ [ "To erase the dedicated disk, type exactly: format ZERO\r\n" -> @message. ]
+  ]
+  ? @operation == 10 [
+   120 -> @state.
+  ]
+  ? @operation == 11 [
+   "0 terminal RUN / always runnable\r\n1 graphics state=$ frames=0x@\r\n2 compute  state=$ blocks=0x@\r\nrounds=0x@\r\nchecksum=0x@\r\nclock ticks=0x@\r\nState: 1=running 2=paused. One CPU.\r\n" -> @text.
+   "0123456789abcdef" -> @wanted.
+   0 -> @i. 0 -> @j. 0 -> @k. 0 -> @status.
+   ?? :load8[@text + @i] [
+    :load8[@text + @i] -> @character.
+    ? @character == 36 [
+     !store8[@listing + @j| 48 + :load64[@console + 264 + @status * 8]].
+     @status + 1 -> @status. @j + 1 -> @j.
+    ] ~ [
+     ? @character == 64 [
+      :load64[@console + 280] -> @temporary.
+      ? @k == 1 [ :load64[@console + 288] -> @temporary. ]
+      ? @k == 2 [ :load64[@console + 296] -> @temporary. ]
+      ? @k == 3 [ :load64[@console + 392] -> @temporary. ]
+      ? @k == 4 [ :load64[@console + 440] -> @temporary. ]
+      !store64[@console + 1040| @temporary]. 8 -> @c0.
+      ?? @c0 [
+       @c0 - 1 -> @c0. :load8[@console + 1040 + @c0] -> @c1. 0 -> @c2.
+       ?? @c1 >= 16 [ @c1 - 16 -> @c1. @c2 + 1 -> @c2. ]
+       !store8[@listing + @j| :load8[@wanted + @c2]]. @j + 1 -> @j.
+       !store8[@listing + @j| :load8[@wanted + @c1]]. @j + 1 -> @j.
+      ]
+      @k + 1 -> @k.
+     ] ~ [ !store8[@listing + @j| @character]. @j + 1 -> @j. ]
+    ]
+    @i + 1 -> @i.
+   ]
+   !store8[@listing + @j| 0]. @listing -> @message.
+   ? :load64[@console + 256] == 0 [ "No valid loader-owned thread stack pool.\r\n" -> @message. ]
+  ]
+  ? (@operation == 12) + (@operation == 13) [
+   :load8[@arguments] -> @c0. 0 -> @valid.
+   ? (@c0 >= 49) * (@c0 <= 50) [ ? :load8[@arguments + 1] == 0 [ 1 -> @valid. ] ]
+   ? :load64[@console + 256] == 0 [ 0 -> @valid. ]
+   ? @valid [
+    2 -> @c1. ? @operation == 13 [ 1 -> @c1. ]
+    !store64[@console + 264 + (@c0 - 49) * 8| @c1].
+    "Thread paused.\r\n" -> @message.
+    ? @operation == 13 [ "Thread resumed.\r\n" -> @message. ]
+   ] ~ [ "Use pause 1|2 or resume 1|2. Thread0 stays runnable.\r\n" -> @message. ]
+  ]
+  ? (@operation >= 14) * (@operation <= 16) [
+   ? :load64[@console] == 2 [
+    ? @operation == 14 [ !store64[@console + 312| 1 - :load64[@console + 312]]. ]
+    ? @operation == 15 [ !store64[@console + 320| 1 - :load64[@console + 320]]. ]
+    ? @operation == 16 [ !store64[@console + 336| 1 - :load64[@console + 336]]. ]
+    !store64[@console + 304| :load64[@console + 304] + 1].
+    "Display updated. Resume thread1 if paused.\r\n" -> @message.
+   ] ~ [ "No supported linear framebuffer.\r\n" -> @message. ]
+  ]
+  ? @operation == 17 [
+   @arguments -> @pointer. 1 -> @valid. 0 -> @j.
+   ?? @j < 5 [
+    0 -> @temporary. 0 -> @k. 0 -> @done.
+    ?? @done == 0 [
+     :load8[@pointer] -> @character.
+     ? (@character >= 48) * (@character <= 57) [
+      ? @valid [ @temporary * 10 + @character - 48 -> @temporary. ]
+      ? @temporary > 8192 [ 0 -> @valid. ]
+      @k + 1 -> @k. @pointer + 1 -> @pointer.
+     ] ~ [ 1 -> @done. ]
+    ]
+    ? @k == 0 [ 0 -> @valid. ]
+    !store64[@console + 1024 + @j * 8| @temporary].
+    ? @j < 4 [ ? :load8[@pointer] != 32 [ 0 -> @valid. ] ]
+    ?? :load8[@pointer] == 32 [ @pointer + 1 -> @pointer. ]
+    @j + 1 -> @j.
+   ]
+   ? :load8[@pointer] [ 0 -> @valid. ]
+   ? :load64[@console] != 2 [ 0 -> @valid. ]
+   ? :load64[@console + 1024] >= :load64[@console + 16] [ 0 -> @valid. ]
+   ? :load64[@console + 1032] >= :load64[@console + 24] [ 0 -> @valid. ]
+   ? :load64[@console + 1040] > 255 [ 0 -> @valid. ]
+   ? :load64[@console + 1048] > 255 [ 0 -> @valid. ]
+   ? :load64[@console + 1056] > 255 [ 0 -> @valid. ]
+   ? @valid [
+    :load64[@console + 1040] -> @c0. :load64[@console + 1048] -> @c1. :load64[@console + 1056] -> @c2.
+    @c0 * 65536 + @c1 * 256 + @c2 -> @c3.
+    ? :load64[@console + 40] == 0 [ @c2 * 65536 + @c1 * 256 + @c0 -> @c3. ]
+    !store32[:load64[@console + 8] + (:load64[@console + 1032] * :load64[@console + 32] + :load64[@console + 1024]) * 4| @c3].
+    "Pixel written.\r\n" -> @message.
+   ] ~ [ "Use pixel X Y R G B; valid coordinates, RGB0..255.\r\n" -> @message. ]
+  ]
+  ? @operation == 18 [
+   !store64[@console + 288| 0]. !store64[@console + 384| 1].
+   "Background computation reset.\r\n" -> @message.
+  ]
+  ? @operation == 19 [ 130 -> @state. ]
+  ? @operation == 20 [ 120 -> @state. ]
+ ]
+ ? @current == 12 [ "\r\n" -> @message. 9 -> @state. ]
+ ? @current == 29 [
+  9 -> @state.
+  ? @fs_ready [
+   0 -> @j. 0 -> @slot.
+   ?? @slot < 8 [
+    @work + 512 + @slot * 512 -> @file.
+    ? :load8[@file] [
+     0 -> @i.
+     ?? :load8[@file + 1 + @i] [
+      !store8[@listing + @j| :load8[@file + 1 + @i]]. @i + 1 -> @i. @j + 1 -> @j.
+     ]
+     !store8[@listing + @j| 10]. @j + 1 -> @j.
+    ]
+    @slot + 1 -> @slot.
+   ]
+   !store8[@listing + @j| 0]. @listing -> @message.
+   ? @j == 0 [ "No files.\r\n" -> @message. ]
+  ] ~ [ "Filesystem unavailable.\r\n" -> @message. ]
+ ]
+ ? @current == 30 [
+  @arguments -> @name. @name -> @text. 0 -> @name_length. 1 -> @valid.
+  ?? :load8[@text] > 32 [
+   :load8[@text] -> @character. 0 -> @ready.
+   ? @character >= 65 [ ? @character <= 90 [ 1 -> @ready. ] ]
+   ? @character >= 97 [ ? @character <= 122 [ 1 -> @ready. ] ]
+   ? @character >= 48 [ ? @character <= 57 [ 1 -> @ready. ] ]
+   ? @character == 46 [ 1 -> @ready. ]
+   ? @character == 95 [ 1 -> @ready. ]
+   ? @character == 45 [ 1 -> @ready. ]
+   ? @ready == 0 [ 0 -> @valid. ]
+   @name_length + 1 -> @name_length. @text + 1 -> @text.
+  ]
+  ? :load8[@text] == 32 [ !store8[@text| 0]. @text + 1 -> @text. ]
+  ? @name_length == 0 [ 0 -> @valid. ]
+  ? @name_length > 31 [ 0 -> @valid. ]
+  ? (@name_length == 1) * (:load8[@name] == 46) [ 0 -> @valid. ]
+  ? (@name_length == 2) * (:load16[@name] == 0x2e2e) [ 0 -> @valid. ]
+  ? @operation != 6 [ ? :load8[@text] [ 0 -> @valid. ] ]
+  ? @valid [
+   0 -> @file. 0 -> @free_file. 0 -> @slot.
+   ?? @slot < 8 [
+    @work + 512 + @slot * 512 -> @pointer.
+    ? :load8[@pointer] [
+     0 -> @i. 1 -> @equal. 0 -> @done.
+     ?? @done == 0 [
+      :load8[@name + @i] -> @character.
+      ? @character != :load8[@pointer + 1 + @i] [ 0 -> @equal. 1 -> @done. ]
+      ? @character == 0 [ 1 -> @done. ]
+      @i + 1 -> @i.
+     ]
+     ? @equal [ @pointer -> @file. ]
+    ] ~ [ ? @free_file == 0 [ @pointer -> @free_file. ] ]
+    @slot + 1 -> @slot.
+   ]
+   31 -> @state.
+  ] ~ [ "Invalid name or arguments. Type help.\r\n" -> @message. 9 -> @state. ]
+ ]
+ ? @current == 31 [
+  9 -> @state.
+  ? @operation == 10 [
+   ? @file [ "File already exists; nothing changed.\r\n" -> @message. ]
+   ~ [ 6 -> @operation. ]
+  ]
+  ? @operation == 6 [
+   0 -> @text_length.
+   ?? :load8[@text + @text_length] [ @text_length + 1 -> @text_length. ]
+   ? @text_length > 400 [
+    "File too large; maximum 400 bytes. Nothing changed.\r\n" -> @message.
+   ] ~ [
+    ? @file == 0 [ @free_file -> @file. ]
+    ? @file == 0 [ "Disk file table full (8 files). Nothing changed.\r\n" -> @message. ]
+    ~ [
+     0 -> @i.
+     ?? @i < 512 [ !store8[@file + @i| 0]. @i + 1 -> @i. ]
+     !store8[@file| 1].
+     0 -> @i.
+     ?? @i < @name_length [ !store8[@file + 1 + @i| :load8[@name + @i]]. @i + 1 -> @i. ]
+     !store16[@file + 34| @text_length].
+     0 -> @i.
+     ?? @i < @text_length [ !store8[@file + 36 + @i| :load8[@text + @i]]. @i + 1 -> @i. ]
+     70 -> @state.
+    ]
+   ]
+  ]
+  ? @operation == 7 [
+   ? @file [ @file + 36 -> @message. 12 -> @state. ]
+   ~ [ "File not found.\r\n" -> @message. ]
+  ]
+  ? @operation == 8 [
+   ? @file [
+    0 -> @i.
+    ?? @i < 512 [ !store8[@file + @i| 0]. @i + 1 -> @i. ]
+    70 -> @state.
+   ] ~ [ "File not found.\r\n" -> @message. ]
+  ]
+ ]
+ ? @current == 50 [
+  1 -> @validate_good.
+  ? :load64[@validate_ptr] != 0x31303053464f525a [ 0 -> @validate_good. ]
+  ? :load64[@validate_ptr + 8] == 0 [ 0 -> @validate_good. ]
+  :load64[@validate_ptr] + :load64[@validate_ptr + 8] + :load64[@validate_ptr + 16] -> @checksum.
+  ? @checksum != :load64[@validate_ptr + 24] [ 0 -> @validate_good. ]
+  0 -> @checksum. 512 -> @i.
+  ?? @i < 4608 [
+   @checksum + :load8[@validate_ptr + @i] * (@i + 1) -> @checksum. @i + 1 -> @i.
+  ]
+  ? @checksum != :load64[@validate_ptr + 16] [ 0 -> @validate_good. ]
+  0 -> @slot.
+  ?? @slot < 8 [
+   @validate_ptr + 512 + @slot * 512 -> @pointer.
+   ? :load8[@pointer] [
+    ? :load8[@pointer] != 1 [ 0 -> @validate_good. ]
+    ? :load8[@pointer + 1] == 0 [ 0 -> @validate_good. ]
+    0 -> @i. 0 -> @done.
+    ?? @i < 32 [
+     :load8[@pointer + 1 + @i] -> @character.
+     ? @done == 0 [
+      ? @character == 0 [ 1 -> @done. ]
+      ~ [
+       0 -> @valid.
+       ? @character >= 65 [ ? @character <= 90 [ 1 -> @valid. ] ]
+       ? @character >= 97 [ ? @character <= 122 [ 1 -> @valid. ] ]
+       ? @character >= 48 [ ? @character <= 57 [ 1 -> @valid. ] ]
+       ? @character == 46 [ 1 -> @valid. ]
+       ? @character == 95 [ 1 -> @valid. ]
+       ? @character == 45 [ 1 -> @valid. ]
+       ? @valid == 0 [ 0 -> @validate_good. ]
+      ]
+     ]
+     @i + 1 -> @i.
+    ]
+    ? @done == 0 [ 0 -> @validate_good. ]
+    # Used names must be unique, or reads/deletes can select the wrong record.
+    0 -> @j.
+    ?? @j < @slot [
+     @validate_ptr + 512 + @j * 512 -> @wanted.
+     ? :load8[@wanted] == 1 [
+      0 -> @i. 1 -> @equal. 0 -> @done.
+      ?? @i < 32 [
+       ? @done == 0 [
+        :load8[@pointer + 1 + @i] -> @character.
+        ? @character != :load8[@wanted + 1 + @i] [ 0 -> @equal. 1 -> @done. ]
+        ? @character == 0 [ 1 -> @done. ]
+       ]
+       @i + 1 -> @i.
+      ]
+      ? @equal [ 0 -> @validate_good. ]
+     ]
+     @j + 1 -> @j.
+    ]
+    :load16[@pointer + 34] -> @text_length.
+    ? @text_length > 400 [ 0 -> @validate_good. ]
+    ~ [
+     ? :load8[@pointer + 36 + @text_length] != 0 [ 0 -> @validate_good. ]
+     0 -> @i.
+     ?? @i < @text_length [
+      :load8[@pointer + 36 + @i] -> @character.
+      ? @character < 32 [ 0 -> @validate_good. ]
+      ? @character > 126 [ 0 -> @validate_good. ]
+      @i + 1 -> @i.
+     ]
+    ]
+   ]
+   @slot + 1 -> @slot.
+  ]
+  @validate_return -> @state.
+ ]
+ # Explicit format erases both snapshots before initializing a fresh one.
+ ? @current == 60 [
+  0 -> @fs_ready. 0 -> @i.
+  ?? @i < 4608 [ !store8[@work + @i| 0]. @i + 1 -> @i. ]
+  0 -> @io_lba. @work -> @io_buffer. 9 -> @io_count.
+  1 -> @io_write. 61 -> @io_return. 90 -> @state.
+ ]
+ ? @current == 61 [
+  ? @io_ok [
+   9 -> @io_lba. @work -> @io_buffer. 9 -> @io_count.
+   1 -> @io_write. 62 -> @io_return. 90 -> @state.
+  ] ~ [ 79 -> @state. ]
+ ]
+ ? @current == 62 [
+  ? @io_ok [ 2 -> @io_write. 63 -> @io_return. 90 -> @state. ]
+  ~ [ 79 -> @state. ]
+ ]
+ ? @current == 63 [
+  ? @io_ok [ 9 -> @active_bank. 70 -> @state. ]
+  ~ [ 79 -> @state. ]
+ ]
+ # Commit: inactive data sectors, flush, inactive header, flush.
+ ? @current == 70 [
+  ? :load64[@work + 8] == 18446744073709551615 [
+   0 -> @fs_ready.
+   "Generation limit reached. Filesystem locked; restart.\r\n" -> @message. 9 -> @state.
+  ] ~ [
+   !store64[@work| 0x31303053464f525a].
+   !store64[@work + 8| :load64[@work + 8] + 1].
+   0 -> @checksum. 512 -> @i.
+   ?? @i < 4608 [ @checksum + :load8[@work + @i] * (@i + 1) -> @checksum. @i + 1 -> @i. ]
+   !store64[@work + 16| @checksum].
+   !store64[@work + 24| :load64[@work] + :load64[@work + 8] + @checksum].
+   9 - @active_bank + 1 -> @io_lba. @work + 512 -> @io_buffer. 8 -> @io_count.
+   1 -> @io_write. 71 -> @io_return. 90 -> @state.
+  ]
+ ]
+ ? @current == 71 [
+  ? @io_ok [ 2 -> @io_write. 72 -> @io_return. 90 -> @state. ]
+  ~ [ 79 -> @state. ]
+ ]
+ ? @current == 72 [
+  ? @io_ok [
+   9 - @active_bank -> @io_lba. @work -> @io_buffer. 1 -> @io_count.
+   1 -> @io_write. 73 -> @io_return. 90 -> @state.
+  ] ~ [ 79 -> @state. ]
+ ]
+ ? @current == 73 [
+  ? @io_ok [ 2 -> @io_write. 74 -> @io_return. 90 -> @state. ]
+  ~ [ 79 -> @state. ]
+ ]
+ ? @current == 74 [
+  ? @io_ok [
+   9 - @active_bank -> @active_bank. 1 -> @fs_ready.
+   0 -> @i.
+   ?? @i < :load64[@memory + 24704] [
+    @memory + 24832 + @i * 24 -> @pointer.
+    ? (:load8[@pointer + 16] == 0) * (:load64[@pointer] == 0) [
+     !store8[@pointer + 17| 4]. !store8[@pointer + 18| 0]. !store8[@pointer + 19| 0].
+    ]
+    @i + 1 -> @i.
+   ]
+   "Saved to disk.\r\n" -> @message. 9 -> @state.
+  ] ~ [ 79 -> @state. ]
+ ]
+ ? @current == 79 [
+  0 -> @fs_ready.
+  "Disk I/O failure. Last write uncertain; files locked until restart.\r\n" -> @message.
+  9 -> @state.
+ ]
+ # IDENTIFY is read-only. Reject incompatible disks before any sector access.
+ ? @current == 80 [
+  0 -> @io_lba. @listing -> @io_buffer. 1 -> @io_count.
+  3 -> @io_write. 81 -> @io_return. 90 -> @state.
+ ]
+ ? @current == 81 [
+  @io_ok -> @valid.
+  ? @io_ok [
+   ? :load16[@listing] >= 32768 [ 0 -> @valid. ]
+   :load16[@listing + 98] -> @temporary.
+   ?? @temporary >= 1024 [ @temporary - 1024 -> @temporary. ]
+   ? @temporary < 512 [ 0 -> @valid. ]
+   ? :load32[@listing + 120] < 18 [ 0 -> @valid. ]
+   :load16[@listing + 166] -> @temporary.
+   ? @temporary < 16384 [ 0 -> @valid. ]
+   ~ [
+    ? @temporary >= 32768 [ 0 -> @valid. ]
+    ~ [
+     @temporary - 16384 -> @temporary.
+     ? @temporary >= 8192 [ @temporary - 8192 -> @temporary. ]
+     ? @temporary < 4096 [ 0 -> @valid. ]
+    ]
+   ]
+   :load16[@listing + 212] -> @temporary.
+   ? @temporary >= 16384 [
+    ? @temporary < 32768 [
+     @temporary - 16384 -> @temporary.
+     ? @temporary >= 8192 [ @temporary - 8192 -> @temporary. ]
+     ? @temporary >= 4096 [ 0 -> @valid. ]
+    ]
+   ]
+  ]
+  @memory + 25472 + @disk_select * 32 -> @pointer.
+  !store64[@pointer + 8| @valid].
+  ? @valid [
+   :load32[@listing + 120] -> @temporary.
+   ? @temporary > 268435456 [ 268435456 -> @temporary. ]
+   !store64[@pointer| @temporary].
+  ]
+  ? @disk_select == 0 [ @valid -> @disk_ready. 1 -> @state. ]
+  ~ [ 100 -> @state. ]
+ ]
+ # One synchronous ATA request: read/write count sectors or flush.
+ # Four legacy ATA positions. Physical and volume bounds are checked separately.
+ ? @current == 90 [
+  1 -> @io_ok. 0 -> @c3.
+  ? @disk_select <= 3 [
+   :load64[@memory + 25472 + @disk_select * 32] -> @c3.
+   ? @io_write != 3 [
+    ? :load64[@memory + 25480 + @disk_select * 32] == 0 [ 0 -> @io_ok. ]
+   ]
+  ] ~ [ 0 -> @io_ok. ]
+  ? @io_write > 3 [ 0 -> @io_ok. ]
+  ? @io_write == 3 [ ? @io_count != 1 [ 0 -> @io_ok. ] ]
+  ? @io_write != 2 [
+   ? @io_buffer < @memory [ 0 -> @io_ok. ]
+   ? @io_buffer + @io_count * 512 < @io_buffer [ 0 -> @io_ok. ]
+   ? @io_buffer + @io_count * 512 > @memory + 65536 [ 0 -> @io_ok. ]
+  ]
+  ? @io_write < 2 [
+   ? @io_count == 0 [ 0 -> @io_ok. ]
+   ? @io_count > 32 [ 0 -> @io_ok. ]
+   ? @io_lba >= 268435456 [ 0 -> @io_ok. ]
+   ? @io_lba + @io_count > @c3 [ 0 -> @io_ok. ]
+   ? @io_lba + @io_count < @io_lba [ 0 -> @io_ok. ]
+   ? (@io_return >= 200) * (@io_return < 600) [
+    ? @io_lba < :load64[@memory + 24656] [ 0 -> @io_ok. ]
+    ? @io_lba - :load64[@memory + 24656] + @io_count > :load64[@memory + 24664] [ 0 -> @io_ok. ]
+   ]
+  ]
+  ? (@io_write == 1) + (@io_write == 2) [
+   ? @io_return < 100 [
+    ? @disk_select != 0 [ 0 -> @io_ok. ]
+    ? @io_write == 1 [ ? @io_lba + @io_count > 18 [ 0 -> @io_ok. ] ]
+   ] ~ [
+    ? (@io_return < 200) + (@io_return >= 600) [ 0 -> @io_ok. ]
+   ]
+  ]
+  0x1f0 -> @c4. 0x3f6 -> @c5.
+  ? @disk_select >= 2 [ 0x170 -> @c4. 0x376 -> @c5. ]
+  0 -> @sector_index.
+  ? @io_write >= 2 [ 1 -> @io_count. ]
+  ? @io_ok == 0 [ 0 -> @io_count. ]
+  ?? @sector_index < @io_count [
+   ? @io_ok [
+    ? @io_write == 3 [ !out8[@c4 + 6| 0xa0 + :bitand[@disk_select| 1] * 16]. ]
+    ~ [ !out8[@c4 + 6| 0xe0 + :bitand[@disk_select| 1] * 16 + :bitand[:shr[@io_lba + @sector_index| 24]| 15]]. ]
+    :in8[@c5] -> @temporary. :in8[@c5] -> @temporary.
+    :in8[@c5] -> @temporary. :in8[@c5] -> @temporary.
+    0 -> @ready. 0 -> @timeout.
+    ?? @ready == 0 [
+     :in8[@c4 + 7] -> @status.
+     ? @status == 0 [ 0 -> @io_ok. 1 -> @ready. ]
+     ? @status == 255 [ 0 -> @io_ok. 1 -> @ready. ]
+     ? @status < 128 [
+      @status -> @command_status.
+      ? @command_status >= 64 [ @command_status - 64 -> @command_status. ]
+      ? @command_status >= 32 [ @command_status - 32 -> @command_status. ]
+      ? @command_status >= 16 [ @command_status - 16 -> @command_status. ]
+      ? @command_status < 8 [ 1 -> @ready. ]
+     ]
+     @timeout + 1 -> @timeout.
+     ? @timeout == 1000000 [ 0 -> @io_ok. 1 -> @ready. ]
+    ]
+    ? @io_ok [
+     ? @io_write == 2 [ !out8[@c4 + 7| 0xe7]. ]
+     ~ [
+      ? @io_write == 3 [
+       !out8[@c4 + 2| 0]. !out8[@c4 + 3| 0]. !out8[@c4 + 4| 0]. !out8[@c4 + 5| 0].
+       !out8[@c4 + 7| 0xec].
+      ] ~ [
+       !out8[@c4 + 2| 1]. !out8[@c4 + 3| @io_lba + @sector_index].
+       !out8[@c4 + 4| :shr[@io_lba + @sector_index| 8]].
+       !out8[@c4 + 5| :shr[@io_lba + @sector_index| 16]].
+       ? @io_write == 0 [ !out8[@c4 + 7| 0x20]. ]
+       ~ [ !out8[@c4 + 7| 0x30]. ]
+      ]
+     ]
+     :in8[@c5] -> @temporary. :in8[@c5] -> @temporary.
+     :in8[@c5] -> @temporary. :in8[@c5] -> @temporary.
+     0 -> @ready. 0 -> @timeout.
+     ?? @ready == 0 [
+      :in8[@c4 + 7] -> @status.
+      ? @status == 0 [ 0 -> @io_ok. 1 -> @ready. ]
+      ? @status == 255 [ 0 -> @io_ok. 1 -> @ready. ]
+      ? @status < 128 [
+       @status -> @command_status.
+       ? @command_status >= 64 [ @command_status - 64 -> @command_status. ]
+       ? @command_status >= 32 [ 0 -> @io_ok. 1 -> @ready. ]
+       @status -> @temporary.
+       ?? @temporary >= 2 [ @temporary - 2 -> @temporary. ]
+       ? @temporary [ 0 -> @io_ok. 1 -> @ready. ]
+       ? @command_status >= 16 [ @command_status - 16 -> @command_status. ]
+       ? @io_write == 2 [
+        ? @command_status < 8 [ 1 -> @ready. ]
+       ] ~ [
+        ? @command_status >= 8 [ 1 -> @ready. ]
+       ]
+      ]
+      @timeout + 1 -> @timeout.
+      ? @timeout == 1000000 [ 0 -> @io_ok. 1 -> @ready. ]
+     ]
+     ? @io_ok [
+      ? @io_write != 2 [
+       0 -> @word_index.
+       ?? @word_index < 256 [
+        @io_buffer + @sector_index * 512 + @word_index * 2 -> @pointer.
+        ? @io_write == 1 [ !out16[@c4| :load16[@pointer]]. ]
+        ~ [ !store16[@pointer| :in16[@c4]]. ]
+        @word_index + 1 -> @word_index.
+       ]
+       :in8[@c5] -> @temporary. :in8[@c5] -> @temporary.
+       :in8[@c5] -> @temporary. :in8[@c5] -> @temporary.
+       0 -> @ready. 0 -> @timeout.
+       ?? @ready == 0 [
+        :in8[@c4 + 7] -> @status.
+        ? @status == 0 [ 0 -> @io_ok. 1 -> @ready. ]
+        ? @status == 255 [ 0 -> @io_ok. 1 -> @ready. ]
+        ? @status < 128 [
+         @status -> @command_status.
+         ? @command_status >= 64 [ @command_status - 64 -> @command_status. ]
+         ? @command_status >= 32 [ 0 -> @io_ok. 1 -> @ready. ]
+         ? @command_status >= 16 [ @command_status - 16 -> @command_status. ]
+         ? @command_status < 8 [ 1 -> @ready. ]
+         @status -> @temporary.
+         ?? @temporary >= 2 [ @temporary - 2 -> @temporary. ]
+         ? @temporary [ 0 -> @io_ok. 1 -> @ready. ]
+        ]
+        @timeout + 1 -> @timeout.
+        ? @timeout == 1000000 [ 0 -> @io_ok. 1 -> @ready. ]
+       ]
+      ]
+     ]
+    ]
+   ]
+   @sector_index + 1 -> @sector_index.
+  ]
+  @io_return -> @state.
+ ]
+ # Visible output is owned by the kernel, with optional independent COM1 mirroring.
+ ? :load64[@console + 120] [
+  ? :load64[@console] == 1 [
+   0 -> @c0.
+   ?? @c0 < 2000 [ !store16[0xb8000 + @c0 * 2| 0x0720]. @c0 + 1 -> @c0. ]
+  ]
+  ? :load64[@console] == 2 [
+   0 -> @c0.
+   ?? @c0 < :load64[@console + 224] [
+    :load64[@console + 8] + ((@c0 + :load64[@console + 208]) * :load64[@console + 32] + :load64[@console + 200]) * 4 -> @c1.
+    0 -> @c2.
+    ?? @c2 < :load64[@console + 216] [
+     !store64[@c1 + @c2 * 4| 0x0010101000101010]. @c2 + 2 -> @c2.
+    ]
+    @c0 + 1 -> @c0.
+   ]
+  ]
+  !store64[@console + 64| 0]. !store64[@console + 72| 0].
+  !store64[@console + 120| 0].
+ ]
+ ? @message [
+  @message -> @pointer.
+  ?? :load8[@pointer] [
+   ? :load64[@console + 80] [
+    # Normalize lone LF for serial terminals; preserve existing CRLF exactly.
+    1 -> @c4.
+    ? (:load8[@pointer] == 10) * (:load64[@console + 448] != 13) [ 2 -> @c4. ]
+    ?? @c4 [
+     :load8[@pointer] -> @c5. ? @c4 == 2 [ 13 -> @c5. ]
+     0 -> @ready. 0 -> @timeout.
+     ?? @ready == 0 [
+      :in8[0x3fd] -> @status.
+      ? @status == 255 [ 1 -> @ready. !store64[@console + 80| 0]. ]
+      ? @status >= 128 [ @status - 128 -> @status. ]
+      ? @status >= 64 [ @status - 64 -> @status. ]
+      ? @status >= 32 [ 1 -> @ready. ]
+      @timeout + 1 -> @timeout.
+      ? @timeout == 100000 [ 1 -> @ready. !store64[@console + 80| 0]. ]
+     ]
+     ? :load64[@console + 80] [ !out8[0x3f8| @c5]. ]
+     @c4 - 1 -> @c4.
+    ]
+   ]
+   !store64[@console + 448| :load8[@pointer]].
+   ? :load64[@console] [
+    ? :load64[@console + 128] == 0 [
+     :load8[@pointer] -> @c0.
+     ? @c0 == 13 [ !store64[@console + 64| 0]. ]
+     ? @c0 == 10 [
+      !store64[@console + 64| 0]. !store64[@console + 72| :load64[@console + 72] + 1].
+     ]
+     ? @c0 == 8 [
+      ? :load64[@console + 64] [ !store64[@console + 64| :load64[@console + 64] - 1]. ]
+      ~ [
+       ? :load64[@console + 72] [
+        !store64[@console + 64| :load64[@console + 184] - 1]. !store64[@console + 72| :load64[@console + 72] - 1].
+       ]
+      ]
+     ]
+     ? (@c0 >= 32) * (@c0 <= 126) [
+      ? :load64[@console + 64] >= :load64[@console + 184] [
+       !store64[@console + 64| 0]. !store64[@console + 72| :load64[@console + 72] + 1].
+      ]
+     ]
+     # Scroll only the terminal rectangle, preserving the desktop and portrait.
+     ? :load64[@console + 72] >= :load64[@console + 192] [
+      ? :load64[@console] == 1 [
+       0 -> @c1.
+       ?? @c1 < 1920 [
+        !store16[0xb8000 + @c1 * 2| :load16[0xb8000 + (@c1 + 80) * 2]].
+        @c1 + 1 -> @c1.
+       ]
+       ?? @c1 < 2000 [ !store16[0xb8000 + @c1 * 2| 0x0720]. @c1 + 1 -> @c1. ]
+      ] ~ [
+       0 -> @c1.
+       ?? @c1 < :load64[@console + 224] - 16 [
+        0 -> @c2.
+        ?? @c2 < :load64[@console + 216] [
+         :load64[@console + 8] + ((@c1 + :load64[@console + 208]) * :load64[@console + 32] + @c2 + :load64[@console + 200]) * 4 -> @c3.
+         !store64[@c3| :load64[@c3 + 16 * :load64[@console + 32] * 4]].
+         @c2 + 2 -> @c2.
+        ]
+        @c1 + 1 -> @c1.
+       ]
+       ?? @c1 < :load64[@console + 224] [
+        0 -> @c2.
+        ?? @c2 < :load64[@console + 216] [
+         :load64[@console + 8] + ((@c1 + :load64[@console + 208]) * :load64[@console + 32] + @c2 + :load64[@console + 200]) * 4 -> @c3.
+         !store64[@c3| 0x0010101000101010]. @c2 + 2 -> @c2.
+        ]
+        @c1 + 1 -> @c1.
+       ]
+      ]
+      !store64[@console + 72| :load64[@console + 192] - 1].
+     ]
+     ? (@c0 >= 32) * (@c0 <= 126) [
+      ? :load64[@console] == 1 [
+       :load64[@console + 72] * 80 + :load64[@console + 64] -> @c1.
+       !store16[0xb8000 + @c1 * 2| 0x0700 + @c0].
+      ] ~ [
+       # 5x7 rows, one horizontal margin, doubled scan lines: an 8x16 cell.
+       0 -> @c1.
+       ?? @c1 < 8 [
+        0 -> @c3.
+        ? @c1 < 7 [ :load8[@font + (@c0 - 32) * 7 + @c1] - 48 -> @c3. ]
+        0 -> @c2.
+        ?? @c2 < 8 [
+         0x00101010 -> @c5.
+         ? (@c2 >= 1) * (@c2 <= 5) [
+          ? @c3 >= 16 [ 0x00e0e0e0 -> @c5. @c3 - 16 -> @c3. ]
+          @c3 * 2 -> @c3.
+         ]
+         :load64[@console + 8] + ((:load64[@console + 208] + :load64[@console + 72] * 16 + @c1 * 2) * :load64[@console + 32] + :load64[@console + 200] + :load64[@console + 64] * 8 + @c2) * 4 -> @c4.
+         !store32[@c4| @c5]. !store32[@c4 + :load64[@console + 32] * 4| @c5].
+         @c2 + 1 -> @c2.
+        ]
+        @c1 + 1 -> @c1.
+       ]
+      ]
+      !store64[@console + 64| :load64[@console + 64] + 1].
+     ]
+    ]
+   ]
+   @pointer + 1 -> @pointer.
+  ]
+  ? :load64[@console] == 1 [
+   :load64[@console + 64] -> @c0.
+   ? @c0 >= 80 [ 79 -> @c0. ]
+   :load64[@console + 72] * 80 + @c0 -> @c0. 0 -> @c1.
+   ?? @c0 >= 256 [ @c0 - 256 -> @c0. @c1 + 1 -> @c1. ]
+   !out8[0x3d4| 14]. !out8[0x3d5| @c1].
+   !out8[0x3d4| 15]. !out8[0x3d5| @c0].
+  ]
+  !store64[@console + 128| 0].
+  0 -> @message.
+ ]
+ # Cooperative round-robin: the terminal always remains runnable.
+ ? :load64[@console + 256] [
+  !out8[0x43| 0]. :in8[0x40] -> @c0. :in8[0x40] -> @c1.
+  @c0 + @c1 * 256 -> @c0. :load64[@console + 424] -> @c1.
+  ? @c1 >= @c0 [ @c1 - @c0 -> @c2. ] ~ [ @c1 + 65536 - @c0 -> @c2. ]
+  !store64[@console + 424| @c0].
+  !store64[@console + 432| :load64[@console + 432] + @c2].
+  ?? :load64[@console + 432] >= 119318 [
+   !store64[@console + 432| :load64[@console + 432] - 119318].
+   !store64[@console + 440| :load64[@console + 440] + 1].
+  ]
+  !store64[@console + 296| :load64[@console + 296] + 1].
+  ? :load64[@console + 264] == 1 [ !switch[@console + 512| @console + 608]. ]
+  ? :load64[@console + 272] == 1 [ !switch[@console + 512| @console + 704]. ]
+ ]
+]

@@ -1,0 +1,631 @@
+# Original Zero native verifier. No subprocess, shell or foreign runtime.
+# Read-only source fixtures; native I/O tests use one exclusively owned directory.
+0 => @root.
+0 => @scratch.
+0 => @rootlen.
+0 => @scratchlen.
+0 => @work.
+0 => @code.
+0 => @path.
+0 => @filename.
+0 => @buffer.
+0 => @capacity.
+0 => @size.
+-1 => @handle.
+0 => @count.
+0 => @n.
+0 => @i.
+0 => @j.
+0 => @c.
+0 => @status.
+0 => @error.
+0 => @message.
+0 => @phase.
+0 => @module.
+0 => @context.
+0 => @input.
+0 => @inputbytes.
+0 => @output.
+0 => @outputcap.
+0 => @outputbytes.
+0 => @prefixbytes.
+0 => @runtimebytes.
+0 => @manifestbytes.
+0 => @cursor.
+0 => @name.
+0 => @namelen.
+0 => @language.
+0 => @kind.
+0 => @wantedstatus.
+0 => @expectedbytes.
+0 => @sourcebytes.
+0 => @packagebytes.
+0 => @initbytes.
+0 => @combinedbytes.
+0 => @done.
+0 => @pass.
+0 => @total.
+0 => @failed.
+0 => @flag.
+0 => @temporary.
+0 => @number.
+0 => @place.
+0 => @slot.
+0 => @owned.
+0 => @first.
+0 => @second.
+0 => @child.
+0 => @actualstatus.
+0 => @matched.
+0 => @scan.
+0 => @stage.
+0 => @got.
+
+"Usage: zero-check PROJECT_ROOT NEW_TEST_DIRECTORY\n" -> @message.
+? :argcount[] != 2 [ 64 -> @error. ]
+? (:host[] != 1)*(:host[] != 2) [ 64 -> @error. ]
+? @error == 0 [
+ :argument[1] -> @root. :argument[2] -> @scratch.
+ ?? (:load8[@root+@rootlen] != 0)*(@rootlen < 3800) [ @rootlen+1 -> @rootlen. ]
+ ?? (:load8[@scratch+@scratchlen] != 0)*(@scratchlen < 3800) [ @scratchlen+1 -> @scratchlen. ]
+ ? (@rootlen == 0)+(@rootlen >= 3800)+(@scratchlen == 0)+(@scratchlen >= 3800) [ 64 -> @error. ]
+]
+? @error == 0 [
+ :hostalloc[16777216] -> @work. :hostalloc[4194304] -> @code.
+ ? (@work == 0)+(@code == 0) [ "Cannot allocate verifier memory.\n" -> @message. 70 -> @error. ]
+ @work -> @context. @work+512 -> @path. @work+4608 -> @name.
+]
+
+# Load owned seed, compile current compiler/frontend/packer, then runtime/data.
+?? (@phase < 7)*(@error == 0) [
+ "bootstrap/zero64.zapp" -> @filename. @code -> @buffer. 1048576 -> @capacity.
+ ? @phase == 1 [ "compiler.zero" -> @filename. @work+131072 -> @buffer. 262144 -> @capacity. ]
+ ? @phase == 2 [ "ezero/compiler.zero" -> @filename. @work+131072 -> @buffer. 262144 -> @capacity. ]
+ ? @phase == 3 [ "ezero/pack.zero" -> @filename. @work+131072 -> @buffer. 262144 -> @capacity. ]
+ ? @phase == 4 [ "ezero/runtime-prefix.zero.part" -> @filename. @work+2097152 -> @buffer. 4096 -> @capacity. ]
+ ? @phase == 5 [ "ezero/runtime.zero.part" -> @filename. @work+2101248 -> @buffer. 65536 -> @capacity. ]
+ ? @phase == 6 [ "checks/cases.ztext" -> @filename. @work+8192 -> @buffer. 65536 -> @capacity. ]
+ 0 -> @i. ?? @i < @rootlen [ !store8[@path+@i|:load8[@root+@i]]. @i+1 -> @i. ]
+ !store8[@path+@i|47]. @i+1 -> @i. 0 -> @j.
+ ?? :load8[@filename+@j] [ !store8[@path+@i|:load8[@filename+@j]]. @i+1 -> @i. @j+1 -> @j. ]
+ !store8[@path+@i|0].
+ :fileopen[@path|0] -> @handle. 0 -> @count.
+ ? @handle == -1 [ "Cannot open verifier dependency.\n" -> @message. 66 -> @error. ]
+ ? @error == 0 [
+  :filesize[@handle] -> @size.
+  ? @size > @capacity [ "Verifier dependency exceeds capacity.\n" -> @message. 65 -> @error. ]
+ ]
+ ?? (@count < @size)*(@error == 0) [
+  :fileread[@handle|@buffer+@count|@size-@count] -> @n.
+  ? (@n == 0)+(@n > @size-@count) [ "Cannot read verifier dependency.\n" -> @message. 74 -> @error. ] ~ [ @count+@n -> @count. ]
+ ]
+ ? @error == 0 [
+  :fileread[@handle|@work+256|1] -> @n.
+  ? @n != 0 [ "Verifier dependency changed while reading.\n" -> @message. 74 -> @error. ]
+ ]
+ ? @handle != -1 [
+  :fileclose[@handle] -> @status. -1 -> @handle.
+  ? @status != 0 [ "Cannot close verifier dependency.\n" -> @message. 74 -> @error. ]
+ ]
+ ? (@error == 0)*(@phase == 6) [
+
+  # Decode our text envelope completely before using its payload.
+  ? @count < 32 [ 65 -> @error. ]
+  ? @error == 0 [
+   "ZTEXT001" -> @filename. 0 -> @i.
+   ?? @i < 8 [ ? :load8[@buffer+@i] != :load8[@filename+@i] [ 65 -> @error. ] @i+1 -> @i. ]
+   0 -> @j.
+   ?? @j < 2 [
+    0 -> @number. 0 -> @i.
+    ?? @i < 8 [
+     :load8[@buffer+8+@j*8+@i] -> @c. 0 -> @n.
+     ? (@c >= 48)*(@c <= 57) [ @c-48 -> @n. ] ~ [
+      ? (@c >= 97)*(@c <= 102) [ @c-87 -> @n. ] ~ [ 65 -> @error. ]
+     ]
+     @number*16+@n -> @number. @i+1 -> @i.
+    ]
+    ? @j == 0 [ @number -> @size. ] ~ [ @number -> @got. ] @j+1 -> @j.
+   ]
+   24 -> @i. ?? @i < 31 [ ? :load8[@buffer+@i] != 48 [ 65 -> @error. ] @i+1 -> @i. ]
+   ? (:load8[@buffer+31] != 10)+(@size != @count-32) [ 65 -> @error. ]
+   0 -> @i. 2166136261 -> @scan.
+   ?? (@i < @size)*(@error == 0) [
+    :load8[@buffer+32+@i] -> @c. 0 -> @matched.
+    ? @c == 0 [ 65 -> @error. ]
+    ? @c >= 128 [
+     ? (@c >= 194)*(@c <= 223) [ 1 -> @matched. ] ~ [
+      ? (@c >= 224)*(@c <= 239) [ 2 -> @matched. ] ~ [
+       ? (@c >= 240)*(@c <= 244) [ 3 -> @matched. ] ~ [ 65 -> @error. ]
+      ]
+     ]
+    ]
+    ? @matched >= @size-@i [ 65 -> @error. ]
+    ? (@error == 0)*(@matched != 0) [
+     :load8[@buffer+33+@i] -> @n.
+     ? ((@c == 224)*(@n < 160))+((@c == 237)*(@n > 159))+((@c == 240)*(@n < 144))+((@c == 244)*(@n > 143)) [ 65 -> @error. ]
+    ]
+    0 -> @j.
+    ?? (@j <= @matched)*(@error == 0) [
+     :load8[@buffer+32+@i+@j] -> @n.
+     ? @j [ ? (@n < 128)+(@n > 191) [ 65 -> @error. ] ]
+     :bitand[:bitxor[@scan|@n]*16777619|4294967295] -> @scan. @j+1 -> @j.
+    ]
+    @i+@matched+1 -> @i.
+   ]
+   ? @scan != @got [ 65 -> @error. ]
+   ? @error == 0 [
+    0 -> @i. ?? @i < @size [ !store8[@buffer+@i|:load8[@buffer+32+@i]]. @i+1 -> @i. ]
+    @size -> @count.
+   ]
+  ]
+  ? @error != 0 [ "Invalid ZTEXT001 verifier data.\n" -> @message. ]
+ ]
+ ? @error == 0 [
+  ? @phase < 4 [
+   @code -> @module.
+   ? @phase == 1 [ @code+3145728 -> @module. ]
+   ? @phase > 1 [ @code+(@phase-1)*1048576 -> @module. ]
+   ? @phase > 0 [
+    0 -> @i. ?? @i < 192 [ !store64[@context+@i|0]. @i+8 -> @i. ]
+    !store64[@context|1]. !store64[@context+8|@work+16777216].
+    !store64[@context+16|@buffer]. !store64[@context+24|@count].
+    !store64[@context+40|@module]. !store64[@context+48|1048576].
+    !store64[@context+64|2]. !store64[@context+72|"zero-check"]. !store64[@context+80|"--app64"].
+    !store64[@context+168|@work+4194304]. !store64[@context+176|12582912].
+    :call[@code+64|@context|0|0|0|0] -> @status.
+    ? (@status != 0)+(:load64[@context+88] != 0)+(:load64[@context+32] > @count) [ "Cannot compile verifier dependency.\n" -> @message. 65 -> @error. ]
+    :load64[@context+56] -> @count.
+   ]
+   ? (@count <= 64)+(@count > 1048576) [ 65 -> @error. ]
+   ? @error == 0 [
+    ? (:load64[@module] != 0x315050414f52455a)+(:load64[@module+8] != 64)+(:load64[@module+16] != @count)+(:load64[@module+24] != 64) [ 65 -> @error. ]
+    ? (:load64[@module+32] != 4198400)+(:load64[@module+40] != 1)+(:load64[@module+48] != 0)+(:load64[@module+56] != 0) [ 65 -> @error. ]
+   ]
+   ? @error != 0 [ "Invalid verifier application image.\n" -> @message. ] ~ [
+    ? :hostprotect[@module|1048576|1] != 0 [ "Cannot make verifier application executable.\n" -> @message. 70 -> @error. ]
+   ]
+   ? (@phase == 1)*(@error == 0) [
+    # Replace the bootstrap mapping only after its call has returned.
+    ? :hostprotect[@code|1048576|0] != 0 [ "Cannot prepare current compiler mapping.\n" -> @message. 70 -> @error. ]
+    ? @error == 0 [
+     0 -> @i. ?? @i < @count [ !store8[@code+@i|:load8[@module+@i]]. @i+1 -> @i. ]
+     ? :hostprotect[@code|1048576|1] != 0 [ "Cannot activate current compiler mapping.\n" -> @message. 70 -> @error. ]
+    ]
+   ]
+  ]
+  ? @phase == 4 [ @count -> @prefixbytes. ]
+  ? @phase == 5 [ @count -> @runtimebytes. ]
+  ? @phase == 6 [ @count -> @manifestbytes. ]
+ ]
+ @phase+1 -> @phase.
+]
+? @error == 0 [
+ ? :makedir[@scratch] != 0 [ "Test directory must be a new writable path; existing contents are never reused.\n" -> @message. 73 -> @error. ] ~ [ 1 -> @owned. ]
+]
+
+# Manifest records: E|S|0|name, E|C|1|name, E|R|65|name, Z|S|0|name.
+# S compares exact output; C/R require the expected diagnostic substring.
+?? (@cursor < @manifestbytes)*(@error == 0) [
+ 0 -> @namelen. 0 -> @wantedstatus. 1 -> @pass. 0 -> @done.
+ @work+8192+@cursor -> @temporary.
+ ? @manifestbytes-@cursor < 7 [ 65 -> @error. ]
+ ? @error == 0 [
+  :load8[@temporary] -> @language. :load8[@temporary+2] -> @kind.
+  ? (@language != 69)*(@language != 90) [ 65 -> @error. ]
+  ? (@kind != 83)*(@kind != 67)*(@kind != 82) [ 65 -> @error. ]
+  ? (:load8[@temporary+1] != 124)+(:load8[@temporary+3] != 124) [ 65 -> @error. ]
+  @cursor+4 -> @cursor. 0 -> @n.
+  ?? (@cursor < @manifestbytes)*(@error == 0)*(@done == 0) [
+   :load8[@work+8192+@cursor] -> @c. @cursor+1 -> @cursor.
+   ? @c == 124 [ 1 -> @done. ] ~ [
+    ? (@c < 48)+(@c > 57) [ 65 -> @error. ] ~ [
+     @wantedstatus*10+@c-48 -> @wantedstatus. @n+1 -> @n.
+     ? (@wantedstatus > 255)+(@n > 3) [ 65 -> @error. ]
+    ]
+   ]
+  ]
+  ? (@done == 0)+(@n == 0) [ 65 -> @error. ]
+  0 -> @done.
+  ?? (@cursor < @manifestbytes)*(@error == 0)*(@done == 0) [
+   :load8[@work+8192+@cursor] -> @c. @cursor+1 -> @cursor.
+   ? @c == 10 [ 1 -> @done. ] ~ [
+    ? ((@c >= 97)*(@c <= 122))+((@c >= 48)*(@c <= 57))+(@c == 95) [
+     ? @namelen >= 63 [ 65 -> @error. ] ~ [ !store8[@name+@namelen|@c]. @namelen+1 -> @namelen. ]
+    ] ~ [ 65 -> @error. ]
+   ]
+  ]
+  ? (@namelen == 0)+(@done == 0) [ 65 -> @error. ]
+  !store8[@name+@namelen|0].
+ ]
+ ? @error != 0 [ "Invalid verifier manifest.\n" -> @message. ]
+
+ # Load the authored source and its expected data without mutating either.
+ 0 -> @phase.
+ ?? (@phase < 2)*(@error == 0) [
+  "checks/cases/" -> @filename. @work+131072 -> @buffer. 262144 -> @capacity.
+  ? @phase == 1 [ "checks/expected/" -> @filename. @work+2228224 -> @buffer. 65536 -> @capacity. ]
+  0 -> @i. ?? @i < @rootlen [ !store8[@path+@i|:load8[@root+@i]]. @i+1 -> @i. ]
+  !store8[@path+@i|47]. @i+1 -> @i. 0 -> @j.
+  ?? :load8[@filename+@j] [ !store8[@path+@i|:load8[@filename+@j]]. @i+1 -> @i. @j+1 -> @j. ]
+  0 -> @j. ?? @j < @namelen [ !store8[@path+@i|:load8[@name+@j]]. @i+1 -> @i. @j+1 -> @j. ]
+  ".ezero" -> @filename. ? @language == 90 [ ".zero" -> @filename. ] ? @phase == 1 [ ".ztext" -> @filename. ]
+  0 -> @j. ?? :load8[@filename+@j] [ !store8[@path+@i|:load8[@filename+@j]]. @i+1 -> @i. @j+1 -> @j. ]
+  !store8[@path+@i|0]. 0 -> @count.
+  :fileopen[@path|0] -> @handle.
+  ? @handle == -1 [ "Cannot open check fixture.\n" -> @message. 66 -> @error. ]
+  ? @error == 0 [ :filesize[@handle] -> @size. ? @size > @capacity [ "Check fixture exceeds capacity.\n" -> @message. 65 -> @error. ] ]
+  ?? (@count < @size)*(@error == 0) [
+   :fileread[@handle|@buffer+@count|@size-@count] -> @n.
+   ? (@n == 0)+(@n > @size-@count) [ "Cannot read check fixture.\n" -> @message. 74 -> @error. ] ~ [ @count+@n -> @count. ]
+  ]
+  ? @error == 0 [
+   :fileread[@handle|@work+256|1] -> @n.
+   ? @n != 0 [ "Check fixture changed while reading.\n" -> @message. 74 -> @error. ]
+  ]
+  ? @handle != -1 [ :fileclose[@handle] -> @status. -1 -> @handle. ? @status != 0 [ "Cannot close check fixture.\n" -> @message. 74 -> @error. ] ]
+  ? (@error == 0)*(@phase == 1) [
+
+  # Decode our text envelope completely before using its payload.
+  ? @count < 32 [ 65 -> @error. ]
+  ? @error == 0 [
+   "ZTEXT001" -> @filename. 0 -> @i.
+   ?? @i < 8 [ ? :load8[@buffer+@i] != :load8[@filename+@i] [ 65 -> @error. ] @i+1 -> @i. ]
+   0 -> @j.
+   ?? @j < 2 [
+    0 -> @number. 0 -> @i.
+    ?? @i < 8 [
+     :load8[@buffer+8+@j*8+@i] -> @c. 0 -> @n.
+     ? (@c >= 48)*(@c <= 57) [ @c-48 -> @n. ] ~ [
+      ? (@c >= 97)*(@c <= 102) [ @c-87 -> @n. ] ~ [ 65 -> @error. ]
+     ]
+     @number*16+@n -> @number. @i+1 -> @i.
+    ]
+    ? @j == 0 [ @number -> @size. ] ~ [ @number -> @got. ] @j+1 -> @j.
+   ]
+   24 -> @i. ?? @i < 31 [ ? :load8[@buffer+@i] != 48 [ 65 -> @error. ] @i+1 -> @i. ]
+   ? (:load8[@buffer+31] != 10)+(@size != @count-32) [ 65 -> @error. ]
+   0 -> @i. 2166136261 -> @scan.
+   ?? (@i < @size)*(@error == 0) [
+    :load8[@buffer+32+@i] -> @c. 0 -> @matched.
+    ? @c == 0 [ 65 -> @error. ]
+    ? @c >= 128 [
+     ? (@c >= 194)*(@c <= 223) [ 1 -> @matched. ] ~ [
+      ? (@c >= 224)*(@c <= 239) [ 2 -> @matched. ] ~ [
+       ? (@c >= 240)*(@c <= 244) [ 3 -> @matched. ] ~ [ 65 -> @error. ]
+      ]
+     ]
+    ]
+    ? @matched >= @size-@i [ 65 -> @error. ]
+    ? (@error == 0)*(@matched != 0) [
+     :load8[@buffer+33+@i] -> @n.
+     ? ((@c == 224)*(@n < 160))+((@c == 237)*(@n > 159))+((@c == 240)*(@n < 144))+((@c == 244)*(@n > 143)) [ 65 -> @error. ]
+    ]
+    0 -> @j.
+    ?? (@j <= @matched)*(@error == 0) [
+     :load8[@buffer+32+@i+@j] -> @n.
+     ? @j [ ? (@n < 128)+(@n > 191) [ 65 -> @error. ] ]
+     :bitand[:bitxor[@scan|@n]*16777619|4294967295] -> @scan. @j+1 -> @j.
+    ]
+    @i+@matched+1 -> @i.
+   ]
+   ? @scan != @got [ 65 -> @error. ]
+   ? @error == 0 [
+    0 -> @i. ?? @i < @size [ !store8[@buffer+@i|:load8[@buffer+32+@i]]. @i+1 -> @i. ]
+    @size -> @count.
+   ]
+  ]
+  ? @error != 0 [ "Invalid ZTEXT001 verifier data.\n" -> @message. ]
+  ]
+  ? @phase == 0 [ @count -> @sourcebytes. ] ~ [ @count -> @expectedbytes. ]
+  @phase+1 -> @phase.
+ ]
+ ? @error == 0 [
+  0 -> @stage. ? @language == 90 [ 2 -> @stage. ]
+  0 -> @done. 0 -> @actualstatus. 0 -> @outputbytes.
+  ? :hostprotect[@code+3145728|1048576|0] != 0 [ "Cannot prepare application memory.\n" -> @message. 70 -> @error. ]
+  ?? (@done == 0)*(@error == 0)*@pass [
+   @code+1048576 -> @module. @work+131072 -> @input. @sourcebytes -> @inputbytes.
+   @work+524288 -> @output. 70000 -> @outputcap.
+   ? @stage == 1 [ @code+2097152 -> @module. @work+524288 -> @input. @packagebytes -> @inputbytes. @work+1048576 -> @output. 196608 -> @outputcap. ]
+   ? @stage == 2 [ @code -> @module. @code+3145728 -> @output. 1048576 -> @outputcap. ? @language == 69 [ @combinedbytes -> @inputbytes. ] ]
+   ? @stage == 3 [ @code+3145728 -> @module. @work+4096 -> @input. 0 -> @inputbytes. @work+524288 -> @output. 65536 -> @outputcap. ]
+   0 -> @i. ?? @i < 192 [ !store64[@context+@i|0]. @i+8 -> @i. ]
+   !store64[@context|1]. !store64[@context+8|@work+16777216].
+   !store64[@context+16|@input]. !store64[@context+24|@inputbytes].
+   !store64[@context+40|@output]. !store64[@context+48|@outputcap].
+   !store64[@context+64|1]. !store64[@context+72|"zero-check"].
+   ? @stage == 2 [ !store64[@context+64|2]. !store64[@context+80|"--app64"]. ]
+   !store64[@context+168|@work+4194304]. !store64[@context+176|12582912].
+   :call[@module+64|@context|0|0|0|0] -> @actualstatus.
+   :load64[@context+56] -> @outputbytes.
+   ? (@actualstatus != :load64[@context+88])+(@outputbytes > @outputcap)+(:load64[@context+32] > @inputbytes) [ "Application violated stream bounds.\n" -> @message. 70 -> @error. ]
+   ? @error == 0 [
+    ? @stage == 3 [ 1 -> @done. ] ~ [
+     ? @actualstatus != 0 [
+      1 -> @done.
+      ? (@kind != 67)+((@stage != 0)*((@stage != 2)+(@language != 90))) [ 0 -> @pass. ]
+     ] ~ [
+      ? @stage == 0 [ @outputbytes -> @packagebytes. ]
+      ? @stage == 1 [
+       @outputbytes -> @initbytes. @prefixbytes+@initbytes+@runtimebytes -> @combinedbytes.
+       ? @combinedbytes > 262144 [ 0 -> @pass. ] ~ [
+        0 -> @i. ?? @i < @prefixbytes [ !store8[@work+131072+@i|:load8[@work+2097152+@i]]. @i+1 -> @i. ]
+        0 -> @i. ?? @i < @initbytes [ !store8[@work+131072+@prefixbytes+@i|:load8[@work+1048576+@i]]. @i+1 -> @i. ]
+        0 -> @i. ?? @i < @runtimebytes [ !store8[@work+131072+@prefixbytes+@initbytes+@i|:load8[@work+2101248+@i]]. @i+1 -> @i. ]
+       ]
+      ]
+      ? @stage == 2 [
+       ? @kind == 67 [ 0 -> @pass. ]
+       @code+3145728 -> @module.
+       ? (@outputbytes <= 64)+(@outputbytes > 1048576) [ 0 -> @pass. ]
+       ? @pass [
+        ? (:load64[@module] != 0x315050414f52455a)+(:load64[@module+8] != 64)+(:load64[@module+16] != @outputbytes)+(:load64[@module+24] != 64) [ 0 -> @pass. ]
+        ? (:load64[@module+32] != 4198400)+(:load64[@module+40] != 1)+(:load64[@module+48] != 0)+(:load64[@module+56] != 0) [ 0 -> @pass. ]
+       ]
+       ? @pass [ ? :hostprotect[@module|1048576|1] != 0 [ "Cannot protect generated program.\n" -> @message. 70 -> @error. ] ]
+      ]
+      @stage+1 -> @stage.
+     ]
+    ]
+   ]
+  ]
+  ? @error == 0 [
+   ? @actualstatus != @wantedstatus [ 0 -> @pass. ]
+   ? @kind == 83 [
+    ? @outputbytes != @expectedbytes [ 0 -> @pass. ]
+    0 -> @i. ?? (@i < @expectedbytes)*@pass [
+     ? :load8[@output+@i] != :load8[@work+2228224+@i] [ 0 -> @pass. ] @i+1 -> @i.
+    ]
+   ] ~ [
+    0 -> @matched. 0 -> @scan.
+    ? @expectedbytes == 0 [ 1 -> @matched. ]
+    ?? (@expectedbytes <= @outputbytes)*(@scan+@expectedbytes <= @outputbytes)*(@matched == 0)*@pass [
+     1 -> @flag. 0 -> @i.
+     ?? (@i < @expectedbytes)*@flag [
+      ? :load8[@output+@scan+@i] != :load8[@work+2228224+@i] [ 0 -> @flag. ] @i+1 -> @i.
+     ]
+     ? @flag [ 1 -> @matched. ] @scan+1 -> @scan.
+    ]
+    ? @matched == 0 [ 0 -> @pass. ]
+   ]
+   @total+1 -> @total. "PASS " -> @filename.
+   ? @pass == 0 [ @failed+1 -> @failed. "FAIL " -> @filename. ]
+   0 -> @i. ?? :load8[@filename+@i] [ !put[:load8[@filename+@i]]. @i+1 -> @i. ]
+   0 -> @i. ?? @i < @namelen [ !put[:load8[@name+@i]]. @i+1 -> @i. ] !put[10].
+   ? @pass == 0 [
+    "  Exit: 0x" -> @filename. 0 -> @i. ?? :load8[@filename+@i] [ !put[:load8[@filename+@i]]. @i+1 -> @i. ]
+    4 -> @j. 0 -> @i. ?? @i < 2 [
+     :bitand[:shr[@actualstatus|@j]|15] -> @n. ? @n < 10 [ !put[48+@n]. ] ~ [ !put[87+@n]. ]
+     0 -> @j. @i+1 -> @i.
+    ] !put[10].
+    ? @output == @work+524288 [
+     0 -> @i. ?? (@i < @outputbytes)*(@i < 2048) [ !put[:load8[@output+@i]]. @i+1 -> @i. ] !put[10].
+    ]
+   ]
+  ]
+ ]
+]
+
+# Native host file checks stay in the newly created private directory.
+? (@error == 0)*@owned [
+ @work+4096 -> @first. @work+8192 -> @second. @work+12288 -> @child.
+ 0 -> @phase.
+ ?? @phase < 3 [
+  @first -> @buffer. "first.txt" -> @filename.
+  ? @phase == 1 [ @second -> @buffer. "second.txt" -> @filename. ]
+  ? @phase == 2 [ @child -> @buffer. "empty-directory" -> @filename. ]
+  0 -> @i. ?? @i < @scratchlen [ !store8[@buffer+@i|:load8[@scratch+@i]]. @i+1 -> @i. ]
+  !store8[@buffer+@i|47]. @i+1 -> @i. 0 -> @j.
+  ?? :load8[@filename+@j] [ !store8[@buffer+@i|:load8[@filename+@j]]. @i+1 -> @i. @j+1 -> @j. ] !store8[@buffer+@i|0].
+  @phase+1 -> @phase.
+ ]
+ 0 -> @phase. 0 -> @slot. 0 -> @got. 0 -> @flag.
+ ?? (@phase < 23)*(@error == 0) [
+  1 -> @pass.
+  ? @phase == 0 [
+   "exclusive-create" -> @name. :fileopen[@first|1] -> @handle.
+   ? @handle == -1 [ 0 -> @pass. ] ~ [ 1 -> @slot. ]
+  ]
+  ? @phase == 1 [
+   "write-flush-close" -> @name. "Verified native Zero file\n" -> @buffer. 0 -> @size.
+   ?? :load8[@buffer+@size] [ @size+1 -> @size. ] 0 -> @count.
+   ?? (@count < @size)*@pass [
+    :filewrite[@handle|@buffer+@count|@size-@count] -> @n.
+    ? (@n == 0)+(@n > @size-@count) [ 0 -> @pass. ] ~ [ @count+@n -> @count. ]
+   ]
+   ? :filesync[@handle] != 0 [ 0 -> @pass. ]
+   ? :fileclose[@handle] != 0 [ 0 -> @pass. ] -1 -> @handle.
+  ]
+  ? @phase == 2 [
+   "existing-file-preserved" -> @name. :fileopen[@first|1] -> @handle.
+   ? @handle != -1 [ 0 -> @pass. :fileclose[@handle] -> @status. -1 -> @handle. ]
+  ]
+  ? @phase == 3 [
+   "read-size-eof" -> @name. :fileopen[@first|0] -> @handle.
+   ? @handle == -1 [ 0 -> @pass. ] ~ [
+    ? :filesize[@handle] != @size [ 0 -> @pass. ] 0 -> @count.
+    ?? (@count < @size)*@pass [
+     :fileread[@handle|@work+16384+@count|1] -> @n.
+     ? @n != 1 [ 0 -> @pass. ] ~ [ @count+1 -> @count. ]
+    ]
+    ? :fileread[@handle|@work+256|1] != 0 [ 0 -> @pass. ]
+    0 -> @i. ?? (@i < @size)*@pass [ ? :load8[@work+16384+@i] != :load8[@buffer+@i] [ 0 -> @pass. ] @i+1 -> @i. ]
+    ? :fileclose[@handle] != 0 [ 0 -> @pass. ] -1 -> @handle.
+   ]
+  ]
+  ? @phase == 4 [
+   "rename-no-overwrite" -> @name. :fileopen[@second|1] -> @handle.
+   ? @handle == -1 [ 0 -> @pass. ] ~ [
+    1 -> @got. ? :fileclose[@handle] != 0 [ 0 -> @pass. ] -1 -> @handle.
+    ? :filemove[@first|@second] != -1 [ 0 -> @pass. ]
+   ]
+  ]
+  ? @phase == 5 [
+   "rename-owned-file" -> @name.
+   ? :filedelete[@second] != 0 [ 0 -> @pass. ] ~ [ 0 -> @got. ]
+   ? :filemove[@first|@second] != 0 [ 0 -> @pass. ] ~ [ 0 -> @slot. 1 -> @got. ]
+  ]
+  ? @phase == 6 [
+   "renamed-content-preserved" -> @name. :fileopen[@second|0] -> @handle.
+   ? @handle == -1 [ 0 -> @pass. ] ~ [
+    ? :filesize[@handle] != @size [ 0 -> @pass. ]
+    :fileread[@handle|@work+16384|@size] -> @count.
+    ? @count != @size [ 0 -> @pass. ]
+    0 -> @i. ?? (@i < @size)*@pass [ ? :load8[@work+16384+@i] != :load8[@buffer+@i] [ 0 -> @pass. ] @i+1 -> @i. ]
+    ? :fileclose[@handle] != 0 [ 0 -> @pass. ] -1 -> @handle.
+   ]
+  ]
+  ? @phase == 7 [
+   "remove-named-file" -> @name.
+   ? :filedelete[@second] != 0 [ 0 -> @pass. ] ~ [ 0 -> @got. ]
+   :fileopen[@second|0] -> @handle.
+   ? @handle != -1 [ 0 -> @pass. :fileclose[@handle] -> @status. -1 -> @handle. ]
+  ]
+  ? @phase == 8 [
+   "create-empty-directory" -> @name.
+   ? :makedir[@child] != 0 [ 0 -> @pass. ] ~ [ 1 -> @flag. ]
+   ? :makedir[@child] != -1 [ 0 -> @pass. ]
+  ]
+  ? @phase == 9 [
+   "directories-are-not-files" -> @name. :fileopen[@child|0] -> @handle.
+   ? @handle != -1 [ 0 -> @pass. :fileclose[@handle] -> @status. -1 -> @handle. ]
+   ? :dirempty[@child] != 0 [ 0 -> @pass. ] ~ [ 0 -> @flag. ]
+  ]
+  ? @phase == 10 [ "invalid-flush-refused" -> @name. ? :filesync[-1] != -1 [ 0 -> @pass. ] ]
+  ? @phase == 11 [ "bounded-native-wait" -> @name. ? :hostwait[1] != 0 [ 0 -> @pass. ] ? :hostwait[86400001] != -1 [ 0 -> @pass. ] ]
+  ? @phase == 12 [
+   "create-save-preserve" -> @name.
+   ? :create[@first] != 0 [ 0 -> @pass. ] ~ [ 1 -> @slot. ]
+   ? :save[@first|@buffer|@size] != @size [ 0 -> @pass. ]
+   ? :create[@first] != 0 [ 0 -> @pass. ]
+   ? :readfile[@first|@work+16384|65536] != @size [ 0 -> @pass. ]
+   0 -> @i. ?? (@i < @size)*@pass [ ? :load8[@work+16384+@i] != :load8[@buffer+@i] [ 0 -> @pass. ] @i+1 -> @i. ]
+  ]
+  ? @phase == 13 [
+   "readfile-bounds" -> @name.
+   !store8[@work+16384+@size|165].
+   ? :readfile[@first|@work+16384|@size-1] != -1 [ 0 -> @pass. ]
+   ? :readfile[@first|@work+16384|@size] != @size [ 0 -> @pass. ]
+   ? :load8[@work+16384+@size] != 165 [ 0 -> @pass. ]
+  ]
+  ? @phase == 14 [
+   "writefile-exclusive" -> @name.
+   ? :writefile[@first|@buffer|@size] != -1 [ 0 -> @pass. ]
+   ? :writefile[@second|@buffer|@size] != @size [ 0 -> @pass. ] ~ [ 1 -> @got. ]
+   ? :readfile[@first|@work+16384|65536] != @size [ 0 -> @pass. ]
+   0 -> @i. ?? (@i < @size)*@pass [ ? :load8[@work+16384+@i] != :load8[@buffer+@i] [ 0 -> @pass. ] @i+1 -> @i. ]
+  ]
+  ? @phase == 15 [
+   "watch-file-list" -> @name. @work+32768 -> @output.
+   :watch[@scratch|@output|65536] -> @outputbytes.
+   ? (@outputbytes == 0)+(@outputbytes > 65536) [ 0 -> @pass. ]
+   0 -> @scan. 0 -> @initbytes. 0 -> @combinedbytes. 0 -> @packagebytes.
+   ?? (@scan < @outputbytes)*@pass [
+    @scan -> @temporary. 0 -> @namelen.
+    ?? (@scan < @outputbytes)*(:load8[@output+@scan] != 0) [ @scan+1 -> @scan. @namelen+1 -> @namelen. ]
+    ? @scan >= @outputbytes [ 0 -> @pass. ] ~ [
+     @scan+1 -> @scan. @packagebytes+1 -> @packagebytes. 0 -> @stage.
+     ?? @stage < 2 [
+      "first.txt" -> @filename. ? @stage == 1 [ "second.txt" -> @filename. ]
+      1 -> @matched. 0 -> @i.
+      ? @namelen != 9+@stage [ 0 -> @matched. ]
+      ?? (@i < @namelen)*@matched [ ? :load8[@output+@temporary+@i] != :load8[@filename+@i] [ 0 -> @matched. ] @i+1 -> @i. ]
+      ? @matched [ ? @stage == 0 [ 1 -> @initbytes. ] ~ [ 1 -> @combinedbytes. ] ]
+      @stage+1 -> @stage.
+     ]
+    ]
+   ]
+   ? (@initbytes != 1)+(@combinedbytes != 1)+(@packagebytes != 2) [ 0 -> @pass. ]
+  ]
+  ? (@phase == 16)+(@phase == 17) [
+   "search-glob" -> @name. "f?rst.*" -> @filename.
+   ? @phase == 17 [ "search-empty" -> @name. "missing-*" -> @filename. ]
+   0 -> @i. ?? @i < @scratchlen [ !store8[@path+@i|:load8[@scratch+@i]]. @i+1 -> @i. ]
+   !store8[@path+@i|47]. @i+1 -> @i. 0 -> @j.
+   ?? :load8[@filename+@j] [ !store8[@path+@i|:load8[@filename+@j]]. @i+1 -> @i. @j+1 -> @j. ] !store8[@path+@i|0].
+   :search[@path|@work+32768|65536] -> @outputbytes.
+   ? @phase == 16 [
+    ? @outputbytes != 10 [ 0 -> @pass. ]
+    "first.txt" -> @filename. 0 -> @i.
+    ?? (@i < 10)*@pass [ ? :load8[@work+32768+@i] != :load8[@filename+@i] [ 0 -> @pass. ] @i+1 -> @i. ]
+   ] ~ [ ? @outputbytes != 0 [ 0 -> @pass. ] ]
+  ]
+  ? @phase == 18 [
+   "watch-capacity" -> @name. !store8[@work+32769|165].
+   ? :watch[@scratch|@work+32768|1] != -1 [ 0 -> @pass. ]
+   ? :load8[@work+32769] != 165 [ 0 -> @pass. ]
+  ]
+  ? @phase == 19 [
+   "disks-root-list" -> @name. :disks[@work+32768|65536] -> @outputbytes.
+   ? (@outputbytes < 2)+(@outputbytes > 65536) [ 0 -> @pass. ]
+   ? @pass [ ? :load8[@work+32768+@outputbytes-1] != 0 [ 0 -> @pass. ] ]
+  ]
+  ? @phase == 20 [
+   "del-named-files" -> @name.
+   ? :del[@first] != 0 [ 0 -> @pass. ] ~ [ 0 -> @slot. ]
+   ? :del[@second] != 0 [ 0 -> @pass. ] ~ [ 0 -> @got. ]
+   ? :del[@first] != -1 [ 0 -> @pass. ]
+  ]
+  ? @phase == 21 [ "create-refuses-directory" -> @name. ? :create[@scratch] != -1 [ 0 -> @pass. ] ]
+  ? @phase == 22 [
+   "create-empty-file" -> @name.
+   ? :create[@first] != 0 [ 0 -> @pass. ] ~ [ 1 -> @slot. ]
+   ? :readfile[@first|@work+16384|1] != 0 [ 0 -> @pass. ]
+   ? :del[@first] != 0 [ 0 -> @pass. ] ~ [ 0 -> @slot. ]
+  ]
+  @total+1 -> @total. "PASS native-" -> @filename.
+  ? @pass == 0 [ @failed+1 -> @failed. "FAIL native-" -> @filename. 74 -> @error. "Native file check failed; owned files are being cleaned.\n" -> @message. ]
+  0 -> @i. ?? :load8[@filename+@i] [ !put[:load8[@filename+@i]]. @i+1 -> @i. ]
+  0 -> @i. ?? :load8[@name+@i] [ !put[:load8[@name+@i]]. @i+1 -> @i. ] !put[10].
+  @phase+1 -> @phase.
+ ]
+ ? @handle != -1 [ :fileclose[@handle] -> @status. -1 -> @handle. ]
+ ? @slot [ :filedelete[@first] -> @status. ]
+ ? @got [ :filedelete[@second] -> @status. ]
+ ? @flag [ :dirempty[@child] -> @status. ]
+]
+? @owned [
+ ? :dirempty[@scratch] != 0 [ "Owned test directory was not empty or could not be removed; inspect it manually.\n" -> @message. 74 -> @error. ]
+]
+? (@error == 0)*@owned [
+ 1 -> @pass.
+ ? :go[@root] != 0 [ 0 -> @pass. ] ~ [
+  ? :readfile["checks/cases.ztext"|@work+32768|65536] != @manifestbytes+32 [ 0 -> @pass. ]
+  ? :go[""] != -1 [ 0 -> @pass. ]
+  ? :readfile["checks/cases.ztext"|@work+32768|65536] != @manifestbytes+32 [ 0 -> @pass. ]
+ ]
+ @total+1 -> @total.
+ "PASS native-go-and-relative-read\n" -> @filename.
+ ? @pass == 0 [ @failed+1 -> @failed. "FAIL native-go-and-relative-read\n" -> @filename. ]
+ 0 -> @i. ?? :load8[@filename+@i] [ !put[:load8[@filename+@i]]. @i+1 -> @i. ]
+]
+? @error != 0 [
+ 0 -> @i. ?? :load8[@message+@i] [ !put[:load8[@message+@i]]. @i+1 -> @i. ]
+]
+"Checks: " -> @filename. 0 -> @i. ?? :load8[@filename+@i] [ !put[:load8[@filename+@i]]. @i+1 -> @i. ]
+0 -> @phase.
+?? @phase < 2 [
+ @total -> @number. ? @phase == 1 [ @failed -> @number. ]
+ 100000 -> @place. 0 -> @flag.
+ ?? @place [
+  0 -> @n. ?? @number >= @place [ @number-@place -> @number. @n+1 -> @n. ]
+  ? @n+@flag+(@place == 1) [ !put[48+@n]. 1 -> @flag. ]
+  ? @place == 1 [ 0 -> @place. ] ~ [
+   ? @place == 10 [ 1 -> @place. ] ~ [
+    ? @place == 100 [ 10 -> @place. ] ~ [
+     ? @place == 1000 [ 100 -> @place. ] ~ [
+      ? @place == 10000 [ 1000 -> @place. ] ~ [ 10000 -> @place. ]
+     ]
+    ]
+   ]
+  ]
+ ]
+ ? @phase == 0 [ " total; " -> @filename. 0 -> @i. ?? :load8[@filename+@i] [ !put[:load8[@filename+@i]]. @i+1 -> @i. ] ]
+ @phase+1 -> @phase.
+]
+" failed.\n" -> @filename. 0 -> @i. ?? :load8[@filename+@i] [ !put[:load8[@filename+@i]]. @i+1 -> @i. ]
+? @code [ :hostfree[@code|4194304] -> @status. ]
+? @work [ :hostfree[@work|16777216] -> @status. ]
+? @error [ !exit[@error]. ]
+? @failed [ !exit[1]. ]
+!exit[0].

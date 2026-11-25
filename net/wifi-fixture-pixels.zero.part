@@ -1,0 +1,47 @@
+# Hosted screenshot renderer in original Zero, using the kernel's own font.
+# P6 rows are streamed; image generation never runs in Python or the shell.
+"P6\n1920 1080\n255\n" -> @pointer.
+? :write[@pointer| 17] != 17 [ !exit[71]. ]
+0 -> @y.
+?? @y < 1080 [
+ 0 -> @x.
+ ?? @x < 1920 [
+  10 -> @red. 15 -> @green. 21 -> @blue. 32 -> @pixel.
+  ? (@x >= 64) * (@x < 1856) * (@y >= 96) * (@y < 1008) [ 20 -> @red. 26 -> @green. 33 -> @blue. ]
+  ? (@x >= 64) * (@x < 1856) * (@y >= 96) * (@y < 160) [ 25 -> @red. 37 -> @green. 48 -> @blue. ]
+  ? (@x >= 96) * (@x < 272) * (@y >= 112) * (@y < 144) [
+   "ZERO / WIFI" -> @pointer. :load8[@pointer + :shr[@x - 96| 4]] -> @pixel.
+   :shr[:bitand[@x - 96| 15]| 1] -> @gx. :shr[:bitand[@y - 112| 31]| 2] -> @gy.
+  ]
+  ? (@x >= 1328) * (@x < 1824) * (@y >= 112) * (@y < 144) [
+   "HOSTED UI FIXTURE / 1920 X 1080" -> @pointer. :load8[@pointer + :shr[@x - 1328| 4]] -> @pixel.
+   :shr[:bitand[@x - 1328| 15]| 1] -> @gx. :shr[:bitand[@y - 112| 31]| 2] -> @gy.
+  ]
+  ? (@x >= 600) * (@x < 1320) * (@y >= 280) * (@y < 664) [
+   :shr[@y - 280| 5] -> @row. :shr[@x - 600| 4] -> @col.
+   ? :load8[@message + @row * 46 + 2] == 62 [ 29 -> @red. 54 -> @green. 61 -> @blue. ]
+   :load8[@message + @row * 46 + @col] -> @pixel.
+   :shr[:bitand[@x - 600| 15]| 1] -> @gx. :shr[:bitand[@y - 280| 31]| 2] -> @gy.
+  ]
+  ? (@x >= 600) * (@x < 1320) * (@y >= 736) * (@y < 768) [
+   "Own Zero UI + font / fixture is not a radio. " -> @pointer.
+   :load8[@pointer + :shr[@x - 600| 4]] -> @pixel.
+   :shr[:bitand[@x - 600| 15]| 1] -> @gx. :shr[:bitand[@y - 736| 31]| 2] -> @gy.
+  ]
+  ? (@pixel >= 33) * (@pixel <= 126) * (@gx >= 1) * (@gx <= 5) * (@gy < 7) [
+   :load8[@font + (@pixel - 32) * 7 + @gy] - 48 -> @mask.
+   ? :bitand[:shr[@mask| 5 - @gx]| 1] [ 223 -> @red. 232 -> @green. 238 -> @blue. ]
+  ]
+  !store8[@memory + 20000 + @x * 3| @red].
+  !store8[@memory + 20001 + @x * 3| @green].
+  !store8[@memory + 20002 + @x * 3| @blue].
+  @x + 1 -> @x.
+ ]
+ 0 -> @written.
+ ?? @written < 5760 [
+  :write[@memory + 20000 + @written| 5760 - @written] -> @n.
+  ? (@n == 0) + (@n > 5760 - @written) [ !exit[72]. ]
+  @written + @n -> @written.
+ ]
+ @y + 1 -> @y.
+]

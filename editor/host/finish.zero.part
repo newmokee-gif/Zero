@@ -1,0 +1,8 @@
+ 0 -> @dirty.
+]
+:hostwait[10] -> @a.
+]
+? @platform == 1 [ ? @sock <= 2147483647 [ :hostsyscall[3 | @sock | 0 | 0 | 0 | 0 | 0] -> @a. ] ]
+? @platform == 2 [ :hostcall12[:load64[@api + 56] | @window | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0] -> @a. ]
+0 -> @i. ?? :load8[@status + @i] [ !put[:load8[@status + @i]]. @i + 1 -> @i. ] !put[10].
+!exit[@failed].

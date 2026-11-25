@@ -1,0 +1,32 @@
+ZTEXT001000006ad3a8b83140000000
+Current original Zero workflow (0.12)
+
+Use the native tools on Linux or their .exe versions on Windows:
+  zero-integrate PROJECT_DIRECTORY NEW_KERNEL.zero
+  zero-build PROJECT_DIRECTORY NEW_OUTPUT_DIRECTORY NEW_KERNEL.zero
+  zero-check PROJECT_DIRECTORY NEW_TEST_DIRECTORY
+All destination paths must be new. The integrator preserves authored sources;
+the builder checks its compiler fixed point and builds the original targets;
+the verifier checks language behavior and host file operations in process.
+See tools/integrate.ztext, tools/build.ztext and checks/README.ztext.
+Read these documents with zero-text read FILE.
+
+The notes below preserve earlier implementation and test history. Any old
+shell/Python runner names, generated artifacts, JSON reports or commands are
+historical references: they were removed from the active project and are not
+current runnable instructions or current-release validation. Native host
+checks do not replace BIOS/UEFI, persistence or physical-hardware testing.
+
+Historical implementation notes
+
+Version0.5.0 compiler-oracle archive
+The expected.tsv file is the exact previous oracle (SHA256
+88fb43d5405d2d6d3b3b526ecaa003cd11350137fceb0cd24e76b57f98c57192).
+README.ztext, REFERENCE-SHA256.ztext and record-baseline.sh preserve its original
+provenance. The historical capture script is archival, not a release command.
+boundary/ preserves all original exact-output fixtures before the0.6 ABI
+migration. Other fixture files and the target/fixture manifest are unchanged.
+The unified0.5.0 executable used for migration was already built:
+SHA256419f29a1c509f3ede1b092ed9bc716cc62169e4b8ef1647028652a6403e64a91.
+No historical binary is needed by normal tests or packaged here.
+

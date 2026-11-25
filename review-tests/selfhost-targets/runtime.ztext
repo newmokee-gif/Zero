@@ -1,0 +1,7 @@
+ZTEXT0010000014d19f7f5a40000000
+# target	fixture	stdin	expected stdout	exit
+elf	positive/host-text.zero	empty.txt	expected-text.txt	0
+host	positive/host-text.zero	empty.txt	expected-text.txt	0
+elf	positive/host-io.zero	input-io.txt	expected-io.txt	0
+host	positive/host-io.zero	input-io.txt	expected-io.txt	0
+host	positive/host-u64.zero	empty.txt	expected-u64.txt	0

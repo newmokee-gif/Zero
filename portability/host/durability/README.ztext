@@ -1,0 +1,46 @@
+ZTEXT00100000af6c3f8a7710000000
+Original Zero native durability and bounded-wait extension, 0.11 candidate
+
+Canonical compiler.zero adds two value primitives without a foreign compiler,
+assembler, linker or runtime. Existing own build/zero compiled its source;
+all three new generations are byte-identical. Seed promotion is root-owned.
+
+filesync[handle]: Linux fsync with EINTR retry; Windows FlushFileBuffers.
+Returns0/u64(-1), keeps the handle and offset. This is an OS file flush request,
+not directory/rename durability, publisher authentication or proof of survival
+after physical power loss. Portable callers use an owned writable regular file.
+
+hostwait[milliseconds]: Linux nanosleep with remaining-time EINTR retry;
+Windows Sleep. Inclusive bounds0..86400000, return0 or u64(-1). Invalid unsigned
+inputs never sleep. It suspends the calling host thread and does not register
+an automatic startup service or switch Zero cooperative workers.
+
+Both guest targets accept these source forms, evaluate their operands and
+return full-u64(-1) without a file operation or delay. Raw/EFI/real targets
+reject the operations. Names are reserved in every target. Template IDs102/103,
+builtin indices73/74, tokens573/574; metadata slots75. Existing memory-region
+positions and4022880-byte reservation are unchanged. PE import table now has
+25 entries plus a null entry (208 bytes); all RVAs remain unchanged.
+
+The hostwait-*.hex files are original instruction data with labels. Existing
+windows-author.zero, itself written in Zero, resolves those labels. The same
+formatter's historical name does not make Linux output a Windows primitive;
+canonical template banks and target conditions determine each target.
+windows-layout.txt reproduces every Windows template value exactly.
+
+Verification in this directory:
+-selfhost.json: three identical native compiler generations;
+-results.json:136 focused checks, including21 native assertions on Linux and
+ Wine each, parser/arity/reserved-name gating, syscall argument observation,
+ injected EINTR recovery and non-EINTR error reporting, actual x64 guest
+ fallback execution, IA32 fallback compilation, native Windows self-rebuild;
+-common-merged.json:433 existing common parser/backend/fallback regressions;
+-linux-verification.json:17 existing native API behavior cases;
+-windows-verification.json: existing61 API/20 boundary assertions and Unicode,
+ argv, cooperative-worker, Ezero host-file and Windows selfhost regressions;
+-guest-sizes.json: own compiler app64=94438, app32=124286, both within131072.
+
+Windows results are Wine10 on Linux, not a native Microsoft Windows run.
+strace is external test infrastructure used to inject EINTR/EIO/EFAULT;
+it is not part of the product implementation or distributed runtime.
+No real disk power-loss, native Windows reparse or physical hardware claim.

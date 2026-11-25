@@ -1,0 +1,1185 @@
+# Original Zero HTTP response native regression. Production parser is composed between markers.
+0 => @active_bank.
+0 => @afterhash.
+0 => @arguments.
+0 => @beforehash.
+0 => @c0.
+0 => @c1.
+0 => @c2.
+0 => @c3.
+0 => @c4.
+0 => @c5.
+0 => @command.
+0 => @disk_ready.
+0 => @disk_select.
+0 => @done.
+0 => @equal.
+0 => @expectedbody.
+0 => @expectederror.
+0 => @expectedlength.
+0 => @expectedlocation.
+0 => @expectedlocationlength.
+0 => @expectedmime.
+0 => @expectedstatus.
+0 => @failed.
+0 => @failures.
+0 => @file.
+0 => @fixture.
+0 => @fixturelength.
+0 => @free_file.
+0 => @good_a.
+0 => @good_b.
+0 => @i.
+0 => @ignore_lf.
+0 => @j.
+0 => @k.
+0 => @name.
+0 => @name_length.
+0 => @operation.
+0 => @pointer.
+0 => @ready.
+0 => @slot.
+0 => @status.
+0 => @temporary.
+0 => @testcase.
+0 => @testdigit.
+0 => @testname.
+0 => @testpos.
+0 => @teststatus.
+0 => @testvalue.
+0 => @text_length.
+0 => @valid.
+0 => @wanted.
+0 => @work.
+
+:hostalloc[262144] -> @work.
+? @work == 0 [ !exit[71]. ]
+?? @testcase < 100 [
+0 -> @testpos. ?? @testpos < 262144 [ !store8[@work+@testpos|0]. @testpos+1 -> @testpos. ]
+0 -> @failed. 1 -> @expectederror. 0 -> @expectedlength. 0 -> @expectedstatus. 0 -> @expectedmime. 0 -> @expectedlocationlength.
+? @testcase == 0 [
+"content length" -> @testname.
+69 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nContent-Length: 5\r\nContent-Type: text/plain\r\n\r\nHello" -> @fixture.
+0 -> @testpos.
+?? @testpos < 69 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+0 -> @expectederror. 5 -> @expectedlength. 200 -> @expectedstatus.
+2 -> @expectedmime.
+"Hello" -> @expectedbody.
+0 -> @testpos.
+?? @testpos < 5 [ !store8[@work+180000+0+@testpos|:load8[@expectedbody+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 1 [
+"close delimited 1.0" -> @testname.
+24 -> @fixturelength.
+"HTTP/1.0 200 OK\r\n\r\nHello" -> @fixture.
+0 -> @testpos.
+?? @testpos < 24 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+0 -> @expectederror. 5 -> @expectedlength. 200 -> @expectedstatus.
+"Hello" -> @expectedbody.
+0 -> @testpos.
+?? @testpos < 5 [ !store8[@work+180000+0+@testpos|:load8[@expectedbody+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 2 [
+"case insensitive headers" -> @testname.
+68 -> @fixturelength.
+"HTTP/1.1 200 OK\r\ncOnTeNt-LeNgTh: 5\r\ncOnTeNt-TyPe: TEXT/HTML\r\n\r\nHello" -> @fixture.
+0 -> @testpos.
+?? @testpos < 68 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+0 -> @expectederror. 5 -> @expectedlength. 200 -> @expectedstatus.
+1 -> @expectedmime.
+"Hello" -> @expectedbody.
+0 -> @testpos.
+?? @testpos < 5 [ !store8[@work+180000+0+@testpos|:load8[@expectedbody+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 3 [
+"empty content length" -> @testname.
+38 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 38 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+0 -> @expectederror. 0 -> @expectedlength. 200 -> @expectedstatus.
+]
+? @testcase == 4 [
+"identical content lengths" -> @testname.
+62 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nContent-Length: 5\r\nContent-Length: 5\r\n\r\nHello" -> @fixture.
+0 -> @testpos.
+?? @testpos < 62 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+0 -> @expectederror. 5 -> @expectedlength. 200 -> @expectedstatus.
+"Hello" -> @expectedbody.
+0 -> @testpos.
+?? @testpos < 5 [ !store8[@work+180000+0+@testpos|:load8[@expectedbody+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 5 [
+"numeric equivalent lengths" -> @testname.
+64 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nContent-Length: 005\r\nContent-Length: 5\r\n\r\nHello" -> @fixture.
+0 -> @testpos.
+?? @testpos < 64 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+0 -> @expectederror. 5 -> @expectedlength. 200 -> @expectedstatus.
+"Hello" -> @expectedbody.
+0 -> @testpos.
+?? @testpos < 5 [ !store8[@work+180000+0+@testpos|:load8[@expectedbody+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 6 [
+"header whitespace" -> @testname.
+46 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nContent-Length:\t 5 \t\r\n\r\nHello" -> @fixture.
+0 -> @testpos.
+?? @testpos < 46 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+0 -> @expectederror. 5 -> @expectedlength. 200 -> @expectedstatus.
+"Hello" -> @expectedbody.
+0 -> @testpos.
+?? @testpos < 5 [ !store8[@work+180000+0+@testpos|:load8[@expectedbody+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 7 [
+"chunked two chunks" -> @testname.
+67 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n2\r\nHe\r\n3\r\nllo\r\n0\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 67 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+0 -> @expectederror. 5 -> @expectedlength. 200 -> @expectedstatus.
+"Hello" -> @expectedbody.
+0 -> @testpos.
+?? @testpos < 5 [ !store8[@work+180000+0+@testpos|:load8[@expectedbody+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 8 [
+"chunked extension" -> @testname.
+72 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n5;note=good\r\nHello\r\n0\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 72 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+0 -> @expectederror. 5 -> @expectedlength. 200 -> @expectedstatus.
+"Hello" -> @expectedbody.
+0 -> @testpos.
+?? @testpos < 5 [ !store8[@work+180000+0+@testpos|:load8[@expectedbody+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 9 [
+"chunked trailer" -> @testname.
+75 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n5\r\nHello\r\n0\r\nX-Note: yes\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 75 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+0 -> @expectederror. 5 -> @expectedlength. 200 -> @expectedstatus.
+"Hello" -> @expectedbody.
+0 -> @testpos.
+?? @testpos < 5 [ !store8[@work+180000+0+@testpos|:load8[@expectedbody+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 10 [
+"UTF8 body" -> @testname.
+42 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nContent-Length: 4\r\n\r\n????" -> @fixture.
+0 -> @testpos.
+?? @testpos < 42 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+!store8[@work+32768+38|208].
+!store8[@work+32768+39|151].
+!store8[@work+32768+40|208].
+!store8[@work+32768+41|181].
+0 -> @expectederror. 4 -> @expectedlength. 200 -> @expectedstatus.
+"????" -> @expectedbody.
+0 -> @testpos.
+?? @testpos < 4 [ !store8[@work+180000+0+@testpos|:load8[@expectedbody+@testpos]]. @testpos+1 -> @testpos. ]
+!store8[@work+180000+0|208].
+!store8[@work+180000+1|151].
+!store8[@work+180000+2|208].
+!store8[@work+180000+3|181].
+]
+? @testcase == 11 [
+"binary body" -> @testname.
+42 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nContent-Length: 4\r\n\r\n????" -> @fixture.
+0 -> @testpos.
+?? @testpos < 42 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+!store8[@work+32768+38|0].
+!store8[@work+32768+39|1].
+!store8[@work+32768+40|255].
+!store8[@work+32768+41|128].
+0 -> @expectederror. 4 -> @expectedlength. 200 -> @expectedstatus.
+"????" -> @expectedbody.
+0 -> @testpos.
+?? @testpos < 4 [ !store8[@work+180000+0+@testpos|:load8[@expectedbody+@testpos]]. @testpos+1 -> @testpos. ]
+!store8[@work+180000+0|0].
+!store8[@work+180000+1|1].
+!store8[@work+180000+2|255].
+!store8[@work+180000+3|128].
+]
+? @testcase == 12 [
+"redirect metadata" -> @testname.
+77 -> @fixturelength.
+"HTTP/1.1 302 Found\r\nLocation: http://example.test/path\r\nContent-Length: 0\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 77 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+0 -> @expectederror. 0 -> @expectedlength. 302 -> @expectedstatus.
+"http://example.test/path" -> @expectedlocation. 24 -> @expectedlocationlength.
+]
+? @testcase == 13 [
+"HTML content type parameters" -> @testname.
+83 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Length: 5\r\n\r\nHello" -> @fixture.
+0 -> @testpos.
+?? @testpos < 83 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+0 -> @expectederror. 5 -> @expectedlength. 200 -> @expectedstatus.
+1 -> @expectedmime.
+"Hello" -> @expectedbody.
+0 -> @testpos.
+?? @testpos < 5 [ !store8[@work+180000+0+@testpos|:load8[@expectedbody+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 14 [
+"binary MIME" -> @testname.
+83 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: 5\r\n\r\nHello" -> @fixture.
+0 -> @testpos.
+?? @testpos < 83 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+0 -> @expectederror. 5 -> @expectedlength. 200 -> @expectedstatus.
+3 -> @expectedmime.
+"Hello" -> @expectedbody.
+0 -> @testpos.
+?? @testpos < 5 [ !store8[@work+180000+0+@testpos|:load8[@expectedbody+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 15 [
+"404 response body" -> @testname.
+46 -> @fixturelength.
+"HTTP/1.1 404 Missing\r\nContent-Length: 3\r\n\r\nNot" -> @fixture.
+0 -> @testpos.
+?? @testpos < 46 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+0 -> @expectederror. 3 -> @expectedlength. 404 -> @expectedstatus.
+"Not" -> @expectedbody.
+0 -> @testpos.
+?? @testpos < 3 [ !store8[@work+180000+0+@testpos|:load8[@expectedbody+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 16 [
+"empty reason phrase" -> @testname.
+36 -> @fixturelength.
+"HTTP/1.1 200 \r\nContent-Length: 0\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 36 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+0 -> @expectederror. 0 -> @expectedlength. 200 -> @expectedstatus.
+]
+? @testcase == 17 [
+"unknown valid status" -> @testname.
+41 -> @fixturelength.
+"HTTP/1.1 599 Other\r\nContent-Length: 0\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 41 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+0 -> @expectederror. 0 -> @expectedlength. 599 -> @expectedstatus.
+]
+? @testcase == 18 [
+"204 no content" -> @testname.
+27 -> @fixturelength.
+"HTTP/1.1 204 No Content\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 27 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+0 -> @expectederror. 0 -> @expectedlength. 204 -> @expectedstatus.
+]
+? @testcase == 19 [
+"304 representation length" -> @testname.
+51 -> @fixturelength.
+"HTTP/1.1 304 Not Modified\r\nContent-Length: 1234\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 51 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+0 -> @expectederror. 0 -> @expectedlength. 304 -> @expectedstatus.
+]
+? @testcase == 20 [
+"identity encoding" -> @testname.
+71 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nContent-Encoding: identity\r\nContent-Length: 5\r\n\r\nHello" -> @fixture.
+0 -> @testpos.
+?? @testpos < 71 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+0 -> @expectederror. 5 -> @expectedlength. 200 -> @expectedstatus.
+"Hello" -> @expectedbody.
+0 -> @testpos.
+?? @testpos < 5 [ !store8[@work+180000+0+@testpos|:load8[@expectedbody+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 21 [
+"quoted chunk extension" -> @testname.
+81 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n5;note=\"hello world\"\r\nHello\r\n0\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 81 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+0 -> @expectederror. 5 -> @expectedlength. 200 -> @expectedstatus.
+"Hello" -> @expectedbody.
+0 -> @testpos.
+?? @testpos < 5 [ !store8[@work+180000+0+@testpos|:load8[@expectedbody+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 22 [
+"chunk empty body" -> @testname.
+52 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n0\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 52 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+0 -> @expectederror. 0 -> @expectedlength. 200 -> @expectedstatus.
+]
+? @testcase == 23 [
+"upper hex chunk" -> @testname.
+67 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\nA\r\n0123456789\r\n0\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 67 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+0 -> @expectederror. 10 -> @expectedlength. 200 -> @expectedstatus.
+"0123456789" -> @expectedbody.
+0 -> @testpos.
+?? @testpos < 10 [ !store8[@work+180000+0+@testpos|:load8[@expectedbody+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 24 [
+"unknown token header" -> @testname.
+47 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nX!#$%&'*+-.^_`|~: yes\r\n\r\nHello" -> @fixture.
+0 -> @testpos.
+?? @testpos < 47 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+0 -> @expectederror. 5 -> @expectedlength. 200 -> @expectedstatus.
+"Hello" -> @expectedbody.
+0 -> @testpos.
+?? @testpos < 5 [ !store8[@work+180000+0+@testpos|:load8[@expectedbody+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 25 [
+"empty response" -> @testname.
+0 -> @fixturelength.
+]
+? @testcase == 26 [
+"unsupported HTTP2 textual version" -> @testname.
+19 -> @fixturelength.
+"HTTP/2.0 200 OK\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 19 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 27 [
+"bad status digit" -> @testname.
+19 -> @fixturelength.
+"HTTP/1.1 20A OK\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 19 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 28 [
+"short status code" -> @testname.
+18 -> @fixturelength.
+"HTTP/1.1 20 OK\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 18 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 29 [
+"oversized status code" -> @testname.
+20 -> @fixturelength.
+"HTTP/1.1 2000 OK\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 20 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 30 [
+"too high status code" -> @testname.
+19 -> @fixturelength.
+"HTTP/1.1 600 OK\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 19 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 31 [
+"missing reason separator" -> @testname.
+18 -> @fixturelength.
+"HTTP/1.1 200OK\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 18 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 32 [
+"bare LF" -> @testname.
+40 -> @fixturelength.
+"HTTP/1.1 200 OK\nContent-Length: 5\n\nHello" -> @fixture.
+0 -> @testpos.
+?? @testpos < 40 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 33 [
+"bare CR" -> @testname.
+29 -> @fixturelength.
+"HTTP/1.1 200 OK\rX: y\r\n\r\nHello" -> @fixture.
+0 -> @testpos.
+?? @testpos < 29 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 34 [
+"NUL header" -> @testname.
+37 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nX-Test: a?b\r\n\r\nHello" -> @fixture.
+0 -> @testpos.
+?? @testpos < 37 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+!store8[@work+32768+26|0].
+]
+? @testcase == 35 [
+"DEL header" -> @testname.
+37 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nX-Test: a?b\r\n\r\nHello" -> @fixture.
+0 -> @testpos.
+?? @testpos < 37 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+!store8[@work+32768+26|127].
+]
+? @testcase == 36 [
+"UTF8 header" -> @testname.
+36 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nX-Test: ??\r\n\r\nHello" -> @fixture.
+0 -> @testpos.
+?? @testpos < 36 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+!store8[@work+32768+25|208].
+!store8[@work+32768+26|176].
+]
+? @testcase == 37 [
+"missing colon" -> @testname.
+42 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nContent-Length 5\r\n\r\nHello" -> @fixture.
+0 -> @testpos.
+?? @testpos < 42 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 38 [
+"space before colon" -> @testname.
+44 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nContent-Length : 5\r\n\r\nHello" -> @fixture.
+0 -> @testpos.
+?? @testpos < 44 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 39 [
+"folded header" -> @testname.
+43 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nX-Test: foo\r\n bar\r\n\r\nHello" -> @fixture.
+0 -> @testpos.
+?? @testpos < 43 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 40 [
+"empty field name" -> @testname.
+31 -> @fixturelength.
+"HTTP/1.1 200 OK\r\n: foo\r\n\r\nHello" -> @fixture.
+0 -> @testpos.
+?? @testpos < 31 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 41 [
+"bad name token" -> @testname.
+37 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nX@Name: foo\r\n\r\nHello" -> @fixture.
+0 -> @testpos.
+?? @testpos < 37 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 42 [
+"negative CL" -> @testname.
+44 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nContent-Length: -1\r\n\r\nHello" -> @fixture.
+0 -> @testpos.
+?? @testpos < 44 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 43 [
+"positive sign CL" -> @testname.
+44 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nContent-Length: +5\r\n\r\nHello" -> @fixture.
+0 -> @testpos.
+?? @testpos < 44 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 44 [
+"junk CL" -> @testname.
+44 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nContent-Length: 5x\r\n\r\nHello" -> @fixture.
+0 -> @testpos.
+?? @testpos < 44 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 45 [
+"empty CL" -> @testname.
+42 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nContent-Length: \r\n\r\nHello" -> @fixture.
+0 -> @testpos.
+?? @testpos < 42 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 46 [
+"CSV CL" -> @testname.
+46 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nContent-Length: 5, 5\r\n\r\nHello" -> @fixture.
+0 -> @testpos.
+?? @testpos < 46 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 47 [
+"overflow CL" -> @testname.
+62 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nContent-Length: 18446744073709551616\r\n\r\nHello" -> @fixture.
+0 -> @testpos.
+?? @testpos < 62 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 48 [
+"too large CL" -> @testname.
+47 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nContent-Length: 65536\r\n\r\nHello" -> @fixture.
+0 -> @testpos.
+?? @testpos < 47 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 49 [
+"conflicting lengths" -> @testname.
+62 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nContent-Length: 5\r\nContent-Length: 6\r\n\r\nHello" -> @fixture.
+0 -> @testpos.
+?? @testpos < 62 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 50 [
+"short body" -> @testname.
+43 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nContent-Length: 6\r\n\r\nHello" -> @fixture.
+0 -> @testpos.
+?? @testpos < 43 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 51 [
+"extra body" -> @testname.
+43 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nContent-Length: 4\r\n\r\nHello" -> @fixture.
+0 -> @testpos.
+?? @testpos < 43 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 52 [
+"transfer gzip" -> @testname.
+49 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nTransfer-Encoding: gzip\r\n\r\nHello" -> @fixture.
+0 -> @testpos.
+?? @testpos < 49 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 53 [
+"multiple transfer codings" -> @testname.
+58 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nTransfer-Encoding: gzip, chunked\r\n\r\n0\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 58 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 54 [
+"TE CL ambiguity" -> @testname.
+71 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nContent-Length: 5\r\nTransfer-Encoding: chunked\r\n\r\n0\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 71 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 55 [
+"duplicate TE" -> @testname.
+80 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nTransfer-Encoding: chunked\r\n\r\n0\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 80 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 56 [
+"gzip compression" -> @testname.
+67 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nContent-Encoding: gzip\r\nContent-Length: 5\r\n\r\nHello" -> @fixture.
+0 -> @testpos.
+?? @testpos < 67 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 57 [
+"duplicate content type" -> @testname.
+89 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Type: text/plain\r\nContent-Length: 0\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 89 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 58 [
+"duplicate location" -> @testname.
+69 -> @fixturelength.
+"HTTP/1.1 302 Found\r\nLocation: /a\r\nLocation: /b\r\nContent-Length: 0\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 69 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 59 [
+"duplicate content encoding" -> @testname.
+94 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nContent-Encoding: identity\r\nContent-Encoding: identity\r\nContent-Length: 0\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 94 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 60 [
+"empty content encoding" -> @testname.
+57 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nContent-Encoding:\r\nContent-Length: 0\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 57 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 61 [
+"nonhex chunk" -> @testname.
+62 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\nX\r\nHello\r\n0\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 62 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 62 [
+"negative chunk" -> @testname.
+63 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n-1\r\nHello\r\n0\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 63 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 63 [
+"empty chunk size" -> @testname.
+61 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n\r\nHello\r\n0\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 61 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 64 [
+"chunk overflow" -> @testname.
+78 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n10000000000000000\r\nHello\r\n0\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 78 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 65 [
+"truncated chunk" -> @testname.
+55 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n6\r\nHello" -> @fixture.
+0 -> @testpos.
+?? @testpos < 55 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 66 [
+"truncated terminator" -> @testname.
+56 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n5\r\nHello\r" -> @fixture.
+0 -> @testpos.
+?? @testpos < 56 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 67 [
+"no terminal zero" -> @testname.
+57 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n5\r\nHello\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 57 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 68 [
+"extra after terminal" -> @testname.
+57 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n0\r\n\r\nHello" -> @fixture.
+0 -> @testpos.
+?? @testpos < 57 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 69 [
+"chunk missing CRLF" -> @testname.
+62 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n5\r\nHelloXX0\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 62 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 70 [
+"chunk LF size" -> @testname.
+61 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n5\nHello\r\n0\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 61 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 71 [
+"trailer CL" -> @testname.
+71 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n0\r\nContent-Length: 0\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 71 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 72 [
+"trailer TE" -> @testname.
+80 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n0\r\nTransfer-Encoding: chunked\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 80 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 73 [
+"trailer missing colon" -> @testname.
+65 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n0\r\nBad trailer\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 65 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 74 [
+"trailer folded" -> @testname.
+66 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n0\r\n X-Test: yes\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 66 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 75 [
+"chunk extension control" -> @testname.
+66 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n5;x=?\r\nHello\r\n0\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 66 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+!store8[@work+32768+51|1].
+]
+? @testcase == 76 [
+"header EOF without blank" -> @testname.
+36 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nContent-Length: 0\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 36 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 77 [
+"header unfinished CRLF" -> @testname.
+18 -> @fixturelength.
+"HTTP/1.1 200 OK\r\n\r" -> @fixture.
+0 -> @testpos.
+?? @testpos < 18 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 78 [
+"leading NUL" -> @testname.
+20 -> @fixturelength.
+"?HTTP/1.1 200 OK\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 20 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+!store8[@work+32768+0|0].
+]
+? @testcase == 79 [
+"204 illegal body" -> @testname.
+32 -> @fixturelength.
+"HTTP/1.1 204 No Content\r\n\r\nHello" -> @fixture.
+0 -> @testpos.
+?? @testpos < 32 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 80 [
+"304 illegal body" -> @testname.
+34 -> @fixturelength.
+"HTTP/1.1 304 Not Modified\r\n\r\nHello" -> @fixture.
+0 -> @testpos.
+?? @testpos < 34 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 81 [
+"100 unsupported interim alone" -> @testname.
+25 -> @fixturelength.
+"HTTP/1.1 100 Continue\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 25 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 82 [
+"unsupported upgrade" -> @testname.
+36 -> @fixturelength.
+"HTTP/1.1 101 Switching Protocols\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 36 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 83 [
+"empty extension name" -> @testname.
+65 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n5;=x\r\nHello\r\n0\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 65 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 84 [
+"unterminated quoted extension" -> @testname.
+74 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n5;note=\"hello\r\nHello\r\n0\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 74 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 85 [
+"trailer content encoding" -> @testname.
+76 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n0\r\nContent-Encoding: gzip\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 76 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 86 [
+"255 byte location" -> @testname.
+308 -> @fixturelength.
+"HTTP/1.1 302 Found\r\nLocation: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\r\nContent-Length: 0\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 308 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+0 -> @expectederror. 0 -> @expectedlength. 302 -> @expectedstatus.
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" -> @expectedlocation. 255 -> @expectedlocationlength.
+]
+? @testcase == 87 [
+"256 byte location" -> @testname.
+309 -> @fixturelength.
+"HTTP/1.1 302 Found\r\nLocation: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\r\nContent-Length: 0\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 309 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 88 [
+"body beyond old 4095 cap" -> @testname.
+12042 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nContent-Length: 12000\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 42 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+42 -> @testpos.
+?? @testpos < 12042 [ !store8[@work+32768+@testpos|97]. @testpos+1 -> @testpos. ]
+0 -> @expectederror. 12000 -> @expectedlength. 200 -> @expectedstatus.
+0 -> @testpos. ?? @testpos < 12000 [ !store8[@work+180000+@testpos|97]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 89 [
+"maximum raw size" -> @testname.
+65535 -> @fixturelength.
+"HTTP/1.1 200 OK\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 19 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+19 -> @testpos.
+?? @testpos < 65535 [ !store8[@work+32768+@testpos|98]. @testpos+1 -> @testpos. ]
+0 -> @expectederror. 65516 -> @expectedlength. 200 -> @expectedstatus.
+0 -> @testpos. ?? @testpos < 65516 [ !store8[@work+180000+@testpos|98]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 90 [
+"raw one past maximum" -> @testname.
+65536 -> @fixturelength.
+"HTTP/1.1 200 OK\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 19 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+19 -> @testpos.
+?? @testpos < 65536 [ !store8[@work+32768+@testpos|99]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 91 [
+"204 disallows content length" -> @testname.
+46 -> @fixturelength.
+"HTTP/1.1 204 No Content\r\nContent-Length: 0\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 46 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 92 [
+"204 disallows transfer encoding" -> @testname.
+60 -> @fixturelength.
+"HTTP/1.1 204 No Content\r\nTransfer-Encoding: chunked\r\n\r\n0\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 60 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 93 [
+"304 representation transfer encoding" -> @testname.
+57 -> @fixturelength.
+"HTTP/1.1 304 Not Modified\r\nTransfer-Encoding: chunked\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 57 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+0 -> @expectederror. 0 -> @expectedlength. 304 -> @expectedstatus.
+]
+? @testcase == 94 [
+"128 headers boundary" -> @testname.
+787 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 787 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+0 -> @expectederror. 0 -> @expectedlength. 200 -> @expectedstatus.
+]
+? @testcase == 95 [
+"129 headers rejected" -> @testname.
+793 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 793 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 96 [
+"8192 header boundary" -> @testname.
+8192 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nX: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" -> @fixture.
+0 -> @testpos.
+?? @testpos < 3000 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" -> @fixture.
+0 -> @testpos.
+?? @testpos < 3000 [ !store8[@work+32768+3000+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 2192 [ !store8[@work+32768+6000+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+0 -> @expectederror. 0 -> @expectedlength. 200 -> @expectedstatus.
+]
+? @testcase == 97 [
+"8193 header rejected" -> @testname.
+8193 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nX: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" -> @fixture.
+0 -> @testpos.
+?? @testpos < 3000 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" -> @fixture.
+0 -> @testpos.
+?? @testpos < 3000 [ !store8[@work+32768+3000+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 2193 [ !store8[@work+32768+6000+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+? @testcase == 98 [
+"128 trailers boundary" -> @testname.
+820 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n0\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 820 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+0 -> @expectederror. 0 -> @expectedlength. 200 -> @expectedstatus.
+]
+? @testcase == 99 [
+"129 trailers rejected" -> @testname.
+826 -> @fixturelength.
+"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n0\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\nX: x\r\n\r\n" -> @fixture.
+0 -> @testpos.
+?? @testpos < 826 [ !store8[@work+32768+0+@testpos|:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+]
+!store64[@work+416|@fixturelength]. !store64[@work+400|1]. !store64[@work+408|0]. !store64[@work+688|@work+32768]. !store64[@work+696|@work+98304].
+!store64[@work+32760|0x1234567887654321]. !store64[@work+163840|0x1122334455667788]. !store64[@work+163848|0x1234567887654321]. !store64[@work+23552|0x1122334455667788].
+2166136261 -> @beforehash. 0 -> @testpos. ?? (@testpos < @fixturelength)*(@testpos < 65535) [ :bitand[:bitxor[@beforehash|:load8[@work+32768+@testpos]]*16777619|4294967295] -> @beforehash. @testpos+1 -> @testpos. ]
+# BEGIN ZERO HTTP RESPONSE
+# Original bounded HTTP/1 response framing; all offsets are network-workspace relative.
+# Raw bytes: pointer688, length416, capacity65536. Decoded body: pointer696, capacity65536.
+# Preserves work, text, line_length, current, console, memory, font, boot_information.
+:load64[@work + 688] -> @pointer. :load64[@work + 416] -> @wanted.
+!store64[@work + 672|0]. !store64[@work + 680|0]. !store64[@work + 704|0].
+!store64[@work + 712|0]. !store64[@work + 720|0].
+!store8[@work + 23040|0]. !store8[@work + 23296|0].
+1 -> @valid. 0 -> @name_length. 0 -> @equal. 0 -> @good_a. 0 -> @good_b.
+0 -> @disk_select. 0 -> @disk_ready. 0 -> @active_bank. 0 -> @free_file. 0 -> @status.
+? (@wanted < 16) + (@wanted > 65535) [ 0 -> @valid. ]
+? @valid [
+ ? (:load32[@pointer] != 0x50545448) + (:load8[@pointer + 4] != 47) + (:load8[@pointer + 5] != 49) + (:load8[@pointer + 6] != 46) + ((:load8[@pointer + 7] != 48) * (:load8[@pointer + 7] != 49)) + (:load8[@pointer + 8] != 32) + (:load8[@pointer + 12] != 32) [ 0 -> @valid. ]
+ 0 -> @status. 9 -> @i.
+ ?? @i < 12 [
+  :load8[@pointer + @i] -> @c0.
+  ? (@c0 < 48) + (@c0 > 57) [ 0 -> @valid. ]
+  @status * 10 + @c0 - 48 -> @status. @i + 1 -> @i.
+ ]
+ ? (@status < 100) + (@status > 599) [ 0 -> @valid. ]
+ ? (@status >= 100) * (@status < 200) [ 0 -> @valid. !store64[@work + 408|15]. ]
+ 13 -> @i. 0 -> @done.
+ ?? (@i + 1 < @wanted) * (@i < 8192) * (@done == 0) * @valid [
+  :load8[@pointer + @i] -> @c0.
+  ? @c0 == 13 [
+   ? :load8[@pointer + @i + 1] == 10 [ 1 -> @done. @i + 2 -> @i. ] ~ [ 0 -> @valid. ]
+  ] ~ [
+   ? (@c0 < 32) + (@c0 > 126) [ 0 -> @valid. ]
+   @i + 1 -> @i.
+  ]
+ ]
+ ? @done == 0 [ 0 -> @valid. ]
+]
+# Each header line is ASCII, has a token name, and is bounded before any interpretation.
+?? @valid * (@name_length == 0) [
+ ? (@i + 1 >= @wanted) + (@i + 2 > 8192) [ 0 -> @valid. ] ~ [
+  ? :load16[@pointer + @i] == 0x0a0d [ @i + 2 -> @name_length. ] ~ [
+   @active_bank + 1 -> @active_bank. ? @active_bank > 128 [ 0 -> @valid. ]
+   @i -> @j. 0 -> @arguments. 0 -> @done.
+   ?? (@j + 1 < @wanted) * (@j < 8192) * (@done == 0) * @valid [
+    :load8[@pointer + @j] -> @c0.
+    ? @c0 == 13 [
+     ? :load8[@pointer + @j + 1] == 10 [ 1 -> @done. ] ~ [ 0 -> @valid. ]
+    ] ~ [
+     ? (@c0 < 32) * (@c0 != 9) + (@c0 > 126) [ 0 -> @valid. ]
+     ? @arguments == 0 [
+      ? @c0 == 58 [ @j -> @arguments. ] ~ [
+       ? ((@c0 >= 48) * (@c0 <= 57) + (@c0 >= 65) * (@c0 <= 90) + (@c0 >= 97) * (@c0 <= 122) + (@c0 == 33) + (@c0 == 35) + (@c0 == 36) + (@c0 == 37) + (@c0 == 38) + (@c0 == 39) + (@c0 == 42) + (@c0 == 43) + (@c0 == 45) + (@c0 == 46) + (@c0 == 94) + (@c0 == 95) + (@c0 == 96) + (@c0 == 124) + (@c0 == 126)) == 0 [ 0 -> @valid. ]
+      ]
+     ]
+     @j + 1 -> @j.
+    ]
+   ]
+   ? (@done == 0) + (@arguments == 0) + (@arguments == @i) + (@j + 2 > 8192) [ 0 -> @valid. ]
+   ? @valid [
+    @arguments + 1 -> @slot. @j -> @text_length.
+    ?? (@slot < @text_length) * ((:load8[@pointer + @slot] == 32) + (:load8[@pointer + @slot] == 9)) [ @slot + 1 -> @slot. ]
+    ?? (@text_length > @slot) * ((:load8[@pointer + @text_length - 1] == 32) + (:load8[@pointer + @text_length - 1] == 9)) [ @text_length - 1 -> @text_length. ]
+    0 -> @operation. 1 -> @command.
+    ?? @command <= 5 [
+     "content-length" -> @name. 14 -> @c5.
+     ? @command == 2 [ "transfer-encoding" -> @name. 17 -> @c5. ]
+     ? @command == 3 [ "content-encoding" -> @name. 16 -> @c5. ]
+     ? @command == 4 [ "content-type" -> @name. 12 -> @c5. ]
+     ? @command == 5 [ "location" -> @name. 8 -> @c5. ]
+     @arguments - @i == @c5 -> @done. 0 -> @k.
+     ?? (@k < @c5) * @done [
+      :load8[@pointer + @i + @k] -> @c0. ? (@c0 >= 65) * (@c0 <= 90) [ @c0 + 32 -> @c0. ]
+      ? @c0 != :load8[@name + @k] [ 0 -> @done. ] @k + 1 -> @k.
+     ]
+     ? @done [ @command -> @operation. ] @command + 1 -> @command.
+    ]
+    ? @operation == 1 [
+     0 -> @c0. @slot -> @k.
+     ? (@slot == @text_length) + (@text_length - @slot > 10) [ 0 -> @valid. ]
+     ?? (@k < @text_length) * @valid [
+      :load8[@pointer + @k] -> @c1.
+      ? (@c1 < 48) + (@c1 > 57) [ 0 -> @valid. ] ~ [ @c0 * 10 + @c1 - 48 -> @c0. ]
+      ? @c0 > 65535 [ 0 -> @valid. !store64[@work + 408|9]. ] @k + 1 -> @k.
+     ]
+     ? @equal * (@equal != @c0 + 1) [ 0 -> @valid. ] @c0 + 1 -> @equal.
+    ]
+    ? (@operation == 2) + (@operation == 3) [
+     "chunked" -> @name. 7 -> @c5.
+     ? @operation == 3 [ "identity" -> @name. 8 -> @c5. ]
+     @text_length - @slot == @c5 -> @done. 0 -> @k.
+     ?? (@k < @c5) * @done [
+      :load8[@pointer + @slot + @k] -> @c0. ? (@c0 >= 65) * (@c0 <= 90) [ @c0 + 32 -> @c0. ]
+      ? @c0 != :load8[@name + @k] [ 0 -> @done. ] @k + 1 -> @k.
+     ]
+     ? @operation == 2 [
+      ? (@done == 0) + @good_a [ 0 -> @valid. !store64[@work + 408|12]. ] 1 -> @good_a.
+     ] ~ [
+      ? (@done == 0) + @good_b [ 0 -> @valid. !store64[@work + 408|13]. ] 1 -> @good_b.
+     ]
+    ]
+    ? (@operation == 4) + (@operation == 5) [
+     ? (@text_length == @slot) + (@text_length - @slot > 255) [ 0 -> @valid. ] ~ [
+      @work + 23040 -> @c2.
+      ? @operation == 4 [ ? @disk_select [ 0 -> @valid. ] 1 -> @disk_select. ] ~ [
+       @work + 23296 -> @c2. ? @disk_ready [ 0 -> @valid. ] 1 -> @disk_ready.
+       !store64[@work + 720|@text_length - @slot].
+      ]
+      0 -> @k. ?? @k < @text_length - @slot [ !store8[@c2 + @k|:load8[@pointer + @slot + @k]]. @k + 1 -> @k. ]
+      !store8[@c2 + @k|0].
+      ? @operation == 4 [
+       !store64[@work + 704|3]. @slot -> @c3.
+       ?? (@c3 < @text_length) * (:load8[@pointer + @c3] != 59) * (:load8[@pointer + @c3] != 32) * (:load8[@pointer + @c3] != 9) [ @c3 + 1 -> @c3. ]
+       1 -> @command. ?? @command <= 3 [
+        "text/html" -> @name. 9 -> @c5.
+        ? @command == 2 [ "text/plain" -> @name. 10 -> @c5. ]
+        ? @command == 3 [ "application/xhtml+xml" -> @name. 21 -> @c5. ]
+        @c3 - @slot == @c5 -> @done. 0 -> @k.
+        ?? (@k < @c5) * @done [
+         :load8[@pointer + @slot + @k] -> @c0. ? (@c0 >= 65) * (@c0 <= 90) [ @c0 + 32 -> @c0. ]
+         ? @c0 != :load8[@name + @k] [ 0 -> @done. ] @k + 1 -> @k.
+        ]
+        ? @done [ 1 -> @c0. ? @command == 2 [ 2 -> @c0. ] !store64[@work + 704|@c0]. ]
+        @command + 1 -> @command.
+       ]
+      ]
+     ]
+    ]
+   ]
+   @j + 2 -> @i.
+  ]
+ ]
+]
+? @good_a * @equal [ 0 -> @valid. ]
+? (@status == 204) * (@equal + @good_a) [ 0 -> @valid. ]
+? @status == 304 [
+ ? @wanted != @name_length [ 0 -> @valid. ]
+ 0 -> @good_a.
+]
+? @valid [
+ @name_length -> @file.
+ ? @good_a == 0 [
+  @wanted - @name_length -> @free_file.
+  ? @equal * (@status != 304) * (@free_file != @equal - 1) [ 0 -> @valid. ]
+  ? @valid [
+   :load64[@work + 696] -> @c2. 0 -> @i.
+   ?? @i < @free_file [ !store8[@c2 + @i|:load8[@pointer + @file + @i]]. @i + 1 -> @i. ]
+  ]
+ ] ~ [
+  0 -> @ignore_lf.
+  ?? @valid * (@ignore_lf == 0) [
+   @file -> @j. 0 -> @c2. 0 -> @c3. 0 -> @c4. 0 -> @done.
+   ?? (@j + 1 < @wanted) * (@j - @file < 1024) * @valid * (@done == 0) [
+    :load8[@pointer + @j] -> @c0.
+    ? @c0 == 13 [
+     ? :load8[@pointer + @j + 1] == 10 [ 1 -> @done. ] ~ [ 0 -> @valid. ]
+    ] ~ [
+     ? @c4 == 0 [
+      ? @c0 == 59 [ 1 -> @c4. ] ~ [
+       256 -> @c1.
+       ? (@c0 >= 48) * (@c0 <= 57) [ @c0 - 48 -> @c1. ]
+       ? (@c0 >= 65) * (@c0 <= 70) [ @c0 - 55 -> @c1. ]
+       ? (@c0 >= 97) * (@c0 <= 102) [ @c0 - 87 -> @c1. ]
+       ? @c1 > 15 [ 0 -> @valid. ] ~ [ @c2 * 16 + @c1 -> @c2. @c3 + 1 -> @c3. ]
+       ? (@c3 > 8) + (@c2 > 65535) [ 0 -> @valid. !store64[@work + 408|9]. ]
+      ]
+     ] ~ [
+      # Parse extension names and token/quoted values without interpreting them.
+      (@c0 >= 48) * (@c0 <= 57) + (@c0 >= 65) * (@c0 <= 90) + (@c0 >= 97) * (@c0 <= 122) -> @operation.
+      "!#$%&'*+-.^_`|~" -> @name. 0 -> @k.
+      ?? @k < 15 [ ? @c0 == :load8[@name + @k] [ 1 -> @operation. ] @k + 1 -> @k. ]
+      @c4 -> @temporary.
+      ? @temporary == 1 [
+       ? @operation [ 2 -> @c4. ] ~ [ ? (@c0 != 32) * (@c0 != 9) [ 0 -> @valid. ] ]
+      ]
+      ? @temporary == 2 [
+       ? @operation == 0 [
+        ? @c0 == 61 [ 3 -> @c4. ] ~ [
+         ? @c0 == 59 [ 1 -> @c4. ] ~ [ ? (@c0 == 32) + (@c0 == 9) [ 8 -> @c4. ] ~ [ 0 -> @valid. ] ]
+        ]
+       ]
+      ]
+      ? @temporary == 3 [
+       ? @c0 == 34 [ 5 -> @c4. ] ~ [
+        ? @operation [ 4 -> @c4. ] ~ [ ? (@c0 != 32) * (@c0 != 9) [ 0 -> @valid. ] ]
+       ]
+      ]
+      ? @temporary == 4 [
+       ? @operation == 0 [
+        ? @c0 == 59 [ 1 -> @c4. ] ~ [ ? (@c0 == 32) + (@c0 == 9) [ 9 -> @c4. ] ~ [ 0 -> @valid. ] ]
+       ]
+      ]
+      ? @temporary == 5 [
+       ? @c0 == 34 [ 7 -> @c4. ] ~ [
+        ? @c0 == 92 [ 6 -> @c4. ] ~ [ ? (@c0 < 32) * (@c0 != 9) + (@c0 > 126) [ 0 -> @valid. ] ]
+       ]
+      ]
+      ? @temporary == 6 [
+       ? (@c0 < 32) * (@c0 != 9) + (@c0 > 126) [ 0 -> @valid. ] 5 -> @c4.
+      ]
+      ? (@temporary == 7) + (@temporary == 9) [
+       ? @c0 == 59 [ 1 -> @c4. ] ~ [ ? (@c0 == 32) + (@c0 == 9) [ 9 -> @c4. ] ~ [ 0 -> @valid. ] ]
+      ]
+      ? @temporary == 8 [
+       ? @c0 == 61 [ 3 -> @c4. ] ~ [
+        ? @c0 == 59 [ 1 -> @c4. ] ~ [ ? (@c0 != 32) * (@c0 != 9) [ 0 -> @valid. ] ]
+       ]
+      ]
+     ]
+     @j + 1 -> @j.
+    ]
+   ]
+   ? (@done == 0) + (@c3 == 0) + (@c4 == 1) + (@c4 == 3) + (@c4 == 5) + (@c4 == 6) [ 0 -> @valid. ]
+   ? @valid [
+    @j + 2 -> @file.
+    ? @c2 == 0 [ 1 -> @ignore_lf. ] ~ [
+     ? (@file + @c2 + 2 > @wanted) + (@free_file + @c2 > 65535) [ 0 -> @valid. ] ~ [
+      ? :load16[@pointer + @file + @c2] != 0x0a0d [ 0 -> @valid. ] ~ [
+       :load64[@work + 696] -> @c4. 0 -> @i.
+       ?? @i < @c2 [ !store8[@c4 + @free_file + @i|:load8[@pointer + @file + @i]]. @i + 1 -> @i. ]
+       @free_file + @c2 -> @free_file. @file + @c2 + 2 -> @file.
+      ]
+     ]
+    ]
+   ]
+  ]
+  # Trailers cannot override framing or response metadata. Validate and ignore other fields.
+  @file -> @slot. 0 -> @active_bank. 0 -> @done.
+  ?? @valid * (@done == 0) [
+   ? (@file + 1 >= @wanted) + (@file - @slot > 8190) [ 0 -> @valid. ] ~ [
+    ? :load16[@pointer + @file] == 0x0a0d [ @file + 2 -> @file. 1 -> @done. ] ~ [
+     @active_bank + 1 -> @active_bank. ? @active_bank > 128 [ 0 -> @valid. ]
+     @file -> @j. 0 -> @arguments. 0 -> @ready.
+     ?? (@j + 1 < @wanted) * (@j - @slot < 8190) * @valid * (@ready == 0) [
+      :load8[@pointer + @j] -> @c0.
+      ? @c0 == 13 [
+       ? :load8[@pointer + @j + 1] == 10 [ 1 -> @ready. ] ~ [ 0 -> @valid. ]
+      ] ~ [
+       ? (@c0 < 32) * (@c0 != 9) + (@c0 > 126) [ 0 -> @valid. ]
+       ? @arguments == 0 [
+        ? @c0 == 58 [ @j -> @arguments. ] ~ [
+         ? ((@c0 >= 48) * (@c0 <= 57) + (@c0 >= 65) * (@c0 <= 90) + (@c0 >= 97) * (@c0 <= 122) + (@c0 == 33) + (@c0 == 35) + (@c0 == 36) + (@c0 == 37) + (@c0 == 38) + (@c0 == 39) + (@c0 == 42) + (@c0 == 43) + (@c0 == 45) + (@c0 == 46) + (@c0 == 94) + (@c0 == 95) + (@c0 == 96) + (@c0 == 124) + (@c0 == 126)) == 0 [ 0 -> @valid. ]
+        ]
+       ]
+       @j + 1 -> @j.
+      ]
+     ]
+     ? (@ready == 0) + (@arguments == 0) + (@arguments == @file) [ 0 -> @valid. ]
+     1 -> @command. ?? @command <= 5 [
+      "content-length" -> @name. 14 -> @c5.
+      ? @command == 2 [ "transfer-encoding" -> @name. 17 -> @c5. ]
+      ? @command == 3 [ "content-encoding" -> @name. 16 -> @c5. ]
+      ? @command == 4 [ "content-type" -> @name. 12 -> @c5. ]
+      ? @command == 5 [ "location" -> @name. 8 -> @c5. ]
+      @arguments - @file == @c5 -> @ready. 0 -> @k.
+      ?? (@k < @c5) * @ready [
+       :load8[@pointer + @file + @k] -> @c0. ? (@c0 >= 65) * (@c0 <= 90) [ @c0 + 32 -> @c0. ]
+       ? @c0 != :load8[@name + @k] [ 0 -> @ready. ] @k + 1 -> @k.
+      ]
+      ? @ready [ 0 -> @valid. ] @command + 1 -> @command.
+     ]
+     @j + 2 -> @file.
+    ]
+   ]
+  ]
+  ? @file != @wanted [ 0 -> @valid. ]
+ ]
+]
+? ((@status == 204) + (@status == 304)) * (@free_file != 0) [ 0 -> @valid. ]
+? @valid [
+ !store8[:load64[@work + 696] + @free_file|0].
+ !store64[@work + 672|@status]. !store64[@work + 680|@free_file].
+ !store64[@work + 712|@name_length]. !store64[@work + 400|2]. !store64[@work + 464|0].
+] ~ [
+ !store64[@work + 680|0]. !store64[@work + 400|3]. !store64[@work + 464|0].
+ ? :load64[@work + 408] == 0 [ !store64[@work + 408|10]. ]
+]
+
+# END ZERO HTTP RESPONSE
+? @expectederror [ ? (:load64[@work+408] == 0)+(:load64[@work+400] == 2)+(:load64[@work+680] != 0) [ 1 -> @failed. ] ] ~ [
+ ? (:load64[@work+408] != 0)+(:load64[@work+400] != 2)+(:load64[@work+672] != @expectedstatus)+(:load64[@work+680] != @expectedlength) [ 1 -> @failed. ]
+ ? @expectedmime [ ? :load64[@work+704] != @expectedmime [ 1 -> @failed. ] ]
+ ? :load64[@work+720] != @expectedlocationlength [ 1 -> @failed. ]
+ 0 -> @testpos. ?? @testpos < @expectedlocationlength [ ? :load8[@work+23296+@testpos] != :load8[@expectedlocation+@testpos] [ 1 -> @failed. ] @testpos+1 -> @testpos. ]
+ 0 -> @testpos. ?? @testpos < @expectedlength [ ? :load8[@work+98304+@testpos] != :load8[@work+180000+@testpos] [ 1 -> @failed. ] @testpos+1 -> @testpos. ]
+ ? :load8[@work+98304+@expectedlength] != 0 [ 1 -> @failed. ]
+]
+? (:load64[@work+32760] != 0x1234567887654321)+(:load64[@work+163840] != 0x1122334455667788)+(:load64[@work+163848] != 0x1234567887654321)+(:load64[@work+23552] != 0x1122334455667788) [ 1 -> @failed. ]
+2166136261 -> @afterhash. 0 -> @testpos. ?? (@testpos < @fixturelength)*(@testpos < 65535) [ :bitand[:bitxor[@afterhash|:load8[@work+32768+@testpos]]*16777619|4294967295] -> @afterhash. @testpos+1 -> @testpos. ]
+? @afterhash != @beforehash [ 1 -> @failed. ]
+"PASS " -> @fixture. ? @failed [ @failures+1 -> @failures. "FAIL " -> @fixture. ]
+0 -> @testpos. ?? :load8[@fixture+@testpos] [ !put[:load8[@fixture+@testpos]]. @testpos+1 -> @testpos. ]
+0 -> @testpos. ?? :load8[@testname+@testpos] [ !put[:load8[@testname+@testpos]]. @testpos+1 -> @testpos. ] !put[10].
+@testcase+1 -> @testcase.
+]
+:hostfree[@work|262144] -> @teststatus.
+? @failures [ !exit[1]. ] !exit[0].

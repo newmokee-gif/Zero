@@ -1,0 +1,79 @@
+# Original Zero event and rendering checks; no host GUI or foreign test code.
+:reserve[131072] => @memory.
+@memory => @console.
+@memory+16384 => @editor.
+0 => @c0.
+0 => @c1.
+0 => @c2.
+0 => @c3.
+0 => @c4.
+0 => @c5.
+0 => @i.
+0 => @j.
+0 => @k.
+0 => @character.
+0 => @text.
+0 => @pointer.
+0 => @state.
+0 => @message.
+0 => @line_length.
+0 => @overflow.
+0 => @fixture.
+0 => @expected.
+0 => @wantlength.
+0 => @wantcursor.
+0 => @wantdirty.
+0 => @wantmode.
+0 => @wantstatus.
+0 => @wantmodal.
+0 => @wantio.
+0 => @wantbuild.
+0 => @check.
+0 => @position.
+0 => @result.
+0 => @failure.
+0 => @key.
+!store64[@console+2112|@memory+8192].
+1 -> @check.
+?? @check <= 28 [
+ @editor -> @c5. 0 -> @position.
+ ?? @position < 8192 [ !store64[@editor+@position|0]. @position+8 -> @position. ]
+ !store64[@console+2416|3]. 10 -> @state. 0 -> @message.
+ "AB" -> @fixture. "AB" -> @expected. 2 -> @wantlength. 2 -> @wantcursor.
+ 0 -> @wantdirty. 0 -> @wantmode. 0 -> @wantstatus. 3 -> @wantmodal.
+ 0 -> @wantio. 0 -> @wantbuild. 0 -> @character.
+ ? @check == 1 [ "" -> @fixture. "A" -> @expected. 65 -> @character. 1 -> @wantlength. 1 -> @wantcursor. 1 -> @wantdirty. ]
+ ? @check == 2 [ "AXB" -> @expected. 88 -> @character. 3 -> @wantlength. 2 -> @wantcursor. 1 -> @wantdirty. ]
+ ? @check == 3 [ "ABC" -> @fixture. "AC" -> @expected. 8 -> @character. 1 -> @wantcursor. 1 -> @wantdirty. ]
+ ? @check == 4 [ 262 -> @character. ]
+ ? @check == 5 [ "AB\n" -> @expected. 10 -> @character. 3 -> @wantlength. 3 -> @wantcursor. 1 -> @wantdirty. ]
+ ? @check == 6 [ 259 -> @character. ]
+ ? (@check == 7)+(@check == 8) [ "ABC\nDEF" -> @fixture. @fixture -> @expected. 7 -> @wantlength. ]
+ ? @check == 7 [ 260 -> @character. 4 -> @wantcursor. ]
+ ? @check == 8 [ 261 -> @character. 3 -> @wantcursor. ]
+ ? @check == 9 [ "abc\nxy" -> @fixture. @fixture -> @expected. 6 -> @wantlength. 2 -> @wantcursor. 256 -> @character. ]
+ ? @check == 10 [ "abc\nx" -> @fixture. @fixture -> @expected. 5 -> @wantlength. 5 -> @wantcursor. 257 -> @character. ]
+ ? @check == 11 [ @editor+6144 -> @fixture. 0 -> @position. ?? @position < 400 [ !store8[@fixture+@position|65]. @position+1 -> @position. ] !store8[@fixture+400|0]. @fixture -> @expected. 400 -> @wantlength. 400 -> @wantcursor. 66 -> @character. 5 -> @wantstatus. ]
+ ? @check == 12 [ 27 -> @character. 1 -> @wantdirty. 3 -> @wantmode. !store64[@editor+40|1]. ]
+ ? @check == 13 [ 89 -> @character. 0 -> @wantmodal. !store64[@editor+8|3]. !store64[@editor+40|1]. ]
+ ? @check == 14 [ 27 -> @character. 1 -> @wantdirty. !store64[@editor+8|3]. !store64[@editor+40|1]. ]
+ ? @check == 15 [ 15 -> @character. 1 -> @wantdirty. 4 -> @wantmode. !store64[@editor+40|1]. ]
+ ? @check == 16 [ 89 -> @character. 1 -> @wantmode. !store64[@editor+8|4]. !store64[@editor+40|1]. ]
+ ? @check == 17 [ 14 -> @character. "" -> @expected. 0 -> @wantlength. 0 -> @wantcursor. ]
+ ? @check == 18 [ 14 -> @character. 1 -> @wantdirty. 5 -> @wantmode. !store64[@editor+40|1]. ]
+ ? @check == 19 [ 19 -> @character. 2 -> @wantmode. ]
+ ? @check == 20 [ 90 -> @character. 2 -> @wantmode. !store64[@editor+8|2]. ]
+ ? @check == 21 [ 10 -> @character. 1 -> @wantmode. !store64[@editor+8|1]. ]
+ ? @check == 22 [ 10 -> @character. 1 -> @wantio. !store64[@editor+8|1]. !store64[@editor+72|1]. !store8[@editor+192|97]. ]
+ ? @check == 23 [ 19 -> @character. 2 -> @wantio. !store8[@editor+128|97]. ]
+ ? @check == 24 [ 2 -> @character. 1 -> @wantbuild. ]
+ ? @check == 25 [ 12 -> @character. ]
+ ? @check == 26 [ "" -> @fixture. "" -> @expected. 8 -> @character. 0 -> @wantlength. 0 -> @wantcursor. ]
+ ? @check == 27 [ "\nAB" -> @expected. 10 -> @character. 3 -> @wantlength. 1 -> @wantcursor. 1 -> @wantdirty. ]
+ ? @check == 28 [ " A" -> @expected. "A" -> @fixture. 9 -> @character. 1 -> @wantcursor. 1 -> @wantdirty. ]
+ 0 -> @position. ?? :load8[@fixture+@position] [ !store8[@editor+512+@position|:load8[@fixture+@position]]. @position+1 -> @position. ]
+ !store8[@editor+512+@position|0]. !store64[@editor+16|@position]. !store64[@editor+24|@position].
+ ? (@check == 2)+(@check == 8) [ !store64[@editor+24|1]. ]
+ ? (@check == 3)+(@check == 10) [ !store64[@editor+24|2]. ]
+ ? (@check == 27)+(@check == 28) [ !store64[@editor+24|0]. ]
+ @character -> @key.

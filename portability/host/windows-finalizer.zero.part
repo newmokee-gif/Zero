@@ -1,0 +1,88 @@
+# Original PE64 console application, fixed import RVAs and PIC code.
+? @mode == 7 [
+ ? @out < 4096 [ !exit[1]. ]
+ @out - 4096 -> @x.
+ 0 -> @y. ?? @y < @x [ @y + 512 -> @y. ]
+ @y + 4096 -> @k. @k + 512 -> @d.
+ ? @d > @limit [ !exit[1]. ]
+ 0 -> @z. ?? @z < @x [ @z + 4096 -> @z. ]
+ @z + 8192 -> @z.
+ @out -> @i. ?? @i < @d [ !store8[@output + @i | 0]. @i + 1 -> @i. ]
+ # DOS/COFF and PE32+ optional header.
+ !store16[@output | 0x5a4d]. !store32[@output + 60 | 64].
+ !store32[@output + 64 | 0x4550]. !store16[@output + 68 | 0x8664].
+ !store16[@output + 70 | 3]. !store16[@output + 84 | 240].
+ !store16[@output + 86 | 0x22]. !store16[@output + 88 | 0x20b].
+ !store8[@output + 90 | 1].
+ !store32[@output + 92 | @y]. !store32[@output + 96 | 4096].
+ !store32[@output + 104 | 8192]. !store32[@output + 108 | 8192].
+ !store64[@output + 112 | 0x140000000].
+ !store32[@output + 120 | 4096]. !store32[@output + 124 | 512].
+ !store16[@output + 128 | 6]. !store16[@output + 136 | 6].
+ !store32[@output + 144 | @z + 4096]. !store32[@output + 148 | 512].
+ !store16[@output + 156 | 3]. !store16[@output + 158 | 0x160].
+ # Commit the owned hosted stack up front: Zero reserves4MiB without CRT probes.
+ !store64[@output + 160 | 16777216]. !store64[@output + 168 | 16777216].
+ !store64[@output + 176 | 1048576]. !store64[@output + 184 | 4096].
+ !store32[@output + 196 | 16].
+ !store32[@output + 208 | 4096]. !store32[@output + 212 | 40].
+ !store32[@output + 240 | @z]. !store32[@output + 244 | 12].
+ !store32[@output + 296 | 4352]. !store32[@output + 300 | 208].
+ # Writable imports, executable/read-only text, discardable relocations.
+ !store64[@output + 328 | 0x000061746164692e].
+ !store32[@output + 336 | 3584]. !store32[@output + 340 | 4096].
+ !store32[@output + 344 | 3584]. !store32[@output + 348 | 512].
+ !store32[@output + 364 | 0xc0000040].
+ !store64[@output + 368 | 0x000000747865742e].
+ !store32[@output + 376 | @x]. !store32[@output + 380 | 8192].
+ !store32[@output + 384 | @y]. !store32[@output + 388 | 4096].
+ !store32[@output + 404 | 0x60000020].
+ !store64[@output + 408 | 0x0000636f6c65722e].
+ !store32[@output + 416 | 12]. !store32[@output + 420 | @z].
+ !store32[@output + 424 | 512]. !store32[@output + 428 | @k].
+ !store32[@output + 444 | 0x42000040].
+ # One KERNEL32 import descriptor plus null descriptor.
+ !store32[@output + 512 | 4608]. !store32[@output + 524 | 4864].
+ !store32[@output + 528 | 4352].
+ "KERNEL32.dll" -> @str. 0 -> @j.
+ ?? :load8[@str + @j] [ !store8[@output + 1280 + @j | :load8[@str + @j]]. @j + 1 -> @j. ]
+ 0 -> @i.
+ ?? @i < 25 [
+  4928 + @i * 32 -> @c.
+  !store64[@output + 768 + @i * 8 | @c].
+  !store64[@output + 1024 + @i * 8 | @c].
+  "GetCommandLineW" -> @str.
+  ? @i == 1 [ "GetStdHandle" -> @str. ]
+  ? @i == 2 [ "ReadFile" -> @str. ]
+  ? @i == 3 [ "WriteFile" -> @str. ]
+  ? @i == 4 [ "ExitProcess" -> @str. ]
+  ? @i == 5 [ "GetLastError" -> @str. ]
+  ? @i == 6 [ "CreateFileW" -> @str. ]
+  ? @i == 7 [ "GetFileSizeEx" -> @str. ]
+  ? @i == 8 [ "CloseHandle" -> @str. ]
+  ? @i == 9 [ "DeleteFileW" -> @str. ]
+  ? @i == 10 [ "CreateDirectoryW" -> @str. ]
+  ? @i == 11 [ "RemoveDirectoryW" -> @str. ]
+  ? @i == 12 [ "MoveFileExW" -> @str. ]
+  ? @i == 13 [ "MultiByteToWideChar" -> @str. ]
+  ? @i == 14 [ "GetFileInformationByHandle" -> @str. ]
+  ? @i == 15 [ "GetFileAttributesW" -> @str. ]
+  ? @i == 16 [ "SetEndOfFile" -> @str. ]
+  ? @i == 17 [ "WideCharToMultiByte" -> @str. ]
+  ? @i == 18 [ "VirtualAlloc" -> @str. ]
+  ? @i == 19 [ "VirtualProtect" -> @str. ]
+  ? @i == 20 [ "VirtualFree" -> @str. ]
+  ? @i == 21 [ "GetModuleFileNameW" -> @str. ]
+  ? @i == 22 [ "FlushInstructionCache" -> @str. ]
+  ? @i == 23 [ "FlushFileBuffers" -> @str. ]
+  ? @i == 24 [ "Sleep" -> @str. ]
+  0 -> @j.
+  ?? :load8[@str + @j] [
+   !store8[@output + 1346 + @i * 32 + @j | :load8[@str + @j]]. @j + 1 -> @j.
+  ]
+  @i + 1 -> @i.
+ ]
+ # All code/data references are relative; two ABSOLUTE relocation padding entries.
+ !store32[@output + @k | 8192]. !store32[@output + @k + 4 | 12].
+ @d -> @out.
+]

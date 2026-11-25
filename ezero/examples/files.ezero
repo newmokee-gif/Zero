@@ -1,0 +1,14 @@
+# Supply a dedicated folder as the first native argument.
+# In Zero OS, relative paths use the selected volume root.
+host() => when [
+ arguments() => paths
+ size(paths) == 1 => when [ go(paths[1]) => ready ]
+]
+create(notes) => ready
+save(notes | Hello from Ezero) => bytes
+Saved bytes => show
+read(notes) => show
+search("note*") => names
+names => each name [ name => show ]
+disks() => show
+# Explicit deletion is available as del(notes).

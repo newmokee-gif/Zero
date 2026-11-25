@@ -1,0 +1,4 @@
+host() => show
+3 банана => purchase
+purchase[1] + 2 => show
+purchase => show

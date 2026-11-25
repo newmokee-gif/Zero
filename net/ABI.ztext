@@ -1,0 +1,112 @@
+ZTEXT001000019bbbb7d08450000000
+ZERO NETWORK AND BROWSER TRANSPORT ABI 0.13
+
+Original Zero implementation. The existing computation worker2 runs a bounded
+network poll before yielding. Locals are private. console remains constant;
+work is the network base. The parent always schedules worker2, so pause3 does
+not suspend DHCP/recovery. Network operations never write user disk sectors.
+
+Memory ownership
+console+2400: network state pointer, or0 when no safe DMA region exists.
+console+2408: WiFi UI/radio state pointer = network+24576.
+Network/browser reserve pool+163840 through pool+393216 (229376 bytes).
+Wired control/DMA own offsets0..24575; WiFi owns24576..32767.
+Raw response owns32768..98303; decoded body owns98304..163839.
+Browser state owns163840..229375. Window slots begin at pool+393216.
+Pool minimum532480; usable window capacity is (poolsize-524288)/8192.
+Initialization zeroes the complete reserved region and rejects a misaligned,
+overflowed, too-small or above4GiB DMA pool. Compiler workspace is separate.
+
+Network u64 fields, except explicitly byte arrays
+0 driver state:0PCIscan,1initialize,2wait,3DHCP,4online,9retry
+8 PCnet I/O base;16 next PCI BDF;24 RX descriptor index
+32 public link:0detecting,1noadapter,2down,3DHCP,4connected,5error
+40 retry deadline;48 attempt count;56 transaction ID
+64 IPv4;72 mask;80 router;88 DNS;96 DHCPserver;104 offeredIPv4
+112 lease expiry;120 RXcount;128 TXcount;136 lease seconds
+144 physical link;152 link poll deadline;160 PCIconfig;168 error
+176 generation;184 renewal tick;192 packet errors;200 descriptor errors
+208 outgoing action;216 outgoing bytes;224 next-hop scratch;232 TXpending
+240 router MAC bytes6;248 MACknown;256 device MAC bytes6
+288..383 DHCP option candidates, published only after complete validation
+384 request generation, published LAST after request copying
+392 handled generation, compared with the request owner before consuming
+400 result:0idle,1running,2success,3error
+408 error:1offline,2invalid/unsupported URL,3noDNS,4ARP/route,
+    5DNSfailure,6connecttimeout,7reset,8read/transactiontimeout,
+    9response/body/declared size over65535,10invalid/incompleteHTTP,
+    12unsupported/duplicateTransfer-Encoding,13unsupported/duplicate
+    Content-Encoding,15interim1xxresponseunsupported
+416 RAW response byte count; consume metadata/body only on result2
+424 remoteIPv4;432 remoteport;440 DNSid;448 retrydeadline;456 retries
+464 stage:0idle,1DNSARP,2DNSwait,3TCPARP,4SYNwait,5GET,6read
+472 next localTCPsequence;480 next remoteTCPsequence
+488 prepared request length;496 initial localTCPsequence
+512..543 PCnet style2 initialization block
+544 ACKpending;568 response-data flag;608 remoteFIN
+616 per-request sourceport49152..57343;624 absolute deadline300ticks
+632 expected DNSquestion length;640 authority parsing scratch
+656 descriptor ownership deadline20ticks
+672 HTTP status code;680 decoded body byte count
+688 raw response pointer = network+32768
+696 decoded body pointer = network+98304
+704 MIME kind:0missing,1text/html or application/xhtml+xml,
+    2text/plain,3other. MIME parameters remain available in the string.
+712 header bytes including the final CRLFCRLF
+720 Location byte count
+
+Buffers
+1024..1151 eight16-byte RXdescriptors;1152..1167 TXdescriptor
+2048..14335 eight1536-byte RXbuffers;14336..15871 TXbuffer1536
+16384..16639 ASCII request, maximum255 bytes plusNUL
+16640..16767 hostname128;16768..17023 path256
+17024..21119 reserved, no longer the response buffer
+21200..21711 HTTP request512;22000..22255 encoded DNSquestion256
+22600..22855 Host authority256
+23040..23295 Content-Type ASCII value, maximum255 bytes plusNUL
+23296..23551 Location ASCII value, maximum255 bytes plusNUL
+32768..98303 raw response65536;98304..163839 decoded body65536
+
+HTTP response parser
+net/http-response.zero.part is the shared source. client-poll.zero.part embeds
+it between BEGIN/END HTTP RESPONSE PARSER. The independent native Zero checker
+embeds the same fragment; the integrator must refresh both after changes.
+Input raw length is at most65535, leaving one terminator byte. Body length is
+authoritative: embedded NUL and UTF8 bytes are preserved. No ASCII-body filter
+is applied to packet reception. Only legacy fetch sanitizes its raw terminal
+view; decoded browser data remains unchanged. fetch wait state740 is separate
+from native guest-service state700, and requires a firmware boot handoff.
+
+Only complete HTTP/1.0 or HTTP/1.1 responses are accepted. Status must be
+200..599; interim1xx is explicitly unsupported. Header syntax is strict ASCII
+with CRLF, token names and no obsolete folded lines. Header block is at most
+8192 bytes and128 fields. Content-Length values are decimal, bounded and
+duplicate values must agree. Transfer-Encoding permits one chunked field;
+Transfer-Encoding plus Content-Length is rejected. Content-Encoding supports
+only absent or one identity field; compressed gzip/br/deflate is not decoded.
+
+Chunk sizes, quoted/token extensions, CRLF, terminal zero and trailers are
+validated. Chunk lines cap1024 bytes, trailers cap8192 bytes/128fields. Trailer
+framing/encoding/MIME/Location overrides are rejected. No trailing bytes are
+accepted after chunk completion. The separate decoded buffer never exceeds
+65535 bytes. 204 must have no body and no CL/TE;304 must have no body and can
+carry representation Content-Length or Transfer-Encoding metadata. Duplicate
+Content-Type/Location fields, empty values or values over255 bytes fail.
+Ordinary responses without CL/TE consume the closed-stream body. A declared
+length mismatch fails rather than presenting a truncated page. Every new
+request clears previous body length, status, MIME and redirect metadata.
+
+Requests and limitations
+Request format HOST[:PORT][/PATH], optionally prefixed http://. IPv4 literals
+bypass DNS. Names use bounded ASCII DNS labels. Userinfo, IPv6, IDNA and TLS
+are unsupported; HTTPS is rejected, never silently downgraded. Requests use
+HTTP/1.0, Connection:close, Accept-Encoding:identity and User-Agent:Zero/0.13.
+The client waits for server close, so persistent peers ignoring close time
+out. Redirect policy belongs to the browser and must reuse URL validation.
+Charset conversion, image codecs, JavaScript, CSS and TLS are not transport
+features. UTF8 body preservation does not imply all Unicode glyphs render.
+
+IPv4 lengths/checksum/nonfragmentation, UDP checksum when present, DNS
+source/id/question/bounded records, TCP tuple/checksum/sequence/overlap and
+retries are checked. DHCP, DNS and HTTP are unauthenticated protocols. This
+is a bounded first transport, not a claim of modern all-site compatibility.

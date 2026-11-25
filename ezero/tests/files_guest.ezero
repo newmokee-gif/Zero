@@ -1,0 +1,2 @@
+# Run only on a selected private writable ZeroFS fixture.
+[create(eguest) | save(eguest | Hello) | read(eguest) | create(eguest) | readfile(eguest) | size(search(eguest)) | size(watch(.)) | go(.) | size(disks()) | del(eguest) | fileexists(eguest)] => show

@@ -1,0 +1,126 @@
+ZTEXT00100001e5164bc28580000000
+ZERO0.11 WINDOWS HOST INTEROPERABILITY BACKEND
+
+This backend is part of canonical Zero0.11. The preserved0.9 compiler and
+packages remain unchanged. Product implementation is original Zero and machine
+encodings. Platform calls use the host operating system's KERNEL32 APIs;
+there is no bundled C runtime, assembler, foreign compiler, shell launcher,
+PowerShell, Bash, Python runtime or subprocess dependency in the product.
+
+Source:
+  windows-layout.txt       original instruction bytes and local rel32 labels
+  windows-author.zero      original Zero formatter/resolver for that source data
+  windows-tables.zero.part resulting mode7 templates70 and86..103
+  windows-finalizer.zero.part original Zero PE/import-table finalization
+  ABI.ztext                  common operation and buffer/ownership contract
+
+The formatter itself is compiled by Zero. Its input is original encoding data,
+not third-party assembly. No external assembler/linker or code generator is
+used. Host integration/verification scripts only assemble source files and
+orchestrate tests; they implement no compiler or runtime behavior.
+
+Native Windows startup uses GetCommandLineW and strict UTF-8 conversion, then
+our own bounded argument parser. It supports quote grouping, empty arguments,
+backslashes preceding quotes, literal quotes, tabs and spaces. There may be
+63 user arguments, excluding the program name. The complete UTF-8 command
+line including executable spelling, separators and quoting must fit4095 bytes.
+An oversized line, excess arguments or unmatched quote exits64. User indices
+start at1; out-of-range argument returns0. A preserved main-frame pointer keeps
+these pointers valid across Zero cooperative fork/switch contexts.
+
+program() returns a stable borrowed UTF-8 absolute module-path buffer, bounded
+to4095 bytes, or0 on error. It uses GetModuleFileNameW rather than trusting argv0.
+The hosted startup allocation is16KiB, containing arguments and program-path
+storage, while the existing4MiB arena/argc offsets remain unchanged.
+
+All path operations require a valid NUL-terminated string of at most4095 bytes.
+MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS) rejects malformed UTF-8;
+wide Windows file APIs perform filesystem operations. Native Windows path
+rules and filesystem limits still apply. Ancestor links are not a sandbox.
+
+fileopen uses CreateFileW with FILE_FLAG_OPEN_REPARSE_POINT, rejects directory
+and final-reparse attributes both before opening and on the opened handle,
+and closes rejected handles. Mode2 uses OPEN_ALWAYS, validates the handle,
+then truncates with SetEndOfFile. Modes1/4 use CREATE_NEW and never overwrite.
+Read mode shares reads; write modes request exclusive sharing. ReadFile and
+WriteFile preserve partial counts and binary bytes. New file I/O operations
+normalize failures to u64(-1); count must not exceed0x7fffffff. EOF returns0.
+Other file primitives follow ABI.ztext. MoveFileExW uses flags0: no replacement
+and no cross-filesystem COPY_ALLOWED fallback. RemoveDirectoryW only removes
+empty directories, after rejecting a final reparse point.
+
+filesync[handle] calls FlushFileBuffers on an owned writable file handle,
+mapping a nonzero BOOL to0 and failure to unsigned-1. It preserves the offset
+and leaves the handle open. This request does not make parent directory entries
+or renames crash-durable and is not proof of physical power-loss survival.
+hostwait[milliseconds] calls Sleep for0..86400000 inclusive, returning0;
+larger unsigned values return-1 without a Windows call. The calling native
+thread sleeps, including every Zero cooperative task scheduled on that thread.
+The PE import arrays now hold25 imports plus a null thunk (208 bytes).
+
+hostalloc uses VirtualAlloc RW; hostprotect uses VirtualProtect to RW or RX
+and flushes the instruction cache after RX. No RWX protection is requested.
+hostfree validates a nonzero supplied size and releases the complete original
+Windows allocation using VirtualFree(base,0,MEM_RELEASE), as its API requires.
+Callers own the ranges and must not pass arbitrary pointers or partial bases.
+
+VERIFICATION
+
+Current0.11 component evidence is in durability/{results.json,
+windows-verification.json}. The focused probe contains21 Windows assertions
+for flush/wait success, errors, handle/stack preservation and millisecond bounds;
+the native Windows compiler still self-reproduces byte-for-byte under Wine.
+The existing API/Unicode/argument/cooperative-context suite also passes.
+The older reports below describe0.10 and are retained as historical evidence.
+
+windows-verification.json records the exact combined compiler/source hashes:
+-61 functional API assertions, including all file modes, Unicode paths,
+ binary I/O, EOF, size, overwrite refusal, truncation and dynamic native call;
+-20 invalid-pointer-value, malformed UTF-8, path-limit and allocation checks;
+-4-byte Unicode paths, exact argument roundtrips,63-user-argument boundary;
+-absolute Unicode program path and byte-exact Windows compiler self-rebuild;
+-Ezero native Windows readfile/writefile/arguments, preserving existing files.
+
+windows-cli-verification.json records26 native compiler CLI checks: real PE
+zero.exe and ezero.exe with no command interpreter, relocation and Unicode
+paths, all9 target output parities, compiler/CLI self-rebuild, high-level
+examples and host files, detailed errors, output preservation and app guards.
+The native CLI implementation lives in tools/compiler-cli.zero, not in Python.
+installer/verification/native-wine.json records18 preparation/verification/
+removal checks for the original Zero setup program. It explicitly does not
+install a boot entry or claim the prepared folder is bootable.
+
+The environment is Wine10.0 on Debian13. No native Microsoft Windows machine
+run is claimed. Wine10's CreateSymbolicLinkW is a stub; the test-only original
+Zero fixture records this at windows-tests/link-fixture.stderr. Wine's Z:
+POSIX symlinks do not expose Windows FILE_ATTRIBUTE_REPARSE_POINT, so they
+cannot establish a native Windows reparse-point rejection test. Those cases
+are explicitly unverified/skipped, never reported as passing. Windows disk-
+full injection and cross-volume move execution are not covered here.
+
+Only original Windows product binaries and their own source/runtime companions
+belong in a distribution. Wine, QEMU, firmware and Linux host tools stay outside
+it. The external test scripts and test-only import fixture are not product
+runtime components.
+
+The Windows argument-pointer contract was also exercised through the original
+cooperative-context regression: two workers,128 switches per worker, checking
+argcount/argument from child frames after each return. This passed under Wine.
+
+HISTORICAL FINAL0.10 PACKAGE
+The host backend is now part of canonical compiler.zero, sourceSHA256
+cf01adff93330c930d1fa6628bbc459d6e93a404b3196afa6ae783922ecc77b7,
+Linux compiler911f6d67361300755c13bbf5f3d231d54ceae5736f1ec5e60dde5d6e4095ed3a.
+The final native-only Windows toolkit is
+build/zero-ezero-windows-x64-0.10.0.zip,179663 bytes, SHA256
+8b66f28c6b64ccc781bc296c31aa9b514df1e02e371b0c8c4da862b64a3bdaa5.
+It contains no CMD/PowerShell/shell/Python files or foreign runtime DLLs.
+The exact ZIP passed13 packaged Wine smoke checks against the final0.10 ISO,
+including real native compilation, file operations, compiler reproduction,
+installer lifecycle and updater selection/rollback. Evidence is persisted at
+verification/windows-0.10.0/packaged-smoke.json and SUMMARY.ztext.
+No native Windows machine run or boot activation is claimed.
+
+The final four-Ezero-document refresh changed no code or native image.
+verification/windows-0.10.0/documentation-refresh.json proves all other
+38 payload files remained byte-identical; existing runtime evidence applies.

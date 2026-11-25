@@ -1,0 +1,10 @@
+? @h_error [ !exit[@h_error]. ]
+!store64[@b_doc|0x313030574f52425a]. !store64[@b_doc+8|1].
+!store64[@b_doc+16|@h_written]. !store64[@b_doc+24|@h_linkcount].
+!store64[@b_doc+32|@h_flags]. !store64[@b_doc+40|0].
+!store64[@b_doc+48|@h_width]. !store64[@b_doc+56|0].
+16576+@h_written -> @b_size. 0 -> @b_i.
+?? @b_i < @b_size [
+ :write[@b_doc+@b_i|@b_size-@b_i] -> @b_n.
+ ? (@b_n == 0)+(@b_n > @b_size-@b_i) [ !exit[74]. ] @b_i+@b_n -> @b_i.
+]

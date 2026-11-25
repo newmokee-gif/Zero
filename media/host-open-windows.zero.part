@@ -1,0 +1,151 @@
+# Native Win64 storage interface. Only a canonical removable USB PhysicalDrive
+# with a serial number is eligible. Mounted volumes are not silently removed.
+? (:load64[@mh+40] == 0) * (:load64[@mh+96] == 2) [
+ :hostlibrary["kernel32.dll"] -> @mh0.
+ ? @mh0 == 0 [ !store64[@mh+40|69]. ] ~ [
+  !store64[@mh+256|:hostsymbol[@mh0|"CreateFileA"]].
+  !store64[@mh+264|:hostsymbol[@mh0|"CloseHandle"]].
+  !store64[@mh+272|:hostsymbol[@mh0|"DeviceIoControl"]].
+  !store64[@mh+280|:hostsymbol[@mh0|"GetWindowsDirectoryA"]].
+  !store64[@mh+288|:hostsymbol[@mh0|"FindFirstVolumeA"]].
+  !store64[@mh+296|:hostsymbol[@mh0|"FindNextVolumeA"]].
+  !store64[@mh+304|:hostsymbol[@mh0|"FindVolumeClose"]].
+  !store64[@mh+312|:hostsymbol[@mh0|"GetVolumePathNamesForVolumeNameA"]].
+  !store64[@mh+320|:hostsymbol[@mh0|"ReadFile"]].
+  !store64[@mh+328|:hostsymbol[@mh0|"WriteFile"]].
+  !store64[@mh+336|:hostsymbol[@mh0|"SetFilePointerEx"]].
+  !store64[@mh+344|:hostsymbol[@mh0|"FlushFileBuffers"]].
+  !store64[@mh+352|:hostsymbol[@mh0|"GetLastError"]].
+  256 -> @mh1. ?? @mh1 <= 352 [ ? :load64[@mh+@mh1] == 0 [ !store64[@mh+40|69]. ] @mh1+8 -> @mh1. ]
+ ]
+ !store64[@mh+48|"Windows storage interfaces are unavailable.\n"].
+ ? :load64[@mh+40] == 0 [
+  :load64[@mh+8] -> @mh0. "\\\\.\\PhysicalDrive" -> @mh1. 0 -> @mh2.
+  ?? (:load8[@mh0+@mh2] != 0) * (@mh2 < 21) [ @mh2+1 -> @mh2. ]
+  ? (@mh2 < 18) + (@mh2 > 20) [ !store64[@mh+40|64]. ]
+  0 -> @mh2.
+  ?? (@mh2 < 17) * (:load64[@mh+40] == 0) [ ? :load8[@mh0+@mh2] != :load8[@mh1+@mh2] [ !store64[@mh+40|64]. ] @mh2+1 -> @mh2. ]
+  17 -> @mh2.
+  0 -> @mh3. 0 -> @mh4.
+  ? :load64[@mh+40] == 0 [
+   ?? (:load8[@mh0+@mh2] != 0) * (@mh2 < 21) [
+    :load8[@mh0+@mh2] -> @mh1.
+    ? (@mh1 < 48) + (@mh1 > 57) [ !store64[@mh+40|64]. ]
+    @mh3*10+@mh1-48 -> @mh3. @mh4+1 -> @mh4. @mh2+1 -> @mh2.
+   ]
+   ? (@mh4 > 1) * (:load8[@mh0+17] == 48) [ !store64[@mh+40|64]. ]
+  ]
+  ? (@mh4 == 0) + (@mh4 > 3) + (@mh3 > 255) [ !store64[@mh+40|64]. ]
+  !store64[@mh+104|@mh3]. !store64[@mh+176|0]. !store64[@mh+184|-1].
+  !store64[@mh+48|"Target must be an exact Windows PhysicalDrive path with a decimal disk number, 0 through 255.\n"].
+ ]
+ ? :load64[@mh+40] == 0 [
+  0x80000000 -> @mh1. 3 -> @mh2.
+  ? :load64[@mh] == 2 [ 0xc0000000 -> @mh1. 0 -> @mh2. ]
+  # Writing needs an unshared physical handle AND each member volume lock.
+  :hostcall12[:load64[@mh+256]|:load64[@mh+8]|@mh1|@mh2|0|3|0|0|0|0|0|0|0] -> @mh4.
+  ? @mh4 == -1 [ !store64[@mh+40|73]. !store64[@mh+48|"Cannot open the physical disk. Run as administrator and close other disk tools.\n"]. ] ~ [ !store64[@mh+16|@mh4]. ]
+ ]
+ ? :load64[@mh+40] == 0 [
+  # STORAGE_DEVICE_DESCRIPTOR is variable-length and every used field is bounded.
+  !store64[@mh+512|0]. !store64[@mh+520|0]. !store64[@mh+528|0].
+  :hostcall12[:load64[@mh+272]|@mh4|0x2d1400|@mh+512|12|@mh+2048|4096|@mh+536|0|0|0|0|0] -> @mh0.
+  :load32[@mh+536] -> @mh1.
+  ? (@mh0 == 0) + (@mh1 < 36) + (@mh1 > 4096) [ !store64[@mh+40|65]. ] ~ [
+   :load32[@mh+2052] -> @mh2. :load32[@mh+2072] -> @mh3.
+   ? (@mh2 < 36) + (@mh2 > @mh1) + (:load8[@mh+2058] != 1) + (:load32[@mh+2076] != 7) + (@mh3 < 36) + (@mh3 >= @mh2) [ !store64[@mh+40|65]. ] ~ [
+    @mh3 -> @mh5. ?? (@mh5 < @mh2) * (:load8[@mh+2048+@mh5] != 0) [ @mh5+1 -> @mh5. ]
+    ? (@mh5 == @mh3) + (@mh5 == @mh2) [ !store64[@mh+40|65]. ]
+    14695981039346656037 -> @mh6. 0 -> @mh5.
+    ?? @mh5 < @mh2 [ :bitxor[@mh6|:load8[@mh+2048+@mh5]]*1099511628211 -> @mh6. @mh5+1 -> @mh5. ]
+    !store64[@mh+128|@mh6].
+   ]
+  ]
+  !store64[@mh+48|"Target must be removable USB storage with a nonempty hardware serial number.\n"].
+ ]
+ ? :load64[@mh+40] == 0 [
+  :hostcall12[:load64[@mh+272]|@mh4|0x2d1080|0|0|@mh+512|32|@mh+536|0|0|0|0|0] -> @mh0.
+  ? (@mh0 == 0) + (:load32[@mh+536] < 12) + (:load32[@mh+512] != 7) + (:load32[@mh+516] != :load64[@mh+104]) + ((:load32[@mh+520] != 0xffffffff) * (:load32[@mh+520] != 0)) [ !store64[@mh+40|65]. ]
+  :hostcall12[:load64[@mh+272]|@mh4|0x700a0|0|0|@mh+2048|4096|@mh+536|0|0|0|0|0] -> @mh0.
+  ? (@mh0 == 0) + (:load32[@mh+536] < 32) [ !store64[@mh+40|65]. ] ~ [
+   !store64[@mh+32|:load32[@mh+2068]]. !store64[@mh+24|:load64[@mh+2072]].
+   ? (:load64[@mh+32] != 512) + (:load64[@mh+24] < 1048576) + (:bitand[:load64[@mh+24]|511] != 0) [ !store64[@mh+40|65]. ]
+  ]
+  :hostcall12[:load64[@mh+272]|@mh4|0x70024|0|0|0|0|@mh+536|0|0|0|0|0] -> @mh0.
+  ? @mh0 == 0 [ !store64[@mh+40|65]. ]
+  !store64[@mh+48|"Physical disk identity, writable state, capacity or 512-byte sector size could not be verified.\n"].
+ ]
+ ? :load64[@mh+40] == 0 [
+  # Explicitly exclude the Windows system volume, even when Windows runs on USB.
+  :hostcall12[:load64[@mh+280]|@mh+1024|512|0|0|0|0|0|0|0|0|0|0] -> @mh0.
+  ? (@mh0 < 3) + (@mh0 >= 512) + (:load8[@mh+1025] != 58) + (:load8[@mh+1026] != 92) [ !store64[@mh+40|65]. ] ~ [
+   !store32[@mh+1536|0x5c2e5c5c]. !store8[@mh+1540|:load8[@mh+1024]]. !store8[@mh+1541|58]. !store8[@mh+1542|0].
+   :hostcall12[:load64[@mh+256]|@mh+1536|0|3|0|3|0|0|0|0|0|0|0] -> @mh5.
+   ? @mh5 == -1 [ !store64[@mh+40|65]. ] ~ [
+    :hostcall12[:load64[@mh+272]|@mh5|0x560000|0|0|@mh+2048|4096|@mh+536|0|0|0|0|0] -> @mh0.
+    :load32[@mh+2048] -> @mh1.
+    ? (@mh0 == 0) + (@mh1 == 0) + (@mh1 > 128) + (:load32[@mh+536] < 8+@mh1*24) [ !store64[@mh+40|65]. ] ~ [
+     0 -> @mh2. ?? @mh2 < @mh1 [ ? :load32[@mh+2056+@mh2*24] == :load64[@mh+104] [ !store64[@mh+40|65]. ] @mh2+1 -> @mh2. ]
+    ]
+    :hostcall12[:load64[@mh+264]|@mh5|0|0|0|0|0|0|0|0|0|0|0] -> @mh0.
+   ]
+  ]
+  !store64[@mh+48|"The Windows system disk is protected, or its identity could not be verified.\n"].
+ ]
+ ? :load64[@mh+40] == 0 [
+  # Enumerate ALL volume GUID names, including volumes without drive letters.
+  :hostcall12[:load64[@mh+288]|@mh+1024|512|0|0|0|0|0|0|0|0|0|0] -> @mh6.
+  ? @mh6 == -1 [ !store64[@mh+40|65]. ] ~ [ !store64[@mh+184|@mh6]. ]
+  0 -> @mh11.
+  ?? (:load64[@mh+40] == 0) * (@mh11 < 4096) [
+   0 -> @mh1. ?? (:load8[@mh+1024+@mh1] != 0) * (@mh1 < 512) [ @mh1+1 -> @mh1. ]
+   ? (@mh1 < 8) + (@mh1 >= 512) [ !store64[@mh+40|65]. ] ~ [
+    ? :load8[@mh+1024+@mh1-1] != 92 [ !store64[@mh+40|65]. ] ~ [
+     !store8[@mh+1024+@mh1-1|0]. !store64[@mh+168|@mh1-1].
+     :hostcall12[:load64[@mh+256]|@mh+1024|0|3|0|3|0|0|0|0|0|0|0] -> @mh5.
+     ? @mh5 == -1 [ !store64[@mh+40|65]. ] ~ [
+      :hostcall12[:load64[@mh+272]|@mh5|0x560000|0|0|@mh+2048|4096|@mh+536|0|0|0|0|0] -> @mh0.
+      :load32[@mh+2048] -> @mh1. 0 -> @mh7.
+      ? (@mh0 == 0) + (@mh1 == 0) + (@mh1 > 128) + (:load32[@mh+536] < 8+@mh1*24) [ !store64[@mh+40|65]. ] ~ [
+       0 -> @mh2. ?? @mh2 < @mh1 [ ? :load32[@mh+2056+@mh2*24] == :load64[@mh+104] [ 1 -> @mh7. ] @mh2+1 -> @mh2. ]
+      ]
+      :hostcall12[:load64[@mh+264]|@mh5|0|0|0|0|0|0|0|0|0|0|0] -> @mh0.
+      ? @mh7 * (:load64[@mh+40] == 0) [
+       # Restore the trailing slash for mount-path enumeration. Any mount path,
+       # including a directory mount point, requires explicit user removal first.
+       !store8[@mh+1024+:load64[@mh+168]|92]. !store8[@mh+1025+:load64[@mh+168]|0].
+       !store64[@mh+2048|0].
+       :hostcall12[:load64[@mh+312]|@mh+1024|@mh+2048|4096|@mh+536|0|0|0|0|0|0|0|0] -> @mh0.
+       ? (@mh0 == 0) + (:load8[@mh+2048] != 0) [ !store64[@mh+40|73]. ]
+       !store8[@mh+1024+:load64[@mh+168]|0].
+       ? (:load64[@mh] == 2) * (:load64[@mh+40] == 0) [
+        ? :load64[@mh+176] >= 128 [ !store64[@mh+40|65]. ] ~ [
+         :hostcall12[:load64[@mh+256]|@mh+1024|0xc0000000|3|0|3|0|0|0|0|0|0|0] -> @mh5.
+         ? @mh5 == -1 [ !store64[@mh+40|73]. ] ~ [
+          # FSCTL_LOCK_VOLUME succeeds only when the filesystem has no open users.
+          :hostcall12[:load64[@mh+272]|@mh5|0x90018|0|0|0|0|@mh+536|0|0|0|0|0] -> @mh0.
+          ? @mh0 == 0 [
+           !store64[@mh+40|73]. :hostcall12[:load64[@mh+264]|@mh5|0|0|0|0|0|0|0|0|0|0|0] -> @mh0.
+          ] ~ [
+           !store64[@mh+6400+:load64[@mh+176]*8|@mh5]. !store64[@mh+176|:load64[@mh+176]+1].
+          ]
+         ]
+        ]
+       ]
+      ]
+     ]
+    ]
+   ]
+   ? :load64[@mh+40] == 0 [
+    :hostcall12[:load64[@mh+296]|@mh6|@mh+1024|512|0|0|0|0|0|0|0|0|0] -> @mh0.
+    ? @mh0 == 0 [
+     :hostcall12[:load64[@mh+352]|0|0|0|0|0|0|0|0|0|0|0|0] -> @mh0.
+     ? @mh0 != 18 [ !store64[@mh+40|65]. ]
+     4096 -> @mh11.
+    ] ~ [ @mh11+1 -> @mh11. ? @mh11 == 4096 [ !store64[@mh+40|65]. ] ]
+   ]
+  ]
+  ? @mh6 != -1 [ :hostcall12[:load64[@mh+304]|@mh6|0|0|0|0|0|0|0|0|0|0|0] -> @mh0. !store64[@mh+184|-1]. ]
+  !store64[@mh+48|"USB volume is mounted or busy, or complete volume ownership could not be verified. Remove its drive letters and mount points before writing.\n"].
+ ]
+]

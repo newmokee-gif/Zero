@@ -1,0 +1,2 @@
+"lines" => word
+join([word | "join"] | /) => show

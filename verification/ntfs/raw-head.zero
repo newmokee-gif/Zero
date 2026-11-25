@@ -1,0 +1,40 @@
+# The exact NTFS driver below runs unchanged in the guest and this harness.
+:reserve[65536] => @memory.
+:reserve[1024] => @input.
+0 => @state.
+0 => @current.
+0 => @pointer.
+0 => @character.
+0 => @i.
+0 => @j.
+0 => @k.
+0 => @temporary.
+0 => @status.
+0 => @timeout.
+0 => @ready.
+0 => @valid.
+0 => @done.
+0 => @checksum.
+0 => @c0.
+0 => @c1.
+0 => @c2.
+0 => @c3.
+0 => @c4.
+0 => @c5.
+0 => @io_lba.
+0 => @io_buffer.
+0 => @io_count.
+0 => @io_write.
+0 => @io_return.
+0 => @io_ok.
+0 => @writes.
+0 => @reads.
+0 => @flushes.
+0 => @length.
+0 -> @i. ?? @i < 65536 [ !store8[@memory + @i| 0]. @i + 1 -> @i. ]
+!store64[@memory + 24648| 900].
+!store64[@memory + 24664| 131072].
+300 -> @state.
+?? @state != 900 [
+ @state -> @current.
+ ? @current == 90 [ 0 -> @io_ok. @io_return -> @state. ]

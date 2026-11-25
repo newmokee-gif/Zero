@@ -1,0 +1,8 @@
+# Original BIOS E820 encoding. Standard binary ECX continuation / EAX buffer.
+# Buffer must be <=0xffe0; an invalid buffer returns0xffffffff without access.
+# Requests24 bytes, initializes extended attributes to1, stores returned size
+# at buffer+24. Returns EBX continuation or0xffffffff on CF, invalid signature,
+# returned size<20 or>24. Preserves general registers except EAX result,
+# DS/ES/EFLAGS, then clears DF. Uses our existing CS:0x6e08 result scratch.
+!store64[@templates + 1280 | "669c1e0666603667668b7c241c6681ffe0ff0000660f87730000003667668b5c241831d28eda8ec2fc266766c747140100000066b820e8000066ba50414d5366b918000000fbcd15fa3667668b7c241cba00008ec2266766894f18660f822c000000663d50414d53660f851f0000006683f914660f82140000006683f918660f87090000006689d866e90600000066b8ffffffff2e66a3086e6661071f669dfc2e66a1086e"].
+!store64[@templates + 1288 | 165].

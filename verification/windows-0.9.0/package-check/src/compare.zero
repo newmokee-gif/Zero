@@ -1,0 +1,24 @@
+# Original binary self-reproduction checker. Input is two files concatenated.
+# Each Zero executable is at most458752 bytes; no host file API is needed.
+:reserve[917520] => @bytes.
+0 => @length.
+0 => @count.
+0 => @done.
+0 => @half.
+0 => @i.
+?? @done == 0 [
+ :read[@bytes + @length | 917505 - @length] -> @count.
+ ? @count == 0 [ 1 -> @done. ] ~ [
+  ? @count > 917505 - @length [ !exit[1]. ]
+  @length + @count -> @length.
+  ? @length > 917504 [ !exit[1]. ]
+ ]
+]
+? @length == 0 [ !exit[1]. ]
+:shr[@length | 1] -> @half.
+? @half * 2 != @length [ !exit[1]. ]
+?? @i < @half [
+ ? :load8[@bytes + @i] != :load8[@bytes + @half + @i] [ !exit[1]. ]
+ @i + 1 -> @i.
+]
+!exit[0].

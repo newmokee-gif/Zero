@@ -1,0 +1,149 @@
+
+:reserve[65536] => @memory.
+@memory + 16384 => @console.
+@memory + 13824 => @line.
+@memory + 14336 => @listing.
+:reserve[1048576] => @pool.
+:reserve[128] => @boot_information.
+0 => @state.
+0 => @operation.
+0 => @ready.
+0 => @done.
+0 => @message.
+0 => @line_length.
+0 => @overflow.
+0 => @ignore_lf.
+0 => @pointer.
+0 => @valid.
+0 => @i.
+0 => @j.
+0 => @c0.
+0 => @c1.
+0 => @c2.
+0 => @c3.
+0 => @c4.
+0 => @c5.
+0 => @saved.
+0 => @counter.
+0 => @next.
+0 -> @i.
+?? @i < 65536 [ !store8[@memory + @i| 0]. @i + 1 -> @i. ]
+0 -> @i.
+?? @i < 1048576 [ !store8[@pool + @i| 165]. @i + 1 -> @i. ]
+!store64[@boot_information + 112| @pool].
+!store64[@boot_information + 120| 1048576].
+!store64[@boot_information + 104| 64].
+#@WM_INIT@
+
+? :load64[@console + 2056] != 88 [ !exit[1]. ]
+? :load64[@console + 2072] != 2 [ !exit[2]. ]
+? :load64[@console + 2048] != @pool + 196608 [ !exit[3]. ]
+? @line != @pool + 196608 + 256 [ !exit[4]. ]
+? :load64[@console + 2112] != @pool + 196608 [ !exit[5]. ]
+? :load64[:load64[@console + 2112] + 144] != 1 [ !exit[6]. ]
+? :load64[@pool + 196608 + 8192 + 144] != 0 [ !exit[7]. ]
+? :load64[@pool + 196608 + 2 * 8192] != 0 [ !exit[8]. ]
+!store8[@line| 97]. !store8[@line + 1| 98]. !store8[@line + 2| 99].
+3 -> @line_length. 1 -> @overflow. 1 -> @ignore_lf.
+!store64[@memory + 24688| 7].
+!store64[@memory + 24704| 10].
+10 -> @state.
+!store64[@console + 2096| 3].
+#@WM_SWITCH@
+
+? :load64[@console + 2064] != 1 [ !exit[9]. ]
+? @state != 9 [ !exit[10]. ]
+? @line_length != 0 [ !exit[11]. ]
+? @overflow != 0 [ !exit[12]. ]
+? :load64[@memory + 24688] != 0 [ !exit[13]. ]
+10 -> @state.
+!store8[@line| 120]. 1 -> @line_length.
+!store64[@memory + 24688| 2].
+0 -> @ignore_lf.
+!store64[@console + 2096| 4].
+#@WM_SWITCH@
+
+? :load64[@console + 2064] != 0 [ !exit[14]. ]
+? @state != 10 [ !exit[15]. ]
+? @line_length != 3 [ !exit[16]. ]
+? @overflow != 1 [ !exit[17]. ]
+? @ignore_lf != 0 [ !exit[18]. ]
+? :load64[@memory + 24688] != 7 [ !exit[19]. ]
+? :load8[@line + 1] != 98 [ !exit[20]. ]
+? @message != 0 [ !exit[21]. ]
+!store64[@console + 2096| 1].
+#@WM_SWITCH@
+
+? :load64[@console + 2064] != 2 [ !exit[22]. ]
+? :load64[@console + 2072] != 3 [ !exit[23]. ]
+? :load64[@memory + 24688] != 7 [ !exit[24]. ]
+? @line_length != 0 [ !exit[25]. ]
+? @state != 9 [ !exit[26]. ]
+10 -> @state.
+!store64[@console + 2096| 2].
+#@WM_SWITCH@
+
+? :load64[@console + 2064] != 0 [ !exit[27]. ]
+? :load64[@console + 2072] != 2 [ !exit[28]. ]
+? :load64[@pool + 196608 + 2 * 8192] != 0 [ !exit[29]. ]
+? @line_length != 3 [ !exit[30]. ]
+!store64[@console + 2096| 1].
+#@WM_SWITCH@
+
+? :load64[@console + 2064] != 2 [ !exit[31]. ]
+? :load8[@line] != 0 [ !exit[32]. ]
+? :load64[:load64[@console + 2112] + 16] != 0 [ !exit[33]. ]
+10 -> @state.
+!store64[@console + 2096| 7].
+#@WM_SWITCH@
+
+? :load64[@console + 2080] != 1 [ !exit[34]. ]
+? :load64[@console + 2064] != 2 [ !exit[35]. ]
+!store64[@console + 2096| 5].
+#@WM_SWITCH@
+
+? :load64[@console + 2080] != 0 [ !exit[36]. ]
+!store8[@line| 122]. 1 -> @line_length.
+!store64[@console + 2104| 88]. !store64[@console + 2096| 8].
+#@WM_SWITCH@
+
+? :load64[@console + 2064] != 2 [ !exit[37]. ]
+? @line_length != 1 [ !exit[38]. ]
+? :load8[@line] != 122 [ !exit[39]. ]
+? @message != @listing [ !exit[40]. ]
+0 -> @i.
+?? @i < 196608 [ ? :load8[@pool + @i] != 165 [ !exit[41]. ] @i + 1 -> @i. ]
+917504 -> @i.
+?? @i < 1048576 [ ? :load8[@pool + @i] != 165 [ !exit[42]. ] @i + 1 -> @i. ]
+0 -> @counter.
+?? @counter < 85 [
+ 10 -> @state. !store64[@console + 2096| 1].
+#@WM_SWITCH@
+
+ @counter + 1 -> @counter.
+]
+? :load64[@console + 2072] != 88 [ !exit[43]. ]
+:load64[@console + 2064] -> @saved.
+!store64[@console + 2096| 1].
+#@WM_SWITCH@
+
+? :load64[@console + 2072] != 88 [ !exit[44]. ]
+? :load64[@console + 2064] != @saved [ !exit[45]. ]
+? @message != @listing [ !exit[46]. ]
+0 -> @counter.
+?? @counter < 87 [
+ 10 -> @state. !store64[@console + 2096| 2].
+#@WM_SWITCH@
+
+ @counter + 1 -> @counter.
+]
+? :load64[@console + 2072] != 1 [ !exit[47]. ]
+:load64[@console + 2064] -> @saved.
+!store64[@console + 2096| 2].
+#@WM_SWITCH@
+
+? :load64[@console + 2072] != 1 [ !exit[48]. ]
+? :load64[@console + 2064] != @saved [ !exit[49]. ]
+? @message != @listing [ !exit[50]. ]
+!put[80]. !put[65]. !put[83]. !put[83]. !put[10].
+!exit[0].

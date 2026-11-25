@@ -1,0 +1,135 @@
+ZTEXT00100002234d69d2fd20000000
+ZERO OS0.7.0 - original Zero filesystem drivers and independent volumes
+Verification date:2026-11-15
+
+Final delivered disk image
+build/zero.iso:17645568 bytes
+SHA256:6af39753816e30ab40e77cf56af4a8edce4de20abb30ef09d722884c217a5f3b
+This is a genuine ISO9660/El Torito optical image with BIOS and IA32/AMD64
+UEFI boot paths. Only ISO disk images are distributed in the new package.
+No IMG/VDI data disks or large private filesystem fixtures are included.
+Internal FAT/padding images produced during a local rebuild are intermediate
+build files. They are not renamed to ISO or presented as optical images.
+
+Implemented system behavior
+The original Zero monolithic kernel retains the pixel desktop/portrait,
+PS/2/COM1 terminal and three cooperative native threads. It adds independent
+A:| through Z:| volume roots, GO/go, qualified file paths, disks inventory,
+four legacy ATA positions, primary MBR/GPT discovery and read-only GPT flags.
+Original ext4, NTFS and Btrfs state machines support root-file reading,
+creation, replacement and deletion in their explicitly bounded profiles.
+The same driver source is compiled for x86-32 and x86-64. No external driver,
+compiler backend, assembler, linker or guest runtime implements these features.
+ROADMAP.txt separates proposed future work from completed functionality.
+
+Compiler and source build
+compiler.zero:56640 bytes
+SHA256:dd2653cbb842b6e5d2778ec8ea7546460984be93376759c5725b14d37bf66f7d
+bootstrap/zero:62102 bytes
+SHA256:26e53cf7cafbfff584575e9f1977277af702c03ab1fa97be5d31c11ea1caca5d
+kernel.zero:195387 bytes; raw64:241827 bytes; raw32:342976 bytes.
+Normal build recompiles the compiler twice and requires byte-identical stages.
+Both loaders, both kernels and both image builders are compiled by that own
+Zero-built compiler. The BIOS component is13865 bytes within its16KiB slot;
+each kernel has a384KiB image slot. BIOS validates E820 RAM for its1..4MiB
+stack pool; UEFI allocates1MiB. Full source audits and source-part composition
+checks are retained. The historical assembly-origin bootstrap is documented,
+not erased. Current normal builds invoke no assembler or foreign compiler.
+The compiler is hosted on Linux x86-64; it does not yet run inside Zero OS.
+
+Compiler checks
+- Stable seed/stage1/stage2/stage3 reproduction after the own Zero4MiB arena
+  transition; source262144/output393216 boundaries and zero stdout on compile
+  failures. Exact source maximum and the extra-byte rejection were exercised.
+- 1107 legacy regression cases:13 expected capacity expansions, all remaining
+  statuses unchanged; all322 previously successful outputs match exactly,
+  allowing only the reviewed hosted arena immediate change where applicable.
+- 61 current native/frontend checks; hosted native thread regression.
+- 110 bit-operation assertions on host, BIOS x64 and IA32;90 real-mode
+  assertions plus complete E820 enumeration with bounded-buffer checks.
+- Positioned I/O tested beyond4GiB, EOF and EBADF; real fsync success/failure.
+Evidence:verification/compiler-fs and review-tests/compiler-fs. Suites overlap;
+these figures are not a count of distinct bugs or a proof of universal safety.
+
+Final complete VM boots and file operations: all PASS
+BIOS64: SeaBIOS, qemu64,128MiB RAM.
+BIOS32: SeaBIOS, qemu64 with long mode and PAE disabled,128MiB RAM.
+UEFI64: matching AMD64 OVMF firmware, qemu64,128MiB RAM.
+UEFI32: matching IA32 OVMF firmware, long mode disabled,128MiB RAM.
+All four use QEMU pc/TCG, standard VGA and private writable test disks.
+All reached the native kernel and visible800x600 pixel desktop, accepted PS/2
+commands and showed growing graphics/computation counters. All enumerated:
+ A raw ZeroFS; B ext4; C NTFS; D Btrfs; E GPT ext4 marked read-only.
+B/C/D were separate MBR partitions of one physical disk. E was on another.
+Same-named files retained distinct contents across volumes. Every backend
+passed actual guest create/save/read/overwrite/delete, duplicate refusal and
+missing-file checks. GO and qualified paths selected the intended volume.
+E permitted reads/listing but rejected save/create/remove and format ZERO;
+the complete GPT image remained byte-identical. Healthy missing/exists errors
+do not mark a filesystem unavailable; LF listings leave prompts at column0.
+
+Persistence and external validation: all PASS
+BIOS64 and UEFI64 were each shut down completely and booted in a new process
+using the same final ISO and private disks. All saved foreign-filesystem and
+ZeroFS contents survived; deleted files stayed absent. These read-only restart
+runs left the complete writable-image hashes unchanged.
+After shutdown, each mode's ext4/NTFS/Btrfs partitions were extracted and
+independently checked: e2fsck -fn, ntfsfix -n and btrfs check --readonly all
+returned0. debugfs, ntfscat and btrfs restore extracted exact expected bytes.
+ntfsfix is a limited consistency tool, not Windows chkdsk. External checkers
+and formatters are test infrastructure, never part of the Zero guest code.
+Evidence:verification/fs-0.7.0/combined64 and final-three, with exact logs,
+commands, expected/readback bytes and actual VM screenshots. Earlier development
+runs remain labelled earlier and are not relabelled as checks of this ISO.
+
+Driver and boundary verification
+ext4:268 final assertions, including externally created files, direct/extent
+mapping,128/256-byte inodes, allocation reuse/exhaustion, partition offsets,
+malformed data and12 write/flush failures. A discovered cross-inode data alias
+is now rejected before mutation; independent overwrite/delete reproductions
+preserve the entire image hash. Ownership checks are conservative, not fsck.
+NTFS: CRUD,400-byte/31-character limits, ASCII case lookup, dotfiles, MFT reuse,
+external interoperability,12 write/flush failures and11 malformed/profile
+refusals. Independent review hardened resident attributes, record identities,
+update-sequence boundaries and LogFile metadata-alias refusal. A separate
+adapter destroys volatile state across every IO and still passes CRUD.
+Btrfs: CRUD, empty transitions, boundary sizes, leaf capacity/reuse, externally
+populated files, nonzero partition offset;8 failed write/fsync boundaries give
+externally clean old-or-new contents. Six malformed structures with valid
+CRCs are refused unchanged; all root/reference/chunk bounds are checked.
+Partition discovery:34 adversarial images plus3 multidisk/capacity cases,
+independent partx oracle, CRC vector, read-only flags, canaries and unchanged
+image hashes. Invalid tables roll back that disk's provisional inventory.
+Root integration:25 path cases,23 IO-bound cases,27 independent state/safety
+cases, and7 integration-wrapper corruption tests pass. They include unsafe
+format attempts, empty inventories, huge indexes, IDENTIFY buffer boundaries,
+read-only preservation and cross-volume failure state.
+Detailed profiles/reproduction:fs/*-profile.txt and per-component reports.
+
+User workflow and data preservation
+An optical ISO is read-only. Persistence requires the user's separate virtual
+hard disk; it is not silently supplied as another image format. Existing
+ZeroFS disks are preserved. New blank primary-master disks require explicit
+format ZERO before file creation. That command cannot format a foreign or
+partitioned volume or a phantom descriptor after failed discovery.
+Additional ISO-only and new-blank-disk VM checks are recorded under
+verification/fs-0.7.0/iso-only. See its results for the exact workflow evidence.
+The original local/Drive data disk contents were not replaced or formatted.
+Original raw SHA256:c730241fb30f5516867c751006951a2878f360319195ee975411a05f040f27e8
+Original VDI SHA256:7f58fb36c934405757da797ca65f2dddef3858e69107f43e2cae59d14c89bc5f
+Older downloadable non-ISO disk files are preserved separately from the new
+ISO-only distribution. Upgrading the ISO does not replace a user's data disk.
+
+Practical limits
+This is an early experimental OS. File operations use flat root names<=31
+ASCII bytes and contents<=400 bytes. ext4 requires a clean single-group4KiB
+profile without a journal; NTFS uses resident files/existing metadata capacity
+and unused formatter journal pages; Btrfs uses one-device SINGLE chunks and
+leaf-only inline-file trees. Default modern volumes, Windows journals,
+compression, snapshots/RAID and other unsupported features may be refused.
+There is no general filesystem repair or arbitrary power-loss guarantee.
+Threads cooperate on one CPU in shared kernel memory. No preemption, SMP,
+protected user processes, application loader, network or AHCI/NVMe/USB storage
+is implemented. VirtualBox-compatible boot structures/settings are supplied,
+but native VirtualBox execution and physical hardware remain unverified here.
+No claim is made that all possible bugs have been eliminated.

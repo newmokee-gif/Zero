@@ -1,0 +1,17 @@
+ZTEXT001000001f6eb67a2eb0000000
+Native Linux file primitive smoke: 14 PASS
+Work /tmp/zero-support/validation-0.12/files/linux-files-78thhl6g
+create idempotent empty file
+save and create preserve existing
+read exact bytes
+exclusive write
+regular-only enumeration with Unicode
+glob star
+glob Unicode scalar question
+empty and exact search
+go changes native current directory
+native logical root enumeration
+listing capacity failure
+nonregular and final link refusal
+delete and missing refusal
+empty folder and trailing search separator

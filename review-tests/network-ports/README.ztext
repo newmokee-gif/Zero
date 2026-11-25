@@ -1,0 +1,45 @@
+ZTEXT0010000093e4d6ab8150000000
+Current original Zero workflow (0.12)
+
+Use the native tools on Linux or their .exe versions on Windows:
+  zero-integrate PROJECT_DIRECTORY NEW_KERNEL.zero
+  zero-build PROJECT_DIRECTORY NEW_OUTPUT_DIRECTORY NEW_KERNEL.zero
+  zero-check PROJECT_DIRECTORY NEW_TEST_DIRECTORY
+All destination paths must be new. The integrator preserves authored sources;
+the builder checks its compiler fixed point and builds the original targets;
+the verifier checks language behavior and host file operations in process.
+See tools/integrate.ztext, tools/build.ztext and checks/README.ztext.
+Read these documents with zero-text read FILE.
+
+The notes below preserve earlier implementation and test history. Any old
+shell/Python runner names, generated artifacts, JSON reports or commands are
+historical references: they were removed from the active project and are not
+current runnable instructions or current-release validation. Native host
+checks do not replace BIOS/UEFI, persistence or physical-hardware testing.
+
+Historical implementation notes
+
+Original Zero dword port tests
+
+python3 review-tests/network-ports/run.py [CANDIDATE_COMPILER] [OLD_COMPILER]
+
+Defaults to build/zero and bootstrap/zero-0.7-seed. The optional old
+compiler enables exact old-source output comparison. The VM tests need the
+384KiB or448KiB kernel-slot ISO, local QEMU/SeaBIOS paths in run.py, and
+no writable disks. They copy/patch the ISO privately and leave the original
+unchanged. Test programs themselves are Zero; Python only orchestrates files,
+processes and result comparisons.
+
+The suite compiles all five hardware targets, checks hosted rejection and
+reserved/malformed forms, and runs native PCI mechanism1 tests in BIOS64,
+BIOS32 without LM/PAE and real mode. Complete results are written under
+verification/network-ports. Generated private images stay under build and
+are not distribution artifacts. No native VirtualBox success is claimed.
+
+python3 review-tests/network-ports/capacity.py [CANDIDATE] [OLD_COMPILER]
+checks the expanded458752-byte output limit, exact458753 rejection for ELF/raw
+and the final EFI padding boundary. These boundary programs are never executed.
+
+If an integrated OS source now uses in32/out32 or exceeds the old output
+ceiling, its old-source parity entry is explicitly skipped; the original
+pre-integration parity run remains recorded in the historical report.

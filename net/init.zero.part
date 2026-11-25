@@ -1,0 +1,16 @@
+# Network/browser own229376 bytes after worker stacks, before relocated WM slots.
+!store64[@console + 2400|0]. !store64[@console + 2408|0].
+? @boot_information [
+ :load64[@boot_information + 112] -> @c0.
+ :load64[@boot_information + 120] -> @c1.
+ ? (@c0 != 0) * (:bitand[@c0|15] == 0) * (@c1 >= 532480) [
+  ? (@c0 + @c1 > @c0) * (@c0 + 393216 <= 4294967296) [
+   @c0 + 163840 -> @c2. 0 -> @i.
+   ?? @i < 229376 [ !store64[@c2 + @i|0]. @i + 8 -> @i. ]
+   !store64[@c2 + 56|0x6f72655a].
+   !store64[@c2 + 688|@c2 + 32768]. !store64[@c2 + 696|@c2 + 98304].
+   !store64[@c2 + 24584|1].
+   !store64[@console + 2400|@c2]. !store64[@console + 2408|@c2 + 24576].
+  ]
+ ]
+]

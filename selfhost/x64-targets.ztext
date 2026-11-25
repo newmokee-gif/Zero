@@ -1,0 +1,170 @@
+ZTEXT00100001da5ef6c11dd0000000
+HISTORICAL INITIAL TEMPLATE/LAYOUT REFERENCE
+This document preserves the original development table and its pinned hashes.
+Its old hosted arena/output sizes are not the current compiler contract.
+Use compiler.zero, LANGUAGE.ztext and selfhost/CORE.ztext for current capacities,
+Windows/guest targets and later native-template overrides.
+
+ZERO X64 CODE GENERATION DATA
+
+This file describes our own x64 instruction encoding tables. The active source
+fragment is x64-tables.zero.part, written in Zero. It was transferred read-only
+from the existing Zero compiler's compiled template data. No assembler or linker
+was invoked to produce this fragment or its validation programs.
+
+TABLE CONTRACT
+The caller binds @templates to a zeroed bank of 128 entries of 16 bytes.
+entry + 0: u64 pointer to lowercase ASCII hexadecimal digits.
+entry + 8: u64 decoded byte count.
+Each pair of hexadecimal digits encodes one output byte. Strings are terminated
+by NUL but the decoder uses the supplied length. Unsupported entries stay zero;
+reject attempts to emit them. The longest string is 1024 characters.
+IDs 0..47 are shared across backends. IDs 48..69 belong to the IA32/real extension
+set. ID70 is the x64 hosted prologue with a 1 MiB reserve arena.
+
+ID NAME                 DECODED_BYTES
+ 0 prologue             38
+ 1 entry_arguments      6
+ 2 immediate            2
+ 3 load_local           3
+ 4 store_local          3
+ 5 push_rax             1
+ 6 pop_rcx              1
+ 7 add_code             3
+ 8 sub_code             6
+ 9 mul_code             4
+10 neg_code             3
+11 compare_code         3
+12 set_eq               3
+13 set_ne               3
+14 set_lt               3
+15 set_gt               3
+16 set_le               3
+17 set_ge               3
+18 normalize            3
+19 test_jump            5
+20 jump_code            1
+21 string_address       3
+22 load8_code           3
+23 load16_code          3
+24 load32_code          2
+25 load64_code          3
+26 store8_code          2
+27 store16_code         3
+28 store32_code         2
+29 store64_code         3
+30 in8_code             5
+31 in16_code            6
+32 out8_code            3
+33 out16_code           4
+34 reserve_code         40
+35 argument0_code       3
+36 argument1_code       3
+37 foreign_call         30
+38 enter_code           13
+39 disable_code         1
+40 halt_code            4
+41 host_read_code       12
+42 host_write_code      18
+43 put_code             49
+44 exit_code            10
+45 default_exit         9
+46 elf_header           120
+47 pe_header            512
+70 host_prologue        38
+
+LAYOUT AND PATCH RULES
+All scalar patches below are little endian. Offsets refer to the beginning of
+the output unless explicitly described as relative to a template. Check output
+capacity before each emit and each finalization extension.
+
+Hosted ELF: emit ID46, then ID70 for the self-hosted compiler, then program code,
+then ID45. ELF header length is 120. Entry is 0x400078. Final output length is
+stored as u64 at offsets 96 and 104. ID0 retains the original 64 KiB arena for
+compatibility when explicitly desired; hosted self-compilation needs ID70.
+
+Raw x64: emit ID1, ID0, program code, ID40. There is no file header.
+UEFI x64: emit ID47, ID1, ID0, program code, ID40, then finalize PE as below.
+ID1 saves initial RCX/RDX into R14/R15. ID35/ID36 expose these saved arguments.
+
+ID0 and ID70 differ only in their four-byte arena-size immediate at template
+offset31. ID0 has 00 00 01 00 (65536), ID70 has 00 00 10 00 (1048576).
+The offset is151 in an ordinary seed-generated hosted ELF (120+31). The
+prologue also reserves/zeroes512 bytes for64 eight-byte local variable slots.
+ID34 aligns allocations to16 bytes and traps on size overflow or arena
+exhaustion. Arena memory is not guaranteed zero: explicitly zero buffers that
+require it.
+
+An integer expression emits ID2 followed by its u64 value.
+A variable load/store emits ID3/ID4 then signed i32 displacement -8*(slot+1).
+Slots are numbered0..63. The type throughout this backend is unsigned u64,
+including comparison order; arithmetic wraps modulo2^64.
+Binary expressions emit left, ID5, right, ID6, then their operator template.
+Comparisons emit ID11, the appropriate ID12..17, and ID18.
+A conditional branch emits ID19 then an i32 displacement.
+An unconditional branch emits ID20 then an i32 displacement.
+For either branch displacement field, value = target - (field_offset + 4).
+
+A string expression emits ID20, u32 byte count including NUL, decoded literal
+bytes and their NUL, ID21, then i32 -(byte_count+7). The literal is skipped at
+runtime and ID21 obtains its position using an instruction-relative address.
+
+Memory loads place the address in RAX before ID22..25. Stores evaluate address,
+emit ID5, evaluate value, emit ID6, then ID26..29. Port output uses the same
+pattern and ID32/33; input evaluates port then ID30/31. Check target permission
+before emitting privileged operations.
+
+Hosted read/write evaluates buffer address, ID5, byte count, ID6, then ID41/42.
+Return value follows the Linux x64 read/write syscall convention, including
+negative error codes; callers handle interrupted and partial operations.
+ID43 writes one byte with interruption retry and exits74 on output failure.
+ID44 consumes an exit code in RAX. ID45 exits0.
+Raw/UEFI targets must reject hosted read/write.
+
+Foreign call evaluates six expressions, emitting ID5 after each: function,
+arg1, arg2, arg3, arg4, arg5. ID37 uses the x64 firmware calling convention,
+including stack alignment and shadow space. Its result is in RAX.
+Enter evaluates entry point, arg0, stack top, with ID5 after each, then ID38;
+this disables interrupts, switches stack and jumps. It does not return.
+
+PE32+ FINALIZATION
+All fields here are u32; header size512, section alignment4096, file alignment512.
+code_length = current_output_length - 512
+store at336: code_length
+raw_length = ceil(code_length / 512) * 512
+store at92 and344: raw_length
+reloc_file = 512 + raw_length
+store at388: reloc_file
+reloc_rva = 4096 + ceil(code_length / 4096) * 4096
+store at380 and240: reloc_rva
+store at144: reloc_rva + 4096
+Check reloc_file + 512 <= output_capacity before adding final padding.
+Zero bytes from current_output_length through reloc_file + 511.
+Store u32 4096 at reloc_file and u32 12 at reloc_file+4.
+Set final output length to reloc_file+512.
+The relocation block contains no relocation entries; current generated code
+is position independent. Directory size at244 remains12 from the header.
+
+VERIFICATION
+A temporary Zero program initialized this exact table fragment, decoded all
+49 populated entries in numeric ID order and wrote1004 bytes. It was compiled
+with the existing own build/zero --host and executed successfully. Its bytes
+matched all extracted own templates, including the deliberate hosted arena
+change. No assembler/linker was invoked.
+Decoded concatenation SHA256:
+8c3e4c0725a9ed5732648ea43e3034fa512263efd4010ceea2386f5454922974
+
+A raw/UEFI fixture was compiled with the existing own compiler:
+1 => @a.
+@a + 2 -> @a.
+!halt.
+The independently assembled sequence of the table fragments and immediate
+fields matched the98-byte raw output exactly. Applying the PE rules above
+matched the1536-byte EFI output exactly, including all padding/header fields.
+Raw fixture SHA256:
+7b426e1be7cf210a9128bf03de1af7398f8a51b6694ca99db086a357f4e90881
+EFI fixture SHA256:
+f4c97391d9d8c7db7957270c68590b822dc6086c91659421ffdb2b0ac22169a3
+
+These checks validate the encoding assets and layout rules. The new compiler's
+lexer/parser, self-compilation and VM boot require their own integration tests.

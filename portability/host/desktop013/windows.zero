@@ -1,0 +1,50 @@
+# Original Win64 dynamic-import and twelve-argument ABI regression.
+:reserve[128] => @result.
+0 => @library.
+0 => @function.
+0 => @code.
+0 => @i.
+0 => @j.
+0 => @byte.
+0 => @digit.
+0 => @round.
+0 => @answer.
+:reserve[0] => @cursor.
+? :host[] != 2 [ !exit[1]. ]
+? 3 + :hostsyscall[1|2|3|4|5|6|7] != 2 [ !exit[14]. ]
+:hostlibrary["kernel32.dll"] -> @library.
+? @library == 0 [ !exit[2]. ]
+:hostsymbol[@library|"GetCurrentProcessId"] -> @function.
+? @function == 0 [ !exit[3]. ]
+? :hostcall12[@function|0|0|0|0|0|0|0|0|0|0|0|0] == 0 [ !exit[4]. ]
+? :hostsymbol[@library|"ZeroMissingExport013"] != 0 [ !exit[5]. ]
+? :hostlibrary["ZeroMissingLibrary013.dll"] != 0 [ !exit[6]. ]
+# Own code fixture records all twelve arguments and incoming stack alignment.
+# It returns a wide value so pointer/u64 results cannot be truncated.
+"4889114c8941084c894910488b44242848894118488b44243048894120488b44243848894128488b44244048894130488b44244848894138488b44245048894140488b44245848894148488b442460488941504889e083e00f4889415848b8f0debc9a78563412c3" => @encoding.
+:hostalloc[4096] -> @code.
+? @code == 0 [ !exit[7]. ]
+?? :load8[@encoding+@i] [
+ 0 -> @byte. 0 -> @j.
+ ?? @j < 2 [
+  :load8[@encoding+@i+@j] -> @digit.
+  ? @digit <= 57 [ @digit-48 -> @digit. ] ~ [ @digit-87 -> @digit. ]
+  @byte*16+@digit -> @byte. @j+1 -> @j.
+ ]
+ !store8[@code+:shr[@i|1]|@byte]. @i+2 -> @i.
+]
+? :hostprotect[@code|4096|1] != 0 [ !exit[8]. ]
+?? @round < 128 [
+ 3 + :hostcall12[@code|@result|11|22|33|44|55|66|77|88|99|110|121] -> @answer.
+ ? @answer != 0x123456789abcdef3 [ !exit[9]. ]
+ 0 -> @i.
+ ?? @i < 11 [
+  ? :load64[@result+@i*8] != (@i+1)*11 [ !exit[10]. ]
+  @i+1 -> @i.
+ ]
+ ? :load64[@result+88] != 8 [ !exit[11]. ]
+ ? :reserve[0] != @cursor [ !exit[12]. ]
+ @round+1 -> @round.
+]
+? :hostfree[@code|4096] != 0 [ !exit[13]. ]
+:write["PASS native desktop Win64 ABI\n"|30] -> @answer.

@@ -1,0 +1,26 @@
+ZTEXT001000005d7831593600000000
+Hosted Ezero behavioral acceptance
+
+Build the tools with bash ezero/build.sh, then run:
+  bash ezero/tests/run.sh
+Use --list to list cases, --filter REGEX for an isolated subset, and
+--output /absolute/new/empty/directory to choose the evidence location.
+
+All parsing, typing, arithmetic, execution and memory reclamation under test
+are implemented in original Zero code. Python and shell only write test inputs,
+invoke the own toolchain and compare independent expected stdout/error results.
+The suite never implements an Ezero evaluator or borrows a foreign runtime.
+No network access, download, third-party package installation or VM is needed.
+
+Coverage includes unquoted UTF-8 text and typed phrases, one-based indexing,
+Unicode scalar count, optional quoted escape compatibility, automatic values,
+checked unsigned arithmetic, lists, conditions, loops evaluated once, recursive
+functions, call evaluation order, copied-frame isolation, garbage collection,
+clear runtime failures, compile source locations and output preservation.
+Boundary cases exercise source/string/variable/parameter/instruction limits.
+
+The generated executables run on the existing Linux host. This is not a claim
+that Ezero programs run inside Zero OS, whose application loader is separate
+work. Test artifacts are private build output, not a new distributed disk image.
+Reports record exact implementation hashes. Passing results must be read from
+the completed report; this source file itself makes no pass claim.

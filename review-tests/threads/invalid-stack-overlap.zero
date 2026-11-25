@@ -1,0 +1,3 @@
+:reserve[81920] => @stack.
+:fork[@stack | @stack | 81920] => @result.
+!exit[99].

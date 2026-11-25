@@ -1,0 +1,11 @@
+walk :: n [
+ n == 0 => when [
+  0 => return
+ ]
+ 0 => total
+ 2 => repeat [
+  total + walk(n - 1) + 1 => total
+ ]
+ total => return
+]
+walk(5) => show

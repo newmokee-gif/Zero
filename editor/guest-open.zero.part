@@ -1,0 +1,15 @@
+# Original ZeroOS editor. The modal owns the browser's otherwise unused region.
+? @operation == 34 [
+ :load64[@console+2400] -> @c0.
+ ? (@c0 == 0)+(:load64[@console+2048] == 0) [ "Editor unavailable: no safe session memory.\r\n" -> @message. ] ~ [
+  @c0+163840 -> @c5. 0 -> @i.
+  ?? @i < 8192 [ !store64[@c5+@i|0]. @i+8 -> @i. ]
+  !store64[@c5|0x3130524f54494445]. !store64[@c5+56|1]. !store64[@c5+112|-1].
+  0 -> @i. ?? (:load8[@arguments+@i] != 0)*(@i < 35) [ !store8[@c5+192+@i|:load8[@arguments+@i]]. @i+1 -> @i. ]
+  !store8[@c5+192+@i|0]. !store64[@c5+72|@i].
+  ? @i [ !store64[@c5+80|1]. ]
+  !store64[@console+2416|3]. !store64[@console+2424|:load64[@console+2064]].
+  !store64[@console+2448|0]. !store64[@console+2088|:load64[@console+2088]+1].
+  0 -> @line_length. 0 -> @overflow. 0 -> @message. 10 -> @state.
+ ]
+]

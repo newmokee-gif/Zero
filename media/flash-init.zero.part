@@ -1,0 +1,21 @@
+"Usage: zero-flash inspect IMAGE.zmedia | write IMAGE.zmedia DEVICE | check IMAGE.zmedia DEVICE | test IMAGE.zmedia NEW_FILE\nUse zero-drives to list eligible USB drives. write asks for ERASE and the exact device path.\n" -> @fmessage.
+? (:argcount[] < 2) + (:argcount[] > 3) [ 64 -> @ferror. ]
+? (:host[] != 1) * (:host[] != 2) [ 64 -> @ferror. ]
+? @ferror == 0 [
+ :argument[1] -> @fpath. 1 -> @fphase.
+ ?? @fphase <= 4 [
+  "inspect" -> @flit. ? @fphase == 2 [ "write" -> @flit. ] ? @fphase == 3 [ "check" -> @flit. ] ? @fphase == 4 [ "test" -> @flit. ]
+  0 -> @fi. 1 -> @fsame.
+  ?? (:load8[@flit+@fi] != 0) * @fsame [
+   ? :load8[@fpath+@fi] != :load8[@flit+@fi] [ 0 -> @fsame. ] ~ [ @fi+1 -> @fi. ]
+  ]
+  ? @fsame [ ? :load8[@fpath+@fi] == 0 [ @fphase -> @fmode. ] ]
+  @fphase+1 -> @fphase.
+ ]
+ ? (@fmode == 0) + ((@fmode == 1) * (:argcount[] != 2)) + ((@fmode > 1) * (:argcount[] != 3)) [ 64 -> @ferror. ]
+ :argument[2] -> @fpath. ? @fmode > 1 [ :argument[3] -> @ftarget. ]
+]
+? @ferror != 0 [ 0 -> @fi. ?? :load8[@fmessage+@fi] [ !put[:load8[@fmessage+@fi]]. @fi+1 -> @fi. ] !exit[@ferror]. ]
+:hostalloc[524288] -> @fwork. ? @fwork == 0 [ !exit[70]. ]
+@fwork -> @zm. @fwork+98304 -> @mh.
+!store64[@mh+16|-1].

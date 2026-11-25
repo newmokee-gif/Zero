@@ -1,0 +1,105 @@
+ZTEXT00100001858dbc136f50000000
+Zero 0.10 local prepared-release updater
+
+The delivered programs are original Zero compiled directly to native Linux
+x64 ELF and Windows x64 PE. They do not launch a shell, Python, PowerShell,
+CMD, an external hash utility or a foreign language runtime. build.py and the
+test scripts are external development/verification orchestration only.
+The updater manages a separate local store and preserves installer manifest v1,
+its base image and storage file. It does not modify a running or booted OS.
+
+Native commands:
+  zero-update init SOURCE.iso VERSION NEW_DIRECTORY
+  zero-update stage SOURCE.iso VERSION DIRECTORY
+  zero-update publish SOURCE.iso VERSION NEW_INBOX
+  zero-update check INBOX DIRECTORY
+  zero-update status DIRECTORY
+  zero-update verify DIRECTORY
+  zero-update rollback DIRECTORY
+  zero-sha256 FILE
+Windows uses zero-update.exe / zero-sha256.exe with the same arguments.
+
+VERSION is a decimal release counter in 1..4294967295, not a parsed semantic
+version string. The publisher chooses it; it is not inferred from ISO contents.
+init creates a dedicated new directory and prepares its first image. stage
+requires a strictly higher counter than any previously staged counter, even
+after rollback. The ISO is copied to an exclusive temporary file, checked with
+our streaming SHA256, reopened and independently hashed again, then atomically
+published without replacing an existing path. Previous images are retained.
+All selected/previous images must verify before any new selection is recorded.
+
+publish creates a new local inbox containing system.iso and release.meta.
+check validates that metadata and, if its counter is newer, automatically
+prepares the inbox image and records the new PREPARED selection. A repeated
+check is idempotent. A launcher can call check at startup; this program does
+not register a daemon, scheduler or OS startup entry. There is no polling
+loop or network fetch in this version. An absent/unreadable inbox is an error,
+not a claim that a remote server has no update. A corrupted inbox is rejected.
+
+Example, using trusted local release media:
+  zero-update init zero.iso 900 NEW_STORE
+  zero-update publish next-zero.iso 901 NEW_INBOX
+  zero-update check NEW_INBOX NEW_STORE
+  zero-update status NEW_STORE
+  zero-update rollback NEW_STORE
+Every successful selection explicitly says PREPARED and NOT IMPLEMENTED for
+boot activation. rollback changes only the prepared selection and preserves
+the highest counter. Repeated rollback toggles the two most recent selections.
+Older historical ISO files remain untouched; no garbage collection is provided.
+
+The store can be a new child directory of a Zero installer preparation.
+It never changes installer/system.iso, storage.data or zero.install. Installer
+v1 removal preserves unknown updater directories. No partition table, boot
+sector, BCD, GRUB, firmware entry or user data disk is modified. The optical
+image format checker accepts the current Zero BIOS/UEFI catalog layout and a
+consistent ZERO_SYSTEM ISO9660 envelope, including in-file catalog boot-image
+extents; it does not prove a new image boots.
+Images are limited to 1GiB. Actual boot testing remains a separate release gate.
+
+The supplied native file API rejects nonregular files and final symlinks or
+Windows reparse points. It does not secure linked ancestor directories or
+provide a sandbox against another process changing the directory. Use a
+private owned directory. An exclusive .update-lock prevents cooperating updater
+instances from mutating the store simultaneously. Status/verify read without
+creating a lock and fail closed if concurrent/incomplete state is observed.
+Existing temporary, lock, version, metadata and destination files are never
+silently overwritten or deleted. Normal copy failures delete only the current
+invocation's exclusive temporary payload. Unrelated contents are preserved.
+
+Journal publication is append-only. A successful append is closed, reopened
+and byte-verified before reporting success. Each fixed record has a format,
+sequence, transition invariants, commit marker and FNV-1a64 corruption check;
+image digests are SHA256. A torn journal tail is an error. A failed partial
+append retains .update-lock and all ISO files for inspection. Automatic journal
+truncation or stale-lock deletion is deliberately absent. Recovery requires
+restoring a known owned journal backup and removing its stale lock after
+confirming no updater is running. A crash between payload publication and the
+journal can leave an unselected ISO; it is preserved and blocks reuse of that
+filename. Maximum journal length is 4096 records; reaching it fails safely.
+No fsync/flush primitive exists in the shared file API, so successful power-loss
+durability or automatic crash recovery is not claimed.
+
+SHA256 detects byte corruption; it does not authenticate a publisher. Neither
+release.meta nor zero.updates is digitally signed. There is no configured
+release server, TLS transport, trusted signing key, public URL or remote update
+service. Do not treat an untrusted inbox as an authenticated update. Booting
+an ISO inside a host filesystem and activating an updated boot slot are still
+unimplemented. This is a real native local preparation/verification/rollback
+backend, not a complete installed rolling-release operating system.
+
+Source layout:
+  declarations.zero.part     shared native variables/memory
+  sha256.zero.part           original streaming SHA256/hash-and-copy worker
+  main.zero.part             updater commands, journal and filesystem logic
+  hash-main.zero.part        standalone SHA256 CLI
+  update.zero / sha256.zero  exact combined standalone Zero source files
+  FORMAT.txt                persistent data contract
+  verification/*.json        actual test results and tested hashes
+
+Build with the repository's native host API compiler binaries:
+  python3 updater/build.py
+This combines authored Zero fragments without translating their logic, then
+runs the own compiler. The resulting binaries need no build script at runtime.
+Linux verification: python3 updater/test-native.py
+Windows PE verification under the existing Wine: python3 updater/test-windows.py
+Wine evidence does not establish native Windows reparse or crash behavior.

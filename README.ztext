@@ -1,0 +1,184 @@
+ZTEXT001000029369f2677e60000000
+Zero OS 0.13 - original Zero development system, browser and graphical editor
+
+The implementation is written in Zero. Ezero is the easier language built on
+Zero; it provides inferred values, functions, managed memory and one-based
+lists. The compiler compiles its own source and emits machine code directly.
+There is no C, assembly, Python, shell build script or imported compiler
+backend in the project sources.
+
+This is an experimental system with explicit limits. It is not a replacement
+for Windows or Linux on arbitrary hardware, and it is not described as bug-free.
+
+Own formats
+
+Documentation and textual fixtures use .ztext, with the ZTEXT001 header,
+payload length, checksum and validated UTF-8. This is an encoded container,
+not a renamed .txt file. The original reader and writer are tools/text.zero.
+
+  zero-text read README.ztext
+  zero-text verify README.ztext
+  zero-text make INPUT NEW_DOCUMENT.ztext
+
+Linux x86-64 and Windows x64 versions use the documented host interfaces
+directly. They do not invoke another program. Existing output files are
+preserved. The native text payload limit is one MiB.
+
+Zero OS's terminal command read detects ZTEXT001 or a .ztext name, validates
+the header and checksum before displaying content, and reports unsupported
+characters. Its current ASCII terminal and 400-byte files limit .ztext to
+368 payload bytes. The native readers support full valid UTF-8.
+
+Images use .zpix with the ZPIX0001 header and original RGB run encoding.
+The encoder, verifier and decoder are tools/picture.zero. Specifications and
+limits are in tools/picture.ztext. PPM/RGB import or export is an explicit
+compatibility operation; those formats are not internal project assets.
+
+Executable seeds use the original ZEROAPP1 application container. ZeroFS is
+our own persistent filesystem; data/storage.zdrive preserves the original
+raw ZeroFS disk byte for byte. Own archives use .zpack and the original
+tools/archive.zero packer/reader; see tools/archive.ztext. They support
+checked relative paths, content checksums and explicit executable flags.
+No audio or video codec is claimed.
+
+Compatibility is explicit: Linux runs ELF executables, Windows runs PE, and
+BIOS/UEFI optical boot uses ISO/El Torito plus a FAT firmware image. Original
+Zero code creates these exports. Those external formats are not our inventions.
+External firmware and virtual machines used for testing are not project code.
+
+Building and checking
+
+  zero-build PROJECT_DIRECTORY NEW_OUTPUT_DIRECTORY
+  zero-integrate PROJECT_DIRECTORY NEW_KERNEL.zero
+  zero-integrate PROJECT_DIRECTORY NEW_COMPILER.zero --ezero
+  zero-integrate PROJECT_DIRECTORY NEW_READER.zero --browser
+  zero-check PROJECT_DIRECTORY NEW_TEST_DIRECTORY
+
+The native builder executes original compiler applications within its own
+process. It checks that two compiler generations reproduce identical bytes,
+then builds the shared kernel, BIOS/UEFI loaders, tools and optical ISO.
+The supplied bootstrap/zero64.zapp is a previous Zero-built compiler seed.
+The historical assembly bootstrap is acknowledged; it is not retained as a
+build dependency or falsely described as never having existed.
+
+The output directory must be new. Native tool binaries and firmware exports
+are distributed separately from the own-format source tree. The compiler CLI
+and its lib companions can be relocated together. Use zero INPUT OUTPUT or
+ezero INPUT OUTPUT in the corresponding native toolkit. See tools/build.ztext,
+tools/compiler-cli.ztext and checks/README.ztext for exact interfaces.
+The complete source package is zero-source-0.13.zpack. It excludes private
+user disks and historical screenshots. Native toolkit packages are also
+.zpack; a standalone zero-archive host executable reads them. For Linux,
+grant the downloaded standalone executable permission to run in the host
+file manager before opening it. Archive extraction never runs its contents.
+
+Boot and terminal
+
+The same kernel source builds for 32-bit and 64-bit x86 PCs. BIOS selects the
+appropriate CPU mode; UEFI has separate IA32 and AMD64 entry points. Eight-bit
+CPUs are outside the target. The ISO is optical boot media, not a hybrid USB
+disk. Persistent data needs a separate writable disk kept across restarts.
+
+VirtualBox: attach the ISO to an optical drive and select that drive for boot.
+Use BIOS or the matching UEFI architecture. A 64-bit guest requires exposed
+64-bit CPU support; the BIOS path can instead run the 32-bit kernel. Current
+four-path automated boot checks use external emulators; those checks do not
+constitute a new native VirtualBox or physical-hardware test.
+
+Terminal file actions include watch, search, read, create, save, del and GO.
+write prints text. Volumes have independent letter roots such as A:| and B:|;
+GO A:| selects the volume. Paths use a vertical bar. Listings and visible
+identifiers start at one. format ZERO initializes a selected disposable disk;
+it is not needed on an already initialized disk and destroys its prior format.
+
+Zero and Ezero file operations are real disk operations. create preserves an
+existing file, save creates or replaces, writefile creates exclusively, and
+del deletes. watch and search return only regular file names. Searches support
+* and ?; native ? matches one Unicode scalar. GO/go changes the selected root
+or host working directory. disks lists available roots. Read failures and
+undersized listing buffers are reported without a partial success result.
+
+ZeroFS currently has eight file slots, 31-byte ASCII names and 400-byte data
+per file. The new guest service accepts printable ASCII plus TAB, LF and CR.
+ext4, NTFS and Btrfs drivers support only the bounded profiles documented in
+fs/*.ztext; unsupported or unsafe volumes are rejected for writes. Native
+Linux/Windows operations support larger files and UTF-8 paths. See LANGUAGE.ztext
+and ezero/LANGUAGE.ztext rather than assuming native and guest limits match.
+
+Browser and graphical source editor
+
+browser [HTTP_ADDRESS] opens the original Zero page reader in a desktop window.
+O edits the address, B goes back, R reloads, Up/Down scroll, Space or Tab selects
+a numbered link, Enter follows it, and Esc returns to the terminal. It handles
+bounded HTML or plain text, UTF-8 validation, entities, headings/lists/links,
+relative addresses and redirects. The original ASCII desktop font substitutes
+unavailable glyphs. HTTP framing supports Content-Length and chunked transfer.
+The raw response is limited to 65535 bytes and rendered text to 32768 bytes.
+The page document uses our ZBROW001 format. No website input becomes a shell
+command. This is a text-oriented first browser, not a Chromium-equivalent:
+HTTPS/TLS, CSS layout, JavaScript/DOM, forms, multimedia and general modern
+website compatibility are not implemented. Chromium code was not copied.
+
+edit [NAME] opens Zero Studio in Zero OS. It provides insertion/deletion,
+arrows and a text caret, line numbers, open/create/save, language selection,
+and actual Zero/Ezero compilation and execution with output or failure status.
+F6 saves, F7 opens, F8 builds and runs, F9 changes language, F10 creates a new
+buffer. Unsaved changes require an explicit discard. This version keeps the
+existing guest filesystem limit: 400 ASCII bytes per source file. A polled
+PS/2 mouse driver supplies an actual moving pointer with background restoration.
+
+zero-studio and zero-studio.exe provide a native graphical editor on Linux x64
+and Windows x64. They use original Zero pixel drawing and editing code. The
+Linux adapter speaks X11 directly and needs X11 or Xwayland; the Windows
+adapter calls documented Win32 interfaces. No foreign GUI toolkit or source
+is included. The native editor holds up to 65535 ASCII bytes, supports mouse
+caret positioning and safe file replacement, and builds Zero/Ezero with F5
+using the original compiler companions in lib/. Keep that directory beside
+the executable. See editor/host/README.ztext for keys and exact limits.
+
+What is implemented
+
+The monolithic kernel includes disk drivers, persistent files, terminal,
+pixel framebuffer graphics, tiled/scrolling terminal windows, keyboard-driven
+system/storage/network applications, and cooperative tasks with independent
+stacks. Native Zero and Ezero compilation and execution are available in the
+guest. Tasks and applications currently share memory and one CPU.
+
+Wired AMD PCnet support includes DHCP, bounded DNS/TCP/HTTP and connection
+status. Wi-Fi has selection/password interface states, but no working physical
+Wi-Fi radio driver is claimed. TLS, full modern-web support, SMP, preemptive scheduling,
+process isolation, general multimedia playback and a full automatic installer
+remain unfinished. The local update tool stages and verifies releases; it is
+not an authenticated Internet rolling-update service.
+
+Verification
+
+verification.ztext records this version's completed checks and their limits.
+The tests exercise ordinary use, errors, boundaries, data preservation and
+cold restarts. Published results must correspond to the exact tested files.
+New failures are fixed before artifacts are described as verified.
+
+Zero Media 0.14 addition - 2026-11-20
+
+Own .zmedia disk-image format and Zero Flash tools are implemented in media/.
+See media/README.ztext for Linux/Windows commands, firmware-mode Zero use,
+source reconstruction and device restrictions. See media/VERIFICATION.ztext
+for completed tests and explicit limits. The new disk boots BIOS/UEFI32/64;
+the UEFI menu also starts the original Zero flash writer. The kernel's USB
+runtime driver is not implemented by this addition. The existing ISO is
+retained as a compatibility export; .zmedia is a different binary format.
+
+
+ZERO WEB0.15PREVIEW ADDITION -25NOVEMBER2026
+
+browser/engine now contains an original Zero HTML tree, CSS cascade, bounded
+JavaScript interpreter and native Linux/Windows GUI for local documents.
+The new zero-web program accepts HTML or ZTEXT001 and renders its own pixels;
+zero-web --render INPUT NEW.zpix exports the original picture format.
+Run zero-web browser/engine/demo.ztext for the included demonstration.
+This is a preview profile, not a complete Chromium rewrite or Internet browser.
+The existing Zero OS HTTP reader remains unchanged; the new engine is not yet
+installed as a guest application. No client Python interpreter is included.
+Read browser/engine/README.ztext and VERIFICATION.ztext with zero-text.
+The builder now emits72artifacts in76stages. All unchanged boot/guest artifacts
+are byte-identical to0.14; no new boot/hardware validation is implied.

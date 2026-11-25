@@ -1,0 +1,1 @@
+var s = "ABC"; put(load8(s)); put(load16(s + 1)); put(load32(s + 2)); exit(0);

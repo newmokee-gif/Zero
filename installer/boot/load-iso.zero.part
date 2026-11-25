@@ -1,0 +1,243 @@
+# Resolve this application's directory from its loaded-image FILEPATH nodes.
+# The firmware device is reused; no partition table or host file is changed.
+? @status == 0 [
+    :load64[@rootOut] -> @root.
+    4 -> @step. 0 -> @done. 0 -> @index. 0 -> @pathUnits.
+    ? @devicePath == 0 [ 0x8000000000000001 -> @status. ]
+    ?? (@done == 0) * (@status == 0) [
+        ? @index > 4092 [ 0x8000000000000001 -> @status. ] ~ [
+            :load16[@devicePath+@index+2] -> @nodeBytes.
+            ? @nodeBytes < 4 [ 0x8000000000000001 -> @status. ]
+            ? @nodeBytes > 4096-@index [ 0x8000000000000001 -> @status. ]
+            ? @status == 0 [
+                ? (:load8[@devicePath+@index] == 127) * (:load8[@devicePath+@index+1] == 255) [
+                    ? @nodeBytes != 4 [ 0x8000000000000001 -> @status. ]
+                    1 -> @done.
+                ] ~ [
+                    ? :load8[@devicePath+@index] != 4 [ 0x8000000000000001 -> @status. ]
+                    ? :load8[@devicePath+@index+1] != 4 [ 0x8000000000000001 -> @status. ]
+                    ? @nodeBytes < 6 [ 0x8000000000000001 -> @status. ]
+                    ? :bitand[@nodeBytes|1] [ 0x8000000000000001 -> @status. ]
+                    4 -> @nodeIndex.
+                    ?? (@nodeIndex < @nodeBytes) * (@status == 0) [
+                        :load16[@devicePath+@index+@nodeIndex] -> @ch.
+                        ? @nodeIndex+2 == @nodeBytes [
+                            ? @ch != 0 [ 0x8000000000000001 -> @status. ]
+                        ] ~ [
+                            ? @ch == 0 [ 0x8000000000000001 -> @status. ]
+                            ? @pathUnits >= 2036 [ 0x8000000000000001 -> @status. ]
+                            ? @status == 0 [
+                                !store16[@path+@pathUnits*2|@ch].
+                                @pathUnits+1 -> @pathUnits.
+                                ? @ch == 92 [ @pathUnits -> @separator. ]
+                            ]
+                        ]
+                        @nodeIndex+2 -> @nodeIndex.
+                    ]
+                ]
+                @index+@nodeBytes -> @index.
+            ]
+        ]
+    ]
+    ? @separator == 0 [ 0x8000000000000001 -> @status. ]
+    ? @separator >= @pathUnits [ 0x8000000000000001 -> @status. ]
+    ? :load16[@path] != 92 [ 0x8000000000000001 -> @status. ]
+    ? @status == 0 [
+        "system.iso" -> @text. 0 -> @index.
+        ?? :load8[@text+@index] != 0 [
+            !store16[@path+(@separator+@index)*2|:load8[@text+@index]].
+            @index+1 -> @index.
+        ]
+        !store16[@path+(@separator+@index)*2|0].
+        !store64[@fileOut|0].
+        :call[:load64[@root+8]|@root|@fileOut|@path|1|0] -> @status.
+    ]
+]
+? @status == 0 [
+    :load64[@fileOut] -> @file. 5 -> @step.
+    !store64[@guid|0x11d26d3f09576e92].
+    !store64[@guid+8|0x3b7269c9a000398e].
+    !store64[@sizeOut|512].
+    :call[:load64[@file+64]|@file|@guid|@sizeOut|@fileInfo|0] -> @status.
+    ? @status == 0 [
+        ? :load64[@sizeOut] < 80 [ 0x8000000000000001 -> @status. ]
+        ? :load64[@sizeOut] > 512 [ 0x8000000000000001 -> @status. ]
+        ? :load64[@fileInfo+8] != 18890752 [ 0x8000000000000001 -> @status. ]
+        ? :bitand[:load64[@fileInfo+72]|16] [ 0x8000000000000001 -> @status. ]
+    ]
+]
+# Read only bounded ISO metadata before allocating executable payloads.
+? @status == 0 [
+    6 -> @step.
+    :call[:load64[@file+56]|@file|32768|0|0|0] -> @status.
+]
+0 -> @received. 0 -> @done.
+?? @done == 0 [
+    ? @status != 0 [ 1 -> @done. ] ~ [
+        ? @received == 16384 [ 1 -> @done. ] ~ [
+            !store64[@sizeOut|16384-@received].
+            :call[:load64[@file+32]|@file|@sizeOut|@isoHead+@received|0|0] -> @status.
+            ? @status == 0 [
+                :load64[@sizeOut] -> @ch.
+                ? @ch == 0 [ 0x8000000000000001 -> @status. ]
+                ? @ch > 16384-@received [ 0x8000000000000001 -> @status. ]
+                ? @status == 0 [ @received+@ch -> @received. ]
+            ]
+        ]
+    ]
+]
+? @status == 0 [
+    7 -> @step.
+    # Current Zero ISO identity, volume length, paired-endian blocks and root.
+    ? :load64[@isoHead] != 0x0001313030444301 [ 0x8000000000000001 -> @status. ]
+    "ZERO_SYSTEM" -> @text. 0 -> @index.
+    ?? @index < 11 [
+        ? :load8[@isoHead+40+@index] != :load8[@text+@index] [ 0x8000000000000001 -> @status. ]
+        @index+1 -> @index.
+    ]
+    ? :load32[@isoHead+80] != 9224 [ 0x8000000000000001 -> @status. ]
+    ? :load32[@isoHead+84] != 0x08240000 [ 0x8000000000000001 -> @status. ]
+    ? :load32[@isoHead+128] != 0x00080800 [ 0x8000000000000001 -> @status. ]
+    ? :load8[@isoHead+156] != 34 [ 0x8000000000000001 -> @status. ]
+    ? :load32[@isoHead+158] != 20 [ 0x8000000000000001 -> @status. ]
+    ? :load32[@isoHead+162] != 0x14000000 [ 0x8000000000000001 -> @status. ]
+    ? :load32[@isoHead+166] != 2048 [ 0x8000000000000001 -> @status. ]
+    ? :load32[@isoHead+170] != 0x00080000 [ 0x8000000000000001 -> @status. ]
+    ? :load8[@isoHead+181] != 2 [ 0x8000000000000001 -> @status. ]
+    ? :load64[@isoHead+2048] != 0x4501313030444300 [ 0x8000000000000001 -> @status. ]
+    ? :load32[@isoHead+2048+71] != 23 [ 0x8000000000000001 -> @status. ]
+    ? :load64[@isoHead+4096] != 0x00013130304443ff [ 0x8000000000000001 -> @status. ]
+    # El Torito validation checksum and BIOS/UEFI entries remain consistent.
+    0 -> @checksum. 0 -> @index.
+    ?? @index < 32 [
+        @checksum+:load16[@isoHead+14336+@index] -> @checksum.
+        @index+2 -> @index.
+    ]
+    ? :bitand[@checksum|65535] != 0 [ 0x8000000000000001 -> @status. ]
+    ? :load16[@isoHead+14336] != 1 [ 0x8000000000000001 -> @status. ]
+    ? :load16[@isoHead+14336+30] != 0xaa55 [ 0x8000000000000001 -> @status. ]
+    ? :load16[@isoHead+14336+32] != 0x88 [ 0x8000000000000001 -> @status. ]
+    ? :load16[@isoHead+14336+38] != 32 [ 0x8000000000000001 -> @status. ]
+    ? :load32[@isoHead+14336+40] != 32 [ 0x8000000000000001 -> @status. ]
+    ? :load32[@isoHead+14336+64] != 0x0001ef91 [ 0x8000000000000001 -> @status. ]
+    ? :load16[@isoHead+14336+96] != 0x88 [ 0x8000000000000001 -> @status. ]
+    ? :load16[@isoHead+14336+102] != 32768 [ 0x8000000000000001 -> @status. ]
+    ? :load32[@isoHead+14336+104] != 520 [ 0x8000000000000001 -> @status. ]
+    # Resolve and validate the two records, including each dual-endian extent.
+    # Extents are pinned to this versioned format; malformed roots cannot
+    # redirect execution to an unrelated ISO member or outside the file.
+    0 -> @recordOffset. 0 -> @done.
+    ?? (@done == 0) * (@status == 0) [
+        ? @recordOffset >= 2048 [ 1 -> @done. ] ~ [
+            @isoHead+8192+@recordOffset -> @record.
+            :load8[@record] -> @recordBytes.
+            ? @recordBytes == 0 [ 1 -> @done. ] ~ [
+                ? @recordBytes < 34 [ 0x8000000000000001 -> @status. ]
+                ? @recordBytes > 2048-@recordOffset [ 0x8000000000000001 -> @status. ]
+                ? @status == 0 [
+                    :load8[@record+32] -> @nameBytes.
+                    ? @nameBytes > @recordBytes-33 [ 0x8000000000000001 -> @status. ]
+                    0 -> @match.
+                    ? @nameBytes == 12 [ "KERNEL.BIN;1" -> @text. 1 -> @match. ]
+                    ? @nameBytes == 11 [ "TOOLS.BIN;1" -> @text. 2 -> @match. ]
+                    0 -> @index.
+                    ?? (@index < @nameBytes) * (@match != 0) * (@status == 0) [
+                        ? :load8[@record+33+@index] != :load8[@text+@index] [ 0 -> @match. ]
+                        @index+1 -> @index.
+                    ]
+                    ? @match != 0 [
+                        ? :load8[@record+1] != 0 [ 0x8000000000000001 -> @status. ]
+                        ? :load8[@record+25] != 0 [ 0x8000000000000001 -> @status. ]
+                        ? :load16[@record+26] != 0 [ 0x8000000000000001 -> @status. ]
+                        ? :load32[@record+28] != 0x01000001 [ 0x8000000000000001 -> @status. ]
+                    ]
+                    ? @match == 1 [
+                        @kernelSeen+1 -> @kernelSeen.
+                        ? :load32[@record+2] != 40 [ 0x8000000000000001 -> @status. ]
+                        ? :load32[@record+6] != 0x28000000 [ 0x8000000000000001 -> @status. ]
+                        :load32[@record+10] -> @fileSize.
+                        ? (@fileSize != 475136)*(@fileSize != 491520) [ 0x8000000000000001 -> @status. ]
+                        ? (@fileSize == 475136)*(:load32[@record+14] != 0x00400700) [ 0x8000000000000001 -> @status. ]
+                        ? (@fileSize == 491520)*(:load32[@record+14] != 0x00800700) [ 0x8000000000000001 -> @status. ]
+                    ]
+                    ? @match == 2 [
+                        @toolsSeen+1 -> @toolsSeen.
+                        ? :load32[@record+2] != 8712 [ 0x8000000000000001 -> @status. ]
+                        ? :load32[@record+6] != 0x08220000 [ 0x8000000000000001 -> @status. ]
+                        ? :load32[@record+10] != 1048576 [ 0x8000000000000001 -> @status. ]
+                        ? :load32[@record+14] != 0x00001000 [ 0x8000000000000001 -> @status. ]
+                    ]
+                ]
+                @recordOffset+@recordBytes -> @recordOffset.
+            ]
+        ]
+    ]
+    ? @kernelSeen != 1 [ 0x8000000000000001 -> @status. ]
+    ? @toolsSeen != 1 [ 0x8000000000000001 -> @status. ]
+]
+? @status == 0 [
+    8 -> @step. !store64[@result|0].
+    :call[:load64[@services+40]|0|1|120|@result|0] -> @status.
+    :load64[@result] -> @code.
+    ? @status == 0 [
+        ? @code == 0 [ 0x8000000000000001 -> @status. ]
+        ? @code+@fileSize <= @code [ 0x8000000000000001 -> @status. ]
+    ]
+]
+? @status == 0 [
+    9 -> @step. :call[:load64[@file+56]|@file|81920|0|0|0] -> @status.
+]
+0 -> @received. 0 -> @done.
+?? @done == 0 [
+    ? @status != 0 [ 1 -> @done. ] ~ [
+        ? @received == @fileSize [ 1 -> @done. ] ~ [
+            !store64[@sizeOut|@fileSize-@received].
+            :call[:load64[@file+32]|@file|@sizeOut|@code+@received|0|0] -> @status.
+            ? @status == 0 [
+                :load64[@sizeOut] -> @ch.
+                ? @ch == 0 [ 0x8000000000000001 -> @status. ]
+                ? @ch > @fileSize-@received [ 0x8000000000000001 -> @status. ]
+                ? @status == 0 [ @received+@ch -> @received. ]
+            ]
+        ]
+    ]
+]
+? @status == 0 [
+    11 -> @step. !store64[@result|0].
+    :call[:load64[@services+40]|0|1|256|@result|0] -> @status.
+    :load64[@result] -> @bundle.
+    ? @status == 0 [
+        ? @bundle == 0 [ 0x8000000000000001 -> @status. ]
+        ? @bundle+1048576 <= @bundle [ 0x8000000000000001 -> @status. ]
+    ]
+]
+? @status == 0 [
+    12 -> @step. :call[:load64[@file+56]|@file|17842176|0|0|0] -> @status.
+]
+0 -> @received. 0 -> @done.
+?? @done == 0 [
+    ? @status != 0 [ 1 -> @done. ] ~ [
+        ? @received == 1048576 [ 1 -> @done. ] ~ [
+            !store64[@sizeOut|1048576-@received].
+            :call[:load64[@file+32]|@file|@sizeOut|@bundle+@received|0|0] -> @status.
+            ? @status == 0 [
+                :load64[@sizeOut] -> @ch.
+                ? @ch == 0 [ 0x8000000000000001 -> @status. ]
+                ? @ch > 1048576-@received [ 0x8000000000000001 -> @status. ]
+                ? @status == 0 [ @received+@ch -> @received. ]
+            ]
+        ]
+    ]
+]
+? @status == 0 [
+    13 -> @step.
+    ? :load64[@bundle] != 0x31304c444e42525a [ 0x8000000000000001 -> @status. ]
+    ? :load64[@bundle+8] != 1 [ 0x8000000000000001 -> @status. ]
+    ? :load64[@bundle+16] != 1048576 [ 0x8000000000000001 -> @status. ]
+    ? :load64[@bundle+24] != 8 [ 0x8000000000000001 -> @status. ]
+]
+? @status == 0 [
+    15 -> @step.
+    :call[:load64[@file+16]|@file|0|0|0|0] -> @status.
+    ? @status == 0 [ :call[:load64[@root+16]|@root|0|0|0|0] -> @status. ]
+]

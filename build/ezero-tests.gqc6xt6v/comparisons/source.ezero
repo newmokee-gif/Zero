@@ -1,0 +1,11 @@
+1 == 1 => show
+1 != 2 => show
+1 < 2 => show
+2 <= 2 => show
+3 > 2 => show
+3 >= 3 => show
+18446744073709551615 > 9223372036854775808 => show
+Mira == Mira => show
+Mira != Leo => show
+true => show
+false => show

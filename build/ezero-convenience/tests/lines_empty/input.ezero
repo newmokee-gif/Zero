@@ -1,0 +1,2 @@
+lines(empty) => show
+size(lines(empty)) => show

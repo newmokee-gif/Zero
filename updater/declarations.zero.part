@@ -1,0 +1,15 @@
+# Original Zero updater; all operational code is Zero.
+:reserve[2097152] => @m.
+0 => @p. 0 => @q. 0 => @r. 0 => @i. 0 => @j. 0 => @k.
+0 => @n. 0 => @count. 0 => @total. 0 => @used. 0 => @got. 0 => @sent.
+0 => @code. -1 => @fd. -1 => @outfd. 0 => @t. 0 => @u. 0 => @v.
+0 => @a. 0 => @b. 0 => @c. 0 => @d. 0 => @e. 0 => @f. 0 => @g. 0 => @h.
+0 => @x. 0 => @y. 0 => @z. 0 => @step. 0 => @action. 0 => @version.
+0 => @root. 0 => @source. 0 => @argc. 0 => @path. 0 => @length.
+0 => @hash. 0 => @expected. 0 => @owned. 0 => @lock. 0 => @seq.
+0 => @current. 0 => @previous. 0 => @high. 0 => @record. 0 => @mode.
+0 => @result. 0 => @chunk. 0 => @platform.
+0 => @destination. 0 => @journalbytes. 0 => @prefix. 0 => @tail.
+0 => @targetlength. 0 => @recoverowned. -1 => @recoverlock.
+0 => @watchinterval. 0 => @watchleft. 0 => @watchactive.
+0 => @watchsource. 0 => @cycleactive.

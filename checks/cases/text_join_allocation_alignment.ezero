@@ -1,0 +1,1 @@
+size(join([aaaaaaaaaaaaaaa | bbbbbbbbbbbbbbbb | ccccccccccccccccc] | /)) => show

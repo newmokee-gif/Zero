@@ -1,0 +1,278 @@
+# Own Zero kernel: native cooperative threads, pixel desktop and persistent files.
+:reserve[65536] => @memory.
+@memory => @bank_a.
+@memory + 4608 => @bank_b.
+@memory + 9216 => @work.
+@memory + 13824 => @line.
+@memory + 14336 => @listing.
+@memory + 16380 => @echo_byte.
+0 => @state.
+0 => @current.
+0 => @message.
+0 => @pointer.
+0 => @character.
+0 => @i.
+0 => @j.
+0 => @k.
+0 => @temporary.
+0 => @status.
+0 => @timeout.
+0 => @ready.
+0 => @valid.
+0 => @done.
+0 => @io_lba.
+0 => @io_buffer.
+0 => @io_count.
+0 => @io_write.
+0 => @io_return.
+0 => @io_ok.
+0 => @sector_index.
+0 => @word_index.
+0 => @command_status.
+0 => @validate_ptr.
+0 => @validate_return.
+0 => @validate_good.
+0 => @checksum.
+0 => @good_a.
+0 => @good_b.
+0 => @active_bank.
+0 => @fs_ready.
+0 => @disk_ready.
+0 => @disk_select.
+0 => @line_length.
+0 => @overflow.
+0 => @ignore_lf.
+0 => @arguments.
+0 => @command.
+0 => @operation.
+0 => @wanted.
+0 => @equal.
+0 => @name.
+0 => @text.
+0 => @name_length.
+0 => @file.
+0 => @free_file.
+0 => @text_length.
+0 => @slot.
+0 => @boot_information.
+@memory + 16384 => @console.
+# Original 5x7 ASCII glyph rows. Each character stores seven masks as 48+mask.
+"00000004444404:::0000:O::O:04?D>5N4IJ248;C<BD8EB=44800002488842842224804E>E40044O4400000448000O0000000004122488@>ACEIA>4<4444>>A1248ON11611N26:BO22O@@N11N68@NAA>O124888>AA>AA>>AA?12<04004000400448124842100O0O00@84248@>A12404>AGEG@>>AAOAAANAANAAN?@@@@@?NAAAAANO@@N@@OO@@N@@@?@@GAA?AAAOAAA>44444>72222B<ABDHDBA@@@@@@OAKEEAAAAIIECCA>AAAAA>NAAN@@@>AAAEB=NAANDBA?@@>11NO444444AAAAAA>AAAAA:4AAAEEKAAA:4:AAAA:4444O1248@O>88888>@884221>22222>4:A0000000000O842000000>1?A?@@NAAAN00?@@@?11?AAA?00>AO@?698N8880?AA?1>@@NAAAA40<444>20622B<@@BDHDB<44444>00JEEEE00NAAAA00>AAA>0NAAN@@0?AA?1100FI@@@00?@>1N88N889600AAAA?00AAA:400AAEE:00A:4:A0AAA?1>00O248O34484434444444H44244H009F000" => @font.
+0 => @c0.
+0 => @c1.
+0 => @c2.
+0 => @c3.
+0 => @c4.
+0 => @c5.
+0 -> @i. ?? @i < 65536 [ !store8[@memory + @i| 0]. @i + 1 -> @i. ]
+!store64[@memory + 25472| 268435456]. !store64[@memory + 25480| 1].
+!store64[@memory + 25504| 268435456]. !store64[@memory + 25512| 1].
+!store64[@memory + 24704| 2].
+!store64[@memory + 24832| 0]. !store64[@memory + 24840| 268435456].
+!store8[@memory + 24848| 0]. !store8[@memory + 24849| 4].
+!store64[@memory + 24856| 2048]. !store64[@memory + 24864| 131072].
+!store8[@memory + 24872| 1]. !store8[@memory + 24873| 2].
+1 -> @fs_ready. 1 -> @disk_ready.
+"format ZERO" -> @text.
+0 -> @i. ?? :load8[@text + @i] [ !store8[@line + @i| :load8[@text + @i]]. @i + 1 -> @i. ]
+!store8[@line + @i| 0].
+20 -> @current. !store64[@memory + 24688| 2].
+ ? @current == 20 [
+  @line -> @command.
+  ?? :load8[@command] == 32 [ @command + 1 -> @command. ]
+  @command -> @arguments.
+  ?? :load8[@arguments] > 32 [ @arguments + 1 -> @arguments. ]
+  ? :load8[@arguments] == 32 [
+   !store8[@arguments| 0]. @arguments + 1 -> @arguments.
+   ?? :load8[@arguments] == 32 [ @arguments + 1 -> @arguments. ]
+  ]
+  0 -> @operation. 1 -> @k.
+  ?? @k < 21 [
+   ? @k == 1 [ "help" -> @wanted. ]
+   ? @k == 2 [ "info" -> @wanted. ]
+   ? @k == 3 [ "clear" -> @wanted. ]
+   ? @k == 4 [ "write" -> @wanted. ]
+   ? @k == 5 [ "watch" -> @wanted. ]
+   ? @k == 6 [ "save" -> @wanted. ]
+   ? @k == 7 [ "read" -> @wanted. ]
+   ? @k == 8 [ "rm" -> @wanted. ]
+   ? @k == 9 [ "format" -> @wanted. ]
+   ? @k == 10 [ "create" -> @wanted. ]
+   ? @k == 11 [ "tasks" -> @wanted. ]
+   ? @k == 12 [ "pause" -> @wanted. ]
+   ? @k == 13 [ "resume" -> @wanted. ]
+   ? @k == 14 [ "portrait" -> @wanted. ]
+   ? @k == 15 [ "animate" -> @wanted. ]
+   ? @k == 16 [ "theme" -> @wanted. ]
+   ? @k == 17 [ "pixel" -> @wanted. ]
+   ? @k == 18 [ "reset" -> @wanted. ]
+   ? @k == 19 [ "disks" -> @wanted. ]
+   ? @k == 20 [ "go" -> @wanted. ]
+   0 -> @i. 1 -> @equal. 0 -> @done.
+   ?? @done == 0 [
+    :load8[@command + @i] -> @character.
+    ? @character != :load8[@wanted + @i] [ 0 -> @equal. 1 -> @done. ]
+    ? @character == 0 [ 1 -> @done. ]
+    @i + 1 -> @i.
+   ]
+   ? @equal [ @k -> @operation. ]
+   @k + 1 -> @k.
+  ]
+  ? (:load8[@command] == 71) * (:load8[@command + 1] == 79) * (:load8[@command + 2] == 0) [ 20 -> @operation. ]
+  9 -> @state.
+  ? :load8[@command] [ ? @operation == 0 [ "Unknown command. Type help.\r\n" -> @message. ] ]
+  ? :load8[@arguments] [
+   ? @operation >= 1 [
+    ? @operation <= 3 [ 0 -> @operation. "This command takes no arguments. Type help.\r\n" -> @message. ]
+   ]
+   ? @operation == 11 [ 0 -> @operation. "This command takes no arguments. Type help.\r\n" -> @message. ]
+   ? (@operation >= 14) * (@operation <= 16) [ 0 -> @operation. "This command takes no arguments. Type help.\r\n" -> @message. ]
+   ? @operation == 18 [ 0 -> @operation. "This command takes no arguments. Type help.\r\n" -> @message. ]
+   ? @operation == 19 [ 0 -> @operation. "This command takes no arguments. Type help.\r\n" -> @message. ]
+  ]
+  ? @operation == 1 [
+   "help | info | disks | tasks | clear\r\nGO B:| - select a separate volume root\r\nwatch [B:|] - list the current/selected root\r\ncreate NAME / save NAME TEXT / read NAME / rm NAME\r\nPaths: NAME or A:|NAME; names <=31, text <=400.\r\nwrite TEXT - print text\r\npause 1|2 / resume 1|2 / reset - threads\r\nportrait / animate / theme - toggle display\r\npixel X Y R G B - draw a true-color pixel\r\nformat ZERO - erase the selected dedicated ZeroFS disk\r\n" -> @message.
+  ]
+  ? @operation == 2 [
+   "x86-64 monolithic kernel, entirely Zero.\r\n3 cooperative native threads; private stacks.\r\n32-bit pixel colors; original animated art.\r\nATA volumes: ZeroFS, ext4, NTFS, Btrfs.\r\nBounded file profiles; roots A:| through Z:|.\r\nSingle CPU, shared kernel memory; no network.\r\n" -> @message.
+   ? :load64[@boot_information + 104] == 32 [
+    "x86-32 monolithic kernel, entirely Zero.\r\n3 cooperative native threads; private stacks.\r\n32-bit pixel colors; original animated art.\r\nATA volumes: ZeroFS, ext4, NTFS, Btrfs.\r\nBounded file profiles; roots A:| through Z:|.\r\nSingle CPU, shared kernel memory; no network.\r\n" -> @message.
+   ]
+  ]
+  ? @operation == 3 [
+   !store64[@console + 120| 1]. !store64[@console + 128| 1].
+   !store8[@listing| 27]. !store8[@listing + 1| 91]. !store8[@listing + 2| 50].
+   !store8[@listing + 3| 74]. !store8[@listing + 4| 27]. !store8[@listing + 5| 91].
+   !store8[@listing + 6| 72]. !store8[@listing + 7| 0]. @listing -> @message.
+  ]
+  ? @operation == 4 [ @arguments -> @message. 12 -> @state. ]
+  ? @operation == 5 [ 120 -> @state. ]
+  ? @operation >= 6 [
+   ? @operation <= 8 [
+    120 -> @state.
+   ]
+  ]
+  ? @operation == 9 [
+   1 -> @valid. :load64[@memory + 24688] -> @i.
+   ? @i >= :load64[@memory + 24704] [ 0 -> @valid. ]
+   ? @valid [
+    @memory + 24832 + @i * 24 -> @pointer.
+    ? (:load8[@pointer + 16] != 0) + (:load64[@pointer] != 0) + ((:load8[@pointer + 17] != 0) * (:load8[@pointer + 17] != 4)) [ 0 -> @valid. ]
+    ? :load64[@pointer + 8] != :load64[@memory + 25472] [ 0 -> @valid. ]
+    ? :load8[@pointer + 19] [ 0 -> @valid. ]
+    ? (:load64[@memory + 25480] != 1) + (:load64[@memory + 25488] != 0) + (:load64[@memory + 25496] != 0) [ 0 -> @valid. ]
+   ]
+   ? @valid == 0 [
+    0 -> @operation. "format ZERO only supports the dedicated raw ZeroFS disk.\r\n" -> @message.
+   ]
+  ]
+  ? @operation == 9 [
+   0 -> @disk_select.
+   "ZERO" -> @wanted. 0 -> @i. 1 -> @equal. 0 -> @done.
+   ?? @done == 0 [
+    :load8[@arguments + @i] -> @character.
+    ? @character != :load8[@wanted + @i] [ 0 -> @equal. 1 -> @done. ]
+    ? @character == 0 [ 1 -> @done. ]
+    @i + 1 -> @i.
+   ]
+   ? @equal [
+    ? @disk_ready [ 60 -> @state. ]
+    ~ [ "No supported IDE disk; nothing changed.\r\n" -> @message. ]
+   ] ~ [ "To erase the dedicated disk, type exactly: format ZERO\r\n" -> @message. ]
+  ]
+  ? @operation == 10 [
+   120 -> @state.
+  ]
+  ? @operation == 11 [
+   "0 terminal RUN / always runnable\r\n1 graphics state=$ frames=0x@\r\n2 compute  state=$ blocks=0x@\r\nrounds=0x@\r\nchecksum=0x@\r\nclock ticks=0x@\r\nState: 1=running 2=paused. One CPU.\r\n" -> @text.
+   "0123456789abcdef" -> @wanted.
+   0 -> @i. 0 -> @j. 0 -> @k. 0 -> @status.
+   ?? :load8[@text + @i] [
+    :load8[@text + @i] -> @character.
+    ? @character == 36 [
+     !store8[@listing + @j| 48 + :load64[@console + 264 + @status * 8]].
+     @status + 1 -> @status. @j + 1 -> @j.
+    ] ~ [
+     ? @character == 64 [
+      :load64[@console + 280] -> @temporary.
+      ? @k == 1 [ :load64[@console + 288] -> @temporary. ]
+      ? @k == 2 [ :load64[@console + 296] -> @temporary. ]
+      ? @k == 3 [ :load64[@console + 392] -> @temporary. ]
+      ? @k == 4 [ :load64[@console + 440] -> @temporary. ]
+      !store64[@console + 1040| @temporary]. 8 -> @c0.
+      ?? @c0 [
+       @c0 - 1 -> @c0. :load8[@console + 1040 + @c0] -> @c1. 0 -> @c2.
+       ?? @c1 >= 16 [ @c1 - 16 -> @c1. @c2 + 1 -> @c2. ]
+       !store8[@listing + @j| :load8[@wanted + @c2]]. @j + 1 -> @j.
+       !store8[@listing + @j| :load8[@wanted + @c1]]. @j + 1 -> @j.
+      ]
+      @k + 1 -> @k.
+     ] ~ [ !store8[@listing + @j| @character]. @j + 1 -> @j. ]
+    ]
+    @i + 1 -> @i.
+   ]
+   !store8[@listing + @j| 0]. @listing -> @message.
+   ? :load64[@console + 256] == 0 [ "No valid loader-owned thread stack pool.\r\n" -> @message. ]
+  ]
+  ? (@operation == 12) + (@operation == 13) [
+   :load8[@arguments] -> @c0. 0 -> @valid.
+   ? (@c0 >= 49) * (@c0 <= 50) [ ? :load8[@arguments + 1] == 0 [ 1 -> @valid. ] ]
+   ? :load64[@console + 256] == 0 [ 0 -> @valid. ]
+   ? @valid [
+    2 -> @c1. ? @operation == 13 [ 1 -> @c1. ]
+    !store64[@console + 264 + (@c0 - 49) * 8| @c1].
+    "Thread paused.\r\n" -> @message.
+    ? @operation == 13 [ "Thread resumed.\r\n" -> @message. ]
+   ] ~ [ "Use pause 1|2 or resume 1|2. Thread0 stays runnable.\r\n" -> @message. ]
+  ]
+  ? (@operation >= 14) * (@operation <= 16) [
+   ? :load64[@console] == 2 [
+    ? @operation == 14 [ !store64[@console + 312| 1 - :load64[@console + 312]]. ]
+    ? @operation == 15 [ !store64[@console + 320| 1 - :load64[@console + 320]]. ]
+    ? @operation == 16 [ !store64[@console + 336| 1 - :load64[@console + 336]]. ]
+    !store64[@console + 304| :load64[@console + 304] + 1].
+    "Display updated. Resume thread1 if paused.\r\n" -> @message.
+   ] ~ [ "No supported linear framebuffer.\r\n" -> @message. ]
+  ]
+  ? @operation == 17 [
+   @arguments -> @pointer. 1 -> @valid. 0 -> @j.
+   ?? @j < 5 [
+    0 -> @temporary. 0 -> @k. 0 -> @done.
+    ?? @done == 0 [
+     :load8[@pointer] -> @character.
+     ? (@character >= 48) * (@character <= 57) [
+      ? @valid [ @temporary * 10 + @character - 48 -> @temporary. ]
+      ? @temporary > 8192 [ 0 -> @valid. ]
+      @k + 1 -> @k. @pointer + 1 -> @pointer.
+     ] ~ [ 1 -> @done. ]
+    ]
+    ? @k == 0 [ 0 -> @valid. ]
+    !store64[@console + 1024 + @j * 8| @temporary].
+    ? @j < 4 [ ? :load8[@pointer] != 32 [ 0 -> @valid. ] ]
+    ?? :load8[@pointer] == 32 [ @pointer + 1 -> @pointer. ]
+    @j + 1 -> @j.
+   ]
+   ? :load8[@pointer] [ 0 -> @valid. ]
+   ? :load64[@console] != 2 [ 0 -> @valid. ]
+   ? :load64[@console + 1024] >= :load64[@console + 16] [ 0 -> @valid. ]
+   ? :load64[@console + 1032] >= :load64[@console + 24] [ 0 -> @valid. ]
+   ? :load64[@console + 1040] > 255 [ 0 -> @valid. ]
+   ? :load64[@console + 1048] > 255 [ 0 -> @valid. ]
+   ? :load64[@console + 1056] > 255 [ 0 -> @valid. ]
+   ? @valid [
+    :load64[@console + 1040] -> @c0. :load64[@console + 1048] -> @c1. :load64[@console + 1056] -> @c2.
+    @c0 * 65536 + @c1 * 256 + @c2 -> @c3.
+    ? :load64[@console + 40] == 0 [ @c2 * 65536 + @c1 * 256 + @c0 -> @c3. ]
+    !store32[:load64[@console + 8] + (:load64[@console + 1032] * :load64[@console + 32] + :load64[@console + 1024]) * 4| @c3].
+    "Pixel written.\r\n" -> @message.
+   ] ~ [ "Use pixel X Y R G B; valid coordinates, RGB0..255.\r\n" -> @message. ]
+  ]
+  ? @operation == 18 [
+   !store64[@console + 288| 0]. !store64[@console + 384| 1].
+   "Background computation reset.\r\n" -> @message.
+  ]
+  ? @operation == 19 [ 130 -> @state. ]
+  ? @operation == 20 [ 120 -> @state. ]
+ ]
+? @state == 60 [ !exit[11]. ]
+!exit[0].

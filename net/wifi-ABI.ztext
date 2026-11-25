@@ -1,0 +1,117 @@
+ZTEXT00100001c4b5ee134fd0000000
+Current original Zero workflow (0.12)
+
+Use the native tools on Linux or their .exe versions on Windows:
+  zero-integrate PROJECT_DIRECTORY NEW_KERNEL.zero
+  zero-build PROJECT_DIRECTORY NEW_OUTPUT_DIRECTORY NEW_KERNEL.zero
+  zero-check PROJECT_DIRECTORY NEW_TEST_DIRECTORY
+All destination paths must be new. The integrator preserves authored sources;
+the builder checks its compiler fixed point and builds the original targets;
+the verifier checks language behavior and host file operations in process.
+See tools/integrate.ztext, tools/build.ztext and checks/README.ztext.
+Read these documents with zero-text read FILE.
+
+The notes below preserve earlier implementation and test history. Any old
+shell/Python runner names, generated artifacts, JSON reports or commands are
+historical references: they were removed from the active project and are not
+current runnable instructions or current-release validation. Native host
+checks do not replace BIOS/UEFI, persistence or physical-hardware testing.
+
+Historical implementation notes
+
+Original Zero WiFi UI ABI, revision1, 2026-11-16
+
+Ownership and integration
+The wired worker owns a32KiB region at loader pool+0x28000. Its first24KiB
+are wired network storage; the final8KiB are WiFi. console+2400 stores the
+network base and console+2408 stores network base+24576. Both addresses must
+be validated/published by kernel initialization before any WiFi snippet runs.
+There is no additional reserve and no new top-level Zero variable. UI parts
+reuse c0..c5,i,j,k,pointer,character,message. They never yield internally and
+must run only in the terminal thread. Persistent state lives entirely in the
+8KiB region. The PCI worker initializes discovery fields before publication.
+
+Kernel integration calls these complete snippets:
+  wifi-open.zero.part: preserve discovered cards, clear credentials and old
+    request/results, enter detecting phase7, mark dirty. Does not render.
+  wifi-step.zero.part: consume character as an event (set character=0), poll
+    discovery/reply state, update phase and dirty. Event0 is a poll. One card
+    automatically selects; two or more require selection. No shell echo.
+  wifi-render.zero.part: produce45 columns x12 LF-terminated rows (552bytes)
+    and NUL at WiFi+4648. Set message=WiFi+4096 and clear dirty. It reads no
+    password byte; only length determines the visible stars/count.
+  wifi-close.zero.part: wipe all64 secret bytes, clear length/request,
+    invalidate pending replies, set phase0 and dirty. Consume character.
+
+Root owns wifi command parsing, empty-argument validation, modal ownership,
+PS/2 routing and original WM integration. While modal, suppress normal shell
+echo and command editing. Extended scan-set1 make72=up and80=down map to256
+and257. Escape make1 maps27. Enter13 or10 confirms; Backspace8/127 removes;
+ASCII32..126 enters the password. Event0 polls completion. F-key window
+actions are blocked during modal. Close/window destruction must run close
+before releasing modal ownership, and restore the underlying terminal view.
+The UI output may be sent to serial: it contains no secret. Do not send raw
+input to serial, output history, or diagnostic dumps.
+
+Root uses console+2416 modal flag and+2424 owner slot index. The UI does not
+modify these. UI+80 is reserved for the owner field, also root-managed.
+
+All following offsets are relative to the8KiB WiFi base. Header fields are
+u64. Discovery worker writes only0,8 and card rows; UI owns remaining header
+except backend response fields104,112 and network rows/count40.
+ 0 card count0..4;8 discovery busy0/1.
+16 phase0closed,1card selection,2scan pending,3network selection,
+   4password,5connect pending,6status,7automatic detection pending.
+24 fixture marker:0production,1simulated backend. Production never sets1.
+32 selected card, one-based;40 network count0..8;48 selected network1..8.
+56 secret length0..63;64 request0none,1scan,2connect.
+72 dirty0/1;80 root-owned modal owner;88 result/status code.
+96 request generation;104 response generation;112 response code.
+120 reserved.128..191 secret bytes, NUL-terminated, maximum63 ASCII bytes.
+192..255 reserved (fixture harness uses200 for injected auth failure).
+256..511: four64-byte PCI records, indexed with displayed card minus1.
+  +0 PCI config address (0x80000000 plus BDF bits);+8 packed vendor/device
+  u32 (vendor low16);+16 packed class/revision;+24 supported-driver0/1.
+  +32..63 reserved. Shared PCI scan publishes actual class0280 controllers.
+512..1023: eight64-byte network records, displayed network minus1.
+  +0..32 SSID bytes followed byNUL, maximum32 bytes; display replaces any
+  nonprintable/non-ASCII byte with question mark. Does not alter raw record.
+  +40 security0open/1WPA2-PSK; +48 signal0..100; +56 reserved for BSSID.
+1024..4095 reserved.4096..8191 UI output, currently553 bytes includingNUL.
+
+Backend contract
+UI publishes selected card/network and generation with request1 or2. In
+this cooperative kernel snippets do not yield, so all fields are visible
+before worker polling. Backend must validate every count/index. It fills
+bounded network records and count for scan success, writes response code,
+then publishes response generation LAST. UI accepts only its current
+nonzero generation. Request remains nonzero until the matching reply is
+consumed. No production backend is supplied yet; every discovered real
+card must have supported-driver0, which prevents scan/connect requests.
+Future drivers must implement actual association/security before reporting
+connection success and must not infer it from interface/link readiness.
+Closing/canceling sets request0 and advances generation. Backend must stop
+an obsolete request and erase any private secret copies when canceled or
+completed. A generation mismatch is not success. Scan response1 means scan
+completed; zero networks then becomes status4. More than8 is scan failure.
+Connect response1 means actual association/security success;5 means auth
+rejected; other values fail. UI erases all64 secret bytes on every completed
+connection, before publishing final status. IPv4/DNS/internet success is
+separate from WiFi association and is not asserted by this interface.
+
+Status codes:1connected,2no PCI radio,3unsupported controller,4no networks,
+5auth rejected,6scan failed,7connection failed,8password shorter than8bytes.
+Status8 remains on the password form; it never publishes a connect request.
+No credential persistence or automatic reconnection is implemented.
+
+Verification
+Run python3 net/wifi-test.py from any directory. Python only assembles own
+Zero source parts, invokes the own compiler/executable, supplies byte events,
+asserts output, and losslessly encodes emitted PPM pixels as PNG when Pillow
+is available. The actual state machine, mock backend, ASCII layout, font
+rendering and pixel rendering execute compiled original Zero. PPM rendering
+uses the current kernel's own5x7 font with a16x32 cell (UI scale2), at native
+1920x1080. All mock-backend screens visibly identify SIMULATION/NO RADIO/
+NO PACKETS. The hosted frame also visibly identifies HOSTED UI FIXTURE.
+These files do not prove guest keyboard/framebuffer integration, packet
+transport, radio scanning or authentication. Root VM tests own that boundary.

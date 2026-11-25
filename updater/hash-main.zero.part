@@ -1,0 +1,12 @@
+? :argcount[] != 1 [ !exit[64]. ]
+:fileopen[:argument[1]|0] -> @fd.
+? @fd == -1 [ !exit[66]. ]
+!store64[@m+80|0]. !store64[@m|@fd]. !store64[@m+8|-1]. !store64[@m+16|1073741824].
+!switch[@m+128|@m+224].
+? :load64[@m+24] [ !exit[:load64[@m+24]]. ]
+"0123456789abcdef" -> @p. 0 -> @i.
+?? @i < 32 [
+ :load8[@m+40+@i] -> @j.
+ !put[:load8[@p+:shr[@j|4]]]. !put[:load8[@p+:bitand[@j|15]]]. @i+1 -> @i.
+]
+!put[10].

@@ -1,0 +1,106 @@
+ZTEXT001000019dfaef122120000000
+Current original Zero workflow (0.12)
+
+Use the native tools on Linux or their .exe versions on Windows:
+  zero-integrate PROJECT_DIRECTORY NEW_KERNEL.zero
+  zero-build PROJECT_DIRECTORY NEW_OUTPUT_DIRECTORY NEW_KERNEL.zero
+  zero-check PROJECT_DIRECTORY NEW_TEST_DIRECTORY
+All destination paths must be new. The integrator preserves authored sources;
+the builder checks its compiler fixed point and builds the original targets;
+the verifier checks language behavior and host file operations in process.
+See tools/integrate.ztext, tools/build.ztext and checks/README.ztext.
+Read these documents with zero-text read FILE.
+
+The notes below preserve earlier implementation and test history. Any old
+shell/Python runner names, generated artifacts, JSON reports or commands are
+historical references: they were removed from the active project and are not
+current runnable instructions or current-release validation. Native host
+checks do not replace BIOS/UEFI, persistence or physical-hardware testing.
+
+Historical implementation notes
+
+Zero NTFS backend: original resident-file implementation
+
+fs/ntfs.zero is original Zero source. Entry300 follows fs/ABI.ztext and reloads
+the volume on every operation. The same source is used in the monolithic
+kernel and the hosted verification harness; no ntfs-3g/Linux/Windows driver
+code is linked or invoked by Zero OS. The compiler emits native machine code
+directly. External ntfs-3g programs are only disposable-image fixture makers
+and independent validators.
+
+Implemented operations
+  probe; watch root directory; read resident file; create empty file;
+  save/create-or-replace resident file; remove file.
+  Names: flat ASCII letters/digits/dot/underscore/hyphen,1..31 bytes;
+  root '.'/'..' and trailing-dot names are refused. Lookup uses standard ASCII
+  NTFS case folding; dotfiles are listed. hiberfil.sys is reserved. System names beginning '$' cannot
+  be passed through the public filename grammar.
+  Data:0..400 bytes. No external data clusters are allocated.
+
+Writable on-disk profile
+  NTFS3.1,512-byte sectors,4096-byte clusters,1024-byte FILE records and
+  4096-byte INDX records. Volume must be clean and have no hiberfil.sys.
+  Both first4096-byte $LogFile restart pages must be unused formatter bytes
+  (all0xff). Initialized Windows journals are explicitly unsupported even
+  when VolumeDirty is clear, because this backend cannot prove no replay is
+  needed. $LogFile must have one ordinary data extent covering these pages.
+  $MFT data and bitmap, $MFTMirr data and root $I30 allocation must each have
+  one ordinary positive mapping pair. Attribute lists, sparse, compressed,
+  encrypted or named data streams are refused. Files must have one resident
+  FILE_NAME, one resident ordinary DATA attribute, one hard link, and standard
+  archive metadata; a security-descriptor attribute may be preserved.
+  Root index is a one-child INDEX_ROOT pointing to one existing leaf INDX.
+  The backend does not split index nodes, grow index allocation, allocate
+  data clusters, grow the MFT allocation, or grow the MFT bitmap. The MFT
+  bitmap is at most512 bytes, supporting at most4096 existing MFT slots.
+  Create uses a free existing MFT slot numbered24 or above. It may initialize
+  the immediately following record within already allocated MFT space and
+  update the MFT's initialized/data sizes, FILE_NAME cache and root index key.
+  A fresh64MiB mkntfs fixture has only one available slot under this bounded
+  profile. Volumes with a larger existing MFT have more slots. Exhaustion
+  returns capacity without changing the image; deleting a file frees its slot.
+  New files inherit valid standard-information timestamps and security ID
+  from the existing MFT metadata. There is no wall-clock timestamp service
+  or Windows ACL inheritance implementation in this backend.
+
+Validation and write protocol
+  Each operation checks signatures, volume bounds, attribute lengths/types,
+  FILE/INDX update-sequence arrays, root index entry lengths and ASCII order,
+  root reference allocation, disjoint metadata regions including the complete
+  allocated $LogFile extent, and MFT/MFTMirr
+  records0/3. The mirror's data mapping must match the boot sector location.
+  Cached FILE_NAME sizes can legally be stale on externally written NTFS;
+  a successful save refreshes both FILE_NAME and directory-index size caches.
+  Unsupported features, missing files, duplicate creates, bad arguments,
+  capacity exhaustion and detected corruption are refused before the first
+  write. Entire changes are staged in private buffers before dirtying disk.
+  Write transaction: set volume dirty in MFT and mirror, flush; write FILE,
+  MFT bitmap, required MFT size/mirror updates and index; flush; clear dirty
+  in both volume records; flush before returning success. Remove unlinks the
+  index and flushes before freeing the FILE/MFT bitmap allocation.
+  Any I/O failure returns failure. Interrupted transactions may leave a dirty
+  volume requiring an external recovery/checking tool. There is no NTFS
+  $LogFile replay/transaction writer, rollback, atomic multi-sector commit,
+  general-purpose NTFS recovery, or claim of production NTFS compatibility.
+  Do not represent this bounded experimental implementation as full NTFS.
+
+Reproduction
+  bash verification/ntfs/check.sh
+  Requires the project's own bootstrap/zero and an installed private copy of
+  ntfs-3g fixture/checking tools on PATH, or set ZERO_NTFS_TOOLS_ROOT to a
+  private extracted package root. The script recreates only verification/ntfs
+  images. It never formats a physical disk or the user's original data images.
+  It checks CRUD,400-byte data,31-byte names,case lookup,dotfiles,record reuse,
+  independent ntfscat/ntfsls/ntfsinfo/ntfsfix -n interoperability,12 failed
+  write/flush positions and11 malformed/unsupported profiles; refused operations compare
+  whole-image SHA256 before/after and report zero writes.
+  Raw/UEFI x86-64 and IA32 use the same source with the kernel's ATA adapter.
+  A successful hosted test is not by itself a claim that a VM boot test ran.
+
+Format references consulted (documentation, not implementation source)
+  https://learn.microsoft.com/en-us/windows/win32/devnotes/master-file-table
+  https://learn.microsoft.com/en-us/windows/win32/devnotes/attribute-record-header
+  https://learn.microsoft.com/en-us/windows/win32/devnotes/file-record-segment-header
+  https://learn.microsoft.com/en-us/windows/win32/devnotes/multi-sector-header
+  https://flatcap.github.io/linux-ntfs/ntfs/concepts/index_entry.html
+  https://flatcap.github.io/linux-ntfs/ntfs/attributes/volume_information.html

@@ -1,0 +1,33 @@
+ZTEXT001000007ce1cf3ba7d0000000
+Native installer 0.11 component status
+
+Implemented in original Zero: prepare/status/remove v1 compatibility and
+new deploy SOURCE.iso LOADER.efi NEW_DIRECTORY using manifest v2.
+The new directory contains verified system.iso, original16MiB storage.data,
+ZEROX64.EFI and zero.install. File contents are flushed, closed, reopened and
+verified before exclusive publication. No foreign runtime or helper process.
+
+Native Linux65/65 checks PASS. Native PE under Wine53/53 checks PASS.
+Evidence: installer/verification/0.11/native-{linux,wine}.json.
+Private tested binaries: build/installer-0.11/zero-setup and zero-setup.exe.
+Built by portability/host/durability/zero-stage2 with filesync support.
+Root release integration may rebuild these using the final canonical compiler.
+
+V2 status accepts changed structurally valid ZeroFS snapshots and preserves
+all data; degraded single-snapshot status is explicit. Removal still refuses
+any changed data before deleting anything. Invalid or unsupported loader
+headers/sections are refused before the destination directory is created.
+Linux fsync EIO injection covers each staged payload and manifest publication;
+EINTR retry is also tested. Parent-directory crash durability is not claimed.
+
+The sibling own UEFI loader reads system.iso in its firmware-visible directory.
+No-CD loading and firmware path handling are verified by installer/boot/tests.
+The installer does not register a firmware/BCD/GRUB entry or modify partitions.
+This is not arbitrary NTFS/ext4/Btrfs Wubi boot or host-file-backed persistence.
+Only the provided UEFI x64 file loader is deployed; the ISO retains separate
+BIOS and IA32 boot paths. Native Windows execution and Secure Boot signing
+are not verified/implemented. FNV checksums do not authenticate source files.
+
+The finalized source/binary/loader hashes are recorded in the test reports.
+The canonical OS ISO and both original user data images were unchanged by all
+installer tests; every fixture used a new private directory.

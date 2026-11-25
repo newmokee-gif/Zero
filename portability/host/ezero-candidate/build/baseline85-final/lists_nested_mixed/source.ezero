@@ -1,0 +1,7 @@
+[Mira | 7 | [8 | 9]] => values
+values => show
+values[1] => show
+values[3][2] => show
+size(values) => show
+values + [10] => show
+values => show

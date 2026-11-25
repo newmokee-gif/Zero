@@ -1,0 +1,45 @@
+# Original Zero hosted verifier for our own ZEROAPP1 x64 Ezero fixtures.
+# Explicitly loads compiled fixture bytes; never used by readfile/writefile.
+:reserve[1048576] => @memory.
+0 => @count.
+0 => @amount.
+0 => @done.
+0 => @image.
+0 => @stack.
+@memory + 524288 => @context.
+0 => @i.
+0 => @status.
+?? @done == 0 [
+ :read[@memory + @count | 491521 - @count] -> @amount.
+ ? @amount > 491521 - @count [ !exit[80]. ]
+ ? @amount == 0 [ 1 -> @done. ] ~ [ @count + @amount -> @count. ]
+ ? @count > 491520 [ !exit[81]. ]
+]
+? @count < 64 [ !exit[82]. ]
+? :load64[@memory] != 0x315050414f52455a [ !exit[83]. ]
+? :load64[@memory + 8] != 64 [ !exit[84]. ]
+? :load64[@memory + 16] != @count [ !exit[85]. ]
+? :load64[@memory + 24] != 64 [ !exit[86]. ]
+? :load64[@memory + 40] != 1 [ !exit[87]. ]
+:hostalloc[@count] -> @image. ? @image == 0 [ !exit[88]. ]
+0 -> @i. ?? @i < @count [ !store8[@image + @i | :load8[@memory + @i]]. @i + 1 -> @i. ]
+? :hostprotect[@image | @count | 1] != 0 [ !exit[89]. ]
+:hostalloc[4198400] -> @stack. ? @stack == 0 [ !exit[90]. ]
+0 -> @i. ?? @i < 192 [ !store8[@context + @i | 0]. @i + 1 -> @i. ]
+!store64[@context | 1]. !store64[@context + 8 | @stack + 4198400].
+!store64[@context + 16 | @memory]. !store64[@context + 24 | 0].
+!store64[@context + 40 | @memory + 528384]. !store64[@context + 48 | 65536].
+!store64[@context + 64 | 1]. !store64[@context + 72 | "fixture"].
+!store64[@context + 168 | @stack]. !store64[@context + 176 | 4198400].
+:call[@image + 64 | @context | 0 | 0 | 0 | 0] -> @status.
+? :load64[@context + 56] > 65536 [ !exit[91]. ]
+0 -> @i.
+?? @i < :load64[@context + 56] [
+ :write[@memory + 528384 + @i | :load64[@context + 56] - @i] -> @amount.
+ ? (@amount == 0) + (@amount > :load64[@context + 56] - @i) [ !exit[92]. ]
+ @i + @amount -> @i.
+]
+:load64[@context + 88] -> @status.
+? :hostfree[@stack | 4198400] != 0 [ !exit[93]. ]
+? :hostfree[@image | @count] != 0 [ !exit[94]. ]
+!exit[@status].

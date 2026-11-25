@@ -1,0 +1,21 @@
+# Modal events never pass through the terminal echo or input/history buffer.
+? :load64[@console + 2416] == 1 [
+ :load64[@console + 2448] -> @character. !store64[@console + 2448|0].
+? :load64[@console+2472] == 0 [
+ # INCLUDE NET wifi-step.zero.part
+] ~ [
+ # INCLUDE APP step.zero.part
+]
+ :load64[@console + 2408] -> @c0.
+ ? :load64[@c0 + 16] == 0 [
+  !store64[@console + 2416|0]. !store64[@console + 2424|0].
+  !store64[@console + 2088|:load64[@console + 2088] + 1].
+  0 -> @line_length. 0 -> @overflow. 9 -> @state.
+ ] ~ [
+  ? :load64[@c0 + 72] [
+   # INCLUDE NET wifi-render.zero.part
+   :load64[@console + 2112] -> @c0.
+   !store64[@c0 + 64|:load64[@c0 + 64] + 1].
+  ]
+ ]
+]

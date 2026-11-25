@@ -1,0 +1,8 @@
+# The host test prints 0123456789 and a newline.
+0 => @digit.
+?? @digit < 10 [
+    !put[48 + @digit].
+    @digit + 1 -> @digit.
+]
+!put[10].
+!exit[0].

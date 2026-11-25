@@ -1,0 +1,76 @@
+# Portable editor commands. Key values 1..12 are navigation; printable bytes insert.
+? @key != 0 [
+ 1 -> @dirty.
+ ? @key == 1004 [
+  ? @changed * (@quit == 0) [ "Unsaved changes. Ctrl+Q again discards them; Ctrl+S saves." -> @status. 1 -> @quit. ] ~ [ 0 -> @running. ]
+ ] ~ [ 0 -> @quit. ]
+ ? @key == 1006 [ 0 -> @mode. "Cancelled." -> @status. ]
+ ? @key == 1001 [
+  ? @changed [ "Save your changes before opening another file." -> @status. ] ~ [ 1 -> @mode. 0 -> @plen. !store8[@prompt | 0]. "Open path: type a file name, then Enter. Escape cancels." -> @status. ]
+ ]
+ ? @key == 1002 [
+  2 -> @mode. 0 -> @plen.
+  ?? :load8[@path + @plen] [ !store8[@prompt + @plen | :load8[@path + @plen]]. @plen + 1 -> @plen. ]
+  !store8[@prompt + @plen | 0]. "Save path: Enter writes atomically. Escape cancels." -> @status.
+ ]
+ ? @key == 1003 [ ? @mode == 0 [ 3 -> @phase. ] ]
+ ? @mode != 0 [
+  ? (@key >= 32) * (@key <= 126) * (@plen < 500) [ !store8[@prompt + @plen | @key]. @plen + 1 -> @plen. !store8[@prompt + @plen | 0]. ]
+  ? (@key == 10) * (@plen > 0) [ @plen - 1 -> @plen. !store8[@prompt + @plen | 0]. ]
+  ? (@key == 11) * (@plen > 0) [ @mode -> @phase. ]
+ ] ~ [
+  ? (@key == 1) * (@caret > 0) [ @caret - 1 -> @caret. ]
+  ? (@key == 2) * (@caret < @length) [ @caret + 1 -> @caret. ]
+  ? (@key == 5) + (@key == 6) + (@key == 3) + (@key == 4) [
+   @caret -> @a.
+   ?? (@a > 0) * (:load8[@text + @a - (@a > 0)] != 10) [ @a - 1 -> @a. ]
+   @caret - @a -> @col.
+   ? @key == 5 [ @a -> @caret. ]
+   ? @key == 6 [ ?? (@caret < @length) * (:load8[@text + @caret] != 10) [ @caret + 1 -> @caret. ] ]
+   ? (@key == 3) * (@a > 0) [
+    @a - 1 -> @b. @b -> @a.
+    ?? (@a > 0) * (:load8[@text + @a - (@a > 0)] != 10) [ @a - 1 -> @a. ]
+    @a + @col -> @caret. ? @caret > @b [ @b -> @caret. ]
+   ]
+   ? @key == 4 [
+    @caret -> @b. ?? (@b < @length) * (:load8[@text + @b] != 10) [ @b + 1 -> @b. ]
+    ? @b < @length [ @b + 1 -> @a. @a -> @b. ?? (@b < @length) * (:load8[@text + @b] != 10) [ @b + 1 -> @b. ] @a + @col -> @caret. ? @caret > @b [ @b -> @caret. ] ]
+   ]
+  ]
+  ? (@key == 7) + (@key == 8) [
+   ? @key == 7 [ ? @caret > 1024 [ @caret - 1024 -> @caret. ] ~ [ 0 -> @caret. ] ]
+   ? @key == 8 [ @caret + 1024 -> @caret. ? @caret > @length [ @length -> @caret. ] ]
+  ]
+  ? (@key == 10) * (@caret > 0) [ @caret - 1 -> @caret. 9 -> @key. ]
+  ? (@key == 9) * (@caret < @length) [
+   @caret -> @i. ?? @i < @length [ !store8[@text + @i | :load8[@text + @i + 1]]. @i + 1 -> @i. ]
+   @length - 1 -> @length. 1 -> @changed.
+  ]
+  0 -> @c.
+  ? (@key >= 32) * (@key <= 126) [ @key -> @c. ]
+  ? @key == 11 [ 10 -> @c. ]
+  ? @key == 12 [ 9 -> @c. ]
+  ? @c != 0 [
+   ? @length >= 65535 [ "Source limit: 65535 bytes. Save before continuing." -> @status. ] ~ [
+    @length -> @i. ?? @i > @caret [ !store8[@text + @i | :load8[@text + @i - 1]]. @i - 1 -> @i. ]
+    !store8[@text + @caret | @c]. @caret + 1 -> @caret. @length + 1 -> @length. !store8[@text + @length | 0]. 1 -> @changed.
+   ]
+  ]
+ ]
+]
+# Mouse coordinates refer to text cells. Scan the current visual page, respecting wraps.
+? @event == 2 [
+ ? (@mousex >= 72) * (@mousex < 1250) * (@mousey >= 102) * (@mousey < 714) * (@mode == 0) [
+  @top -> @i. 0 -> @row. 0 -> @col. 1 -> @a.
+  ?? (@i < @length) * @a [
+   ? ((102 + @row * 18 + 18) > @mousey) * ((72 + @col * 12 + 12) > @mousex) [ 0 -> @a. ] ~ [
+    :load8[@text + @i] -> @c.
+    ? @c == 10 [ ? 102 + @row * 18 + 18 > @mousey [ 0 -> @a. ] ~ [ @row + 1 -> @row. 0 -> @col. @i + 1 -> @i. ] ] ~ [
+     @col + 1 -> @col. ? @c == 9 [ @col + 3 -> @col. ]
+     ? @col >= 98 [ @row + 1 -> @row. 0 -> @col. ] @i + 1 -> @i.
+    ]
+   ]
+  ]
+  @i -> @caret. 1 -> @dirty.
+ ]
+]

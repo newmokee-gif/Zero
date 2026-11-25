@@ -1,0 +1,62 @@
+ZTEXT00100000d1297a95bcf0000000
+ZERO RGB PICTURE FORMAT — ZPIX0001
+
+This original format stores lossless 24-bit RGB images as repeated-pixel runs.
+Its extension is .zpix. Pixels are ordered left to right, then top to bottom.
+A run may cross a row boundary. There is no alpha channel, palette, orientation
+metadata, color profile, audio track or video timeline in this version.
+
+All binary integers below are unsigned little-endian. The header is 64 bytes.
+
+Offset  Size  Meaning
+0       8     ASCII bytes ZPIX0001
+8       4     Width: 1 through 3840
+12      4     Height: 1 through 2160
+16      4     Number of channels: exactly 3
+20      4     Encoding number: exactly 1 (RGB runs)
+24      8     Exact pixel count: width multiplied by height
+32      8     Encoded payload length, excluding the 64-byte header
+40      4     FNV-1a32 checksum of every decoded RGB byte, in raster order
+44      4     Reserved: zero
+48      8     Exact whole-file length, including the header
+56      8     Reserved: zero
+
+Each payload record is four bytes: count, red, green, blue. Count is 1..255;
+zero is invalid. The encoder emits maximal runs of equal RGB triples, splitting
+runs longer than 255. The decoder also accepts valid shorter adjacent runs.
+The sum of all counts must equal the pixel count exactly. Payload length must
+be a multiple of four; trailing bytes, truncated records and extra pixels fail.
+Upper words of all bounded 64-bit fields must be zero, including on a 32-bit
+Zero target. Empty pictures and unsupported channel/codec values are refused.
+
+FNV-1a32 starts at 2166136261. For each decoded byte, XOR that byte, multiply by
+16777619 and retain the low 32 bits. This detects accidental damage; it does
+not authenticate the sender. No existing compressed-image codec is embedded.
+
+At the maximum dimensions, decoded RGB is 24883200 bytes. The largest encoded
+file is 33177664 bytes when every adjacent pixel differs. A flat-color image
+compresses substantially; noisy images can be larger than uncompressed RGB.
+The file is still bounded below the native command's 32 MiB input capacity.
+
+Shared original Zero decoder
+
+media/zpix-decoder.zero.part contains only memory operations and Zero language
+control flow; no host or file API is used. It is shared with tools/picture.zero
+and media/picture-check.zero via fixed markers and our native compositor.
+
+The caller declares the referenced Zero variables and supplies:
+  @mode != 1; @error = 0
+  @input = readable input pointer; @size = exact available input bytes
+  @output = writable output pointer with at least 24883264 available bytes
+Input and output memory ranges must be disjoint, owned and kept valid by the
+caller. The decoder itself does not allocate memory. Header and record checks
+reject inputs outside the format bounds before out-of-range memory accesses.
+
+On success @error is zero; @width, @height and @pixels are valid, and decoded
+RGB begins at @output+64. On failure @error is 65; the output region may contain
+partial unverified bytes and MUST NOT be consumed or displayed. Only a fully
+validated success may be published. Other referenced variables are scratch.
+
+The current native command uses separate 32 MiB input and output buffers plus
+4 KiB scratch (67112960 bytes total). The library does not add a desktop viewer
+or an OS image command. The existing kernel is not expanded by this addition.

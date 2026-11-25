@@ -1,0 +1,439 @@
+# Original Zero host-directory preparation, verification and removal tool.
+# Native firmware-file deployment does not register a boot entry or mount host data.
+:reserve[262144] => @memory.
+@memory+65536 => @buffer.
+@memory+131072 => @manifest.
+@memory+139264 => @banks.
+@memory+163840 => @loader_buffer.
+:host[] => @platform.
+:argcount[] => @argc.
+0 => @action.
+0 => @source.
+0 => @loader_source.
+0 => @loader_size.
+0 => @loader_hash.
+0 => @making.
+1 => @version.
+2 => @payloads.
+0 => @data_changed.
+0 => @bank_count.
+0 => @bank.
+0 => @bank_good.
+0 => @slot.
+0 => @done.
+0 => @other.
+0 => @name_valid.
+0 => @length.
+0 => @pe.
+0 => @optional.
+0 => @virtual_size.
+-1 => @loader_input.
+0 => @directory.
+0 => @directory_length.
+0 => @path.
+0 => @stage.
+0 => @final.
+0 => @suffix.
+0 => @pointer.
+-1 => @input.
+-1 => @output.
+0 => @error.
+0 => @created.
+0 => @owned.
+0 => @stage_bit.
+0 => @final_bit.
+0 => @index.
+0 => @i.
+0 => @j.
+0 => @k.
+0 => @status.
+0 => @size.
+0 => @expected.
+0 => @chunk.
+0 => @got.
+0 => @sent.
+0 => @total.
+0 => @hash.
+0 => @wanted_hash.
+0 => @iso_hash.
+0 => @data_hash.
+0 => @equal.
+0 => @character.
+0 => @temporary.
+0 => @cleanup_error.
+"Usage: zero-setup prepare SOURCE.iso NEW_DIRECTORY\n       zero-setup deploy SOURCE.iso LOADER.efi NEW_DIRECTORY\n       zero-setup status DIRECTORY\n       zero-setup remove DIRECTORY\nPreparation does not install boot integration.\n" => @message.
+? (@platform != 1)*(@platform != 2) [ 64 -> @error. ]
+? (@argc != 2)*(@argc != 3)*(@argc != 4) [ 64 -> @error. ]
+? @error == 0 [
+ :argument[1] -> @pointer. 0 -> @k.
+ ?? @k < 4 [
+  "prepare" -> @suffix. ? @k == 1 [ "status" -> @suffix. ] ? @k == 2 [ "remove" -> @suffix. ] ? @k == 3 [ "deploy" -> @suffix. ]
+  0 -> @i. 1 -> @equal.
+  ?? (:load8[@suffix+@i] != 0)*@equal [
+   ? :load8[@suffix+@i] != :load8[@pointer+@i] [ 0 -> @equal. ]
+   ? @equal [ @i+1 -> @i. ]
+  ]
+  ? @equal [ ? :load8[@pointer+@i] != 0 [ 0 -> @equal. ] ]
+  ? @equal [ @k+1 -> @action. ] @k+1 -> @k.
+ ]
+ ? @action == 0 [ 64 -> @error. ]
+ ? (@action == 1)*(@argc != 3) [ 64 -> @error. ]
+ ? (@action != 1)*(@action != 4)*(@argc != 2) [ 64 -> @error. ]
+ ? (@action == 4)*(@argc != 4) [ 64 -> @error. ]
+ (@action == 1)+(@action == 4) -> @making.
+ :argument[2] -> @directory.
+ ? @making [ @directory -> @source. :argument[3] -> @directory. ]
+ ? @action == 4 [ @directory -> @loader_source. :argument[4] -> @directory. 2 -> @version. 3 -> @payloads. ]
+]
+? @error == 0 [
+ ?? (:load8[@directory+@directory_length] != 0)*(@directory_length < 4000) [ @directory_length+1 -> @directory_length. ]
+ ? (@directory_length == 0)+(@directory_length >= 4000) [ 64 -> @error. ]
+ ? @directory_length [
+  :load8[@directory+@directory_length-1] -> @character.
+  ? (@character == 47)+(@character == 92)+(@character == 58) [ 64 -> @error. ]
+  0 -> @j. 0 -> @i.
+  ?? @i < @directory_length [
+   :load8[@directory+@i] -> @character.
+   ? (@character == 47)+(@character == 92) [ @i+1 -> @j. ] @i+1 -> @i.
+  ]
+  ? (@directory_length-@j == 1)*(:load8[@directory+@j] == 46) [ 64 -> @error. ]
+  ? (@directory_length-@j == 2)*(:load16[@directory+@j] == 0x2e2e) [ 64 -> @error. ]
+ ]
+ 0 -> @index.
+ ?? (@index < 8)*(@error == 0) [
+  @memory+@index*4096 -> @path.
+  0 -> @i. ?? @i < @directory_length [ !store8[@path+@i|:load8[@directory+@i]]. @i+1 -> @i. ]
+  !store8[@path+@i|47]. @i+1 -> @i.
+  "system.iso" -> @suffix. ? @index == 1 [ "system.part" -> @suffix. ]
+  ? @index == 2 [ "storage.data" -> @suffix. ] ? @index == 3 [ "storage.part" -> @suffix. ]
+  ? @index == 4 [ "zero.install" -> @suffix. ] ? @index == 5 [ "manifest.part" -> @suffix. ]
+  ? @index == 6 [ "ZEROX64.EFI" -> @suffix. ] ? @index == 7 [ "loader.part" -> @suffix. ]
+  0 -> @j. ?? :load8[@suffix+@j] [ !store8[@path+@i|:load8[@suffix+@j]]. @i+1 -> @i. @j+1 -> @j. ]
+  !store8[@path+@i|0]. @index+1 -> @index.
+ ]
+]
+# Validate the supplied current-format Zero optical image before any writes.
+? (@error == 0)*@making [
+ "Source is unreadable or is not a supported Zero ISO. Nothing was installed.\n" -> @message.
+ :fileopen[@source|0] -> @input.
+ ? @input == -1 [ 65 -> @error. ]
+ ? @error == 0 [
+  :filesize[@input] -> @size. ? @size != 18890752 [ 65 -> @error. ]
+ ]
+ 0 -> @got.
+ ?? (@got < 65536)*(@error == 0) [
+  :fileread[@input|@buffer+@got|65536-@got] -> @status.
+  ? (@status == 0)+(@status > 65536-@got) [ 65 -> @error. ] ~ [ @got+@status -> @got. ]
+ ]
+ ? @error == 0 [
+  @buffer+32768 -> @pointer.
+  ? (:load8[@pointer] != 1)+(:load32[@pointer+1] != 0x30304443)+(:load8[@pointer+5] != 49)+(:load8[@pointer+6] != 1) [ 65 -> @error. ]
+  "ZERO_SYSTEM" -> @suffix. 0 -> @i.
+  ?? @i < 11 [ ? :load8[@pointer+40+@i] != :load8[@suffix+@i] [ 65 -> @error. ] @i+1 -> @i. ]
+  ? (:load32[@pointer+80] != 9224)+(:load32[@pointer+84] != 0x08240000)+(:load16[@pointer+128] != 2048)+(:load16[@pointer+130] != 0x0008) [ 65 -> @error. ]
+  ? (:load32[@buffer+34816+71] != 23)+(:load8[@buffer+36864] != 255) [ 65 -> @error. ]
+  @buffer+47104 -> @pointer. 0 -> @temporary. 0 -> @i.
+  ?? @i < 32 [ @temporary+:load16[@pointer+@i] -> @temporary. @i+2 -> @i. ]
+  ? (:bitand[@temporary|65535] != 0)+(:load16[@pointer+30] != 0xaa55) [ 65 -> @error. ]
+  ? (:load8[@pointer+32] != 0x88)+(:load16[@pointer+38] != 32)+(:load32[@pointer+40] != 32) [ 65 -> @error. ]
+  ? (:load8[@pointer+96] != 0x88)+(:load16[@pointer+102] != 32768)+(:load32[@pointer+104] != 520) [ 65 -> @error. ]
+ ]
+ ? (@error == 0)*(@action == 4) [
+  "Loader is unreadable or not a bounded x64 UEFI application. Nothing was installed.\n" -> @message.
+  :fileopen[@loader_source|0] -> @loader_input.
+  ? @loader_input == -1 [ 65 -> @error. ]
+  ? @error == 0 [ :filesize[@loader_input] -> @loader_size. ? (@loader_size < 1024)+(@loader_size > 65536) [ 65 -> @error. ] ]
+  0 -> @got.
+  ?? (@got < @loader_size)*(@error == 0) [
+   :fileread[@loader_input|@loader_buffer+@got|@loader_size-@got] -> @status.
+   ? (@status == 0)+(@status > @loader_size-@got) [ 65 -> @error. ] ~ [ @got+@status -> @got. ]
+  ]
+  ? @error == 0 [ :fileread[@loader_input|@loader_buffer+65536|1] -> @status. ? @status != 0 [ 65 -> @error. ] ]
+  ? @loader_input != -1 [ :fileclose[@loader_input] -> @status. -1 -> @loader_input. ? @status != 0 [ 74 -> @error. ] ]
+  ? @error == 0 [
+   :load32[@loader_buffer+60] -> @pe.
+   ? (:load16[@loader_buffer] != 0x5a4d)+(@pe < 64)+(@pe > 4096)+(@pe+264 > @loader_size) [ 65 -> @error. ]
+  ]
+  ? @error == 0 [
+   @loader_buffer+@pe -> @pointer. @pointer+24 -> @optional.
+   :load16[@pointer+6] -> @length.
+   ? (:load32[@pointer] != 0x4550)+(:load16[@pointer+4] != 0x8664)+(@length == 0)+(@length > 16) [ 65 -> @error. ]
+   ? (:load16[@pointer+20] != 240)+(:bitand[:load16[@pointer+22]|2] == 0) [ 65 -> @error. ]
+   ? (:load16[@optional] != 0x20b)+(:load16[@optional+68] != 10) [ 65 -> @error. ]
+   ? (:load32[@optional+32] != 4096)+(:load32[@optional+36] != 512) [ 65 -> @error. ]
+   :load32[@optional+56] -> @size. :load32[@optional+60] -> @expected. :load32[@optional+16] -> @other.
+   ? (@size == 0)+(@size > 1048576)+(:bitand[@size|4095] != 0) [ 65 -> @error. ]
+   ? (@expected < @pe+264+@length*40)+(@expected > @loader_size)+(:bitand[@expected|511] != 0)+(@other >= @size) [ 65 -> @error. ]
+  ]
+  0 -> @slot. @expected -> @total. 4096 -> @wanted_hash. 0 -> @name_valid.
+  ?? @wanted_hash < @expected [ @wanted_hash+4096 -> @wanted_hash. ]
+  ?? (@slot < @length)*(@error == 0) [
+   @optional+240+@slot*40 -> @pointer.
+   :load32[@pointer+8] -> @virtual_size. :load32[@pointer+12] -> @chunk.
+   :load32[@pointer+16] -> @sent. :load32[@pointer+20] -> @got.
+   ? @virtual_size == 0 [ 65 -> @error. ]
+   ? @sent > @virtual_size [ @sent -> @virtual_size. ]
+   ? (@virtual_size == 0)+(@chunk < @wanted_hash)+(:bitand[@chunk|4095] != 0)+(@chunk+@virtual_size > @size) [ 65 -> @error. ]
+   ? (@sent == 0)+(@got < @total)+(:bitand[@got|511] != 0)+(:bitand[@sent|511] != 0)+(@got+@sent > @loader_size) [ 65 -> @error. ]
+   ? (@other >= @chunk)*(@other < @chunk+@virtual_size)*(:bitand[:load32[@pointer+36]|0x20000000] != 0) [ 1 -> @name_valid. ]
+   @got+@sent -> @total. @chunk+@virtual_size -> @wanted_hash. @slot+1 -> @slot.
+  ]
+  ? @name_valid == 0 [ 65 -> @error. ]
+ ]
+ ? @error == 0 [
+  "Destination must be a new directory; no existing directory is reused.\n" -> @message.
+  :makedir[@directory] -> @status.
+  ? @status != 0 [ 73 -> @error. ] ~ [ 1 -> @created. ]
+ ]
+]
+# The ownership manifest is fixed-size, versioned and independently checked.
+? (@error == 0)*(@making == 0) [
+ "No readable valid Zero preparation manifest. Nothing was removed.\n" -> @message.
+ :fileopen[@memory+16384|0] -> @input.
+ ? @input == -1 [ 65 -> @error. ]
+ ? @error == 0 [ ? :filesize[@input] != 256 [ 65 -> @error. ] ]
+ 0 -> @got.
+ ?? (@got < 256)*(@error == 0) [
+  :fileread[@input|@manifest+@got|256-@got] -> @status.
+  ? (@status == 0)+(@status > 256-@got) [ 65 -> @error. ] ~ [ @got+@status -> @got. ]
+ ]
+ ? @input != -1 [ :fileclose[@input] -> @status. -1 -> @input. ? @status != 0 [ 74 -> @error. ] ]
+ ? @error == 0 [
+  ? (:load64[@manifest] != 0x315055544553525a)+(:load64[@manifest+8] != 1)*(:load64[@manifest+8] != 2)+(:load64[@manifest+16] != 1) [ 65 -> @error. ]
+  ? (:load64[@manifest+24] != 18890752)+(:load64[@manifest+40] != 16777216)+(:load64[@manifest+72] != 1) [ 65 -> @error. ]
+  ? (:load64[@manifest+56] != 1)*(:load64[@manifest+56] != 2) [ 65 -> @error. ]
+  :load64[@manifest+8] -> @version.
+  ? (@version == 1)*(:load64[@manifest+64] != 0) [ 65 -> @error. ]
+  ? @version == 2 [
+   ? :load64[@manifest+64] != 1 [ 65 -> @error. ]
+   :load64[@manifest+80] -> @loader_size. :load64[@manifest+88] -> @loader_hash.
+   ? (@loader_size < 1024)+(@loader_size > 65536) [ 65 -> @error. ]
+   3 -> @payloads.
+  ]
+  80 -> @i. ? @version == 2 [ 96 -> @i. ] ?? @i < 240 [ ? :load64[@manifest+@i] != 0 [ 65 -> @error. ] @i+8 -> @i. ]
+  ? :load64[@manifest+248] != 0 [ 65 -> @error. ]
+  14695981039346656037 -> @hash. 0 -> @i.
+  ?? @i < 240 [ :bitxor[@hash|:load8[@manifest+@i]]*1099511628211 -> @hash. @i+1 -> @i. ]
+  ? @hash != :load64[@manifest+240] [ 65 -> @error. ]
+  :load64[@manifest+32] -> @iso_hash. :load64[@manifest+48] -> @data_hash.
+ ]
+]
+# Create staged payloads only in a directory created by this invocation.
+# Flush, close, reopen and hash every payload before atomic publication.
+0 -> @index.
+?? (@index < @payloads)*(@error == 0) [
+ @memory+@index*8192 -> @final. ? @index == 2 [ @memory+24576 -> @final. ] @final+4096 -> @stage.
+ 18890752 -> @expected. 1 -> @stage_bit. 2 -> @final_bit.
+ ? @index == 1 [ 16777216 -> @expected. 4 -> @stage_bit. 8 -> @final_bit. ]
+ ? @index == 2 [ @loader_size -> @expected. 64 -> @stage_bit. 128 -> @final_bit. ]
+ ? @making [
+  "Preparation failed while writing a new staged payload.\n" -> @message.
+  :fileopen[@stage|1] -> @output.
+  ? @output == -1 [ 73 -> @error. ] ~ [ @owned+@stage_bit -> @owned. ]
+  0 -> @total. 14695981039346656037 -> @hash.
+  ?? (@total < @expected)*(@error == 0) [
+   65536 -> @chunk. ? @expected-@total < @chunk [ @expected-@total -> @chunk. ]
+   ? @index == 0 [
+    ? @total != 0 [
+     0 -> @got.
+     ?? (@got < @chunk)*(@error == 0) [
+      :fileread[@input|@buffer+@got|@chunk-@got] -> @status.
+      ? (@status == 0)+(@status > @chunk-@got) [ 74 -> @error. ] ~ [ @got+@status -> @got. ]
+     ]
+    ]
+   ]
+   ? @index == 1 [
+    0 -> @i. ?? @i < @chunk [ !store64[@buffer+@i|0]. @i+8 -> @i. ]
+    ? @total == 0 [
+     0 -> @j. ?? @j < 2 [
+      @buffer+@j*4608 -> @pointer.
+      !store64[@pointer|0x31303053464f525a]. !store64[@pointer+8|1].
+      !store64[@pointer+16|0]. !store64[@pointer+24|0x31303053464f525b]. @j+1 -> @j.
+     ]
+    ]
+   ]
+   ? @index == 2 [ 0 -> @i. ?? @i < @chunk [ !store8[@buffer+@i|:load8[@loader_buffer+@total+@i]]. @i+1 -> @i. ] ]
+   0 -> @i. ?? (@i < @chunk)*(@error == 0) [ :bitxor[@hash|:load8[@buffer+@i]]*1099511628211 -> @hash. @i+1 -> @i. ]
+   0 -> @sent.
+   ?? (@sent < @chunk)*(@error == 0) [
+    :filewrite[@output|@buffer+@sent|@chunk-@sent] -> @status.
+    ? (@status == 0)+(@status > @chunk-@sent) [ 74 -> @error. ] ~ [ @sent+@status -> @sent. ]
+   ]
+   @total+@chunk -> @total.
+  ]
+  ? (@index == 0)*(@input != -1) [
+   ? @error == 0 [
+    :fileread[@input|@buffer|1] -> @status. ? @status != 0 [ 74 -> @error. ]
+    ? :filesize[@input] != @expected [ 74 -> @error. ]
+   ]
+   :fileclose[@input] -> @status. -1 -> @input. ? @status != 0 [ 74 -> @error. ]
+  ]
+  ? (@output != -1)*(@error == 0) [ :filesync[@output] -> @status. ? @status != 0 [ 74 -> @error. ] ]
+  ? @output != -1 [ :fileclose[@output] -> @status. -1 -> @output. ? @status != 0 [ 74 -> @error. ] ]
+  ? @index == 0 [ @hash -> @iso_hash. ] ? @index == 1 [ @hash -> @data_hash. ] ? @index == 2 [ @hash -> @loader_hash. ]
+ ]
+ ? @error == 0 [
+  "Payload verification failed; installation is not ready and removal was not started.\n" -> @message.
+  @iso_hash -> @wanted_hash. ? @index == 1 [ @data_hash -> @wanted_hash. ] ? @index == 2 [ @loader_hash -> @wanted_hash. ]
+  @final -> @path. ? @making [ @stage -> @path. ]
+  :fileopen[@path|0] -> @input.
+  ? @input == -1 [ 75 -> @error. ]
+  ? @error == 0 [ ? :filesize[@input] != @expected [ 75 -> @error. ] ]
+  0 -> @total. 14695981039346656037 -> @hash.
+  ?? (@total < @expected)*(@error == 0) [
+   65536 -> @chunk. ? @expected-@total < @chunk [ @expected-@total -> @chunk. ]
+   :fileread[@input|@buffer|@chunk] -> @got.
+   ? (@got == 0)+(@got > @chunk) [ 75 -> @error. ] ~ [
+    ? (@index == 1)*(@total < 9216) [ 0 -> @i. ?? (@i < @got)*(@total+@i < 9216) [ !store8[@banks+@total+@i|:load8[@buffer+@i]]. @i+1 -> @i. ] ]
+    0 -> @i. ?? @i < @got [ :bitxor[@hash|:load8[@buffer+@i]]*1099511628211 -> @hash. @i+1 -> @i. ]
+    @total+@got -> @total.
+   ]
+  ]
+  ? @error == 0 [
+   :fileread[@input|@buffer|1] -> @status.
+   ? @status != 0 [ 75 -> @error. ]
+   ? @hash != @wanted_hash [
+    ? (@version == 2)*(@action == 2)*(@index == 1) [ 1 -> @data_changed. ] ~ [ 75 -> @error. ]
+   ]
+  ]
+  ? (@error == 0)*(@version == 2)*(@index == 1) [
+   0 -> @bank_count. 0 -> @bank.
+   ?? @bank < 2 [
+    @banks+@bank*4608 -> @temporary. 1 -> @bank_good.
+    ? (:load64[@temporary] != 0x31303053464f525a)+(:load64[@temporary+8] == 0) [ 0 -> @bank_good. ]
+    ? :load64[@temporary]+:load64[@temporary+8]+:load64[@temporary+16] != :load64[@temporary+24] [ 0 -> @bank_good. ]
+    0 -> @hash. 512 -> @i. ?? @i < 4608 [ @hash+:load8[@temporary+@i]*(@i+1) -> @hash. @i+1 -> @i. ]
+    ? @hash != :load64[@temporary+16] [ 0 -> @bank_good. ]
+    0 -> @slot.
+    ?? @slot < 8 [
+     @temporary+512+@slot*512 -> @pointer.
+     ? :load8[@pointer] [
+      ? (:load8[@pointer] != 1)+(:load8[@pointer+1] == 0) [ 0 -> @bank_good. ]
+      0 -> @i. 0 -> @done.
+      ?? @i < 32 [
+       :load8[@pointer+1+@i] -> @character.
+       ? @done == 0 [
+        ? @character == 0 [ 1 -> @done. ] ~ [
+         0 -> @name_valid.
+         ? (@character >= 65)*(@character <= 90) [ 1 -> @name_valid. ]
+         ? (@character >= 97)*(@character <= 122) [ 1 -> @name_valid. ]
+         ? (@character >= 48)*(@character <= 57) [ 1 -> @name_valid. ]
+         ? (@character == 46)+(@character == 95)+(@character == 45) [ 1 -> @name_valid. ]
+         ? @name_valid == 0 [ 0 -> @bank_good. ]
+        ]
+       ] @i+1 -> @i.
+      ]
+      ? @done == 0 [ 0 -> @bank_good. ]
+      0 -> @j.
+      ?? @j < @slot [
+       @temporary+512+@j*512 -> @other.
+       ? :load8[@other] == 1 [
+        0 -> @i. 1 -> @equal. 0 -> @done.
+        ?? @i < 32 [
+         ? @done == 0 [
+          :load8[@pointer+1+@i] -> @character.
+          ? @character != :load8[@other+1+@i] [ 0 -> @equal. 1 -> @done. ]
+          ? @character == 0 [ 1 -> @done. ]
+         ] @i+1 -> @i.
+        ]
+        ? @equal [ 0 -> @bank_good. ]
+       ] @j+1 -> @j.
+      ]
+      :load16[@pointer+34] -> @length.
+      ? @length > 400 [ 0 -> @bank_good. ] ~ [
+       ? :load8[@pointer+36+@length] != 0 [ 0 -> @bank_good. ]
+       0 -> @i. ?? @i < @length [
+        :load8[@pointer+36+@i] -> @character.
+        ? ((@character < 32)*(@character != 9)*(@character != 10)*(@character != 13))+(@character > 126) [ 0 -> @bank_good. ] @i+1 -> @i.
+       ]
+      ]
+     ] @slot+1 -> @slot.
+    ]
+    @bank_count+@bank_good -> @bank_count. @bank+1 -> @bank.
+   ]
+   ? @bank_count == 0 [ 75 -> @error. ]
+  ]
+  ? @input != -1 [ :fileclose[@input] -> @status. -1 -> @input. ? @status != 0 [ 75 -> @error. ] ]
+  ? (@error == 0)*@making [
+   :filemove[@stage|@final] -> @status.
+   ? @status != 0 [ 73 -> @error. ] ~ [ @owned-@stage_bit+@final_bit -> @owned. ]
+  ]
+ ]
+ @index+1 -> @index.
+]
+? (@error == 0)*@making [
+ "Preparation failed while publishing the ownership manifest.\n" -> @message.
+ 0 -> @i. ?? @i < 256 [ !store64[@manifest+@i|0]. @i+8 -> @i. ]
+ !store64[@manifest|0x315055544553525a]. !store64[@manifest+8|@version]. !store64[@manifest+16|1].
+ !store64[@manifest+24|18890752]. !store64[@manifest+32|@iso_hash].
+ !store64[@manifest+40|16777216]. !store64[@manifest+48|@data_hash].
+ !store64[@manifest+56|@platform]. !store64[@manifest+72|1].
+ ? @version == 2 [ !store64[@manifest+64|1]. !store64[@manifest+80|@loader_size]. !store64[@manifest+88|@loader_hash]. ]
+ 14695981039346656037 -> @hash. 0 -> @i.
+ ?? @i < 240 [ :bitxor[@hash|:load8[@manifest+@i]]*1099511628211 -> @hash. @i+1 -> @i. ]
+ !store64[@manifest+240|@hash].
+ :fileopen[@memory+20480|1] -> @output.
+ ? @output == -1 [ 73 -> @error. ] ~ [ @owned+16 -> @owned. ]
+ 0 -> @sent. ?? (@sent < 256)*(@error == 0) [
+  :filewrite[@output|@manifest+@sent|256-@sent] -> @status.
+  ? (@status == 0)+(@status > 256-@sent) [ 74 -> @error. ] ~ [ @sent+@status -> @sent. ]
+ ]
+ ? (@output != -1)*(@error == 0) [ :filesync[@output] -> @status. ? @status != 0 [ 74 -> @error. ] ]
+ ? @output != -1 [ :fileclose[@output] -> @status. -1 -> @output. ? @status != 0 [ 74 -> @error. ] ]
+ ? @error == 0 [
+  :fileopen[@memory+20480|0] -> @input.
+  ? @input == -1 [ 75 -> @error. ]
+  ? @error == 0 [ ? :filesize[@input] != 256 [ 75 -> @error. ] ]
+  0 -> @got. ?? (@got < 256)*(@error == 0) [
+   :fileread[@input|@buffer+@got|256-@got] -> @status.
+   ? (@status == 0)+(@status > 256-@got) [ 75 -> @error. ] ~ [ @got+@status -> @got. ]
+  ]
+  0 -> @i. ?? (@i < 256)*(@error == 0) [ ? :load8[@buffer+@i] != :load8[@manifest+@i] [ 75 -> @error. ] @i+1 -> @i. ]
+  ? @input != -1 [ :fileclose[@input] -> @status. -1 -> @input. ? @status != 0 [ 75 -> @error. ] ]
+ ]
+ ? @error == 0 [
+  :filemove[@memory+20480|@memory+16384] -> @status.
+  ? @status != 0 [ 73 -> @error. ] ~ [ @owned-16+32 -> @owned. ]
+ ]
+]
+? (@error == 0)*(@action == 3) [
+ "Removal stopped after an I/O error. Some owned files may already be removed.\n" -> @message.
+ ? @version == 2 [ :filedelete[@memory+24576] -> @status. ? @status != 0 [ 76 -> @error. ] ]
+ ? @error == 0 [ :filedelete[@memory] -> @status. ? @status != 0 [ 76 -> @error. ] ]
+ ? @error == 0 [ :filedelete[@memory+8192] -> @status. ? @status != 0 [ 76 -> @error. ] ]
+ ? @error == 0 [ :filedelete[@memory+16384] -> @status. ? @status != 0 [ 76 -> @error. ] ]
+ ? @error == 0 [
+  "Verified prepared files removed.\n" -> @message.
+  :dirempty[@directory] -> @status.
+  ? @status != 0 [ "Verified prepared files removed. Folder retained: not empty or not removable.\n" -> @message. ]
+ ]
+]
+# Failure cleanup is restricted to files exclusively created in our new folder.
+? @input != -1 [ :fileclose[@input] -> @status. -1 -> @input. ]
+? @output != -1 [ :fileclose[@output] -> @status. -1 -> @output. ]
+? (@error != 0)*@created [
+ 0 -> @index. 1 -> @temporary.
+ ?? @index < 8 [
+  @index -> @j.
+  ? @index == 0 [ 1 -> @j. ] ? @index == 1 [ 0 -> @j. ]
+  ? @index == 2 [ 3 -> @j. ] ? @index == 3 [ 2 -> @j. ]
+  ? @index == 4 [ 5 -> @j. ] ? @index == 5 [ 4 -> @j. ]
+  ? @index == 6 [ 7 -> @j. ] ? @index == 7 [ 6 -> @j. ]
+  ? :bitand[@owned|@temporary] [
+   :filedelete[@memory+@j*4096] -> @status. ? @status != 0 [ 1 -> @cleanup_error. ]
+  ]
+  @temporary*2 -> @temporary. @index+1 -> @index.
+ ]
+ :dirempty[@directory] -> @status. ? @status != 0 [ 1 -> @cleanup_error. ]
+ ? @cleanup_error [ "Preparation failed; newly created files could not all be removed. Inspect the destination.\n" -> @message. ]
+]
+? (@error == 0)*(@action == 1) [ "Prepared and verified: system.iso, storage.data and zero.install.\nBoot integration: NOT INSTALLED. No host boot entry or partition was changed.\n" -> @message. ]
+? (@error == 0)*(@action == 2)*(@version == 1) [ "Preparation verified. ISO and initial ZeroFS data checksums match.\nBoot integration: NOT INSTALLED. This directory is not a boot installation.\n" -> @message. ]
+? (@error == 0)*(@action == 4) [ "Deployed and verified: ZEROX64.EFI, system.iso, storage.data and zero.install.\nUEFI file launch: select ZEROX64.EFI on a firmware-readable volume.\nNo firmware entry was registered. Host-file data persistence is NOT IMPLEMENTED.\n" -> @message. ]
+? (@error == 0)*(@action == 2)*(@version == 2) [
+ "UEFI files verified. Initial ZeroFS data is unchanged.\nSelect ZEROX64.EFI on a firmware-readable volume; no boot entry is registered.\nHost-file data persistence is NOT IMPLEMENTED.\n" -> @message.
+ ? @data_changed [ "UEFI files verified. Modified ZeroFS data is valid and preserved.\nSelect ZEROX64.EFI on a firmware-readable volume; no boot entry is registered.\nHost-file data persistence is NOT IMPLEMENTED.\n" -> @message. ]
+ ? @bank_count == 1 [ "UEFI files verified. ZeroFS has one valid snapshot; data is preserved.\nSelect ZEROX64.EFI on a firmware-readable volume; no boot entry is registered.\nHost-file data persistence is NOT IMPLEMENTED.\n" -> @message. ]
+]
+0 -> @i. ?? :load8[@message+@i] [ !put[:load8[@message+@i]]. @i+1 -> @i. ]
+!exit[@error].

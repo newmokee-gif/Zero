@@ -1,0 +1,57 @@
+# Original Zero integration checks. Creates a NEW private regular file only.
+# The exact media backend performs real Linux/Windows positioned I/O on that
+# scratch handle; this test never opens a block device or physical disk.
+0 => @rt. 0 => @ri. 0 => @re. 0 => @rr. 0 => @rf. 0 => @rb. 0 => @rc.
+? :argcount[] != 1 [ !exit[64]. ]
+:hostalloc[32768] -> @mh. ? @mh == 0 [ !exit[70]. ]
+@mh+16384 -> @rb.
+:fileopen[:argument[1]|1] -> @rf. ? @rf == -1 [ !exit[73]. ]
+0 -> @ri. ?? @ri < 4096 [ !store8[@rb+@ri|83]. @ri+1 -> @ri. ]
+0 -> @ri. ?? @ri < 4096 [
+ :filewrite[@rf|@rb+@ri|4096-@ri] -> @rr.
+ ? (@rr == 0)+(@rr > 4096-@ri) [ !exit[74]. ] @ri+@rr -> @ri.
+]
+? :filesync[@rf] != 0 [ !exit[74]. ]
+? :fileclose[@rf] != 0 [ !exit[74]. ]
+:fileopen[:argument[1]|3] -> @rf. ? @rf == -1 [ !exit[74]. ]
+? :host[] == 2 [
+ :hostlibrary["kernel32.dll"] -> @rr. ? @rr == 0 [ !exit[69]. ]
+ !store64[@mh+264|:hostsymbol[@rr|"CloseHandle"]].
+ !store64[@mh+320|:hostsymbol[@rr|"ReadFile"]].
+ !store64[@mh+328|:hostsymbol[@rr|"WriteFile"]].
+ !store64[@mh+336|:hostsymbol[@rr|"SetFilePointerEx"]].
+ !store64[@mh+344|:hostsymbol[@rr|"FlushFileBuffers"]].
+]
+?? @rt < 18 [
+ !store64[@mh+16|@rf]. !store64[@mh+24|4096]. !store64[@mh+32|512].
+ !store64[@mh+40|0]. !store64[@mh+56|1]. !store64[@mh+64|@rb].
+ !store64[@mh+72|512]. !store64[@mh+80|512]. !store64[@mh+96|:host[]].
+ !store64[@mh+112|1]. 0 -> @re. 0 -> @rc.
+ ? @rt == 0 [
+  !store64[@mh+56|2]. 0 -> @ri.
+  ?? @ri < 512 [ !store8[@rb+@ri|:bitand[@ri*7+17|255]]. @ri+1 -> @ri. ]
+  512 -> @rc.
+ ]
+ ? @rt == 1 [
+  0 -> @ri. ?? @ri < 512 [ !store8[@rb+@ri|0]. @ri+1 -> @ri. ] 512 -> @rc.
+ ]
+ ? @rt == 2 [ !store64[@mh+56|3]. ]
+ ? @rt == 3 [ !store64[@mh+56|2]. !store64[@mh+112|0]. 73 -> @re. ]
+ ? @rt == 4 [ !store64[@mh+72|0]. 64 -> @re. ]
+ ? @rt == 5 [ !store64[@mh+72|513]. 64 -> @re. ]
+ ? @rt == 6 [ !store64[@mh+80|1]. 64 -> @re. ]
+ ? @rt == 7 [ !store64[@mh+80|4096]. 65 -> @re. ]
+ ? @rt == 8 [ !store64[@mh+80|0xfffffffffffffe00]. 65 -> @re. ]
+ ? @rt == 9 [ !store64[@mh+72|1049088]. !store64[@mh+24|2097152]. 64 -> @re. ]
+ ? @rt == 10 [ !store64[@mh+16|-1]. 64 -> @re. ]
+ ? @rt == 11 [ !store64[@mh+56|0]. 64 -> @re. ]
+ ? @rt == 12 [ !store64[@mh+56|4]. 64 -> @re. ]
+ ? @rt == 13 [ !store64[@mh+24|8192]. !store64[@mh+80|3584]. !store64[@mh+72|1024]. 74 -> @re. 512 -> @rc. ]
+ ? @rt == 14 [
+  ? :fileclose[@rf] != 0 [ !exit[74]. ]
+  :fileopen[:argument[1]|0] -> @rf. ? @rf == -1 [ !exit[74]. ]
+  !store64[@mh+16|@rf]. !store64[@mh+56|2]. !store64[@mh+80|2048]. 74 -> @re.
+ ]
+ ? @rt == 15 [ !store64[@mh+96|3]. 69 -> @re. ]
+ ? @rt == 16 [ !store64[@mh+64|0]. 64 -> @re. ]
+ ? @rt == 17 [ !store64[@mh+40|87]. !store64[@mh+56|2]. 87 -> @re. ]

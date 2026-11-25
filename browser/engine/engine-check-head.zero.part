@@ -1,0 +1,5 @@
+# Integration checks execute the exact memory-only document pipeline.
+:hostalloc[4194336] -> @web. ? @web == 0 [ !exit[71]. ] @web+16 -> @web.
+0 -> @v0. ?? @v0 < 4194304 [ !store64[@web+@v0|0]. @v0+8 -> @v0. ]
+!store64[@web-8|0xa55aa55aa55aa55a]. !store64[@web+4194304|0xa55aa55aa55aa55a].
+!store64[@web|@web+1507328]. !store64[@web+40|800]. !store64[@web+48|600].

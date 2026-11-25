@@ -1,0 +1,95 @@
+ZTEXT0010000147a6bad461c0000000
+Current original Zero workflow (0.12)
+
+Use the native tools on Linux or their .exe versions on Windows:
+  zero-integrate PROJECT_DIRECTORY NEW_KERNEL.zero
+  zero-build PROJECT_DIRECTORY NEW_OUTPUT_DIRECTORY NEW_KERNEL.zero
+  zero-check PROJECT_DIRECTORY NEW_TEST_DIRECTORY
+All destination paths must be new. The integrator preserves authored sources;
+the builder checks its compiler fixed point and builds the original targets;
+the verifier checks language behavior and host file operations in process.
+See tools/integrate.ztext, tools/build.ztext and checks/README.ztext.
+Read these documents with zero-text read FILE.
+
+The notes below preserve earlier implementation and test history. Any old
+shell/Python runner names, generated artifacts, JSON reports or commands are
+historical references: they were removed from the active project and are not
+current runnable instructions or current-release validation. Native host
+checks do not replace BIOS/UEFI, persistence or physical-hardware testing.
+
+Historical implementation notes
+
+Self-host compiler target regression corpus, version0.6
+
+Normal verification
+From the project directory:
+review-tests/selfhost-targets/run.sh build/zero
+
+An optional second argument selects the result directory. The script compiles
+committed fixtures and checks committed expectations. Historical compilers,
+an assembler and a linker are not required. All executable test programs are
+Zero; shell scripts only orchestrate processes, files and comparisons.
+
+expected.tsv contains1107 target/fixture pairs:243 exact raw64/EFI64/raw32/
+EFI32/real SHA-256 checks,79 hosted acceptance checks, and785 rejections.
+Rejections require status1 and empty stdout. Five safe hosted programs execute
+string escapes, stdin/stdout and full-u64 arithmetic/memory tests.
+Exact-output fixtures also require the actual maximum file size, including
+hosted targets:131072 bytes, or16384 for real. EFI additionally requires a
+130048-byte .text section before headers, padding and relocations.
+Raw, EFI and real binaries are not executed by run.sh.
+
+Version0.6 oracle migration
+The0.5 oracle, its provenance and original output-limit fixtures are preserved
+under archive/0.5.0/. The new hashes were accepted only after the independent
+Zero auditor audit-abi-0.6.zero compared all322 accepted outputs from pinned
+old/new compilers. It allows only the exact reviewed prologue insertion,
+x64 foreign-call preservation instructions, and independently recomputed
+ELF/PE sizes and zero padding. Real-mode outputs remain completely identical.
+Of243 non-host hashes,192 intentionally change and51 real-mode hashes remain.
+
+This migration includes hosted binaries: both0.5 and0.6 already use a1MiB host
+arena, so there is no arena-size exception in this comparison. Normal run.sh
+retains79 host acceptance checks plus the five native runtime checks; the
+one-time migration independently proves normalized host output parity too.
+
+ABI-MIGRATION-0.6.txt documents every allowed byte change, the analytically
+adjusted exact/+1 output ceilings, reference hashes, and the auditor limits.
+Seven deliberate corruption controls demonstrate that unrelated body,
+prologue, foreign-call, metadata and padding changes are rejected.
+
+Optional reviewed migration recapture:
+review-tests/selfhost-targets/record-baseline.sh OLD_0.5_COMPILER NEW_0.6_COMPILER RESULTS
+
+This command requires the exact documented compiler SHA-256 hashes, validates
+all1107 pairs and all ceiling equations, and only then replaces expected.tsv.
+It does not build or obtain either reference. Do not regenerate an oracle from
+an unreviewed candidate to make failures disappear.
+
+Fixture groups
+positive/ covers grammar, each original builtin, nested calls, target-specific
+names and u64/real-mode probes. invalid/ covers malformed arities, unsupported
+forms and grammar failures. boundary/ covers lengths, numeric widths, operator
+chains, nesting, symbol counts and exact output ceilings. cases.tsv and
+boundaries.tsv preserve the original target/case classification.
+
+The unified-language namespace deliberately rejects23 formerly accepted
+cross-target names: @bios, @protectedjump and @enable outside real, and @call7
+outside IA32. semantic-overrides.tsv documents these0.5 changes; they remain
+explicit rejection cases. New threading/video operations have separate tests.
+
+Optional IA32 VM execution:
+review-tests/selfhost-targets/run-ia32-vm.sh build/zero build/zero.iso
+
+This compiles the u64 probe with --raw32 and patches only a disposable COPY of
+the17121280-byte optical image, kernel32 slot LBA104. No persistent data disk
+is attached. QEMU runs with long mode and PAE disabled. Success requires exact
+ABCDEFGHIJKLMN0123OP plus LF and the expected ISA debug-exit status.
+The probe covers carry/borrow, wrapping math, cross-half multiplication,
+negation, unsigned comparisons, high-only truth, memory widths, strings,
+loops and entry arguments. This is test instrumentation, not an OS syscall.
+
+ZERO_QEMU, ZERO_QEMU_DATA and ZERO_BIOS_ROM select test tools; the workspace's
+extracted QEMU tree is detected as a fallback. ZERO_TEST_TIMEOUT and
+ZERO_VM_TIMEOUT adjust bounded execution time. VM success does not establish
+physical-hardware or native VirtualBox compatibility.

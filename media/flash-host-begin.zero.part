@@ -1,0 +1,5 @@
+# All raw device operations run this own coroutine, retaining the same handle.
+:fork[@fwork+130128|@fwork+262144|81920] -> @fn.
+? @fn == 1 [
+ ?? 1 [
+  ? :load64[@mh+200] == 1 [

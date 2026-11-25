@@ -1,0 +1,43 @@
+# Memory-only ZPIX0001 decoder, shared by the native picture command.
+# Caller supplies @mode != 1, @error = 0, @input and @size <= 33554432,
+# and @output with at least 24883264 writable bytes. No host/file API is used.
+# Input and output memory ranges must be disjoint; the caller owns both ranges.
+# Success: @error = 0; @width/@height/@pixels are valid, RGB at @output+64.
+# Failure: @error = 65; no decoded bytes may be consumed.
+# Verify every field and every record before any destination is opened.
+? (@mode != 1)*(@error == 0) [
+ "Invalid ZPIX0001 header, dimensions, reserved fields or exact length.\n" -> @message.
+ ? (@size < 68)+(@size > 33554432) [ 65 -> @error. ]
+ ? @error == 0 [
+  "ZPIX0001" -> @literal. 0 -> @i. ?? @i < 8 [ ? :load8[@input+@i] != :load8[@literal+@i] [ 65 -> @error. ] @i+1 -> @i. ]
+  :load32[@input+8] -> @width. :load32[@input+12] -> @height.
+  ? (@width == 0)+(@height == 0)+(@width > 3840)+(@height > 2160) [ 65 -> @error. ]
+  ? (:load32[@input+16] != 3)+(:load32[@input+20] != 1)+(:load32[@input+44] != 0)+(:load64[@input+56] != 0) [ 65 -> @error. ]
+  # Explicit upper words keep bounded header semantics on 32-bit Zero targets.
+  ? (:load32[@input+28] != 0)+(:load32[@input+36] != 0)+(:load32[@input+52] != 0)+(:load32[@input+60] != 0) [ 65 -> @error. ]
+  @width*@height -> @pixels. :load64[@input+32] -> @payload. :load32[@input+40] -> @wanted.
+  ? (:load64[@input+24] != @pixels)+(:load64[@input+48] != @size)+(@payload != @size-64)+(:bitand[@payload|3] != 0) [ 65 -> @error. ]
+ ]
+ ? @error == 0 [
+  "Invalid ZPIX0001 run length, decoded length or RGB checksum.\n" -> @message.
+  64 -> @position. 0 -> @count. 2166136261 -> @hash.
+  ?? (@position < @size)*(@error == 0) [
+   :load8[@input+@position] -> @run.
+   ? (@run == 0)+(@run > @pixels-@count) [ 65 -> @error. ]
+   ? @error == 0 [
+    :load8[@input+@position+1] -> @red. :load8[@input+@position+2] -> @green. :load8[@input+@position+3] -> @blue.
+    0 -> @i.
+    ?? @i < @run [
+     @output+64+(@count+@i)*3 -> @raster.
+     !store8[@raster|@red]. !store8[@raster+1|@green]. !store8[@raster+2|@blue].
+     :bitand[:bitxor[@hash|@red]*16777619|4294967295] -> @hash.
+     :bitand[:bitxor[@hash|@green]*16777619|4294967295] -> @hash.
+     :bitand[:bitxor[@hash|@blue]*16777619|4294967295] -> @hash.
+     @i+1 -> @i.
+    ]
+    @count+@run -> @count. @position+4 -> @position.
+   ]
+  ]
+  ? (@count != @pixels)+(@hash != @wanted) [ 65 -> @error. ]
+ ]
+]

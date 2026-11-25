@@ -1,0 +1,31 @@
+ZTEXT001000006bab77a9aea0000000
+Native original Zero verifier: verified 2026-11-17
+
+Linux ELF: 182/182 passed.
+Windows PE under Wine: 182/182 passed.
+Each run used the canonical project and its older owned bootstrap/zero64.zapp.
+The verifier compiled current compiler.zero from that seed in process before
+compiling the Ezero frontend/packer and running the actual language fixtures.
+There are158 language fixtures and24 actual native file-operation checks.
+
+An additional21 adversarial runner cases passed: usage, existing destination
+preservation, wrong output/status detection, path traversal, corrupt ZTEXT001
+headers/checksums/UTF-8/exact lengths, capacity refusal, corrupt seed ABI,
+missing fixture/manifest/compiler and invalid current compiler source.
+Expected infrastructure errors were checked for nonzero status and private
+scratch cleanup; an existing sentinel remained unchanged.
+
+No QEMU/firmware or physical Windows installation is claimed by this report.
+The verifier is not a sandbox for hostile executable source; fixture code is
+trusted original Zero/Ezero, and malformed input tests cover data boundaries.
+No foreign-language test program is shipped in the project.
+
+Exact source SHA-256:
+dbf586c17f28e482457589136fe66d0d0009c5a6772770c9dc03aa96f6a60105  tools/check.zero
+58c293eb4aaa6aabbe9026b24059508d7e652f0b5510d91a913413f2ccdd38ad  compiler.zero
+cad49cb2f5ee5a7bf09d8b221949ece97d23d07231d4c0e9e7a62a1eb30dec96  bootstrap/zero64.zapp
+757111fd2a643423cefe3edfc9bdbf0963fa5891d07e58675a2b125481d7b003  checks/cases.ztext
+
+Exact tested native tool SHA-256:
+409d8b5349b89007438febac14e3ce311f3350f3b2fa6f279960d3fb63db2854  zero-check-current
+700dde08c5f6b27c86d26470b0ec301605b78a0f39015fe86754153916aa9cd2  zero-check-current.exe

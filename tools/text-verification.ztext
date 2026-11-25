@@ -1,0 +1,27 @@
+ZTEXT0010000058d930c35100000000
+Original Zero text codec: verified 2026-11-17
+
+Linux ELF:69/69 native command/file assertions passed.
+Windows PE under Wine:69/69 identical command/file assertions passed.
+Each matrix includes zero-text selftest:51/51 original-Zero decoder cases.
+The selftest feeds the same decoder used by make/read/verify, rather than an
+alternate implementation. Cases and one-based failure identifiers are in
+original tools/text.zero source.
+
+File checks covered empty, ASCII, Unicode and exact1MiB payload round trips;
+known independent FNV1a32 bytes; header/exact-length/checksum validation;
+exclusive output preservation; invalid UTF-8/NUL and oversize make refusal;
+partial/trailing containers, malformed headers, non-scalar UTF-8 and checksums;
+no payload leakage before validation; missing/directory inputs, existing
+output directories and argument errors. Read-back and EOF are enforced by make.
+The Windows NUL reserved device name was excluded from ordinary file fixtures.
+
+Windows execution used Wine, not a newly installed physical Windows machine.
+FNV1a32 is an accidental-corruption checksum, not an authenticity signature.
+
+Exact source SHA-256:
+ee7a54679a88a6dde3f55101ed66e253405e01562a057fb4301d0a4ac7e9b0ee  tools/text.zero
+
+Exact tested native tool SHA-256:
+709e63a39f5195500c363f22a133dc86ee42ca9f3b50640af1f880b81e52ef94  zero-text
+fcd837a1843f7a4ad1caed66f18251cfc977463cf305dfc9dc68f4714a724c47  zero-text.exe

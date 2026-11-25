@@ -1,0 +1,69 @@
+ZTEXT00100000f85d6ec4f9e0000000
+ZERO STUDIO GUEST EDITOR VERIFICATION
+2026-11-18
+
+Candidate tested
+/tmp/zero-support/validation-0.13/integration/build-third/zero.iso
+SHA256 45ce79a877fc7a47d105217a2631cc79d6106f2a781619e718859fbad01d50d2
+This report covers the guest editor in that candidate, not later untested builds.
+
+Original Zero native checks: 35 passed
+28 event/render checks cover insertion, middle insertion, Backspace/Delete,
+Home/End/Up/Down, exact 400-byte capacity, refusing extra input without changing
+source, unsaved-close/open/new confirmations, filename entry, Save dispatch,
+compiler dispatch, language selection, canvas bounds and caret bounds.
+7 real cooperative file-service client checks use the original fork/switch and
+filesystem service. They cover existing reads, missing files as unsaved new
+buffers, invalid-path preservation, 400-byte reads, 401-byte rejection, NUL/binary
+rejection and Save rejection for an unavailable filesystem. No fake successful
+disk write was substituted in these checks.
+Sources: guest-check-head/tail.zero.part; guest-file-check-head/tail.zero.part.
+Native execution artifacts: /tmp/zero-support/validation-0.13/editor-guest.
+
+Actual guest execution: BIOS64 and BIOS32
+Each mode passed 20 editor-state assertions and 12 terminal command checks,
+including 4 cold-boot file checks.
+The tests used independent 16MiB disks, real PS/2 keyboard events and the actual
+GUI frame/state. The editor opened an existing Zero source file, moved the caret
+with End/Left, deleted and inserted a character, compiled and ran the changed
+program with the bundled Zero compiler, then saved it through the real disk
+service. A new Ezero buffer compiled and ran through the bundled frontend,
+packer and Zero compiler, and Save As created its file on disk.
+Both modes exercised unsaved-close and unsaved-open protection, cancellation,
+failed-open preservation, 400-byte overflow rejection and invalid Zero compiler
+diagnostics without losing source. The original source, Ezero source, 400-byte
+file and independent sentinel all survived a full VM stop and fresh boot.
+
+Actual guest execution: UEFI64 and UEFI32
+Both modes passed GUI Zero compilation/execution, Ezero compilation/execution,
+Save, New, language selection and Save As. The saved Zero/Ezero files and
+sentinel were read again after a full VM stop and fresh boot.
+All guest tests used QEMU with BIOS or OVMF firmware. They are not a claim of a
+separate VirtualBox hardware test or support for every physical machine.
+
+Visual evidence
+Actual 1920x1080 framebuffer captures were encoded and validated with the
+original Zero picture codec. These are running-system screenshots, not mockups:
+/tmp/zero-support/validation-0.13/browser-vm/editor-third-bios64/editor-ezero.zpix
+/tmp/zero-support/validation-0.13/browser-vm/editor-third-bios32/editor-ezero.zpix
+The code, insertion caret, saved state and actual Ezero program output are
+visible. The candidate retained an incorrect inner-window WiFi title; root was
+notified for correction independently of the editor state/content renderer.
+
+Serial test infrastructure finding
+The early external VM harness stopped draining its serial socket during HMP
+keyboard/screenshot operations. Per-character GUI frame mirroring could then
+fill the socket and trigger the guest's bounded UART timeout. The external
+harness now drains in a background reader. The editor also now mirrors only
+bounded status/diagnostic transitions, avoiding full-frame output per keystroke.
+No UART implementation change was needed for these tests.
+
+Protected user data remained unchanged
+storage.zdrive SHA256
+c730241fb30f5516867c751006951a2878f360319195ee975411a05f040f27e8
+user-data/data.vdi SHA256
+7f58fb36c934405757da797ca65f2dddef3858e69107f43e2cae59d14c89bc5f
+
+The first editor's documented limitations remain: 400 ASCII source bytes in the
+guest filesystem service, keyboard editing, manual Zero/Ezero language choice,
+no debugger/process sandbox, and a one-line GUI diagnostic excerpt.

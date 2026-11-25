@@ -1,0 +1,1 @@
+readfile(arguments()[1]) => show

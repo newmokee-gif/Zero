@@ -1,0 +1,5 @@
+:reserve[80] => @context.
+0x40000 => @stack.
+:fork[@context | @stack | 81920] => @result.
+!switch[@context | @context].
+!out16[0xf4 | 99]. !halt.

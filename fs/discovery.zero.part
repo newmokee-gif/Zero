@@ -1,0 +1,288 @@
+# Original Zero read-only physical-disk / volume discovery.
+# H=memory+24576. See discovery-profile.txt. No disk writes are issued.
+? @current == 150 [
+ 0 -> @i. ?? @i < 624 [ !store8[@memory + 24832 + @i| 0]. @i + 1 -> @i. ]
+ !store64[@memory + 24704| 0]. !store64[@memory + 24720| 0].
+ 151 -> @state.
+]
+? @current == 151 [
+ :load64[@memory + 24720] -> @disk_select.
+ ? @disk_select >= 4 [ 199 -> @state. ] ~ [
+  @memory + 25472 + @disk_select * 32 -> @pointer.
+  !store64[@pointer + 16| 0]. !store64[@pointer + 24| 0].
+  ? :load64[@pointer + 8] == 0 [
+   !store64[@memory + 24720| @disk_select + 1]. 151 -> @state.
+  ] ~ [
+   0 -> @i. ?? @i < 1024 [ !store8[@memory + 25600 + @i| 0]. @i + 1 -> @i. ]
+   !store64[@memory + 25600| :load64[@pointer]].
+   !store64[@memory + 25608| :load64[@memory + 24704]].
+   ? (:load64[@pointer] < 2) + (:load64[@pointer] > 268435456) [
+    !store64[@memory + 25624| 1]. 198 -> @state.
+   ] ~ [
+    0 -> @io_lba. @memory + 49152 -> @io_buffer. 1 -> @io_count.
+    0 -> @io_write. 152 -> @io_return. 90 -> @state.
+   ]
+  ]
+ ]
+]
+? @current == 152 [
+ ? @io_ok == 0 [ !store64[@memory + 25624| 3]. 198 -> @state. ] ~ [
+  # A raw ZeroFS or NTFS boot sector is not an MBR partition table.
+  0 -> @valid.
+  ? :load64[@memory + 49152] == 0x31303053464f525a [ 1 -> @valid. ]
+  ? :load64[@memory + 49155] == 0x202020205346544e [ 1 -> @valid. ]
+  ? @valid [
+   !store64[@memory + 25768| 0]. !store64[@memory + 25776| :load64[@memory + 25600]].
+   !store64[@memory + 25784| 197]. 178 -> @state.
+  ] ~ [
+   ? :load16[@memory + 49662] == 0xaa55 [
+    !store64[@memory + 25616| 1]. !store64[@memory + 25632| 0]. 154 -> @state.
+   ] ~ [
+    # Partition-like records without their required signature are ambiguous.
+    # Refuse them; a missing55aa must not reinterpret partitions as a raw FS.
+    0 -> @i. 0 -> @valid.
+    ?? @i < 4 [
+     @memory + 49598 + @i * 16 -> @pointer.
+     ? :load8[@pointer + 4] + :load32[@pointer + 8] + :load32[@pointer + 12] [ 1 -> @valid. ]
+     @i + 1 -> @i.
+    ]
+    ? @valid [
+     !store64[@memory + 25616| 1]. !store64[@memory + 25624| 2]. 198 -> @state.
+    ] ~ [
+     # Also detect a GPT header when its entire protective MBR was lost.
+     1 -> @io_lba. @memory + 32768 -> @io_buffer. 1 -> @io_count.
+     0 -> @io_write. 153 -> @io_return. 90 -> @state.
+    ]
+   ]
+  ]
+ ]
+]
+? @current == 153 [
+ ? @io_ok == 0 [ !store64[@memory + 25624| 3]. 198 -> @state. ] ~ [
+  ? :load64[@memory + 32768] == 0x5452415020494645 [
+   !store64[@memory + 25616| 2]. !store64[@memory + 25624| 2]. 198 -> @state.
+  ] ~ [
+   !store64[@memory + 25768| 0]. !store64[@memory + 25776| :load64[@memory + 25600]].
+   !store64[@memory + 25784| 197]. 178 -> @state.
+  ]
+ ]
+]
+? @current == 154 [
+ :load64[@memory + 25632] -> @i.
+ ? @i == 4 [
+  ? :load64[@memory + 25824] [
+   ? (:load64[@memory + 25824] != 1) + (:load64[@memory + 25832] != 0) [
+    !store64[@memory + 25624| 1]. 198 -> @state.
+   ] ~ [
+    !store64[@memory + 25616| 2].
+    1 -> @io_lba. @memory + 32768 -> @io_buffer. 1 -> @io_count.
+    0 -> @io_write. 160 -> @io_return. 90 -> @state.
+   ]
+  ] ~ [ 197 -> @state. ]
+ ] ~ [
+  @memory + 49598 + @i * 16 -> @pointer.
+  :load8[@pointer + 4] -> @c0. :load32[@pointer + 8] -> @c1. :load32[@pointer + 12] -> @c2.
+  1 -> @valid.
+  ? (:load8[@pointer] != 0) * (:load8[@pointer] != 128) [ 0 -> @valid. ]
+  ? @c0 == 0 [
+   ? @c1 + @c2 [ 0 -> @valid. ]
+   156 -> @state.
+  ] ~ [
+   ? @c0 == 238 [
+    !store64[@memory + 25824| :load64[@memory + 25824] + 1].
+    ? (@c1 != 1) + (@c2 != :load64[@memory + 25600] - 1) [ 0 -> @valid. ]
+    156 -> @state.
+   ] ~ [
+    ? (@c0 == 5) + (@c0 == 15) + (@c0 == 133) [
+     !store64[@memory + 25624| 1]. 198 -> @state.
+    ] ~ [
+     !store64[@memory + 25832| :load64[@memory + 25832] + 1].
+     ? @c1 == 0 [ 0 -> @valid. ]
+     !store64[@memory + 25768| @c1]. !store64[@memory + 25776| @c2].
+     !store64[@memory + 25784| 156]. 178 -> @state.
+    ]
+   ]
+  ]
+  ? @valid == 0 [ !store64[@memory + 25624| 2]. 198 -> @state. ]
+ ]
+]
+? @current == 156 [
+ !store64[@memory + 25632| :load64[@memory + 25632] + 1]. 154 -> @state.
+]
+? @current == 160 [
+ ? @io_ok == 0 [ !store64[@memory + 25624| 3]. 198 -> @state. ] ~ [
+  @memory + 32768 -> @pointer. 1 -> @valid. 2 -> @status.
+  ? :load64[@pointer] != 0x5452415020494645 [ 0 -> @valid. ]
+  ? :load32[@pointer + 8] != 0x10000 [ 0 -> @valid. 1 -> @status. ]
+  :load32[@pointer + 12] -> @c0.
+  ? (@c0 < 92) + (@c0 > 512) [ 0 -> @valid. ]
+  ? :load32[@pointer + 20] != 0 [ 0 -> @valid. ]
+  ? :load64[@pointer + 24] != 1 [ 0 -> @valid. ]
+  ? :load64[@pointer + 32] != :load64[@memory + 25600] - 1 [ 0 -> @valid. ]
+  :load32[@pointer + 80] -> @c1.
+  ? @c1 == 0 [ 0 -> @valid. ]
+  ? @c1 > 128 [ 0 -> @valid. 1 -> @status. ]
+  ? :load32[@pointer + 84] != 128 [ 0 -> @valid. 1 -> @status. ]
+  :shr[@c1 * 128 + 511| 9] -> @c2.
+  :load64[@pointer + 40] -> @c3. :load64[@pointer + 48] -> @c4.
+  :load64[@pointer + 72] -> @c5.
+  ? (@c3 < 2) + (@c3 > @c4) + (@c4 >= :load64[@memory + 25600] - 1) [ 0 -> @valid. ]
+  ? (@c5 < 2) + (@c5 > @c3) [ 0 -> @valid. ]
+  ? @c5 + @c2 < @c5 [ 0 -> @valid. ]
+  ? @c5 + @c2 > @c3 [ 0 -> @valid. ]
+  ? (:load64[@pointer + 56] == 0) * (:load64[@pointer + 64] == 0) [ 0 -> @valid. ]
+  ? @valid [
+   0 -> @i. ?? @i < 512 [ !store8[@memory + 26112 + @i| :load8[@pointer + @i]]. @i + 1 -> @i. ]
+   !store64[@memory + 25640| @c1]. !store64[@memory + 25648| @c3]. !store64[@memory + 25656| @c4].
+   !store64[@memory + 25664| @c5]. !store64[@memory + 25680| @c1 * 128]. !store64[@memory + 25688| @c2].
+   !store64[@memory + 25696| :load32[@pointer + 88]].
+   !store64[@memory + 25712| @pointer]. !store64[@memory + 25720| @c0].
+   !store64[@memory + 25728| :load32[@pointer + 16]]. !store64[@memory + 25736| 161].
+   !store32[@pointer + 16| 0]. 180 -> @state.
+  ] ~ [ !store64[@memory + 25624| @status]. 198 -> @state. ]
+ ]
+]
+? @current == 161 [
+ ? :load64[@memory + 25744] == 0 [ !store64[@memory + 25624| 2]. 198 -> @state. ] ~ [
+  :load64[@memory + 25664] -> @io_lba. @memory + 32768 -> @io_buffer.
+  :load64[@memory + 25688] -> @io_count. 0 -> @io_write. 162 -> @io_return. 90 -> @state.
+ ]
+]
+? @current == 162 [
+ ? @io_ok == 0 [ !store64[@memory + 25624| 3]. 198 -> @state. ] ~ [
+  !store64[@memory + 25712| @memory + 32768]. !store64[@memory + 25720| :load64[@memory + 25680]].
+  !store64[@memory + 25728| :load64[@memory + 25696]]. !store64[@memory + 25736| 163]. 180 -> @state.
+ ]
+]
+? @current == 163 [
+ ? :load64[@memory + 25744] == 0 [ !store64[@memory + 25624| 2]. 198 -> @state. ] ~ [
+  :load64[@memory + 25600] - 1 -> @io_lba. @memory + 49152 -> @io_buffer.
+  1 -> @io_count. 0 -> @io_write. 164 -> @io_return. 90 -> @state.
+ ]
+]
+? @current == 164 [
+ ? @io_ok == 0 [ !store64[@memory + 25624| 3]. 198 -> @state. ] ~ [
+  @memory + 49152 -> @pointer. @memory + 26112 -> @c0. 1 -> @valid.
+  ? :load64[@pointer] != 0x5452415020494645 [ 0 -> @valid. ]
+  ? :load32[@pointer + 8] != :load32[@c0 + 8] [ 0 -> @valid. ]
+  ? :load32[@pointer + 12] != :load32[@c0 + 12] [ 0 -> @valid. ]
+  ? :load32[@pointer + 20] != 0 [ 0 -> @valid. ]
+  ? :load64[@pointer + 24] != :load64[@memory + 25600] - 1 [ 0 -> @valid. ]
+  ? :load64[@pointer + 32] != 1 [ 0 -> @valid. ]
+  40 -> @i. ?? @i < 72 [
+   ? :load8[@pointer + @i] != :load8[@c0 + @i] [ 0 -> @valid. ] @i + 1 -> @i.
+  ]
+  80 -> @i. ?? @i < 92 [
+   ? :load8[@pointer + @i] != :load8[@c0 + @i] [ 0 -> @valid. ] @i + 1 -> @i.
+  ]
+  :load64[@pointer + 72] -> @c1.
+  ? @c1 <= :load64[@memory + 25656] [ 0 -> @valid. ]
+  ? @c1 + :load64[@memory + 25688] < @c1 [ 0 -> @valid. ]
+  ? @c1 + :load64[@memory + 25688] > :load64[@memory + 25600] - 1 [ 0 -> @valid. ]
+  ? @valid [
+   !store64[@memory + 25672| @c1].
+   !store64[@memory + 25712| @pointer]. !store64[@memory + 25720| :load32[@pointer + 12]].
+   !store64[@memory + 25728| :load32[@pointer + 16]]. !store64[@memory + 25736| 165].
+   !store32[@pointer + 16| 0]. 180 -> @state.
+  ] ~ [ !store64[@memory + 25624| 2]. 198 -> @state. ]
+ ]
+]
+? @current == 165 [
+ ? :load64[@memory + 25744] == 0 [ !store64[@memory + 25624| 2]. 198 -> @state. ] ~ [
+  :load64[@memory + 25672] -> @io_lba. @memory + 49152 -> @io_buffer.
+  :load64[@memory + 25688] -> @io_count. 0 -> @io_write. 166 -> @io_return. 90 -> @state.
+ ]
+]
+? @current == 166 [
+ @io_ok -> @valid. 0 -> @i.
+ ? @valid [
+  ?? @i < :load64[@memory + 25680] [
+   ? :load8[@memory + 32768 + @i] != :load8[@memory + 49152 + @i] [ 0 -> @valid. ]
+   @i + 1 -> @i.
+  ]
+ ]
+ ? @valid [ !store64[@memory + 25632| 0]. 167 -> @state. ] ~ [
+  !store64[@memory + 25624| 2]. ? @io_ok == 0 [ !store64[@memory + 25624| 3]. ] 198 -> @state.
+ ]
+]
+? @current == 167 [
+ :load64[@memory + 25632] -> @i.
+ ? @i == :load64[@memory + 25640] [ 197 -> @state. ] ~ [
+  @memory + 32768 + @i * 128 -> @pointer.
+  ? (:load64[@pointer] == 0) * (:load64[@pointer + 8] == 0) [ 168 -> @state. ] ~ [
+   1 -> @valid.
+   ? (:load64[@pointer + 16] == 0) * (:load64[@pointer + 24] == 0) [ 0 -> @valid. ]
+   :load64[@pointer + 32] -> @c0. :load64[@pointer + 40] -> @c1.
+   ? (@c0 < :load64[@memory + 25648]) + (@c1 > :load64[@memory + 25656]) + (@c1 < @c0) [ 0 -> @valid. ]
+   0 -> @j. ?? @j < @i [
+    @memory + 32768 + @j * 128 -> @c2.
+    ? (:load64[@c2] != 0) + (:load64[@c2 + 8] != 0) [
+     ? (:load64[@c2 + 16] == :load64[@pointer + 16]) * (:load64[@c2 + 24] == :load64[@pointer + 24]) [ 0 -> @valid. ]
+    ]
+    @j + 1 -> @j.
+   ]
+   ? @valid [
+    !store64[@memory + 25768| @c0]. !store64[@memory + 25776| @c1 - @c0 + 1].
+    # Preserve the GPT read-only attribute; other type-specific bits are not interpreted.
+    !store64[@memory + 25816| :bitand[:shr[:load64[@pointer + 48]| 60]| 1]].
+    !store64[@memory + 25784| 168]. 178 -> @state.
+   ] ~ [ !store64[@memory + 25624| 2]. 198 -> @state. ]
+  ]
+ ]
+]
+? @current == 168 [
+ !store64[@memory + 25632| :load64[@memory + 25632] + 1]. 167 -> @state.
+]
+# Append only a bounded, non-overlapping interval. The whole disk rolls back on error.
+? @current == 178 [
+ :load64[@memory + 25768] -> @c0. :load64[@memory + 25776] -> @c1.
+ :load64[@memory + 24704] -> @c2. 1 -> @valid.
+ ? (@c1 == 0) + (@c0 >= :load64[@memory + 25600]) [ 0 -> @valid. ]
+ ? @c0 + @c1 < @c0 [ 0 -> @valid. ]
+ ? @c0 + @c1 > :load64[@memory + 25600] [ 0 -> @valid. ]
+ :load64[@memory + 25608] -> @i.
+ ?? @i < @c2 [
+  @memory + 24832 + @i * 24 -> @pointer.
+  ? (@c0 < :load64[@pointer] + :load64[@pointer + 8]) * (:load64[@pointer] < @c0 + @c1) [ 0 -> @valid. ]
+  @i + 1 -> @i.
+ ]
+ ? @valid == 0 [ !store64[@memory + 25624| 2]. 198 -> @state. ] ~ [
+  ? @c2 >= 26 [ !store64[@memory + 25624| 6]. 198 -> @state. ] ~ [
+   @memory + 24832 + @c2 * 24 -> @pointer.
+   !store64[@pointer| @c0]. !store64[@pointer + 8| @c1]. !store64[@pointer + 16| @disk_select].
+   !store8[@pointer + 19| :load64[@memory + 25816]].
+   !store64[@memory + 24704| @c2 + 1]. :load64[@memory + 25784] -> @state.
+  ]
+ ]
+]
+# IEEE CRC32, reflected polynomial, bounded metadata buffer supplied by this FSM.
+? @current == 180 [
+ 0xffffffff -> @checksum. 0 -> @i.
+ ?? @i < :load64[@memory + 25720] [
+  :bitxor[@checksum| :load8[:load64[@memory + 25712] + @i]] -> @checksum.
+  0 -> @j. ?? @j < 8 [
+   :bitand[@checksum| 1] -> @k. :shr[@checksum| 1] -> @checksum.
+   ? @k [ :bitxor[@checksum| 0xedb88320] -> @checksum. ] @j + 1 -> @j.
+  ]
+  @i + 1 -> @i.
+ ]
+ :bitxor[@checksum| 0xffffffff] -> @checksum.
+ !store64[@memory + 25744| @checksum == :load64[@memory + 25728]].
+ :load64[@memory + 25736] -> @state.
+]
+? @current == 197 [
+ @memory + 25472 + @disk_select * 32 -> @pointer.
+ !store64[@pointer + 16| 0]. !store64[@pointer + 24| :load64[@memory + 25616]].
+ !store64[@memory + 24720| @disk_select + 1]. 151 -> @state.
+]
+? @current == 198 [
+ :load64[@memory + 25608] -> @i.
+ ?? @i < :load64[@memory + 24704] [
+  @memory + 24832 + @i * 24 -> @pointer.
+  !store64[@pointer| 0]. !store64[@pointer + 8| 0]. !store64[@pointer + 16| 0]. @i + 1 -> @i.
+ ]
+ !store64[@memory + 24704| :load64[@memory + 25608]].
+ @memory + 25472 + @disk_select * 32 -> @pointer.
+ !store64[@pointer + 16| :load64[@memory + 25624]]. !store64[@pointer + 24| :load64[@memory + 25616]].
+ !store64[@memory + 24720| @disk_select + 1]. 151 -> @state.
+]

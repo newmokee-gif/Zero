@@ -1,0 +1,21 @@
+ZTEXT0010000036cdeea31300000000
+Zmedia format verification
+Date2026-11-20 UTC.
+
+Own Zero regression executable:
+media/check.zero -> --host and --windows.
+8712 checks passed per platform (Linux native and Windows/Wine).
+Raw SHA256 vectors include the million-a vector; malformed container tests invoke
+the same shared worker used by codec, native flash and firmware writer.
+
+Native codec built at:
+/tmp/zero-support/validation-0.14/format/zero-media
+/tmp/zero-support/validation-0.14/format/zero-media.exe
+
+Own Zero source composer reproduced media/codec.zero and media/check.zero
+byte-for-byte from original parts using exclusive output creation.
+
+Independent reviewer additionally checks variable-length SHA blocks, corrupted
+fields, links, input/output aliases, and output preservation. Its report is
+separate and may contain more tests. Native Windows physical hardware is not
+claimed by the Wine result.

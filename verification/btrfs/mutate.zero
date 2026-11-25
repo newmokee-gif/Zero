@@ -1,0 +1,76 @@
+# Original Zero fixture corrupter. Only private test image FD3 is modified.
+:reserve[32768] => @memory.
+@memory + 8192 => @leaf.
+0 => @mode.
+0 => @count.
+0 => @offset.
+0 => @root.
+0 => @wanted.
+0 => @pointer.
+0 => @payload.
+0 => @i.
+0 => @j.
+0 => @checksum.
+0 => @bit.
+0 => @result.
+:read[@memory| 1] -> @result.
+:load8[@memory] -> @mode.
+:pread[3| @memory| 4096| 65536] -> @result.
+? @result != 4096 [ !exit[70]. ]
+16384 -> @count.
+? @mode == 3 [
+ @memory -> @leaf. 4096 -> @count. 65536 -> @offset.
+ !store64[@leaf + 72| 0xffffffffffffffff].
+] ~ [
+ ? @mode == 4 [ :load64[@memory + 88] -> @offset. ] ~ [
+  :load64[@memory + 80] -> @root.
+  :pread[3| @leaf| 16384| @root] -> @result.
+  ? @result != 16384 [ !exit[71]. ]
+  5 -> @wanted. ? @mode == 5 [ 2 -> @wanted. ]
+  0 -> @i.
+  ?? @i < :load32[@leaf + 96] [
+   @leaf + 101 + @i * 25 -> @pointer.
+   ? (:load64[@pointer] == @wanted) * (:load8[@pointer + 8] == 132) [
+    :load64[@leaf + 101 + :load32[@pointer + 17] + 176] -> @offset.
+   ]
+   @i + 1 -> @i.
+  ]
+ ]
+ :pread[3| @leaf| 16384| @offset] -> @result.
+ ? @result != 16384 [ !exit[72]. ]
+ 0 -> @i. 0 -> @wanted.
+ ?? (@i < :load32[@leaf + 96]) * (@wanted == 0) [
+  @leaf + 101 + @i * 25 -> @pointer.
+  @leaf + 101 + :load32[@pointer + 17] -> @payload.
+  ? (@mode == 1) * (:load8[@pointer + 8] == 84) [ !store64[@payload| 99999]. 1 -> @wanted. ]
+  ? (@mode == 2) * (:load64[@pointer] > 256) * (:load8[@pointer + 8] == 12) [
+   !store8[@payload + 10| 90]. 1 -> @wanted.
+  ]
+  ? (@mode == 4) * (:load8[@pointer + 8] == 228) * (:load64[@payload + 24] == 4) [
+   !store64[@payload| 0xffffffffffffffff]. 1 -> @wanted.
+  ]
+  ? (@mode == 5) * (:load8[@pointer + 8] == 169) [ !store64[@payload + 25| 99]. 1 -> @wanted. ]
+  ? (@mode == 6) * (:load8[@pointer + 8] == 108) [
+   !store64[@payload + 8| :load64[@payload + 8] + 1]. 1 -> @wanted.
+  ]
+  @i + 1 -> @i.
+ ]
+ ? @wanted == 0 [ !exit[73]. ]
+]
+0xffffffff -> @checksum. 32 -> @i.
+?? @i < @count [
+ :bitxor[@checksum| :load8[@leaf + @i]] -> @checksum.
+ 0 -> @j.
+ ?? @j < 8 [
+  :bitand[@checksum| 1] -> @bit.
+  :shr[@checksum| 1] -> @checksum.
+  ? @bit [ :bitxor[@checksum| 0x82f63b78] -> @checksum. ]
+  @j + 1 -> @j.
+ ]
+ @i + 1 -> @i.
+]
+!store32[@leaf| 0xffffffff - @checksum].
+:pwrite[3| @leaf| @count| @offset] -> @result.
+? @result != @count [ !exit[74]. ]
+:fsync[3] -> @result.
+? @result [ !exit[75]. ]

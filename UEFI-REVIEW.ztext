@@ -1,0 +1,47 @@
+ZTEXT00100000ae3d474dcec0000000
+Review of extended compiler and initial loader (2026-11-15)
+
+Observed executable checks against build/zero:
+- All five original hosted execution tests pass exact output/status.
+- All 24 original invalid inputs still reject with status1, empty stdout.
+- New string literal with load8/load16/load32 yields expected ABC output.
+- reserve(65536) succeeds in a hosted program.
+
+PE inspection: build/probe.efi is validly recognized by objdump as PE32+
+AMD64, EFI application subsystem10, entry RVA0x1000, 512-byte headers,
+4096 section alignment, .text RX, .reloc read/discardable, no imports,
+no-op relocation block with two ABSOLUTE entries. Header/section sizes
+and relocation-directory offsets are internally consistent.
+
+Code generation static review:
+- entry captures RCX/RDX into R14/R15 before prologue clobbers RCX.
+- call consumes fn+5 arguments in correct order into RAX,RCX,RDX,R8,R9,R10.
+- firmware call stack is aligned16 and has32-byte shadow space, arg5+32.
+- R12 saves RSP across call; conforming Microsoft ABI firmware preserves it.
+- R13 arena pointer and R14/R15 entry arguments are nonvolatile as required.
+- expression temporaries remain below the fixed arena; nested foreign calls
+  restore their caller's evaluation-stack pointer after returning.
+- enter consumes entry,arg0,stack_top; sets RCX=arg0; disables interrupts;
+  aligns new stack16 and jumps. RDX still contains stack_top at kernel entry,
+  so arg1 in that kernel is stack_top unless documented otherwise.
+
+Small documentation/alignment point:
+reserve rounds lengths16, but its base follows initial RSP. At standard UEFI
+function entry, RSP is8 modulo16, so returned pointers remain8 modulo16.
+These are valid8-byte-aligned UEFI struct/GUID buffers, but do not promise
+16-byte-aligned allocation unless the compiler prologue additionally aligns
+RSP before establishing its frame/arena. ELF entry and enter() alignment differ.
+
+Initial loader source interface review:
+LoadedImage/SimpleFS/File offsets and GUID encodings match official specs.
+Kernel allocated as EfiLoaderCode; dedicated kernel stack allocated LoaderData.
+File read loop honors returned byte count; data-map buffer is allocated before
+final GetMemoryMap and ExitBootServices. Exit invalid-key retry uses a fresh map
+and no forbidden console/protocol calls after the first attempt.
+The fixed64KiB map capacity fails explicitly if insufficient; it does not resize.
+The loader's direct UART writes lack transmitter-ready polling and can lose
+some diagnostic bytes on slower hardware; this does not alter boot logic.
+
+Not claimed by this review: firmware execution of PE, completion of boot,
+execution of privileged intrinsics, or physical hardware behavior. Those need
+parent's full-machine tests. No source modifications were made by reviewer.

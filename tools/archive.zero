@@ -1,0 +1,337 @@
+# Original Zero indexed archive. ZPACK001; bounded, uncompressed, portable paths.
+# make MANIFEST.ztext NEW.zpack | list FILE | verify FILE | read FILE NEW_DIRECTORY
+0 => @mode. 0 => @option. 0 => @literal. 0 => @source. 0 => @destination.
+0 => @work. 0 => @archive. 0 => @manifest. 0 => @buffer. 0 => @full.
+0 => @entry. 0 => @path. 0 => @rootlen. 0 => @total. 0 => @count.
+0 => @indexbytes. 0 => @position. 0 => @size. 0 => @offset. 0 => @length.
+0 => @i. 0 => @j. 0 => @k. 0 => @c. 0 => @d. 0 => @n.
+0 => @hash. 0 => @wanted. -1 => @handle. -1 => @output.
+0 => @error. 0 => @message. 0 => @phase. 0 => @same. 0 => @component.
+0 => @start. 0 => @extra. 0 => @next. 0 => @value. 0 => @used.
+0 => @fileindex. 0 => @created. 0 => @owner. 0 => @limit. 0 => @status.
+0 => @resume. 1 => @state. 0 => @current. 0 => @input. 0 => @inputsize.
+0 => @createdfiles. 0 => @nextoffset. 0 => @manifestsize. 0 => @destcheck.
+"Usage: zero-archive make MANIFEST.ztext NEW.zpack | list FILE | verify FILE | read FILE NEW_DIRECTORY\n" -> @message.
+? (:host[] != 1)*(:host[] != 2) [ 64 -> @error. ]
+? (:argcount[] < 2)+(:argcount[] > 3) [ 64 -> @error. ]
+? @error == 0 [
+ :argument[1] -> @option. :argument[2] -> @source. 1 -> @phase.
+ ?? @phase <= 4 [
+  "make" -> @literal. ? @phase == 2 [ "read" -> @literal. ] ? @phase == 3 [ "list" -> @literal. ] ? @phase == 4 [ "verify" -> @literal. ]
+  0 -> @i. 1 -> @same. ?? :load8[@literal+@i]*@same [ ? :load8[@option+@i] != :load8[@literal+@i] [ 0 -> @same. ] ~ [ @i+1 -> @i. ] ]
+  ? @same [ ? :load8[@option+@i] == 0 [ @phase -> @mode. ] ] @phase+1 -> @phase.
+ ]
+ ? (@mode == 0)+((@mode <= 2)*(:argcount[] != 3))+((@mode > 2)*(:argcount[] != 2)) [ 64 -> @error. ]
+ ? @mode <= 2 [ :argument[3] -> @destination. ]
+]
+? @error == 0 [
+ :hostalloc[68165632] -> @work. ? @work == 0 [ 70 -> @error. "Cannot allocate bounded archive workspace.\n" -> @message. ]
+ @work -> @archive. @work+67108864 -> @manifest. @manifest+1048608 -> @buffer. @buffer+1024 -> @full.
+]
+?? (@state != 0)*(@error == 0) [
+ @state -> @current.
+ ? @current == 1 [
+  "Cannot read archive or manifest input.\n" -> @message.
+  :fileopen[@source|0] -> @handle. ? @handle == -1 [ 66 -> @error. ]
+  ? @error == 0 [
+   :filesize[@handle] -> @inputsize. @archive -> @input. 67108864 -> @limit.
+   ? @mode == 1 [ @manifest -> @input. 1048608 -> @limit. ]
+   ? @inputsize > @limit [ 65 -> @error. ] 0 -> @used.
+   ?? (@used < @inputsize)*(@error == 0) [
+    @inputsize-@used -> @size. ? @size > 65536 [ 65536 -> @size. ]
+    :fileread[@handle|@input+@used|@size] -> @n.
+    ? (@n == 0)+(@n > @size) [ 74 -> @error. ] ~ [ @used+@n -> @used. ]
+   ]
+   ? @error == 0 [ ? :fileread[@handle|@buffer|1] != 0 [ 74 -> @error. ] ]
+  ]
+  ? @handle != -1 [ :fileclose[@handle] -> @status. -1 -> @handle. ? @status != 0 [ 74 -> @error. ] ]
+  2 -> @state.
+ ]
+ ? @current == 2 [
+  "Invalid archive or Ztext manifest header.\n" -> @message.
+  ? @mode == 1 [
+   ? @inputsize < 32 [ 65 -> @error. ]
+   ? @error == 0 [
+    ? :load64[@manifest] != 0x313030545845545a [ 65 -> @error. ]
+    0 -> @phase. ?? @phase < 2 [
+     0 -> @value. 0 -> @i. ?? @i < 8 [
+      :load8[@manifest+8+@phase*8+@i] -> @c. 99 -> @d.
+      ? (@c >= 48)*(@c <= 57) [ @c-48 -> @d. ]
+      ? (@c >= 97)*(@c <= 102) [ @c-87 -> @d. ]
+      ? @d > 15 [ 65 -> @error. ] @value*16+@d -> @value. @i+1 -> @i.
+     ]
+     ? @phase == 0 [ @value -> @manifestsize. ] ~ [ @value -> @wanted. ] @phase+1 -> @phase.
+    ]
+    ? (@manifestsize != @inputsize-32)+(:load64[@manifest+24] != 0x0a30303030303030) [ 65 -> @error. ]
+    2166136261 -> @hash. 0 -> @i.
+    ?? (@i < @manifestsize)*(@error == 0) [ :bitand[:bitxor[@hash|:load8[@manifest+32+@i]]*16777619|4294967295] -> @hash. @i+1 -> @i. ]
+    ? @hash != @wanted [ 65 -> @error. ]
+   ]
+   0 -> @position. 0 -> @count. 3 -> @state.
+  ] ~ [
+   @inputsize -> @total.
+   ? @total < 64 [ 65 -> @error. ]
+   ? @error == 0 [
+    ? (:load64[@archive] != 0x3130304b4341505a)+(:load64[@archive+8] != 1)+(:load64[@archive+48] != 0)+(:load64[@archive+56] != 0) [ 65 -> @error. ]
+    :load64[@archive+16] -> @count. :load64[@archive+24] -> @indexbytes.
+    ? (@count > 4096)+(@indexbytes != @count*288)+(:load64[@archive+32] != @total)+(@indexbytes > @total-64) [ 65 -> @error. ]
+    ? @error == 0 [
+     2166136261 -> @hash. 0 -> @i. ?? @i < @indexbytes [ :bitand[:bitxor[@hash|:load8[@archive+64+@i]]*16777619|4294967295] -> @hash. @i+1 -> @i. ]
+     ? @hash != :load64[@archive+40] [ 65 -> @error. ]
+    ]
+   ]
+   0 -> @fileindex. @indexbytes+64 -> @nextoffset. 6 -> @state.
+  ]
+ ]
+ ? @current == 3 [
+  "Invalid manifest: expected at most4096 nonempty relative paths, each <=255 bytes.\n" -> @message.
+  ?? (@position < @manifestsize)*(@error == 0) [
+   ? @count >= 4096 [ 65 -> @error. ] ~ [
+    @archive+64+@count*288 -> @entry. 0 -> @i. ?? @i < 288 [ !store64[@entry+@i|0]. @i+8 -> @i. ]
+    ? @manifestsize-@position >= 2 [
+     ? (:load8[@manifest+32+@position] == 120)*(:load8[@manifest+33+@position] == 124) [ !store64[@entry+280|1]. @position+2 -> @position. ]
+    ]
+    0 -> @length.
+    ?? (@position < @manifestsize)*(@error == 0)*(:load8[@manifest+32+@position] != 10) [
+     ? (@length >= 255)+(:load8[@manifest+32+@position] == 0) [ 65 -> @error. ] ~ [ !store8[@entry+@length|:load8[@manifest+32+@position]]. @length+1 -> @length. @position+1 -> @position. ]
+    ]
+    ? @length [ ? :load8[@entry+@length-1] == 13 [ @length-1 -> @length. !store8[@entry+@length|0]. ] ]
+    ? @length == 0 [ 65 -> @error. ]
+    ? @position < @manifestsize [ @position+1 -> @position. ] @count+1 -> @count.
+   ]
+  ]
+  @count*288 -> @indexbytes. @indexbytes+64 -> @total. 0 -> @fileindex. 4 -> @state.
+ ]
+ ? @current == 4 [
+  ? @fileindex == @count [ 8 -> @state. ] ~ [
+   @archive+64+@fileindex*288 -> @entry. @entry -> @path. 0 -> @length.
+   ?? (@length < 256)*(:load8[@path+@length] != 0) [ @length+1 -> @length. ]
+   5 -> @resume. 100 -> @state.
+  ]
+ ]
+ ? @current == 5 [
+  "Cannot read manifest file; sources must remain unchanged while packing.\n" -> @message.
+  :fileopen[@path|0] -> @handle. ? @handle == -1 [ 66 -> @error. ]
+  ? @error == 0 [
+   :filesize[@handle] -> @size. ? @size > 67108864-@total [ 65 -> @error. ]
+   !store64[@entry+256|@total]. !store64[@entry+264|@size]. 0 -> @used.
+   ?? (@used < @size)*(@error == 0) [
+    @size-@used -> @limit. ? @limit > 65536 [ 65536 -> @limit. ]
+    :fileread[@handle|@archive+@total+@used|@limit] -> @n.
+    ? (@n == 0)+(@n > @limit) [ 74 -> @error. ] ~ [ @used+@n -> @used. ]
+   ]
+   ? @error == 0 [ ? :fileread[@handle|@buffer|1] != 0 [ 74 -> @error. ] ]
+  ]
+  ? @handle != -1 [ :fileclose[@handle] -> @status. -1 -> @handle. ? @status != 0 [ 74 -> @error. ] ]
+  ? @error == 0 [
+   2166136261 -> @hash. 0 -> @i. ?? @i < @size [ :bitand[:bitxor[@hash|:load8[@archive+@total+@i]]*16777619|4294967295] -> @hash. @i+1 -> @i. ]
+   !store64[@entry+272|@hash]. @total+@size -> @total. @fileindex+1 -> @fileindex. 4 -> @state.
+  ]
+ ]
+ ? @current == 6 [
+  "Archive index, path, size or content checksum is invalid.\n" -> @message.
+  ? @fileindex == @count [
+   ? @nextoffset != @total [ 65 -> @error. ] 9 -> @state.
+  ] ~ [
+   @archive+64+@fileindex*288 -> @entry. @entry -> @path. 0 -> @length.
+   ?? (@length < 256)*(:load8[@path+@length] != 0) [ @length+1 -> @length. ]
+   @length -> @i. ?? @i < 256 [ ? :load8[@entry+@i] != 0 [ 65 -> @error. ] @i+1 -> @i. ]
+   :load64[@entry+256] -> @offset. :load64[@entry+264] -> @size.
+   ? (@offset != @nextoffset)+(@offset > @total)+(:load64[@entry+272] > 4294967295)+(:load64[@entry+280] > 1) [ 65 -> @error. ]
+   ? @error == 0 [ ? @size > @total-@offset [ 65 -> @error. ] ]
+   ? @error == 0 [
+    2166136261 -> @hash. 0 -> @i. ?? @i < @size [ :bitand[:bitxor[@hash|:load8[@archive+@offset+@i]]*16777619|4294967295] -> @hash. @i+1 -> @i. ]
+    ? @hash != :load64[@entry+272] [ 65 -> @error. ]
+   ]
+   @offset+@size -> @nextoffset. 7 -> @resume. 100 -> @state.
+  ]
+ ]
+ ? @current == 7 [ @fileindex+1 -> @fileindex. 6 -> @state. ]
+ ? @current == 8 [
+  !store64[@archive|0x3130304b4341505a]. !store64[@archive+8|1]. !store64[@archive+16|@count].
+  !store64[@archive+24|@indexbytes]. !store64[@archive+32|@total]. !store64[@archive+48|0]. !store64[@archive+56|0].
+  2166136261 -> @hash. 0 -> @i. ?? @i < @indexbytes [ :bitand[:bitxor[@hash|:load8[@archive+64+@i]]*16777619|4294967295] -> @hash. @i+1 -> @i. ]
+  !store64[@archive+40|@hash].
+  "Cannot create complete archive; an existing output is never overwritten.\n" -> @message.
+  :fileopen[@destination|1] -> @output. ? @output == -1 [ 73 -> @error. ] ~ [ 1 -> @created. ]
+  0 -> @used. ?? (@used < @total)*(@error == 0) [
+   @total-@used -> @limit. ? @limit > 65536 [ 65536 -> @limit. ]
+   :filewrite[@output|@archive+@used|@limit] -> @n.
+   ? (@n == 0)+(@n > @limit) [ 74 -> @error. ] ~ [ @used+@n -> @used. ]
+  ]
+  ? (@output != -1)*(@error == 0) [ ? :filesync[@output] != 0 [ 74 -> @error. ] ]
+  ? @output != -1 [ :fileclose[@output] -> @status. -1 -> @output. ? @status != 0 [ 74 -> @error. ] ]
+  ? @error == 0 [
+   :fileopen[@destination|0] -> @handle. ? @handle == -1 [ 74 -> @error. ]
+   ? @error == 0 [ ? :filesize[@handle] != @total [ 74 -> @error. ] ]
+   0 -> @used. ?? (@used < @total)*(@error == 0) [
+    @total-@used -> @limit. ? @limit > 65536 [ 65536 -> @limit. ]
+    :fileread[@handle|@manifest|@limit] -> @n. ? (@n == 0)+(@n > @limit) [ 74 -> @error. ] ~ [
+     0 -> @i. ?? (@i < @n)*(@error == 0) [ ? :load8[@manifest+@i] != :load8[@archive+@used+@i] [ 74 -> @error. ] @i+1 -> @i. ] @used+@n -> @used.
+    ]
+   ]
+   ? @error == 0 [ ? :fileread[@handle|@buffer|1] != 0 [ 74 -> @error. ] ]
+   ? @handle != -1 [ :fileclose[@handle] -> @status. -1 -> @handle. ? @status != 0 [ 74 -> @error. ] ]
+  ]
+  0 -> @state.
+ ]
+ ? @current == 9 [
+  ? @mode == 3 [
+   0 -> @fileindex. ?? @fileindex < @count [
+    @archive+64+@fileindex*288 -> @entry. 0 -> @i. ?? :load8[@entry+@i] [ !put[:load8[@entry+@i]]. @i+1 -> @i. ] !put[10]. @fileindex+1 -> @fileindex.
+   ] 0 -> @state.
+  ]
+  ? @mode == 4 [ 0 -> @state. ]
+  ? @mode == 2 [
+   @destination -> @path. 0 -> @length. ?? (@length < 256)*(:load8[@path+@length] != 0) [ @length+1 -> @length. ]
+   @length -> @rootlen. 1 -> @destcheck. 10 -> @resume. 100 -> @state.
+  ]
+ ]
+ ? @current == 10 [
+  "Extraction requires a new single-component destination directory.\n" -> @message.
+  ? :makedir[@destination] != 0 [ 73 -> @error. ] ~ [ 1 -> @created. ]
+  0 -> @i. ?? @i < @rootlen [ !store8[@full+@i|:load8[@destination+@i]]. @i+1 -> @i. ] !store8[@full+@rootlen|47].
+  0 -> @fileindex. 11 -> @state.
+ ]
+ ? @current == 11 [
+  "Extraction failed; only the newly created destination is eligible for cleanup.\n" -> @message.
+  ? @fileindex == @count [ 0 -> @state. ] ~ [
+   @archive+64+@fileindex*288 -> @entry. 0 -> @length.
+   ?? :load8[@entry+@length] [ !store8[@full+@rootlen+1+@length|:load8[@entry+@length]]. @length+1 -> @length. ]
+   !store8[@full+@rootlen+1+@length|0]. 0 -> @i.
+   ?? (@i < @length)*(@error == 0) [
+    ? :load8[@entry+@i] == 47 [
+     0 -> @owner. 0 -> @j. ?? (@j < @fileindex)*(@owner == 0) [
+      1 -> @same. 0 -> @k. ?? (@k <= @i)*@same [
+       ? :load8[@archive+64+@j*288+@k] != :load8[@entry+@k] [ 0 -> @same. ] @k+1 -> @k.
+      ] ? @same [ 1 -> @owner. ] @j+1 -> @j.
+     ]
+     ? @owner == 0 [
+      !store8[@full+@rootlen+1+@i|0]. ? :makedir[@full] != 0 [ 73 -> @error. ] !store8[@full+@rootlen+1+@i|47].
+     ]
+    ] @i+1 -> @i.
+   ]
+   ? @error == 0 [
+    :fileopen[@full|1+3*:load64[@entry+280]] -> @output. ? @output == -1 [ 73 -> @error. ] ~ [ @createdfiles+1 -> @createdfiles. ]
+    :load64[@entry+256] -> @offset. :load64[@entry+264] -> @size. 0 -> @used.
+    ?? (@used < @size)*(@error == 0) [
+     @size-@used -> @limit. ? @limit > 65536 [ 65536 -> @limit. ]
+     :filewrite[@output|@archive+@offset+@used|@limit] -> @n. ? (@n == 0)+(@n > @limit) [ 74 -> @error. ] ~ [ @used+@n -> @used. ]
+    ]
+    ? (@output != -1)*(@error == 0) [ ? :filesync[@output] != 0 [ 74 -> @error. ] ]
+    ? @output != -1 [ :fileclose[@output] -> @status. -1 -> @output. ? @status != 0 [ 74 -> @error. ] ]
+    ? @error == 0 [
+     :fileopen[@full|0] -> @handle. ? @handle == -1 [ 74 -> @error. ]
+     ? @error == 0 [ ? :filesize[@handle] != @size [ 74 -> @error. ] ]
+     0 -> @used. ?? (@used < @size)*(@error == 0) [
+      @size-@used -> @limit. ? @limit > 65536 [ 65536 -> @limit. ]
+      :fileread[@handle|@manifest|@limit] -> @n. ? (@n == 0)+(@n > @limit) [ 74 -> @error. ] ~ [
+       0 -> @i. ?? (@i < @n)*(@error == 0) [ ? :load8[@manifest+@i] != :load8[@archive+@offset+@used+@i] [ 74 -> @error. ] @i+1 -> @i. ] @used+@n -> @used.
+      ]
+     ]
+     ? @error == 0 [ ? :fileread[@handle|@buffer|1] != 0 [ 74 -> @error. ] ]
+     ? @handle != -1 [ :fileclose[@handle] -> @status. -1 -> @handle. ? @status != 0 [ 74 -> @error. ] ]
+    ]
+   ]
+   @fileindex+1 -> @fileindex.
+  ]
+ ]
+ # Shared portable-path and strict UTF-8 validation, used before all mutation.
+ ? @current == 100 [
+  "Unsafe, ambiguous, duplicate or conflicting archive path.\n" -> @message.
+  ? (@length == 0)+(@length > 255) [ 65 -> @error. ]
+  0 -> @i. 0 -> @start. 0 -> @component.
+  ?? (@i <= @length)*(@error == 0) [
+   0 -> @c. ? @i < @length [ :load8[@path+@i] -> @c. ]
+   ? (@c == 47)+(@i == @length) [
+    @i-@start -> @size. @component+1 -> @component.
+    ? (@size == 0)+(@component > 32) [ 65 -> @error. ]
+    ? @size [
+     ? (:load8[@path+@i-1] == 46)+(:load8[@path+@i-1] == 32)+(:load8[@path+@start] == 32) [ 65 -> @error. ]
+     0 -> @value. 0 -> @j.
+     ?? (@j < 3)*(@j < @size) [
+      :load8[@path+@start+@j] -> @d. ? (@d >= 65)*(@d <= 90) [ @d+32 -> @d. ]
+      ? @j == 0 [ @d -> @value. ] ? @j == 1 [ @value+@d*256 -> @value. ] ? @j == 2 [ @value+@d*65536 -> @value. ] @j+1 -> @j.
+     ]
+     0 -> @same. ? @size == 3 [ 1 -> @same. ] ? @size > 3 [ ? :load8[@path+@start+3] == 46 [ 1 -> @same. ] ]
+     ? @same [
+      ? (@value == 7237475)+(@value == 7238256)+(@value == 7894369)+(@value == 7107950) [ 65 -> @error. ]
+     ]
+     0 -> @same. ? @size == 4 [ 1 -> @same. ] ? @size > 4 [ ? :load8[@path+@start+4] == 46 [ 1 -> @same. ] ]
+     ? @same [
+      :load8[@path+@start+3] -> @d.
+      ? ((@value == 7171939)+(@value == 7630956))*(@d >= 49)*(@d <= 57) [ 65 -> @error. ]
+     ]
+     ? ((@value == 7171939)+(@value == 7630956))*(@size >= 5) [
+      ? (:load8[@path+@start+3] == 194)*((@size == 5)+(:load8[@path+@start+5] == 46)) [
+       :load8[@path+@start+4] -> @d. ? (@d == 178)+(@d == 179)+(@d == 185) [ 65 -> @error. ]
+      ]
+     ]
+     ? @value == 7237475 [
+      0 -> @phase. ?? @phase < 2 [
+       "conin$" -> @literal. 6 -> @n. ? @phase [ "conout$" -> @literal. 7 -> @n. ]
+       0 -> @same. ? @size == @n [ 1 -> @same. ] ? @size > @n [ ? :load8[@path+@start+@n] == 46 [ 1 -> @same. ] ]
+       ? @same [
+        1 -> @same. 0 -> @j. ?? (@j < @n)*@same [
+         :load8[@path+@start+@j] -> @d. ? (@d >= 65)*(@d <= 90) [ @d+32 -> @d. ]
+         ? @d != :load8[@literal+@j] [ 0 -> @same. ] @j+1 -> @j.
+        ] ? @same [ 65 -> @error. ]
+       ] @phase+1 -> @phase.
+      ]
+     ]
+    ]
+    ? @destcheck*(@c == 47) [ 65 -> @error. ] @i+1 -> @start. @i+1 -> @i.
+   ] ~ [
+    ? (@c <= 31)+(@c == 34)+(@c == 42)+(@c == 58)+(@c == 60)+(@c == 62)+(@c == 63)+(@c == 92)+(@c == 124)+(@c == 127) [ 65 -> @error. ]
+    0 -> @extra.
+    ? @c >= 128 [
+     ? (@c >= 194)*(@c <= 223) [ 1 -> @extra. ] ~ [ ? (@c >= 224)*(@c <= 239) [ 2 -> @extra. ] ~ [ ? (@c >= 240)*(@c <= 244) [ 3 -> @extra. ] ~ [ 65 -> @error. ] ] ]
+    ]
+    ? @extra >= @length-@i [ 65 -> @error. ]
+    ? (@error == 0)*@extra [
+     :load8[@path+@i+1] -> @next.
+     ? ((@c == 224)*(@next < 160))+((@c == 237)*(@next > 159))+((@c == 240)*(@next < 144))+((@c == 244)*(@next > 143)) [ 65 -> @error. ]
+    ]
+    1 -> @j. ?? (@j <= @extra)*(@error == 0) [ :load8[@path+@i+@j] -> @d. ? (@d < 128)+(@d > 191) [ 65 -> @error. ] @j+1 -> @j. ]
+    @i+@extra+1 -> @i.
+   ]
+  ]
+  0 -> @j.
+  ?? (@j < @fileindex)*(@error == 0)*(@destcheck == 0) [
+   0 -> @k. 1 -> @same. 0 -> @owner.
+   ?? (@k <= @length)*@same [
+    :load8[@archive+64+@j*288+@k] -> @c. :load8[@path+@k] -> @d.
+    ? @c != @d [ 1 -> @owner. ]
+    ? (@c == 47)*(@d == 47)*@owner [ 65 -> @error. ]
+    ? (@c >= 65)*(@c <= 90) [ @c+32 -> @c. ] ? (@d >= 65)*(@d <= 90) [ @d+32 -> @d. ]
+    ? (@c == 0)+(@d == 0) [
+     ? (@c == @d)+((@c == 0)*(@d == 47))+((@d == 0)*(@c == 47)) [ 65 -> @error. ] 0 -> @same.
+    ] ~ [ ? @c != @d [ 0 -> @same. ] ] @k+1 -> @k.
+   ] @j+1 -> @j.
+  ]
+  @resume -> @state.
+ ]
+]
+? @handle != -1 [ :fileclose[@handle] -> @status. ]
+? @output != -1 [ :fileclose[@output] -> @status. ]
+? @created*@error [
+ ? @mode == 1 [ :filedelete[@destination] -> @status. ]
+ ? @mode == 2 [
+  0 -> @fileindex. ?? @fileindex < @createdfiles [
+   @archive+64+@fileindex*288 -> @entry. 0 -> @i. ?? :load8[@entry+@i] [ !store8[@full+@rootlen+1+@i|:load8[@entry+@i]]. @i+1 -> @i. ] !store8[@full+@rootlen+1+@i|0].
+   :filedelete[@full] -> @status. @fileindex+1 -> @fileindex.
+  ]
+  @count -> @fileindex. ?? @fileindex [
+   @fileindex-1 -> @fileindex. @archive+64+@fileindex*288 -> @entry. 0 -> @i.
+   ?? :load8[@entry+@i] [ !store8[@full+@rootlen+1+@i|:load8[@entry+@i]]. @i+1 -> @i. ]
+   ?? @i [ @i-1 -> @i. ? :load8[@entry+@i] == 47 [ !store8[@full+@rootlen+1+@i|0]. :dirempty[@full] -> @status. ] ]
+  ]
+  :dirempty[@destination] -> @status.
+  ? @status != 0 [ "Extraction failed; an incomplete owned destination remains.\n" -> @message. ]
+ ]
+]
+? @error [ 0 -> @i. ?? :load8[@message+@i] [ !put[:load8[@message+@i]]. @i+1 -> @i. ] ] ~ [
+ ? @mode != 3 [ "Archive operation complete.\n" -> @message. 0 -> @i. ?? :load8[@message+@i] [ !put[:load8[@message+@i]]. @i+1 -> @i. ] ]
+]
+? @work [ :hostfree[@work|68165632] -> @status. ]
+!exit[@error].

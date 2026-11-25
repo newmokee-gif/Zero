@@ -1,0 +1,46 @@
+ZTEXT001000008c1a560ee550000000
+ZERO OS 0.7.1 ANIME COMMAND VERIFICATION
+Date: 2026-11-16 UTC
+
+Tested ISO SHA256:
+4b690138dfd0e3bc759d1a4163f3c73c528977f950bb62cbf7919204a6c4a1e9
+build/zero.iso remained unchanged throughout all five runs.
+
+QEMU TCG graphical boot modes, no data disks attached:
+BIOS x86-64: PASS, 13 terminal commands.
+BIOS x86-32 with long mode and PAE disabled: PASS, 13 commands.
+UEFI x86-64: PASS, 13 commands.
+UEFI x86-32 with long mode disabled: PASS, 13 commands.
+
+In each graphical mode, PS/2 keyboard input exercised the actual shell:
+- Disable animation, hide the portrait, then anime shows it.
+- Repeating anime keeps the portrait visible.
+- Hide again and pause graphics; anime extra is rejected.
+- tasks confirms the invalid command leaves graphics paused.
+- anime resumes graphics and restores the portrait.
+- help contains anime; clear followed by anime remains usable.
+
+Seven actual VM screenshots per graphical mode were captured. Exact RGB
+comparisons of the entire 288x384 portrait region prove:
+- shown differs from hidden;
+- shown equals repeated;
+- hidden equals hidden-again;
+- hidden-again equals invalid-unchanged;
+- shown equals resumed and final.
+The BIOS64 and UEFI32 final screenshots were also visually inspected.
+
+No-framebuffer IA32 run: PASS, 3 commands via the actual keyboard path.
+anime returns No supported linear framebuffer.; anime extra is rejected;
+tasks remains available and computation continues. This configuration used
+ISA VGA without an available default VGA ROM, so it is a serial-observed
+no-framebuffer case. Its screenshot reports that the display is not
+initialized; this is not evidence of a rendered text console.
+The first attempt had an unsupported host-side isa-vga.romfile property;
+removing that property fixed VM startup. No guest changes were required.
+
+All five VM processes exited. No existing user data disks were attached or
+modified. Test infrastructure uses QEMU; native VirtualBox was not run.
+run.sh reproduces the focused tests; optional arguments select boot modes.
+session.serial and command-N.txt files preserve actual terminal output.
+The script also writes private PPM/pixel/firmware-variable artifacts for
+verification; these are not needed in the distributed ISO/source archive.

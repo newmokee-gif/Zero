@@ -1,0 +1,124 @@
+# BEGIN ZERO WINDOW SESSION SWITCH
+# Called only in shell state10. Requests from keyboard/commands are deferred
+# until the command engine and filesystem state machines have completed.
+? :load64[@console + 2096] [
+ :load64[@console + 2096] -> @operation.
+ !store64[@console + 2096| 0].
+ :load64[@console + 2048] -> @c0.
+ :load64[@console + 2056] -> @c1.
+ :load64[@console + 2064] -> @c2.
+ 0 -> @ready. 0 -> @done. 0 -> @message.
+ 1 -> @valid.
+ ? @c0 == 0 [ 0 -> @valid. ]
+ ? @c1 == 0 [ 0 -> @valid. ]
+ ? @c2 >= @c1 [ 0 -> @valid. ]
+ ? @valid [
+  @c0 + @c2 * 8192 -> @c3.
+  ? :load64[@c3] != 1 [ 0 -> @valid. ]
+  ? :load64[@console + 2112] != @c3 [ 0 -> @valid. ]
+ ]
+ ? @valid [
+  !store64[@c3 + 32| @line_length]. !store64[@c3 + 40| @overflow].
+  !store64[@c3 + 56| :load64[@memory + 24688]].
+  @c2 -> @c4.
+  ? @operation == 1 [
+   0 -> @i.
+   ?? (@i < @c1) * (@ready == 0) [
+    ? :load64[@c0 + @i * 8192] == 0 [
+     @i -> @c4. @c0 + @i * 8192 -> @c5. 0 -> @j.
+     ?? @j < 8192 [ !store64[@c5 + @j| 0]. @j + 8 -> @j. ]
+     !store64[@c5 + 8| @i + 1]. !store64[@c5 + 64| 1].
+     !store64[@c5 + 56| :load64[@memory + 24688]].
+     !store64[@c5| 1].
+     !store64[@console + 2072| :load64[@console + 2072] + 1].
+     1 -> @ready.
+    ]
+    @i + 1 -> @i.
+   ]
+   ? @ready == 0 [ "Window memory is full. Close a window first." -> @message. ]
+  ]
+  ? @operation == 2 [
+   ? :load64[@console + 2072] > 1 [
+    0 -> @i.
+    ?? (@i < @c1) * (@ready == 0) [
+     @c4 + 1 -> @c4. ? @c4 >= @c1 [ 0 -> @c4. ]
+     ? (@c4 != @c2) * (:load64[@c0 + @c4 * 8192] == 1) [ 1 -> @ready. ]
+     @i + 1 -> @i.
+    ]
+    ? @ready [
+     !store64[@c3| 0].
+     !store64[@console + 2072| :load64[@console + 2072] - 1].
+    ] ~ [ "No other window is available." -> @message. ]
+   ] ~ [ "The last terminal must stay open." -> @message. ]
+  ]
+  ? (@operation == 3) + (@operation == 4) [
+   0 -> @i. 0 -> @valid.
+   ?? (@i < @c1) * (@valid == 0) [
+    ? @operation == 3 [
+     @c4 + 1 -> @c4. ? @c4 >= @c1 [ 0 -> @c4. ]
+    ] ~ [
+     ? @c4 == 0 [ @c1 -> @c4. ]
+     @c4 - 1 -> @c4.
+    ]
+    ? :load64[@c0 + @c4 * 8192] == 1 [ 1 -> @valid. ]
+    @i + 1 -> @i.
+   ]
+   ? @valid [ ? @c4 != @c2 [ 1 -> @ready. ] ]
+  ]
+  ? (@operation >= 5) * (@operation <= 7) [
+   :load64[@console + 2080] -> @i. @i -> @j.
+   ? @operation == 5 [ 1 - @i -> @j. ]
+   ? @operation == 6 [ 0 -> @j. ]
+   ? @operation == 7 [ 1 -> @j. ]
+   ? @j != @i [ !store64[@console + 2080| @j]. 1 -> @done. ]
+  ]
+  ? @operation == 8 [
+   :load64[@console + 2104] -> @c4. 0 -> @valid.
+   ? @c4 < @c1 [
+    ? :load64[@c0 + @c4 * 8192] == 1 [ 1 -> @valid. ]
+   ]
+   ? @valid [ ? @c4 != @c2 [ 1 -> @ready. ] ]
+   ~ [ "No open window with that number." -> @message. ]
+  ]
+  ? @operation > 8 [ "Unknown window action." -> @message. ]
+  ? @ready [
+   @c0 + @c4 * 8192 -> @c5.
+   !store64[@console + 2064| @c4]. !store64[@console + 2112| @c5].
+   @c5 + 256 -> @line.
+   :load64[@c5 + 32] -> @line_length.
+   :load64[@c5 + 40] -> @overflow.
+   !store64[@memory + 24688| :load64[@c5 + 56]].
+   ? :load64[@c5 + 144] == 0 [
+    !store64[@c5 + 144| 1]. 9 -> @state.
+   ]
+  ]
+  ? @ready + @done [
+   !store64[@console + 2088| :load64[@console + 2088] + 1].
+  ]
+ ] ~ [ "Window manager unavailable: no safe memory pool." -> @message. ]
+ ? @message [
+  # Error output must not consume or alter a partially typed command.
+  # Re-emit its prompt/input after the diagnostic, using bounded scratch.
+  !store8[@listing| 13]. !store8[@listing + 1| 10]. 2 -> @i. 0 -> @j.
+  ?? :load8[@message + @j] [
+   !store8[@listing + @i| :load8[@message + @j]].
+   @i + 1 -> @i. @j + 1 -> @j.
+  ]
+  !store8[@listing + @i| 13]. !store8[@listing + @i + 1| 10]. @i + 2 -> @i.
+  ? :load64[@memory + 24704] [
+   !store8[@listing + @i| 65 + :load64[@memory + 24688]].
+   !store8[@listing + @i + 1| 58]. !store8[@listing + @i + 2| 124].
+   !store8[@listing + @i + 3| 62]. !store8[@listing + @i + 4| 32].
+   @i + 5 -> @i.
+  ] ~ [
+   "zero> " -> @pointer. 0 -> @j.
+   ?? @j < 6 [ !store8[@listing + @i| :load8[@pointer + @j]]. @i + 1 -> @i. @j + 1 -> @j. ]
+  ]
+  0 -> @j.
+  ?? (@j < @line_length) * (@j < 480) [
+   !store8[@listing + @i| :load8[@line + @j]]. @i + 1 -> @i. @j + 1 -> @j.
+  ]
+  !store8[@listing + @i| 0]. @listing -> @message.
+ ]
+]
+# END ZERO WINDOW SESSION SWITCH

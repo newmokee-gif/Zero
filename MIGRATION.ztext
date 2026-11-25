@@ -1,0 +1,42 @@
+ZTEXT001000009d70daf07090000000
+Zero distinct-syntax source migration
+
+All six active system/tool sources now use the same distinct grammar:
+bios.zero, kernel.zero, loader.zero, loader32.zero, image.zero and iso.zero.
+Examples, active valid/invalid/boundary fixtures and real-mode.zero were also
+migrated. Source comments, operation order, constants and algorithms were
+preserved. There is no packaged foreign-language source converter or runtime.
+
+Syntax conventions
+An expression followed by => @name. creates a variable. An expression followed
+by -> @name. updates an existing variable. References always begin with @.
+? condition [ ... ] ~ [ ... ] is a choice; the alternative is optional.
+?? condition [ ... ] repeats its block while the condition is nonzero.
+:operation[argument|argument] yields a value; !operation[arguments]. performs
+an effect. Zero-argument architectural effects include !halt. and !disable.
+Parentheses remain available for arithmetic grouping. See SYNTAX.ztext for
+the complete grammar and the retained u64/u32 target contracts.
+
+Verification performed during migration
+PASS: all six active sources compile with the new grammar for their target.
+PASS: five native language regression programs produce the original exact
+      expected output and exit successfully.
+PASS: all 24 invalid fixtures reject with status 1 and zero stdout. Each was
+      rewritten to exercise its original semantic or grammar failure.
+PASS: source byte limits (65536 accepted, 65537 rejected), 64 variables,
+      31-character names, 64 block levels, expression-depth and output limits.
+PASS: raw target fixture compiles with its memory/port operations.
+PASS: migrated real-mode regression compiles byte-for-byte identically to
+      the previously validated real-mode regression binary.
+PASS: migrated kernel, EFI64 loader, FAT builder and ISO builder compile
+      byte-for-byte identically to their pre-migration sources compiled by
+      the previous compiler. This checks grammar migration independently
+      of changes already made to those source algorithms before migration.
+
+The new IA32 loader/backend and BIOS protected-mode branch are integration
+work in the same release. Their runtime results belong in verification.ztext;
+successful source migration alone is not claimed as a VM boot test.
+
+Active packaged tests are examples/, review-tests/valid/, invalid/, boundary/,
+TESTS.ztext and real-mode.zero. Older loader-faults-0.2.2 and uefi-review working
+directories are historical audit artifacts and are not current test sources.

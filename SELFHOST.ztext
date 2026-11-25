@@ -1,0 +1,284 @@
+ZTEXT001000043b0297575230000000
+Current original Zero workflow (0.12)
+
+Use the native tools on Linux or their .exe versions on Windows:
+  zero-integrate PROJECT_DIRECTORY NEW_KERNEL.zero
+  zero-build PROJECT_DIRECTORY NEW_OUTPUT_DIRECTORY NEW_KERNEL.zero
+  zero-check PROJECT_DIRECTORY NEW_TEST_DIRECTORY
+All destination paths must be new. The integrator preserves authored sources;
+the builder checks its compiler fixed point and builds the original targets;
+the verifier checks language behavior and host file operations in process.
+See tools/integrate.ztext, tools/build.ztext and checks/README.ztext.
+Read these documents with zero-text read FILE.
+
+The notes below preserve earlier implementation and test history. Any old
+shell/Python runner names, generated artifacts, JSON reports or commands are
+historical references: they were removed from the active project and are not
+current runnable instructions or current-release validation. Native host
+checks do not replace BIOS/UEFI, persistence or physical-hardware testing.
+
+Historical implementation notes
+
+Zero self-hosting compiler
+
+compiler.zero is the complete canonical compiler source, written in Zero.
+It contains the lexer, parser, symbol handling, target checks, code emission
+and ELF/PE/real-mode file finalization. It reads source from stdin and writes
+the generated executable or flat image to stdout. It does not call another
+compiler, assembler or linker, and does not embed a native compiler binary.
+
+Self-hosting means that the Zero-written compiler compiles its own source
+and the resulting executable reproduces itself byte for byte. Linux ELF and Windows PE
+hosted executables use their native binary stdin/stdout services. Native --app64/--app32 builds instead
+execute inside Zero OS using its bounded memory-stream application ABI;
+they require no Linux or firmware services. Each ISO includes both Zero
+compiler architectures, both Ezero frontends/packers and Ezero runtime source
+in TOOLS.BIN. See portability/guest/ABI.ztext and BUNDLE.ztext. These applications
+share kernel memory and cooperate with the caller; they are not isolated
+user processes. Rebuilding the complete boot ISO remains a host workflow.
+
+Normal source build
+Run zero-build PROJECT_DIRECTORY NEW_OUTPUT_DIRECTORY. The destination must
+not exist. The native original Zero builder validates bootstrap/zero64.zapp,
+runs its owned compiler in process, and checks successive compiler application
+generations for byte-for-byte self-reproduction. It then builds native tools,
+BIOS/UEFI targets and the ISO from original sources. No shell or foreign
+language build script is part of the project. It does not overwrite user disks.
+Use zero-integrate PROJECT_DIRECTORY NEW_KERNEL.zero before building edited
+kernel parts, and pass that source as the optional third zero-build argument.
+See tools/build.ztext and tools/integrate.ztext for exact limits and outputs.
+
+compiler.zero is the build input. The optional selfhost/*.zero.part files
+show its development layout; a normal build does not concatenate or depend
+on them. selfhost/CORE.ztext and the target manifests explain parser actions,
+instruction templates and executable metadata. The templates encode our
+own language primitives, hardware instructions and ABI/file-format rules.
+They are data used by our Zero emitter, not assembly source for an external
+tool and not a borrowed compiler backend.
+
+Historical compiler self-reproduction
+The0.7 compiler grows source/output capacities for filesystem implementations,
+adds native bit operations, hosted positioned I/O/flush and a real BIOS memory-
+map primitive. It was compiled with the preserved own Zero-built0.6 seed.
+bootstrap/grow-host-4m.zero, itself compiled by that seed, verified the complete
+41-byte hosted prologue and changed only its arena-size immediate at offset151
+from1MiB to4MiB. The new compiler emits that prologue itself. The patched first
+generation and its self-compiled generations 2/3 match byte for byte.
+The preserved bootstrap/zero-0.7-seed contains that historical fixed point:
+62,102 bytes, SHA-256:
+26e53cf7cafbfff584575e9f1977277af702c03ab1fa97be5d31c11ea1caca5d
+
+Its historical source, preserved as bootstrap/compiler-0.7.zero, is56,640
+bytes, SHA-256:
+dd2653cbb842b6e5d2778ec8ea7546460984be93376759c5725b14d37bf66f7d
+
+No assembler or linker was used. Compiler self-reproduction, native primitive
+tests and integrated OS/filesystem tests are separate checks. The historical
+0.5 payload equality with0.4 is not a claim about later system images.
+See verification/compiler-fs/ for compiler evidence and verification.ztext for
+the separately recorded system-release evidence.
+
+Historical bootstrap boundary
+The first Zero-written compiler was compiled using our already-built own
+0.4 compiler. That earlier executable originated from our assembly source;
+this history is retained, not claimed to have been Zero from its inception.
+No assembler or linker was run to make this transition.
+The resulting 0.5 compiler was 52,496 bytes with SHA-256:
+419f29a1c509f3ede1b092ed9bc716cc62169e4b8ef1647028652a6403e64a91
+That own Zero-built compiler, not the old assembly-origin executable, started
+the subsequent 0.6 transition.
+
+The0.6 compiler added native continuations and real-mode video primitives.
+Its58,959-byte fixed point has SHA-256:
+3f9da290f0afc54da61c02297ca9a385b70a49da45fc5094688f966904ad98c6.
+That executable, its complete52,656-byte source and their hashes are preserved
+as bootstrap/zero-0.6-seed, bootstrap/compiler-0.6.zero and zero-0.6.sha256.
+
+The old host target allocated 64 KiB, which could not hold a compiler's
+source, tokens, output and parser state. bootstrap/grow-host.zero, itself
+compiled by the existing own seed, checked the first generated ELF and
+changed its arena allocation to 1 MiB. It did not replace the compiler
+implementation. The new compiler emits that larger host prologue itself,
+so subsequent generations and normal builds need no adjustment.
+
+The historical assembly sources and old bootstrap/zero-0.4-seed are archived
+outside the active release. bootstrap/grow-host.zero and bootstrap/NOTES.ztext
+remain as transition provenance; build.sh does not execute them. The normal
+seed bootstrap/zero is the current 0.11 fixed-point compiler documented below.
+
+Host ABI and memory
+Both default ELF and --host output have a 4 MiB arena; --host additionally
+permits memory stores. This change does not enlarge the raw/UEFI arenas
+(64 KiB) or the real-mode arena (8 KiB). A Linux host must provide sufficient
+stack space for the generated program's arena and temporary stack usage.
+
+Before the first allocation, :reserve[0] gives the host arena base. Under
+this exact generated entry ABI, the original Linux process stack is at
+arena_base + 4194304 + 512: argc is there and argv[1] is 16 bytes later.
+The compiler reads its target option through that contract. This is not a
+portable interface for unrelated executable formats or operating systems.
+The thread-capable x64 prologue records the operand-stack baseline in R12.
+Version 0.10 additionally preserves the original hosted frame in R14, giving
+one-based argument operations stable pointers across cooperative child frames.
+The Linux prologue grows from 41 to 44 bytes without changing SP/BP or the
+argc/argv offsets. Windows retains R15 for its PE image base and uses its own
+wide-command-line startup. Native-call templates preserve the R12 baseline
+across their ABI-alignment scratch use.
+
+The compiler reserves 4,022,880 bytes once. Offsets from that reservation:
+
+       0  source:262,145 bytes, including overflow-detection space
+  262160  tokens:262,145 records of 12 bytes, including explicit EOF
+ 3407904  output:491,520 bytes
+ 3899440  parser action/continuation stack:32,768 bytes
+ 3932224  symbols:2,048 bytes
+ 3934272  three instruction-template banks:6,144 bytes
+ 3940416  decoded instruction templates:32,768 bytes
+ 3973184  reserved string scratch:4,096 bytes
+ 3977880  builtin metadata:75 slots of 24 bytes, including retired-name holes
+
+Token records hold a u32 kind and u64 payload. Source stays unchanged after
+tokenization. The parser uses explicit 24-byte continuation frames, allowing
+Zero's current top-level language to implement nested grammar without native
+recursion or user-defined functions. The compiler uses 59 Zero variables.
+
+Native continuation support
+fork and switch are explicitly selected language primitives. They save and
+restore native continuations, copy the child's 512-byte local frame and live
+operand stack, and give each child a fresh 64 KiB arena. They leave existing
+pointer values shared. x64 and IA32 have architecture-specific encodings but
+one source contract. Scheduling policy and the three worker bodies remain
+kernel Zero source. There are no user-defined functions, implicit preemption,
+separate process address spaces or SMP support. LANGUAGE.ztext documents the
+80-byte context and ownership rules; selfhost/CORE.ztext gives native details.
+
+The real-mode target supplies VBE BIOS call and bounded segmented-word-read
+primitives. BIOS mode discovery, validation, selection, framebuffer mapping
+and memory layout remain Zero loader policy, described in BIOS-GRAPHICS.ztext.
+The E820 memmap primitive exposes firmware records; usable-RAM validation and
+stack-pool selection remain BIOS Zero source. bitxor/bitand/shr emit native
+value operations with identicalu64 x64/IA32 semantics and an explicitu32 real
+subset. Hosted pread/pwrite/fsync are direct Linux ABI primitives for test and
+tool descriptors; no filesystem algorithm is embedded in the compiler.
+
+Language limits and errors
+Source is limited to262,144 bytes; generated output to491,520 bytes including
+executable metadata, or 16,384 bytes for --real. There are at most 64 source
+variables, 31-byte names, 64 nested blocks and 64 expression levels including
+the leaf. String payloads contain at most 4,095 bytes. All builtin names are
+reserved across targets; unsupported target operations still reject.
+
+All input is read and validated, parsed, emitted into memory and finalized
+before stdout begins. Compile errors return status 1 with zero stdout.
+This initial self-hosted version does not print source diagnostics to stderr;
+callers must check the exit status. Input/output retries EINTR and output
+handles short writes. A later output error can leave a partial stream, so
+publish generated files only after successful exit. Host SIGPIPE behavior
+still applies.
+
+External boundary
+Linux or Windows execute their native compilers and tools. Shell and file tools
+arrange artifacts, compare stages and pad bounded payloads; they do not
+compile Zero or generate the filesystem/ISO metadata. QEMU, firmware and
+format inspectors provide separate test environments. These remain external
+infrastructure, not code claimed as part of our compiler or guest OS.
+
+Historical0.7 validation of the expanded compiler
+Exact262144-byte source and worst-case token storage were exercised, while
+262145-byte input rejects without stdout. Output above the old131072-byte cap
+was generated successfully and output above393216 rejects. A generated hosted
+program allocated the full4MiB arena and verified both ends. Existing hosted
+threading passes with the larger main arena. Positioned I/O passed a4GiB+17
+offset, EOF and EBADF; fsync passed success and EBADF. Independent native
+bit-operation suites passed on host, BIOS x64 and IA32, with real-mode bit and
+E820 enumeration checks in a separate BIOS probe. These are reproducible
+compiler/ABI checks, not proof of arbitrary filesystem or hardware correctness.
+
+Historical dword I/O /448KiB output extension
+That Zero compiler version appended in32/out32 with native templates for
+x64, IA32 and real mode; hosted targets reject privileged I/O. PCI discovery
+and all driver policy remain in Zero OS source. Existing supported source
+programs retain byte-identical compiled output, except that the newly reserved
+names in32/out32 cannot be variable names. See selfhost/port32.ztext.
+
+That version had an output ceiling of458752 bytes. The source/token buffers stay unchanged;
+parser/symbol/template/scratch/metadata regions move65536 bytes upward inside
+the same4MiB hosted arena. Its total reservation was3965536 bytes. The
+raw/UEFI64KiB arena and real16KiB output ceiling are unchanged. This compiler
+limit alone does not enlarge a boot image: matching loader/payload-slot
+changes are a separately verified OS integration.
+
+Historical compiler.zero:57573 bytes, SHA256:
+d905ac07ee31be5ba3eefb7d28cc28dc9a54caa957d508a7bda68294625e027a
+Historical bootstrap/zero and build/zero:63027 bytes, SHA256:
+6920190de948804096ccd8e2b47b1423060631dd5c2a2904b08d1f47f99a3733
+The preserved own0.7 seed compiled this source, and generations 1/2 plus a
+published-source rebuild match byte for byte. No binary patch helper, assembler
+or linker was used. Historical evidence: verification/network-ports.
+
+Historical 0.9 native-tool and480KiB extension
+The 0.9 build contracts introduced 491520-byte output, keeping the source/token
+buffers and4MiB hosted arena unchanged. Parser state moves32768 bytes beyond
+the historical448KiB layout;0.10 later enlarges decoded-template storage. The real-mode output remains
+limited to16KiB. biosmove supplies bounded INT15/AH87 transfers to the Zero
+BIOS loader; loading policy stays in bios.zero. Native app targets provide
+Zero-owned memory input/output and exit services, enabling Zero and Ezero
+execution inside the guest. The1MiB bundle and8MiB workspace are loaded by
+BIOS or allocated by UEFI before entering the kernel. Capacity and full-copy
+evidence: verification/guest-bundle-480k/. Native compiler execution evidence:
+verification/guest-app/bundle/. Historical merged compiler source:69624 bytes, SHA256:
+01ee47113ab98da6ea4d84c042e570d4080a7ab69473acc205923bd6ba7839fc
+Historical bootstrap/zero and build/zero:75249 bytes, SHA256:
+7a24c5e3d23bbeb6df6b25a30f99efe26e82aa9f9c835d4aba45000a61d75cb6
+Self-reproduction passed before publication. The earlier448KiB source/seed
+remain preserved under bootstrap/*network448*. These are compiler results;
+final integrated kernel/terminal/ISO tests remain separate.
+
+Current 0.11 native host interoperability
+The canonical source is 88763 bytes, SHA256:
+a76aeeda865a3fbbc887c3d9a66c8a02bd1ff5e46aacd1d359a361033c170b7a
+bootstrap/zero and build/zero are 93086 bytes, SHA256:
+d89762ea95d3591d95e7f9a66e1015d8124bf87f702dac65ce25547f2ec4ed3f
+The preserved 0.10 source/seed are bootstrap/compiler-0.10.zero and
+bootstrap/zero-0.10-seed, with their manifest bootstrap/zero-0.10.ztext.
+That own seed compiled the new source directly. All three successive native
+generations are byte-identical. Normal builds compare generations1/2 from the
+new fixed point. The earlier0.9 source/seed and transition remain preserved.
+
+Eighteen native host operations add host identity, one-based user arguments,
+absolute program path, bounded file operations, file-flush requests, bounded
+native-thread waits and explicit RW/RX memory ownership. Direct Linux syscalls
+and Windows KERNEL32 services implement the
+platform boundary; no foreign compiler/backend/runtime is embedded. Windows
+startup converts its wide command line to UTF-8 and uses our original bounded
+argument parser. It supports 63 user arguments and 4095 total converted bytes.
+Guest targets compile the shared operations but return explicit unavailable
+sentinels. Existing hardware target programs retain their instruction output.
+See LANGUAGE.ztext and portability/host/ABI.ztext for semantics and target gates.
+
+Native zero/ezero launchers are original Zero programs. They load the original
+application images into owned memory, change code pages from RW to RX, and
+call the guest ABI. No shell/Python/.cmd launcher is needed to compile a user
+program. Full ISO construction, tests and packaging remain host orchestration.
+The guest compiler images are 94438 bytes x64 and 124286 bytes IA32, each within
+its 131072-byte bundle slot. The current Ezero runtime body uses a 65536-byte
+slot; the complete TOOLS.BIN remains 1 MiB. BUNDLE.ztext defines the exact layout.
+Guest compiler SHA256 values:
+x64 cad49cb2f5ee5a7bf09d8b221949ece97d23d07231d4c0e9e7a62a1eb30dec96
+IA32 74de4b0eea075c451752289be79c65229a4e8962f37e50b0cc57b667c25ad852
+
+Verification passed136 focused durability/wait checks and433 existing common
+parser/target/fallback checks, with native x64 guest fallback execution and
+exact hardware-target output parity. All17 Linux host-ABI behavior cases pass.
+The new Linux tests observe timespec arguments and injectEINTR/EIO/EFAULT to
+exercise retries and failure reporting. They do not simulate real power loss.
+Windows tests cover21 new flush/wait assertions, native PE self-reproduction
+and existing API/argument/file behavior under Wine10. The new FlushFileBuffers
+and Sleep imports retain the existing RVAs, with25 entries plus a null thunk.
+These are not a native Microsoft Windows machine test, and real
+Windows reparse-point rejection remains dynamically unverified because the
+Wine creation fixture is a stub. Current reports are in
+portability/host/durability; historical0.10 reports remain under
+verification/host-api/ and portability/host/*verification.json.
+File flush requests do not establish directory/rename durability or physical
+power-loss guarantees. Final OS-image validation is separate.

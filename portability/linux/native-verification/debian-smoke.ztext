@@ -1,0 +1,30 @@
+ZTEXT0010000044e49753af50000000
+PASS native SHA256 known vector
+PASS native Ezero example hello
+PASS native Ezero example banana
+PASS native Ezero example values
+PASS native Ezero example lists
+PASS native Ezero example functions
+PASS native Ezero example memory
+PASS native Zero compile and execute
+PASS own Zero compiler exact self-rebuild
+PASS native CLI exact source rebuild
+PASS invalid Ezero diagnostic and no output
+PASS existing output preserved
+PASS native Ezero UTF-8 file API and no overwrite
+PASS native installer prepares and verifies exact ISO and ZeroFS data
+PASS native installer removes verified owned preparation
+PASS native local updater publishes checks and verifies prepared selections
+PASS native local updater rollback preserves monotonic version policy
+PASS package remains unchanged
+Native Linux package checks: 18/18 PASS
+PRETTY_NAME="Debian GNU/Linux 13 (trixie)"
+NAME="Debian GNU/Linux"
+VERSION_ID="13"
+VERSION="13 (trixie)"
+VERSION_CODENAME=trixie
+DEBIAN_VERSION_FULL=13.6
+ID=debian
+HOME_URL="https://www.debian.org/"
+SUPPORT_URL="https://www.debian.org/support"
+BUG_REPORT_URL="https://bugs.debian.org/"

@@ -1,0 +1,45 @@
+  ? @operation == 14 [
+   ? :load64[@console + 2048] [
+    !store64[@console + 2176| 0]. 600 -> @state.
+   ] ~ [ "Window manager unavailable: no safe memory pool.\r\n" -> @message. ]
+  ]
+  ? @operation == 21 [
+   ? :load64[@console + 2048] [
+    0 -> @valid. 1 -> @k.
+    ?? @k < 8 [
+     ? @k == 1 [ "new" -> @wanted. ]
+     ? @k == 2 [ "close" -> @wanted. ]
+     ? @k == 3 [ "next" -> @wanted. ]
+     ? @k == 4 [ "prev" -> @wanted. ]
+     ? @k == 5 [ "toggle" -> @wanted. ]
+     ? @k == 6 [ "tile" -> @wanted. ]
+     ? @k == 7 [ "scroll" -> @wanted. ]
+     0 -> @i. 1 -> @equal. 0 -> @done.
+     ?? @done == 0 [
+      :load8[@arguments + @i] -> @character.
+      ? @character != :load8[@wanted + @i] [ 0 -> @equal. 1 -> @done. ]
+      ? @character == 0 [ 1 -> @done. ]
+      @i + 1 -> @i.
+     ]
+     ? @equal [ @k -> @valid. ]
+     @k + 1 -> @k.
+    ]
+    ? @valid == 0 [
+     0 -> @temporary. 0 -> @i. 1 -> @equal.
+     ?? :load8[@arguments + @i] [
+      :load8[@arguments + @i] -> @character.
+      ? (@character < 48) + (@character > 57) [ 0 -> @equal. ]
+      ? @equal [
+       @temporary * 10 + @character - 48 -> @temporary.
+       ? @temporary > :load64[@console + 2056] [ 0 -> @equal. ]
+      ]
+      @i + 1 -> @i.
+     ]
+     ? (@i > 0) * @equal * (@temporary > 0) [
+      !store64[@console + 2104| @temporary - 1]. 8 -> @valid.
+     ]
+    ]
+    ? @valid [ !store64[@console + 2096| @valid]. ]
+    ~ [ "Use window new|close|next|prev|tile|scroll|toggle|ID.\r\n" -> @message. ]
+   ] ~ [ "Window manager unavailable: no safe memory pool.\r\n" -> @message. ]
+  ]

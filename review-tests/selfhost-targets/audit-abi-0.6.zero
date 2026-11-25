@@ -1,0 +1,209 @@
+# Audit only the documented0.5 ->0.6 ABI changes in two compiler outputs.
+# Input:8 lowercase-hex old length,8 lowercase-hex new length,mode digit0..6,
+# then old binary and new binary. Modes match the compiler:ELF,host,raw,EFI,
+# raw32,EFI32,real. No machine code is executed here.
+:reserve[270000] => @buffer.
+:reserve[80] => @patterns.
+0 => @n.
+0 => @received.
+?? @received != 0 - 1 [
+ :read[@buffer + @n | 270000 - @n] -> @received.
+ ? @received == 0 - 4 [ 0 -> @received. ] ~ [
+  ? @received > 270000 - @n [ !exit[10]. ]
+  ? @received == 0 [ 0 - 1 -> @received. ] ~ [ @n + @received -> @n. ]
+ ]
+]
+? @n < 17 [ !exit[11]. ]
+0 => @old_size.
+0 => @new_size.
+0 => @i.
+0 => @digit.
+?? @i < 16 [
+ :load8[@buffer + @i] -> @digit.
+ ? @digit >= 97 [
+  ? @digit > 102 [ !exit[12]. ]
+  @digit - 87 -> @digit.
+ ] ~ [
+  ? @digit < 48 [ !exit[12]. ]
+  ? @digit > 57 [ !exit[12]. ]
+  @digit - 48 -> @digit.
+ ]
+ ? @i < 8 [ @old_size * 16 + @digit -> @old_size. ]
+ ~ [ @new_size * 16 + @digit -> @new_size. ]
+ @i + 1 -> @i.
+]
+? @old_size > 131072 [ !exit[13]. ]
+? @new_size > 131072 [ !exit[13]. ]
+? @n != @old_size + @new_size + 17 [ !exit[14]. ]
+:load8[@buffer + 16] - 48 => @mode.
+? @mode > 6 [ !exit[15]. ]
+@buffer + 17 => @old.
+@old + @old_size => @new.
+0 => @header.
+@old_size => @old_code.
+@new_size => @new_code.
+0 => @j.
+0 => @image.
+0 => @size.
+0 => @code.
+0 => @raw.
+0 => @rva.
+0 => @reloc.
+0 => @offset.
+0 => @p.
+0 => @q.
+0 => @a.
+0 => @b.
+0 => @match.
+0 => @calls.
+0 => @prefix.
+0 => @end_old.
+0 => @end_new.
+0 => @hex.
+0 => @pair.
+0 => @value.
+# ELF metadata changes only to record the actual larger image length.
+? @mode < 2 [
+ 120 -> @header.
+ ? @old_size < 120 [ !exit[20]. ]
+ ? @new_size < 120 [ !exit[20]. ]
+ ? :load64[@old + 96] != @old_size [ !exit[21]. ]
+ ? :load64[@old + 104] != @old_size [ !exit[21]. ]
+ ? :load64[@new + 96] != @new_size [ !exit[21]. ]
+ ? :load64[@new + 104] != @new_size [ !exit[21]. ]
+ !store64[@old + 96 | 0]. !store64[@old + 104 | 0].
+ !store64[@new + 96 | 0]. !store64[@new + 104 | 0].
+ @old_size - 120 -> @old_code. @new_size - 120 -> @new_code.
+]
+# PE metadata is independently recomputed from each .text virtual size.
+# No arbitrary header differences or nonzero padding are ignored.
+? @mode == 3 [ 512 -> @header. 16 -> @offset. ]
+? @mode == 5 [ 512 -> @header. ]
+? @header == 512 [
+ ?? @j < 2 [
+  @old -> @image. @old_size -> @size.
+  ? @j == 1 [ @new -> @image. @new_size -> @size. ]
+  ? @size < 1024 [ !exit[22]. ]
+  :load32[@image + 320 + @offset] -> @code.
+  ? @code == 0 [ !exit[23]. ]
+  0 -> @raw. ?? @raw < @code [ @raw + 512 -> @raw. ]
+  0 -> @rva. ?? @rva < @code [ @rva + 4096 -> @rva. ]
+  @rva + 4096 -> @rva.
+  @raw + 512 -> @reloc.
+  ? @size != @reloc + 512 [ !exit[24]. ]
+  ? :load32[@image + 92] != @raw [ !exit[25]. ]
+  ? :load32[@image + 144] != @rva + 4096 [ !exit[25]. ]
+  ? :load32[@image + 328 + @offset] != @raw [ !exit[25]. ]
+  ? :load32[@image + 364 + @offset] != @rva [ !exit[25]. ]
+  ? :load32[@image + 372 + @offset] != @reloc [ !exit[25]. ]
+  ? :load32[@image + 224 + @offset] != @rva [ !exit[25]. ]
+  ? @mode == 5 [
+   ? :load32[@image + 112] != @rva [ !exit[25]. ]
+   !store32[@image + 112 | 0].
+  ]
+  ? :load32[@image + @reloc] != 4096 [ !exit[26]. ]
+  ? :load32[@image + @reloc + 4] != 12 [ !exit[26]. ]
+  @code + 512 -> @p.
+  ?? @p < @size [
+   ? @p == @reloc [ @p + 8 -> @p. ]
+   ? @p < @size [
+    ? :load8[@image + @p] != 0 [ !exit[27]. ]
+    @p + 1 -> @p.
+   ]
+  ]
+  !store32[@image + 92 | 0]. !store32[@image + 144 | 0].
+  !store32[@image + 320 + @offset | 0].
+  !store32[@image + 328 + @offset | 0].
+  !store32[@image + 364 + @offset | 0].
+  !store32[@image + 372 + @offset | 0].
+  !store32[@image + 224 + @offset | 0].
+  ? @j == 0 [ @code -> @old_code. ] ~ [ @code -> @new_code. ]
+  @j + 1 -> @j.
+ ]
+]
+0 -> @i.
+?? @i < @header [
+ ? :load8[@old + @i] != :load8[@new + @i] [ !exit[28]. ]
+ @i + 1 -> @i.
+]
+@old + @header -> @a. @new + @header -> @b.
+@a + @old_code -> @end_old. @b + @new_code -> @end_new.
+# Real mode remains fully byte-identical. Other targets add exactly3 bytes.
+? @mode < 6 [
+ 38 -> @prefix.
+ ? @mode == 2 [ 44 -> @prefix. ]
+ ? @mode == 3 [ 44 -> @prefix. ]
+ ? @mode > 3 [ 50 -> @prefix. ]
+ 0 -> @i.
+ ?? @i < @prefix [
+  ? :load8[@a + @i] != :load8[@b + @i] [ !exit[30]. ]
+  @i + 1 -> @i.
+ ]
+ @a + @prefix -> @a. @b + @prefix -> @b.
+ ? @mode < 4 [
+  ? :load8[@b] != 73 [ !exit[31]. ]
+  ? :load8[@b + 1] != 137 [ !exit[31]. ]
+  ? :load8[@b + 2] != 228 [ !exit[31]. ]
+ ] ~ [
+  ? :load8[@b] != 137 [ !exit[31]. ]
+  ? :load8[@b + 1] != 101 [ !exit[31]. ]
+  ? :load8[@b + 2] != 12 [ !exit[31]. ]
+ ]
+ @b + 3 -> @b.
+]
+# Decode the only additional permitted body change: x64 foreign calls save
+# and restore R12 (the arena base), adding PUSH R12 and POP R12.
+0 -> @j.
+?? @j < 2 [
+ "415a415941585a59584989e44883e4f04883ec304c89542420ffd04c89e4" -> @hex.
+ 30 -> @size. @patterns -> @image.
+ ? @j == 1 [
+  "415a415941585a595841544989e44883e4f04883ec304c89542420ffd04c89e4415c" -> @hex.
+  34 -> @size. @patterns + 40 -> @image.
+ ]
+ 0 -> @i.
+ ?? @i < @size [
+  0 -> @pair. 0 -> @value.
+  ?? @pair < 2 [
+   :load8[@hex + @i * 2 + @pair] -> @digit.
+   ? @digit >= 97 [ @digit - 87 -> @digit. ] ~ [ @digit - 48 -> @digit. ]
+   @value * 16 + @digit -> @value. @pair + 1 -> @pair.
+  ]
+  !store8[@image + @i | @value].
+  @i + 1 -> @i.
+ ]
+ @j + 1 -> @j.
+]
+?? @a < @end_old [
+ 0 -> @match.
+ ? @mode < 4 [
+  ? @a + 30 <= @end_old [
+   1 -> @match. 0 -> @i.
+   ?? @i < 30 [
+    ? :load8[@a + @i] != :load8[@patterns + @i] [ 0 -> @match. ]
+    @i + 1 -> @i.
+   ]
+  ]
+ ]
+ ? @match == 1 [
+  ? @b + 34 > @end_new [ !exit[32]. ]
+  0 -> @i.
+  ?? @i < 34 [
+   ? :load8[@b + @i] != :load8[@patterns + 40 + @i] [ !exit[32]. ]
+   @i + 1 -> @i.
+  ]
+  @a + 30 -> @a. @b + 34 -> @b. @calls + 1 -> @calls.
+ ] ~ [
+  ? @b >= @end_new [ !exit[33]. ]
+  ? :load8[@a] != :load8[@b] [ !exit[34]. ]
+  @a + 1 -> @a. @b + 1 -> @b.
+ ]
+]
+? @b != @end_new [ !exit[35]. ]
+? @mode < 6 [
+ ? @new_code != @old_code + 3 + @calls * 4 [ !exit[36]. ]
+] ~ [
+ ? @new_code != @old_code [ !exit[36]. ]
+]
+!exit[0].
+

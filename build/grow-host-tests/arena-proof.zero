@@ -1,0 +1,14 @@
+:reserve[0] => @arena.
+:load64[@arena + 1048576 + 512] => @argc.
+:reserve[262144] => @large.
+!store64[@large + 262136 | 0xfedcba9876543210].
+? :load64[@large + 262136] != 0xfedcba9876543210 [ !exit[2]. ]
+? @argc != 3 [ !exit[3]. ]
+:load64[@arena + 1048576 + 528] => @first.
+:load64[@arena + 1048576 + 536] => @second.
+? :load8[@first] != 65 [ !exit[4]. ]
+? :load8[@second] != 66 [ !exit[5]. ]
+"PASS arena and argv\n" => @message.
+:write[@message | 20] => @written.
+? @written != 20 [ !exit[6]. ]
+!exit[0].

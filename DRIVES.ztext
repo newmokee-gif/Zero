@@ -1,0 +1,92 @@
+ZTEXT0010000150586a4f9b80000000
+Zero independent volumes and paths
+
+The public naming contract is A: through Z:, in discovery order. Each volume
+has its own root, written A:|. GO B:| selects B: as the current root. Lowercase
+go and lowercase drive letters are accepted too. Relative names use that
+selected volume; a qualified name selects only the target of that operation.
+
+Examples inside the Zero terminal:
+  disks
+  GO A:|
+  create note
+  save note Hello from Zero
+  read A:|note
+  watch B:|
+  save B:|second Another volume
+  search A:|n*
+  del B:|second
+
+The separator is the vertical bar, ASCII124. Slash and backslash are not
+aliases. CD is not a command. Current file operations address flat root files;
+GO into nested directories is planned and rejected explicitly for now.
+Names use letters, digits, dot, underscore and hyphen, at most31 bytes.
+Dot and dot-dot are not ordinary file names. Terminal text is at most400 bytes.
+write prints text; save writes a disk file; create preserves an existing file.
+del removes one file; rm remains a compatibility alias. search lists matching
+filenames with * for any number of characters and ? for one character. A
+plain search name is an exact match. watch . and GO . use the current root.
+Zero and Ezero programs share these file operations through the native guest
+service, including persistent disk writes. See portability/guest/ABI.ztext.
+Stored ASCII text may include TAB, LF and CR. read automatically validates
+and decodes .ztext files (or files with the ZTEXT001 header), displaying only
+the payload after length and checksum checks pass. Its32-byte header leaves
+368 payload bytes within the current400-byte file limit. Non-ASCII payloads
+are rejected for terminal display; raw file primitives retain the full bytes.
+
+An independent volume is not a directory mounted under another volume.
+Physical disks and volumes are different: the disk layer identifies devices,
+the discovery layer describes whole-volume or partition extents, and a format
+driver handles filesystem metadata within that extent. Disk devices are shown
+by disks; there is no Linux-style /dev directory containing user file trees.
+
+Hardware scope
+The kernel scans four legacy IDE ATA positions: primary master/slave and
+secondary master/slave. It requires LBA28,512-byte logical sectors and FLUSH
+CACHE. Optical ATAPI media are not writable data volumes. SATA AHCI, NVMe,
+USB storage and sector formats other than512 bytes are future drivers.
+The addressable size is at most268435456 sectors (128GiB) per physical disk.
+disks reports whole MiB rounded down, underlying physical disk number and
+recognized filesystem. Unsupported/corrupt devices or volumes are identified.
+
+Letters currently follow physical position and partition discovery order,
+including unknown filesystem volumes. They are not persistent disk IDs and
+can change if attachment order or partition tables change. Persistent IDs and
+saved letter assignments are planned. No automatic partition resize, format,
+repair or destructive conversion occurs during discovery.
+Discovery supports raw volumes, four primary MBR partitions and GPT revision1
+with up to128 entries of128 bytes. GPT primary/backup headers and tables are
+verified, including CRCs, geometry, unique IDs and nonoverlapping partitions.
+The GPT read-only attribute is honored. Extended MBR chains and hybrid tables
+are refused. See fs/discovery-profile.ztext for the exact recognition rules.
+
+The release supplies only the read-only ISO boot image. A writable disk must
+be created separately in the user's VM manager or preserved from an earlier
+ZeroFS setup. Attach that dedicated disk as primary IDE master; it is normally
+A:|. A new blank disk is discovered as an unknown raw volume. Confirm its
+identity with disks, select GO A:|, then explicitly initialize it with
+format ZERO. This command erases the selected disk's ZeroFS area; never use
+it as a recovery step for existing files. No formatting happens at boot.
+Without a writable disk, the OS can run its terminal and graphics but cannot
+save persistent user files. The18-sector ZeroFS format and eight-file capacity
+remain unchanged, even on a larger virtual disk. format ZERO applies only to
+the selected dedicated raw primary-master disk, never a foreign or partitioned
+volume.
+Other recognized volumes dispatch to original Zero ext4, NTFS or Btrfs state
+machines. Their detailed feature restrictions are in fs/*-profile.txt.
+No ext4, NTFS or Btrfs disk image is bundled. Existing user-owned volumes in
+the supported profiles may be attached separately; see COMPATIBLE-DISKS.ztext.
+
+All requests are bounded by the physical disk and selected volume. Metadata
+is revalidated for each operation; switching letters cannot reuse another
+volume's cache. An integrity, recovery or I/O failure blocks further foreign
+volume writes until restart/recovery. Successful mutation includes the driver's
+documented flush protocol. A flush is not a guarantee of crash atomicity;
+see each filesystem's transaction and recovery limitations.
+
+Development evidence is recorded in verification/volumes and the filesystem
+verification directories. verification.ztext describes the final integrated ISO
+and completed VM matrix; a host-driver test alone is not a full-system boot.
+
+Visible physical disk numbers start at1 (ATA slot0 is displayed as disk1).
+Volume letters and stored sector addresses are unchanged.

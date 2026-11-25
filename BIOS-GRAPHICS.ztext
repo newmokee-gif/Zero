@@ -1,0 +1,62 @@
+ZTEXT00100000e4f1d5dedd70000000
+Zero BIOS true-color graphics
+
+bios.zero selects a linear VBE2/3 framebuffer before entering the kernel.
+The implementation is Zero source. The compiler provides only the firmware
+INT10 ABI operation :vbe[ax|bx|cx|buffer] and the real-mode segment access
+:far16[segment|offset]; mode discovery, validation, selection, page tables
+and loader handoff are all expressed by bios.zero.
+
+The VBE controller query uses a zeroed 512-byte buffer at6200 with the VBE2
+request signature. A VESA response and VBE version>=0200 are required. The
+actual firmware-provided far mode list is examined, at most256 entries per
+pass. Three passes prefer1920x1080, then800x600, then640..800 by480..600
+when the larger modes are unavailable or fail to set. Every mode candidate
+still undergoes the same format, stride, memory-size and address checks.
+A list terminator, segment-offset overflow or address beyond the first MiB
+stops discovery. far16 permits reading a list in firmware ROM without
+violating the real-mode DS=0 64KiB segment limit.
+
+Each mode query uses a separate zeroed256-byte buffer at6400. Eligible modes
+are supported graphics modes with a linear framebuffer, one plane,32 bits
+per pixel and direct-color memory model6. The first pass accepts only
+1920x1080, the second only800x600, and the last the smaller fallback range.
+FullHD requires at least8294400 framebuffer bytes at a1920-pixel stride.
+Pitch must cover width*4, be a multiple of4 and
+be at most16384 bytes. Frame size must fit reported video memory; the physical
+base must be at least4MiB, beyond the owned stack pool, and the entire extent
+must not wrap32-bit arithmetic.
+
+Red, green and blue masks must each have8bits. Green must start at bit8;
+red/blue must occupy bits0/16 or16/0. Thus the kernel receives format0RGB or
+format1BGR, using4bytes per pixel. The high reserved byte is not an alpha API.
+VBE3 uses the linear pitch and linear color-mask fields; VBE2 uses its legacy
+mode fields. The first eligible mode whose SetMode succeeds is selected,
+with the linear-framebuffer flag. If no mode succeeds, BIOS text mode3 is
+restored and the existing VGA text handoff is retained.
+
+Shared handoff
++48 kind2 for a selected framebuffer, otherwise kind1 VGA text
++56 physical framebuffer base
++64 width, +72 height, +80 stride in pixels, +88 format0RGB/1BGR
++96 bootkind1, +104 architecture32 or64
++112 stack pool physical base100000, +120 pool bytes300000
+All fields are u64; BIOS clears128bytes first and fills low halves with u32.
+The main kernel entry stack starts at400000. The complete1..4MiB pool must be
+usable E820 RAM, as documented in BIOS.ztext; this is not a general RAM allocator.
+
+BIOS64 identity-maps the entire first4GiB using2MiB pages. PML4 is1000,
+PDPT2000 and the four page directories are3000,4000,5000,c000. Every page-table
+store is below the64KiB real-mode segment limit. The loader never calls reserve,
+so4000..5fff can hold two directories; c000 follows the maximum BIOS image
+extent7c00..bbff. The disk DAP at3900 is reused only after all disk reads finish.
+VBE buffers6200/6400, E820 buffer6600, ABI scratch6e00, locals6f00, stack below7c00,
+GDT0800 and handoff0900 remain separate. The temporary E820 interval bank at
+4000..47ff is no longer needed when page tables are built. BIOS32 uses flat
+segments with paging disabled,
+so it can address the same32-bit physical framebuffer directly.
+
+There is no universal video-device claim. Unsupported bit-mask formats,
+24-bit modes, banked modes and incompatible firmware retain the text path.
+See verification/bios-graphics-0.6.0/ for isolated pixel/firmware probes and
+verification.ztext for the final integrated release checks.

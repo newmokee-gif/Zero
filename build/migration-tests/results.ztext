@@ -1,0 +1,4 @@
+ZTEXT001000001b59ee652410000000
+PASS: five native exact-output cases; 24 semantic/grammar invalid cases; source/variable/name/block/expression/output limits; raw compilation; real-mode regression bytes unchanged.
+PASS: migrated kernel, EFI64 loader, FAT builder and ISO builder compile byte-for-byte identically to the pre-migration sources using the previous compiler.
+PASS: raw hosted-effect rejection; generated program /dev/full exits74; compiler /dev/full exits1.

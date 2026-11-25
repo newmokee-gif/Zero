@@ -1,0 +1,15 @@
+? @platform == 1 [
+ 0 -> @y. ?? (@y < 800) * @running [
+  48 -> @row. ? @row > 800 - @y [ 800 - @y -> @row. ]
+  @row * 5120 -> @target.
+  !store8[@wire | 72]. !store8[@wire + 1 | 2]. !store16[@wire + 2 | :shr[@target + 24 | 2]].
+  !store32[@wire + 4 | @window]. !store32[@wire + 8 | @gc]. !store16[@wire + 12 | 1280]. !store16[@wire + 14 | @row].
+  !store16[@wire + 16 | 0]. !store16[@wire + 18 | @y]. !store8[@wire + 20 | 0]. !store8[@wire + 21 | @depth]. !store16[@wire + 22 | 0].
+  0 -> @i. ?? @i < @target [ !store64[@wire + 24 + @i | :load64[@pixels + @y * 5120 + @i]]. @i + 8 -> @i. ]
+  @target + 24 -> @target. 0 -> @n.
+  ?? (@n < @target) * @running [
+   :hostsyscall[44 | @sock | @wire + @n | @target - @n | 16384 | 0 | 0] -> @c.
+   ? (@c == 0) + (@c > @target - @n) [ 0 -> @running. 1 -> @failed. "X11 presentation failed." -> @status. ] ~ [ @n + @c -> @n. ]
+  ] @y + @row -> @y.
+ ]
+]

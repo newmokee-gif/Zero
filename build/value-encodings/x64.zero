@@ -1,0 +1,43 @@
+:reserve[2048] => @templates.
+0 => @i.
+?? @i < 2048 [ !store64[@templates + @i | 0]. @i + 8 -> @i. ]
+# Original value-operation encodings, authored directly as Zero data.
+# 75 host_pread: four pushed values fd,buffer,count,offset; syscall17.
+!store64[@templates + 1200 | "415a5a5e5fb8110000000f05"].
+!store64[@templates + 1208 | 12].
+# 76 host_pwrite: four pushed values fd,buffer,count,offset; syscall18.
+!store64[@templates + 1216 | "415a5a5e5fb8120000000f05"].
+!store64[@templates + 1224 | 12].
+# 77 bitxor: RAX = RCX XOR RAX.
+!store64[@templates + 1232 | "4831c8"].
+!store64[@templates + 1240 | 3].
+# 78 bitand: RAX = RCX AND RAX.
+!store64[@templates + 1248 | "4821c8"].
+!store64[@templates + 1256 | 3].
+# 79 shr: logical u64 shift; count >=64 returns0.
+!store64[@templates + 1264 | "48914883f940730548d3e8eb0231c0"].
+!store64[@templates + 1272 | 15].
+:reserve[1024] => @output.
+0 => @out.
+0 => @j.
+0 => @str.
+0 => @len.
+0 => @a.
+0 => @b.
+75 -> @i.
+?? @i < 80 [
+ :load64[@templates + @i * 16] -> @str.
+ :load64[@templates + @i * 16 + 8] -> @len.
+ 0 -> @j.
+ ?? @j < @len [
+  :load8[@str + @j * 2] -> @a.
+  :load8[@str + @j * 2 + 1] -> @b.
+  ? @a < 58 [ @a - 48 -> @a. ] ~ [ @a - 87 -> @a. ]
+  ? @b < 58 [ @b - 48 -> @b. ] ~ [ @b - 87 -> @b. ]
+  !store8[@output + @out | @a * 16 + @b].
+  @out + 1 -> @out. @j + 1 -> @j.
+ ]
+ @i + 1 -> @i.
+]
+:write[@output | @out] => @written.
+? @written != @out [ !exit[1]. ]

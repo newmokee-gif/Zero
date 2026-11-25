@@ -1,0 +1,84 @@
+ZTEXT0010000130ec78ca0a30000000
+ZERO OS 0.8.0 WINDOW MANAGER VM VERIFICATION
+Date: 2026-11-16 UTC
+
+FINAL TESTED ISO
+SHA256:216bc7216b623240ca3cfb1e719139ac037d8c801a6cb44ee91b401a6692f651
+Bytes:17645568. All six VM runs used this exact ISO and verified it unchanged.
+
+FOUR-MODE MATRIX
+BIOS x86-64: PASS,137 recorded actions,344 available slots.
+BIOS x86-32 (-lm,-pae): PASS,94 recorded actions,344 available slots.
+UEFI x86-64: PASS,94 recorded actions,88 available slots.
+UEFI x86-32 (-lm): PASS,94 recorded actions,88 available slots.
+Counts include function keys and submission of preserved partial input.
+The host sends actual emulated PS/2 keystrokes via QMP; no guest code or
+memory writes are injected. Each VM attaches its own copied ZeroFS and MBR
+fixture disks. Full SHA256 hashes remained unchanged in this matrix.
+
+Verified in all four modes:
+- Two initial sessions, stable IDs, default focus1; create at least6.
+- Real F1 new, F2 close, F3 next, F4 previous and F5 layout controls.
+- Both sessions retain incomplete write commands across F3/F4 switching;
+  ALPHA-PENDING and BETA-PENDING execute only in the intended sessions.
+- Per-window volume rootsA/B survive focus changes; new windows inherit root.
+- Closing/reusing slot3 preserves the other sessions; a closed numeric ID
+  is rejected before slot reuse.
+- clear affects only its window. Window1's408x352 body pixel region is
+  byte-identical before/after clearing window2; window2's body changes.
+- Tile and scrolling layouts, keyboard toggles and textual commands work.
+- Changes made while graphics is paused appear after resume, including the
+  latest focus/layout and LATEST-UPDATE output.
+- Malformed commands, out-of-range/closed IDs leave inventory unchanged.
+- The last session cannot be closed by either API; an incomplete command
+  also survives a refused F2 and executes correctly on explicit Enter.
+
+Additional BIOS read-only memory oracles pause the VM briefly and dump its
+actual loader-owned slots at0x130000. They independently verify saved input,
+root metadata, unchanged neighboring rings after clear, and zeroed reused
+slot history. BIOS64 fills the7168-byte ring past capacity and confirms old
+text is evicted, newest text remains and all other sessions stay unchanged.
+No memory-write debugging commands are used.
+
+ACTUAL UART REGRESSION
+bios64-uart: PASS,7 recorded actions, no data disks.
+Uses a real bidirectional emulated COM1 socket. A pending write SENTINEL in
+window2 survives UART window2 followed by CRLF from window1: its input and
+history ring remain byte-identical, with no output until explicit Enter.
+That Enter prints SENTINEL exactly once. UART window new followed by CRLF
+creates exactly one fresh prompt; a following write executes exactly once.
+
+CROSS-WINDOW FILESYSTEM INTEGRATION
+bios64-files: PASS,27 shell commands, separate disposable writable copies.
+Three sessions selectB:|ext4,C:|NTFS,D:|Btrfs. Each creates the same filename
+wm08 with its own text, switches away/back, replaces the file and reads the
+correct session-specific content. This exercises arguments/input located
+outside the kernel arena and the shared filesystem command engine.
+After VM exit, independent e2fsck -fn, ntfsfix -n and btrfs check --readonly
+all return0. debugfs,ntfscat and btrfs restore extract byte-exact
+B-session-updated,C-session-updated,D-session-updated respectively.
+MBR/outer gaps and the unused private ZeroFS disk are unchanged.
+ntfsfix is a limited consistency check, not Windows chkdsk.
+
+SCREENSHOTS
+Real final-ISO VM images, not static design previews:
+bios64/desktop-tiles.png and bios64/desktop-scroll.png show a clean3-session
+demonstration, using actual terminal/root/task commands with no disk writes.
+All four boot modes also retain raw tile/scroll/clear/resume evidence.
+Selected final images from all four modes were visually inspected.
+Animation was disabled during screenshot equality tests to keep the caret
+stable; caret animation itself is outside this focused VM matrix.
+
+SCOPE AND ARTIFACTS
+All six QEMU processes exited. Original user disks were never attached.
+QEMU is external test infrastructure, not guest implementation. Native
+VirtualBox and physical hardware were not tested. Sessions share one command
+engine; this report does not claim protected processes or parallel commands.
+candidate-50e1a74d contains earlier candidate evidence, not final-ISO proof.
+Initial harness corrections involved host ATA readonly configuration and
+waiting for actual typed echo; they were not guest defects. The separate
+filesystem harness was corrected to expect the foreign-filesystem success
+message rather than the ZeroFS message before its successful final run.
+Distribute source scripts,JSON/text/serial logs and PNG screenshots only;
+private-disk-*,*.partition,*.memory,*.ppm,vars.fd and sockets are private test
+artifacts, not delivery disk images. The distribution image remains ISO.

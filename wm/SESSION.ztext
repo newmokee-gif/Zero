@@ -1,0 +1,86 @@
+ZTEXT00100001356972163090000000
+Current original Zero workflow (0.12)
+
+Use the native tools on Linux or their .exe versions on Windows:
+  zero-integrate PROJECT_DIRECTORY NEW_KERNEL.zero
+  zero-build PROJECT_DIRECTORY NEW_OUTPUT_DIRECTORY NEW_KERNEL.zero
+  zero-check PROJECT_DIRECTORY NEW_TEST_DIRECTORY
+All destination paths must be new. The integrator preserves authored sources;
+the builder checks its compiler fixed point and builds the original targets;
+the verifier checks language behavior and host file operations in process.
+See tools/integrate.ztext, tools/build.ztext and checks/README.ztext.
+Read these documents with zero-text read FILE.
+
+The notes below preserve earlier implementation and test history. Any old
+shell/Python runner names, generated artifacts, JSON reports or commands are
+historical references: they were removed from the active project and are not
+current runnable instructions or current-release validation. Native host
+checks do not replace BIOS/UEFI, persistence or physical-hardware testing.
+
+Historical implementation notes
+
+Zero window session storage
+
+The session manager is original Zero, integrated in the terminal thread.
+It does not create a native thread or a filesystem cache for each window.
+Commands still complete through the one shared command/IO state machine.
+
+Memory ownership
+The loader owns the pool described by handoff+112/base and+120/size.
+The two existing worker stacks use base..base+0x28000. Sessions start at
+base+0x30000 and stop before base+size-0x20000, retaining32KiB separation
+below and128KiB for the main stack/64KiB arena above. Pool address arithmetic,
+alignment, minimum one-slot size and the IA32 address ceiling are checked.
+With8192-byte slots the existing1MiB UEFI pool permits88 windows; the3MiB
+BIOS pool permits344. Smaller valid pools naturally permit fewer windows.
+An unusable pool leaves the existing single-terminal input buffer intact.
+Unused slot headers are cleared at initialization; every newly opened slot
+is fully zeroed before publishing its alive flag. No user data disk is used.
+
+Shared u64 fields relative to console:
+2048 slot base;2056 capacity;2064 focused index;2072 live count;
+2080 layout0tile/1scroll;2088 layout generation;
+2096 pending action;2104 requested numeric focus index;2112 focused pointer.
+Actions:1new,2close,3next,4previous,5toggle,6tile,7scroll,8numeric focus.
+Numeric targets are zero-based slot indices; displayed IDs are index+1.
+
+Each8192-byte slot contains these u64 fields:
+0alive,8ID,16ring next-write position,24ring byte count(max7168),
+32input length,40overflow flag,48reserved,56selected volume,
+64dirty generation,72drawn generation,144prompt initialized.
+Input has512 bytes at+256; the7168-byte output ring begins at+1024.
+Renderer-owned geometry occupies the remaining agreed header fields.
+
+Switching is processed only while shell state10 is waiting for input.
+The parser's mutable argument pointers and active filesystem requests are
+never changed midway. The selected volume and incomplete command survive
+focus changes. Keyboard modifiers, PS/2 prefix state, COM1 stream state and
+ignore_lf remain global. A CRLF split across focus/new must consume its LF
+without submitting the destination window's unfinished command. New windows
+inherit the old selected volume. A first focus
+requests a fresh prompt via state9; subsequent focus keeps the saved input.
+Initial slot0 already owns the startup output; initial slot1 receives its
+first prompt when focused. The last terminal cannot be closed.
+
+Successful focus emits no message into unfinished input. A refused request
+prints its diagnostic then reconstructs the prompt and saved input without
+resetting the command. Error text plus480 input bytes fits the existing
+2044-byte listing scratch. Focus/layout/create/close increment the global
+layout generation; the renderer must check this after yielding to avoid
+painting a closed/reused slot or a stale layout.
+
+Focused hosted verification
+The current own Zero compiler compiled a session harness with50 static
+assertions, including saving/restoring unfinished input and overflow state,
+volume independence, silent focus, first prompts, reuse after close, layout
+changes, invalid numeric focus, all88 UEFI-sized slots, full-capacity refusal,
+closing back to one terminal and last-close refusal. Guard bytes below the
+session region and in the top128KiB main-stack reservation remained intact.
+Eight additional initialization scenarios passed:3MiB capacity344, minimum
+one-slot capacity, just-too-small pool, misalignment, u64 wrap, IA32 ceiling,
+zero base and missing handoff. A further20 assertions cover global CRLF
+framing across focus and new-window requests, including an unfinished
+destination command. These hosted checks do not replace VM boot,
+framebuffer, keyboard or filesystem integration tests.
+Reproduce with bash review-tests/wm-sessions/run.sh; current logs and tested
+source/compiler hashes are in verification/wm-sessions-0.8.0.

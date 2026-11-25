@@ -1,0 +1,6 @@
+join(
+lines(
+"A\nB"
+)
+| /
+) => show

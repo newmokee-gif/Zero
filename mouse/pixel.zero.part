@@ -1,0 +1,21 @@
+# After the terminal pixel store, preserve an explicit write under the cursor.
+# c3 is the framebuffer-format pixel value; request coordinates are one-based.
+? :load64[@console + 2584] [
+ 0 -> @i. 0 -> @k.
+ ?? @i < 17 [
+  0 -> @j.
+  ?? @j < 12 [
+   ? :load8[:load64[@console + 2648] + @i * 12 + @j] != 48 [
+    ? (:load64[@console + 1024] == :load64[@console + 2592] + @j + 1) * (:load64[@console + 1032] == :load64[@console + 2600] + @i + 1) [
+     !store32[@console + 2656 + @k * 4|@c3].
+     0x151515 -> @temporary.
+     ? :load8[:load64[@console + 2648] + @i * 12 + @j] == 50 [ 0xf2f2f2 -> @temporary. ]
+     !store32[:load64[@console + 8] + ((:load64[@console + 1032] - 1) * :load64[@console + 32] + :load64[@console + 1024] - 1) * 4|@temporary].
+    ]
+    @k + 1 -> @k.
+   ]
+   @j + 1 -> @j.
+  ]
+  @i + 1 -> @i.
+ ]
+]

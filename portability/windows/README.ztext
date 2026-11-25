@@ -1,0 +1,118 @@
+ZTEXT0010000158e040cddfb0000000
+ZERO / EZERO 0.9.0 FOR WINDOWS X64
+
+This distribution contains original Zero and Ezero compilers, both written in
+Zero. All generated executables are native PE64 console applications. They
+use Windows KERNEL32 services directly and need no Linux, Wine, C runtime,
+Python, external assembler, foreign compiler, or installed language runtime.
+The .cmd files use the Windows command interpreter to connect these programs.
+
+Target: Windows 10/11 x64. Windows on ARM, 32-bit Windows and native Windows
+execution have not yet been verified. Compatibility tests use Wine 10 on a
+Debian 13 host; a Wine pass does not claim a native Windows machine test.
+
+GET STARTED
+
+Extract the complete directory. Open Command Prompt (cmd.exe) in it:
+
+    call ezero.cmd examples\banana.ezero banana.exe
+    banana.exe
+
+    call ezero-run.cmd examples\functions.ezero
+
+The banana example prints:
+    3 банана
+    5
+    банана
+    6
+
+Source is UTF-8. For UTF-8 terminal display, use `chcp 65001` in Command Prompt
+and a font supporting your characters. Redirected program output is always
+binary UTF-8 with LF newlines, with no Windows text conversion.
+
+For low-level Zero (source from stdin, executable to stdout):
+
+    call zero.cmd < example.zero > example.exe
+    example.exe
+
+zero.cmd selects --windows by default. Pass an explicit target to cross-compile:
+
+    call zero.cmd --host < example.zero > example-linux
+
+Available explicit targets: --windows, --host, --raw, --raw32, --efi, --efi32,
+--real, --app64 and --app32. The app targets require Zero OS's own application
+ABI; they do not produce Windows executables.
+
+The internal bin\zero.exe has the shared cross-platform compiler defaults;
+when invoking it directly, always select --windows for Windows output:
+
+    bin\zero.exe --windows < example.zero > example.exe
+
+Use Command Prompt for these binary redirections. Older Windows PowerShell
+versions may transform redirected binary bytes; their redirection is not part
+of this package. Ezero's wrapper handles binary files with Windows copy /b.
+
+REBUILD ON WINDOWS
+
+    call rebuild.cmd
+
+This compiles the included Zero compiler source twice using Zero, compares the
+two PE files byte for byte with the included original Zero checker, and builds
+Ezero's original frontend and packer.
+The source and both runtime fragments are included. No downloaded sources or
+third-party language implementation is included. An existing Zero executable
+is the bootstrap seed for this self-hosting cycle.
+
+EZERO
+
+Ezero is the easy, high-level language built on Zero. It supports automatic
+value kinds, unquoted UTF-8 text, typed phrases such as `3 банана`, numbers,
+lists, one-based collection indices, loops, functions, recursion and automatic
+memory collection. See EZERO-LANGUAGE.ztext and EZERO-MEMORY.ztext for the precise
+syntax, limits and behavior. Programs run on the original Ezero runtime built
+into each executable by the original Zero compiler.
+
+`ezero INPUT.ezero OUTPUT.exe` compiles before replacing the destination; a
+syntax error preserves an existing executable. It rejects identical source
+and output paths. `ezero-run INPUT.ezero` builds in a temporary directory,
+runs the executable, preserves its exit status and removes its temporary files.
+
+WINDOWS HOST PROFILE
+
+Supported Zero primitives: put, exit, store8/16/32/64, load8/16/32/64,
+reserve, read, write, bitxor, bitand, shr, fork and switch.
+The existing compiler rejects raw hardware/firmware and Unix positioned-file
+primitives in Windows mode. Fork/switch are Zero cooperative contexts within
+one process, not Windows processes or threads. Stack/arena layout follows the
+same original Zero 4 MiB hosted memory profile. Each PE requests a committed
+16 MiB stack to reserve the arena without borrowing a CRT stack probe.
+
+read/write use ReadFile/WriteFile on the standard handles. Count must be at
+most 0x7fffffff; a larger count returns unsigned -22. EOF returns0. Other I/O
+failures return unsigned -5. Short reads/writes remain visible to the caller.
+put exits74 on a failed one-byte write. Exit statuses use the low eight bits.
+The compiler emits no output until parsing and finalization succeed.
+
+The native startup reconstructs the compiler's existing argc/argv layout.
+Its bounded command-line profile allows at most4095 bytes and63 arguments;
+spaces outside double quotes separate arguments. Double quotes group paths
+with spaces. Unclosed quotes and oversized command lines exit64. It does not
+implement the complete Windows CRT backslash-before-quote grammar; compiler
+options contain no such quoting. Source bytes arrive through binary stdin.
+
+IMPLEMENTATION / VALIDATION
+
+The PE header, import table, relocation padding and x64 instructions are
+emitted by original Zero code. No external assembler/linker/PE library is
+used. The sole imported library is the host operating system's KERNEL32.dll.
+All references are position-independent; .text is executable/read-only,
+.idata writable/non-executable, and .reloc discardable/non-executable.
+
+Release 0.9.0 verification: all 85 Ezero behavioral cases, 25 native ABI/PE
+checks and 12 Windows wrapper/checker cases passed under Wine. The final
+merged Zero compiler reproduced its Windows executable byte for byte.
+
+Verification records live in the development tree under
+verification/windows-0.9.0 and portability/windows/STATUS.ztext.
+External Wine, Python, shell and binary-inspection tools only orchestrate tests
+or package files; none are required by or included in the Windows product.

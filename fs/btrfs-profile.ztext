@@ -1,0 +1,123 @@
+ZTEXT00100001d21cde889800000000
+Current original Zero workflow (0.12)
+
+Use the native tools on Linux or their .exe versions on Windows:
+  zero-integrate PROJECT_DIRECTORY NEW_KERNEL.zero
+  zero-build PROJECT_DIRECTORY NEW_OUTPUT_DIRECTORY NEW_KERNEL.zero
+  zero-check PROJECT_DIRECTORY NEW_TEST_DIRECTORY
+All destination paths must be new. The integrator preserves authored sources;
+the builder checks its compiler fixed point and builds the original targets;
+the verifier checks language behavior and host file operations in process.
+See tools/integrate.ztext, tools/build.ztext and checks/README.ztext.
+Read these documents with zero-text read FILE.
+
+The notes below preserve earlier implementation and test history. Any old
+shell/Python runner names, generated artifacts, JSON reports or commands are
+historical references: they were removed from the active project and are not
+current runnable instructions or current-release validation. Native host
+checks do not replace BIOS/UEFI, persistence or physical-hardware testing.
+
+Historical implementation notes
+
+Zero Btrfs backend: original native Zero implementation, bounded writable profile
+
+fs/btrfs.zero is the same state machine used by the kernel and host tests.
+It contains no C, Rust, assembly, imported filesystem code or external runtime.
+The Zero compiler emits native code directly. External mkfs.btrfs, btrfs check
+and btrfs restore are independent fixture/verification tools only.
+
+Implemented operations
+- Probe/validate, list the top-level root, read a file, create an empty file,
+  create-or-replace file contents, remove a file.
+- Case-sensitive names of 1..31 printable ASCII bytes, excluding slash,
+  backslash, dot and dot-dot names. Each file is at most 400 bytes, inline.
+- Persistent standard Btrfs inode items, inode references, hashed directory
+  items, directory indices and inline extent data. Existing files written by
+  mkfs.btrfs --rootdir are read and modified by this driver.
+- Empty files have no data extent. Rewriting nonempty to empty and vice versa
+  is supported. Deletion compacts the leaf and makes its capacity reusable.
+- File bytes are not interpreted as a programming language or host pathname.
+
+Explicit supported volume profile
+- A whole filesystem or partition at the ABI-provided base LBA, on one device
+  with internal device ID1. ATA LBA28 bound: disk address below 128GiB.
+- At least64MiB+4096B; at most128GiB. Primary and64MiB mirror superblocks.
+- CRC32C checksums;4096-byte sectors;16384-byte tree nodes.
+- compat_flags=0, compat_ro_flags=0, incompat_flags=321 or833:
+  MIXED_BACKREF, EXTENDED_IREF, SKINNY_METADATA, optional NO_HOLES.
+- No log root, no free-space cache generation (cache_generation=UINT64_MAX),
+  no free-space-tree, RAID, DUP, mixed block groups or multiple devices.
+- Exactly one nonoverlapping SINGLE system chunk, metadata chunk and data
+  chunk. The data chunk is empty because every supported file is inline.
+- Root tree and every referenced tree root are level0 leaves; root/extent/FS
+  trees are checksum-validated on every operation. FS tree5, directory256,
+  and the default root directory must refer to the top-level FS tree.
+- No subvolumes/snapshots, shared metadata references, received roots,
+  read-only roots, quota tree, directories below root, hard links, symlinks,
+  xattrs, ACLs, compression, encryption, sparse/external extents or data
+  checksums. Every metadata extent belongs to exactly one known tree root.
+- Root and extent leaf capacity is preserved by COW replacement. The file
+  tree does not split: insertion that cannot fit returns capacity failure
+  before publishing or writing a replacement file-tree block.
+
+A reproducible disposable test volume can be made using:
+  truncate -s 256M fixture.img
+  mkfs.btrfs -f -m single -d single -R ^free-space-tree fixture.img
+This is a test instruction, not an automatic reformat operation. No existing
+user volume is reformatted or downgraded to make it fit the profile.
+Default modern Btrfs volumes commonly use DUP and free-space-tree and are
+therefore rejected by this initial backend. This is not full Btrfs support.
+
+Transaction behavior
+1. Validate superblock/profile, chunk ranges/UUIDs, all known metadata
+   references and generation numbers, and the entire supported file tree.
+   Check inode/ref/name/hash/index/data-length agreement and directory size.
+2. Choose three free metadata blocks excluding active extents and superblock
+   mirror stripes. Build a complete replacement file-tree leaf in RAM.
+3. Write COW file-tree, root-tree and extent-tree leaves with CRC32C, updated
+   root pointers/generations and replacement metadata backreferences.
+   No active old leaf is overwritten. Space accounting remains unchanged.
+4. Flush those leaves, publish and flush the primary superblock, then the
+   secondary superblock. Both have checksums and a current root backup.
+All operations reload metadata, so switching volumes needs no retained
+backend state. No host filesystem mount is required.
+
+Error semantics and limits
+The common ABI reports success0, unsupported1, corrupt2, I/O3, missing4,
+exists5, leaf/allocation capacity6, invalid argument7, output/file too large8,
+recovery required9, wrong signature10. Error output length is zero. The kernel
+may continue probing another filesystem only after wrong signature10.
+A late I/O/flush failure can occur after the new primary root became visible;
+the operation reports I/O failure and the next request reloads the volume.
+This does not claim transactional rollback of a failed device write, hardware
+power-loss guarantees, torn-sector recovery or generic filesystem repair.
+The independent fault test proves consistency at eight simulated whole-write
+or flush failure boundaries, not arbitrary physical torn writes.
+Timestamps are preserved for existing files; newly created files have zero
+(epoch/unknown) timestamps because this backend has no wall-clock service.
+Directory ordering follows persistent Btrfs directory indices.
+
+ABI and ownership
+Entry400, helpers400..599; complete by loading H+72. H=memory+24576.
+H fields follow fs/ABI.ztext (or the parent kernel's matching common contract).
+Private state25600..28671, saved superblock28672..32767, two16KiB leaves at
+32768/49152. No persistent or external allocation. Only declared volatile
+scratch variables are used. Block I/O goes through state90 and includes H+80
+partition LBA. io_write2 must perform a real device flush.
+
+Evidence
+verification/btrfs/test.sh, refusals.sh and mutants.sh exercise the same code.
+results.txt: CRUD, empty transitions,31-byte names/400-byte payloads, directory
+capacity/no mutation, delete/reuse, external btrfs check after every successful
+matrix mutation,8 fail points with btrfs check and restore old-or-new data.
+refusal-results.txt: bad checksum/foreign signature/truncated I/O, output
+capacity, nonzero partition LBA and external check after partition mutation.
+mutant-results.txt: checksummed orphan dir entry, mismatched inode ref,
+generation overflow, wrapping chunk length, wrong metadata backref and inline
+length mismatch; every rejection leaves the image SHA256 unchanged.
+An externally populated image was read/updated and restored independently.
+Both superblock mirror checksums were inspected with btrfs dump-super.
+
+Format references, used as specifications rather than implementation code:
+https://btrfs.readthedocs.io/en/latest/dev/On-disk-format.html
+Linux UAPI btrfs_tree.h on-disk record layouts and constants.

@@ -1,0 +1,12 @@
+3 банана => retained
+[retained | [1 | 2 | 3]] => graph
+graph => alias
+0 => counter
+empty => temporary
+10000 => repeat [
+ Temporary counter => temporary
+ counter + 1 => counter
+]
+graph => show
+alias => show
+temporary => show

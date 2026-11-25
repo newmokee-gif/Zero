@@ -1,0 +1,20 @@
+# Run in a dedicated empty native folder.
+check :: value [
+ value => when [ 1 => return ]
+ 0 - 1 => return
+]
+arguments()[1] => root
+go(root) => ready
+create(é.txt) => ready
+create(🙂.txt) => ready
+create(ab.txt) => ready
+check(size(search("?.txt")) == 2) => ready
+check(size(search("??.txt")) == 1) => ready
+check(size(search("*.txt")) == 3) => ready
+check(search("é.?xt")[1] == é.txt) => ready
+check(search("🙂.?xt")[1] == 🙂.txt) => ready
+check(size(search("É.txt")) == 0) => ready
+del(é.txt) => ready
+del(🙂.txt) => ready
+del(ab.txt) => ready
+Unicode glob passed => show

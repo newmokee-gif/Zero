@@ -1,0 +1,39 @@
+ZTEXT001000006e7d7c759e60000000
+PASS case0 count=1 status=0 kind=0 unchanged
+PASS case1 count=1 status=0 kind=0 unchanged
+PASS case2 count=1 status=0 kind=0 unchanged
+PASS case3 count=2 status=0 kind=1 unchanged
+PASS case4 count=0 status=2 kind=1 unchanged
+PASS case5 count=0 status=2 kind=1 unchanged
+PASS case6 count=0 status=1 kind=1 unchanged
+PASS case7 count=0 status=1 kind=1 unchanged
+PASS case8 count=0 status=2 kind=1 unchanged
+PASS case9 count=0 status=0 kind=1 unchanged
+PASS case10 count=2 status=0 kind=2 unchanged
+PASS case11 count=0 status=2 kind=2 unchanged
+PASS case12 count=0 status=2 kind=2 unchanged
+PASS case13 count=0 status=2 kind=2 unchanged
+PASS case14 count=0 status=2 kind=2 unchanged
+PASS case15 count=0 status=2 kind=2 unchanged
+PASS case16 count=0 status=2 kind=2 unchanged
+PASS case17 count=0 status=2 kind=2 unchanged
+PASS case18 count=0 status=1 kind=2 unchanged
+PASS case19 count=0 status=2 kind=1 unchanged
+PASS case20 count=0 status=2 kind=1 unchanged
+PASS case21 count=2 status=0 kind=2 unchanged
+PASS case22 count=0 status=6 kind=2 unchanged
+PASS case23 count=2 status=0 kind=2 unchanged
+PASS case24 count=0 status=2 kind=2 unchanged
+PASS case25 count=0 status=2 kind=2 unchanged
+PASS case26 count=1 status=0 kind=2 unchanged
+PASS case27 count=1 status=0 kind=2 unchanged
+PASS case28 count=0 status=2 kind=2 unchanged
+PASS case29 count=0 status=2 kind=1 unchanged
+PASS case30 count=0 status=2 kind=2 unchanged
+PASS case31 count=0 status=3 kind=0 unchanged
+PASS case32 count=0 status=1 kind=2 unchanged
+PASS case33 count=0 status=2 kind=1 unchanged
+PASS four physical disks, six distinct volume records
+PASS malformed disk rollback preserves other disks
+PASS A-Z inventory capacity rollback preserves other disks
+PASS independent partx MBR/GPT start/size oracle

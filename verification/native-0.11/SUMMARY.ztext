@@ -1,0 +1,14 @@
+ZTEXT001000003173db7eaef0000000
+Zero 0.11 exact native archive verification
+
+Linux Debian host:14/14 PASS. Windows PE under Wine10:14/14 PASS.
+Both archives extracted to private Unicode/space paths; native commands run
+with an empty tool PATH. Selfhost reproduction, Ezero text/host files, sync/wait,
+v1/v2 deployment, SHA256, journal recovery preserving source and timed local
+watch checks passed. Archive manifests and original ISO bytes remained intact.
+Windows evidence is Wine, not native Microsoft Windows.
+Arch userspace:23/23 PASS, cached official Arch container on shared Linux
+kernel. Detailed report in portability/native/arch/verification.
+
+linux 174863 bytes 27a20a26f2c51e77fde4f5c488feba0cf55ebe8739f526722799ec9117fd638f
+windows 208809 bytes ec2799ae8d87ea00a14fac7b01ffab59e4af73d8e0c7ac77848ecd530b8771b7

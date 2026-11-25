@@ -1,0 +1,14 @@
+1 => @n.
+1 => @factorial.
+?? @n <= 5 [
+    @factorial * @n -> @factorial.
+    @n + 1 -> @n.
+]
+? @factorial == 120 [
+    !put[79].
+    !put[75].
+    !put[10].
+    !exit[0].
+] ~ [
+    !exit[1].
+]

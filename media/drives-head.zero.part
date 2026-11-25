@@ -1,0 +1,24 @@
+# Read-only eligibility scan for zero-flash. One-based display; original Zero.
+0 => @ds.
+0 => @dr.
+0 => @dfd.
+0 => @di.
+0 => @dj.
+0 => @dk.
+0 => @dn.
+0 => @ddone.
+0 => @dvalid.
+0 => @dcount.
+0 => @dvalue.
+0 => @dpower.
+0 => @ddigit.
+0 => @dnumber.
+0 => @dtext.
+0 => @derror.
+:hostalloc[131072] -> @ds.
+? @ds == 0 [ !exit[70]. ]
+@ds+1024 -> @mh. !store64[@mh+16|-1].
+:fork[@ds+128|@ds+32768|81920] -> @dr.
+? @dr == 1 [
+ ?? 1 [
+  ? :load64[@mh+200] == 1 [

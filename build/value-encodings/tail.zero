@@ -1,0 +1,24 @@
+:reserve[1024] => @output.
+0 => @out.
+0 => @j.
+0 => @str.
+0 => @len.
+0 => @a.
+0 => @b.
+75 -> @i.
+?? @i < 80 [
+ :load64[@templates + @i * 16] -> @str.
+ :load64[@templates + @i * 16 + 8] -> @len.
+ 0 -> @j.
+ ?? @j < @len [
+  :load8[@str + @j * 2] -> @a.
+  :load8[@str + @j * 2 + 1] -> @b.
+  ? @a < 58 [ @a - 48 -> @a. ] ~ [ @a - 87 -> @a. ]
+  ? @b < 58 [ @b - 48 -> @b. ] ~ [ @b - 87 -> @b. ]
+  !store8[@output + @out | @a * 16 + @b].
+  @out + 1 -> @out. @j + 1 -> @j.
+ ]
+ @i + 1 -> @i.
+]
+:write[@output | @out] => @written.
+? @written != @out [ !exit[1]. ]

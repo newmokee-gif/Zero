@@ -1,0 +1,89 @@
+
+:reserve[65536] => @memory.
+@memory + 16384 => @console.
+@memory + 13824 => @line.
+@memory + 14336 => @listing.
+:reserve[1048576] => @pool.
+:reserve[128] => @boot_information.
+0 => @state.
+0 => @operation.
+0 => @ready.
+0 => @done.
+0 => @message.
+0 => @line_length.
+0 => @overflow.
+0 => @ignore_lf.
+0 => @pointer.
+0 => @valid.
+0 => @i.
+0 => @j.
+0 => @c0.
+0 => @c1.
+0 => @c2.
+0 => @c3.
+0 => @c4.
+0 => @c5.
+0 => @saved.
+0 => @counter.
+0 => @next.
+0 -> @i.
+?? @i < 65536 [ !store8[@memory + @i| 0]. @i + 1 -> @i. ]
+0 -> @i.
+?? @i < 1048576 [ !store8[@pool + @i| 165]. @i + 1 -> @i. ]
+!store64[@boot_information + 112| @pool].
+!store64[@boot_information + 120| 1048576].
+!store64[@boot_information + 104| 64].
+#@WM_INIT@
+10 -> @state.
+!store64[@console + 2096| 3].
+#@WM_SWITCH@
+? :load64[@console + 2064] != 1 [ !exit[1]. ]
+? @state != 9 [ !exit[2]. ]
+# Window2 has an unfinished command and no pending CRLF suppression.
+10 -> @state. 0 -> @ignore_lf.
+"write UNFINISHED" -> @pointer. 0 -> @line_length.
+?? :load8[@pointer + @line_length] [
+ !store8[@line + @line_length| :load8[@pointer + @line_length]].
+ @line_length + 1 -> @line_length.
+]
+!store64[@console + 2096| 4].
+#@WM_SWITCH@
+? :load64[@console + 2064] != 0 [ !exit[3]. ]
+? @ignore_lf != 0 [ !exit[4]. ]
+# UART command window2<CR> completed in window1. Its trailing LF has not
+# arrived yet. The deferred focus must preserve this shared framing flag.
+1 -> @ignore_lf. 10 -> @state.
+!store64[@console + 2104| 1]. !store64[@console + 2096| 8].
+#@WM_SWITCH@
+? :load64[@console + 2064] != 1 [ !exit[5]. ]
+? @line_length != 16 [ !exit[6]. ]
+? :load8[@line] != 119 [ !exit[7]. ]
+? @ignore_lf != 1 [ !exit[8]. ]
+# Apply the terminal's LF framing rule. A consumed trailing LF must not
+# reach the command-submission transition20 for the destination window.
+1 -> @valid. ? @ignore_lf [ 0 -> @valid. ] 0 -> @ignore_lf.
+? @valid [ 20 -> @state. ]
+? @state != 10 [ !exit[9]. ]
+? @line_length != 16 [ !exit[10]. ]
+? @ignore_lf != 0 [ !exit[11]. ]
+!store64[@console + 2096| 4].
+#@WM_SWITCH@
+? :load64[@console + 2064] != 0 [ !exit[12]. ]
+# UART window new<CR> completes; first focus opens an empty terminal.
+0 -> @line_length. 1 -> @ignore_lf. 10 -> @state.
+!store64[@console + 2096| 1].
+#@WM_SWITCH@
+? :load64[@console + 2064] != 2 [ !exit[13]. ]
+? @state != 9 [ !exit[14]. ]
+? @ignore_lf != 1 [ !exit[15]. ]
+10 -> @state.
+1 -> @valid. ? @ignore_lf [ 0 -> @valid. ] 0 -> @ignore_lf.
+? @valid [ 20 -> @state. ]
+? @state != 10 [ !exit[16]. ]
+? @line_length != 0 [ !exit[17]. ]
+!store64[@console + 2104| 1]. !store64[@console + 2096| 8].
+#@WM_SWITCH@
+? :load64[@console + 2064] != 1 [ !exit[18]. ]
+? @line_length != 16 [ !exit[19]. ]
+? :load8[@line + 15] != 68 [ !exit[20]. ]
+!put[80]. !put[65]. !put[83]. !put[83]. !put[10]. !exit[0].

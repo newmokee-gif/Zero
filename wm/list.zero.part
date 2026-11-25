@@ -1,0 +1,54 @@
+ ? @current == 600 [
+  "Windows: $/$; focused: $; layout: " -> @text.
+  0 -> @i. 0 -> @j. 0 -> @k.
+  ?? :load8[@text + @i] [
+   :load8[@text + @i] -> @character.
+   ? @character == 36 [
+    :load64[@console + 2072] -> @temporary.
+    ? @k == 1 [ :load64[@console + 2056] -> @temporary. ]
+    ? @k == 2 [ :load64[@console + 2064] + 1 -> @temporary. ]
+    100 -> @c0. 0 -> @c1.
+    ?? @c1 < 3 [
+     0 -> @c2.
+     ?? @temporary >= @c0 [ @temporary - @c0 -> @temporary. @c2 + 1 -> @c2. ]
+     !store8[@listing + @j| @c2 + 48]. @j + 1 -> @j.
+     ? @c0 == 100 [ 10 -> @c0. ] ~ [ 1 -> @c0. ]
+     @c1 + 1 -> @c1.
+    ]
+    @k + 1 -> @k.
+   ] ~ [ !store8[@listing + @j| @character]. @j + 1 -> @j. ]
+   @i + 1 -> @i.
+  ]
+  "tile\r\n" -> @text. ? :load64[@console + 2080] [ "scroll\r\n" -> @text. ]
+  0 -> @i.
+  ?? :load8[@text + @i] [ !store8[@listing + @j| :load8[@text + @i]]. @j + 1 -> @j. @i + 1 -> @i. ]
+  !store8[@listing + @j| 0]. @listing -> @message. 601 -> @state.
+ ]
+ ? @current == 601 [
+  :load64[@console + 2176] -> @i. 0 -> @valid.
+  ?? (@i < :load64[@console + 2056]) * (@valid == 0) [
+   :load64[@console + 2048] + @i * 8192 -> @c3.
+   ? :load64[@c3] [ 1 -> @valid. ] ~ [ @i + 1 -> @i. ]
+  ]
+  ? @valid [
+   @i + 1 -> @temporary. 100 -> @c0. 0 -> @j.
+   ?? @j < 3 [
+    0 -> @c1.
+    ?? @temporary >= @c0 [ @temporary - @c0 -> @temporary. @c1 + 1 -> @c1. ]
+    !store8[@listing + @j| @c1 + 48]. @j + 1 -> @j.
+    ? @c0 == 100 [ 10 -> @c0. ] ~ [ 1 -> @c0. ]
+   ]
+   !store8[@listing + 3| 32]. !store8[@listing + 4| 45].
+   ? @i == :load64[@console + 2064] [
+    !store8[@listing + 4| 42]. !store64[@c3 + 56| :load64[@memory + 24688]].
+   ]
+   !store8[@listing + 5| 32]. !store8[@listing + 6| 45].
+   !store8[@listing + 7| 45]. !store8[@listing + 8| 45].
+   ? :load64[@c3 + 56] < :load64[@memory + 24704] [
+    !store8[@listing + 6| 65 + :load64[@c3 + 56]].
+    !store8[@listing + 7| 58]. !store8[@listing + 8| 124].
+   ]
+   !store8[@listing + 9| 13]. !store8[@listing + 10| 10]. !store8[@listing + 11| 0].
+   !store64[@console + 2176| @i + 1]. @listing -> @message.
+  ] ~ [ 9 -> @state. ]
+ ]

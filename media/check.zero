@@ -1,0 +1,225 @@
+# Shared Zmedia validator and original SHA-256 memory worker.
+0 => @zm. 0 => @zi. 0 => @zj. 0 => @zk. 0 => @zp. 0 => @zq.
+0 => @zr. 0 => @zs. 0 => @zt. 0 => @zu. 0 => @zv. 0 => @zw.
+# Own memory SHA256 vectors and envelope regression checks.
+:reserve[1100000] => @testmemory.
+0 => @testinput. 0 => @testlength. 0 => @testvector. 0 => @testexpected.
+0 => @testi. 0 => @testj. 0 => @testn. 0 => @testactual. 0 => @testchar.
+0 => @testfailures. 0 => @testcases. 0 => @testsaved. 0 => @testheader.
+0 => @testliteral.
+@testmemory -> @zm. @testmemory+90112 -> @testinput.
+# Caller supplies zeroed90112byte arena@zm before including this block.
+# Descriptor input0,size8,mode16(0envelope,1rawSHA),result24,payload32,size40,digest48.
+# Caller and worker contexts128/224; stack4096..86015; scratch512..1151.
+# Invoke !switch[@zm+128|@zm+224]. No host services are used by this worker.
+:fork[@zm+224|@zm+4096|81920] -> @zs.
+? @zs == 1 [
+ !store32[@zm+512|0x428a2f98].
+ !store32[@zm+516|0x71374491].
+ !store32[@zm+520|0xb5c0fbcf].
+ !store32[@zm+524|0xe9b5dba5].
+ !store32[@zm+528|0x3956c25b].
+ !store32[@zm+532|0x59f111f1].
+ !store32[@zm+536|0x923f82a4].
+ !store32[@zm+540|0xab1c5ed5].
+ !store32[@zm+544|0xd807aa98].
+ !store32[@zm+548|0x12835b01].
+ !store32[@zm+552|0x243185be].
+ !store32[@zm+556|0x550c7dc3].
+ !store32[@zm+560|0x72be5d74].
+ !store32[@zm+564|0x80deb1fe].
+ !store32[@zm+568|0x9bdc06a7].
+ !store32[@zm+572|0xc19bf174].
+ !store32[@zm+576|0xe49b69c1].
+ !store32[@zm+580|0xefbe4786].
+ !store32[@zm+584|0xfc19dc6].
+ !store32[@zm+588|0x240ca1cc].
+ !store32[@zm+592|0x2de92c6f].
+ !store32[@zm+596|0x4a7484aa].
+ !store32[@zm+600|0x5cb0a9dc].
+ !store32[@zm+604|0x76f988da].
+ !store32[@zm+608|0x983e5152].
+ !store32[@zm+612|0xa831c66d].
+ !store32[@zm+616|0xb00327c8].
+ !store32[@zm+620|0xbf597fc7].
+ !store32[@zm+624|0xc6e00bf3].
+ !store32[@zm+628|0xd5a79147].
+ !store32[@zm+632|0x6ca6351].
+ !store32[@zm+636|0x14292967].
+ !store32[@zm+640|0x27b70a85].
+ !store32[@zm+644|0x2e1b2138].
+ !store32[@zm+648|0x4d2c6dfc].
+ !store32[@zm+652|0x53380d13].
+ !store32[@zm+656|0x650a7354].
+ !store32[@zm+660|0x766a0abb].
+ !store32[@zm+664|0x81c2c92e].
+ !store32[@zm+668|0x92722c85].
+ !store32[@zm+672|0xa2bfe8a1].
+ !store32[@zm+676|0xa81a664b].
+ !store32[@zm+680|0xc24b8b70].
+ !store32[@zm+684|0xc76c51a3].
+ !store32[@zm+688|0xd192e819].
+ !store32[@zm+692|0xd6990624].
+ !store32[@zm+696|0xf40e3585].
+ !store32[@zm+700|0x106aa070].
+ !store32[@zm+704|0x19a4c116].
+ !store32[@zm+708|0x1e376c08].
+ !store32[@zm+712|0x2748774c].
+ !store32[@zm+716|0x34b0bcb5].
+ !store32[@zm+720|0x391c0cb3].
+ !store32[@zm+724|0x4ed8aa4a].
+ !store32[@zm+728|0x5b9cca4f].
+ !store32[@zm+732|0x682e6ff3].
+ !store32[@zm+736|0x748f82ee].
+ !store32[@zm+740|0x78a5636f].
+ !store32[@zm+744|0x84c87814].
+ !store32[@zm+748|0x8cc70208].
+ !store32[@zm+752|0x90befffa].
+ !store32[@zm+756|0xa4506ceb].
+ !store32[@zm+760|0xbef9a3f7].
+ !store32[@zm+764|0xc67178f2].
+ ?? 1 [
+  !store64[@zm+24|0]. !store64[@zm+32|0]. !store64[@zm+40|0].
+  0 -> @zi. ?? @zi < 32 [ !store8[@zm+48+@zi|0]. @zi+1 -> @zi. ]
+  :load64[@zm] -> @zp. :load64[@zm+8] -> @zq.
+  ? :load64[@zm+16] > 1 [ !store64[@zm+24|65]. ]
+  ? @zp+@zq < @zp [ !store64[@zm+24|65]. ]
+  ? :load64[@zm+16] == 0 [
+   ? (@zq < 4096)+(@zq > 268439552)+(@zp == 0) [ !store64[@zm+24|65]. ]
+   ? :load64[@zm+24] == 0 [
+    ? (:load64[@zp] != 0x3130414944454d5a)+(:load64[@zp+8] != 1)+(:load64[@zp+16] != 4096)+(:load64[@zp+24] != 512)+(:load64[@zp+40] != 0) [ !store64[@zm+24|65]. ]
+    :load64[@zp+32] -> @zr.
+    ? (@zr < 512)+(@zr > 268435456)+(:bitand[@zr|511] != 0)+(@zr != @zq-4096) [ !store64[@zm+24|65]. ]
+    80 -> @zi. ?? @zi < 4096 [ ? :load8[@zp+@zi] != 0 [ !store64[@zm+24|65]. ] @zi+1 -> @zi. ]
+    @zp+4096 -> @zp. @zr -> @zq.
+   ]
+  ] ~ [
+   ? (@zq > 268435456)+((@zq != 0)*(@zp == 0)) [ !store64[@zm+24|65]. ]
+  ]
+  ? :load64[@zm+24] == 0 [
+   !store32[@zm+768|0x6a09e667]. !store32[@zm+772|0xbb67ae85].
+   !store32[@zm+776|0x3c6ef372]. !store32[@zm+780|0xa54ff53a].
+   !store32[@zm+784|0x510e527f]. !store32[@zm+788|0x9b05688c].
+   !store32[@zm+792|0x1f83d9ab]. !store32[@zm+796|0x5be0cd19].
+   (:shr[@zq|6]+1)*64 -> @zs. ? :bitand[@zq|63] >= 56 [ @zs+64 -> @zs. ]
+   0 -> @zr.
+   ?? @zr < @zs [
+    @zp+@zr -> @zw.
+    ? @zr+64 > @zq [
+     @zm+1088 -> @zw. 0 -> @zi.
+     ?? @zi < 64 [
+      0 -> @zk.
+      ? @zr+@zi < @zq [ :load8[@zp+@zr+@zi] -> @zk. ]
+      ? @zr+@zi == @zq [ 128 -> @zk. ]
+      ? @zr+@zi >= @zs-8 [ :bitand[:shr[@zq*8|(@zs-1-@zr-@zi)*8]|255] -> @zk. ]
+      !store8[@zw+@zi|@zk]. @zi+1 -> @zi.
+     ]
+    ]
+    0 -> @zi.
+    ?? @zi < 16 [
+     @zw+@zi*4 -> @zj.
+     :load8[@zj]*16777216+:load8[@zj+1]*65536+:load8[@zj+2]*256+:load8[@zj+3] -> @zk.
+     !store32[@zm+800+@zi*4|@zk]. @zi+1 -> @zi.
+    ]
+    ?? @zi < 64 [
+     :load32[@zm+800+(@zi-15)*4] -> @zk.
+     :bitxor[:bitxor[:shr[@zk|7]|:bitand[@zk*33554432|0xffffffff]]|:bitxor[:shr[@zk|18]|:bitand[@zk*16384|0xffffffff]]] -> @zu.
+     :bitxor[@zu|:shr[@zk|3]] -> @zu.
+     :load32[@zm+800+(@zi-2)*4] -> @zk.
+     :bitxor[:bitxor[:shr[@zk|17]|:bitand[@zk*32768|0xffffffff]]|:bitxor[:shr[@zk|19]|:bitand[@zk*8192|0xffffffff]]] -> @zv.
+     :bitxor[@zv|:shr[@zk|10]] -> @zv.
+     !store32[@zm+800+@zi*4|:load32[@zm+800+(@zi-16)*4]+@zu+:load32[@zm+800+(@zi-7)*4]+@zv].
+     @zi+1 -> @zi.
+    ]
+    0 -> @zi. ?? @zi < 32 [ !store32[@zm+1056+@zi|:load32[@zm+768+@zi]]. @zi+4 -> @zi. ]
+    0 -> @zi.
+    ?? @zi < 64 [
+     :load32[@zm+1072] -> @zk.
+     :bitxor[:bitxor[:shr[@zk|6]|:bitand[@zk*67108864|0xffffffff]]|:bitxor[:shr[@zk|11]|:bitand[@zk*2097152|0xffffffff]]] -> @zu.
+     :bitxor[@zu|:bitxor[:shr[@zk|25]|:bitand[@zk*128|0xffffffff]]] -> @zu.
+     :bitxor[:bitand[@zk|:load32[@zm+1076]]|:bitand[:bitxor[@zk|0xffffffff]|:load32[@zm+1080]]] -> @zv.
+     :load32[@zm+1084]+@zu+@zv+:load32[@zm+512+@zi*4]+:load32[@zm+800+@zi*4] -> @zt.
+     :load32[@zm+1056] -> @zk.
+     :bitxor[:bitxor[:shr[@zk|2]|:bitand[@zk*1073741824|0xffffffff]]|:bitxor[:shr[@zk|13]|:bitand[@zk*524288|0xffffffff]]] -> @zu.
+     :bitxor[@zu|:bitxor[:shr[@zk|22]|:bitand[@zk*1024|0xffffffff]]] -> @zu.
+     :bitxor[:bitxor[:bitand[@zk|:load32[@zm+1060]]|:bitand[@zk|:load32[@zm+1064]]]|:bitand[:load32[@zm+1060]|:load32[@zm+1064]]] -> @zv.
+     !store32[@zm+1084|:load32[@zm+1080]]. !store32[@zm+1080|:load32[@zm+1076]].
+     !store32[@zm+1076|:load32[@zm+1072]]. !store32[@zm+1072|:load32[@zm+1068]+@zt].
+     !store32[@zm+1068|:load32[@zm+1064]]. !store32[@zm+1064|:load32[@zm+1060]].
+     !store32[@zm+1060|@zk]. !store32[@zm+1056|@zt+@zu+@zv]. @zi+1 -> @zi.
+    ]
+    0 -> @zi. ?? @zi < 32 [ !store32[@zm+768+@zi|:load32[@zm+768+@zi]+:load32[@zm+1056+@zi]]. @zi+4 -> @zi. ]
+    @zr+64 -> @zr.
+   ]
+   0 -> @zi. ?? @zi < 32 [
+    :bitand[@zi|3] -> @zj. :bitand[@zi|0xfffffffc] -> @zk.
+    !store8[@zm+48+@zi|:shr[:load32[@zm+768+@zk]|(3-@zj)*8]]. @zi+1 -> @zi.
+   ]
+   ? :load64[@zm+16] == 0 [
+    :load64[@zm] -> @zr. 0 -> @zi.
+    ?? @zi < 32 [ ? :load8[@zm+48+@zi] != :load8[@zr+48+@zi] [ !store64[@zm+24|65]. ] @zi+1 -> @zi. ]
+   ]
+   ? :load64[@zm+24] == 0 [ !store64[@zm+32|@zp]. !store64[@zm+40|@zq]. ]
+  ]
+  !switch[@zm+224|@zm+128].
+ ]
+]
+0 -> @testvector.
+?? @testvector < 4 [
+ "" -> @testliteral. 0 -> @testlength.
+ "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" -> @testexpected.
+ ? @testvector == 1 [ "abc" -> @testliteral. 3 -> @testlength. "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad" -> @testexpected. ]
+ ? @testvector == 2 [ "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq" -> @testliteral. 56 -> @testlength. "248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1" -> @testexpected. ]
+ ? @testvector == 3 [ 1000000 -> @testlength. "cdc76e5c9914fb9281a1c7e284d73e67f1809a48a497200e046d39ccc7112cd0" -> @testexpected. ]
+ 0 -> @testi. ?? @testi < @testlength [
+  97 -> @testchar. ? @testvector < 3 [ :load8[@testliteral+@testi] -> @testchar. ]
+  !store8[@testinput+@testi|@testchar]. @testi+1 -> @testi.
+ ]
+ !store64[@zm|@testinput]. !store64[@zm+8|@testlength]. !store64[@zm+16|1].
+ !switch[@zm+128|@zm+224]. ? :load64[@zm+24] != 0 [ @testfailures+1 -> @testfailures. ]
+ "0123456789abcdef" -> @testliteral. 0 -> @testi.
+ ?? @testi < 32 [
+  :load8[@zm+48+@testi] -> @testactual.
+  ? :load8[@testliteral+:shr[@testactual|4]] != :load8[@testexpected+@testi*2] [ @testfailures+1 -> @testfailures. ]
+  ? :load8[@testliteral+:bitand[@testactual|15]] != :load8[@testexpected+@testi*2+1] [ @testfailures+1 -> @testfailures. ]
+  @testi+1 -> @testi.
+ ]
+ @testvector+1 -> @testvector. @testcases+1 -> @testcases.
+]
+# Canonical512-byte raw disk payload is wrapped, then this exact validator is
+# exercised at every header-byte corruption and every truncated input length.
+@testinput -> @testheader. 0 -> @testi.
+?? @testi < 4609 [ !store8[@testheader+@testi|0]. @testi+1 -> @testi. ]
+!store64[@zm|@testheader+4096]. !store64[@zm+8|512]. !store64[@zm+16|1].
+!switch[@zm+128|@zm+224].
+!store64[@testheader|0x3130414944454d5a]. !store64[@testheader+8|1].
+!store64[@testheader+16|4096]. !store64[@testheader+24|512].
+!store64[@testheader+32|512]. !store64[@testheader+40|0].
+0 -> @testi. ?? @testi < 32 [ !store8[@testheader+48+@testi|:load8[@zm+48+@testi]]. @testi+1 -> @testi. ]
+!store64[@zm|@testheader]. !store64[@zm+8|4608]. !store64[@zm+16|0].
+!switch[@zm+128|@zm+224].
+? (:load64[@zm+24] != 0)+(:load64[@zm+32] != @testheader+4096)+(:load64[@zm+40] != 512) [ @testfailures+1 -> @testfailures. ]
+@testcases+1 -> @testcases.
+0 -> @testi.
+?? @testi < 4096 [
+ :load8[@testheader+@testi] -> @testsaved.
+ !store8[@testheader+@testi|:bitxor[@testsaved|1]].
+ !switch[@zm+128|@zm+224].
+ ? (:load64[@zm+24] != 65)+(:load64[@zm+32] != 0)+(:load64[@zm+40] != 0) [ @testfailures+1 -> @testfailures. ]
+ !store8[@testheader+@testi|@testsaved]. @testi+1 -> @testi. @testcases+1 -> @testcases.
+]
+0 -> @testi.
+?? @testi < 4608 [
+ !store64[@zm+8|@testi]. !switch[@zm+128|@zm+224].
+ ? :load64[@zm+24] != 65 [ @testfailures+1 -> @testfailures. ] @testi+1 -> @testi. @testcases+1 -> @testcases.
+]
+!store64[@zm+8|4609]. !switch[@zm+128|@zm+224].
+? :load64[@zm+24] != 65 [ @testfailures+1 -> @testfailures. ] @testcases+1 -> @testcases.
+!store64[@zm+8|4608]. !store8[@testheader+4096|1]. !switch[@zm+128|@zm+224].
+? :load64[@zm+24] != 65 [ @testfailures+1 -> @testfailures. ] @testcases+1 -> @testcases.
+!store8[@testheader+4096|0]. !store64[@zm+16|2]. !switch[@zm+128|@zm+224].
+? :load64[@zm+24] != 65 [ @testfailures+1 -> @testfailures. ] @testcases+1 -> @testcases.
+"Zmedia SHA/header regression checks passed:8712.\n" -> @testliteral.
+? @testfailures [ "Zmedia SHA/header regression FAILED.\n" -> @testliteral. ]
+0 -> @testi. ?? :load8[@testliteral+@testi] [ !put[:load8[@testliteral+@testi]]. @testi+1 -> @testi. ]
+? @testcases != 8712 [ !exit[1]. ] ? @testfailures [ !exit[1]. ] !exit[0].

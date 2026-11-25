@@ -1,0 +1,20 @@
+churn :: [
+ 0 => counter
+ empty => temporary
+ 10000 => repeat [
+  Temporary counter => temporary
+  counter + 1 => counter
+ ]
+ 0 => return
+]
+collect :: depth | retained [
+ [retained | depth] => local
+ depth == 0 => when [
+  churn() => ignored
+  local => return
+ ]
+ collect(depth - 1 | retained) => child
+ local[2] => show
+ child => return
+]
+collect(4 | Надёжно) => show

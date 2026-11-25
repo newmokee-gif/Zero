@@ -1,0 +1,108 @@
+ZTEXT00100001846e2c750b30000000
+Zero boot/container growth to 384 KiB kernel slots
+2026-11-15 UTC
+
+Scope and provenance
+Audited every line of bios.zero, loader.zero, loader32.zero, image.zero,
+iso.zero and build.sh. The OS loaders and container writers are original
+Zero source, compiled by build/selfhost-core-fs-stage2. No assembler or
+linker was used. Bash/file tools prepare slots and run tests; QEMU, SeaBIOS,
+OVMF, xorriso, fsck.fat and mtools are external validation dependencies.
+The compiler agent independently tested the new INT15/E820 ABI primitive;
+its evidence is verification/compiler-fs/values/real-vm.
+
+Final source, BIOS binary and two private ISO hashes are in
+final-inputs.sha256. The standalone full-slot ISO is also identified by
+tail-iso.sha256. Tests never used build/data.img or build/data.vdi writable.
+
+Final binary sizes
+BIOS: 13865 bytes, maximum16384.
+AMD64 EFI: 14336 bytes, maximum65536.
+IA32 EFI: 20992 bytes, maximum65536.
+FAT16: 16777216 bytes.
+ISO: 8616 * 2048 = 17645568 bytes.
+
+Implementation and full source audit
+Both kernel slots are393216 bytes, and all loader/builder/build limits agree.
+BIOS reads12 separate32KiB requests, ending at physical80000 exclusively.
+The optical extents are BIOS32..39, kernel64 40..231, kernel32 232..423 and
+EFI FAT424..8615. Each UEFI loader allocates96 code pages and accepts file
+sizes1..393216. IA32's maximum code base isfff9f000 for its below4GiB guard.
+Both EFI GetInfo paths now validate returned size80..512 before FileSize.
+
+The BIOS validates conventional-memory and EBDA boundaries before payload
+reads. Its high stack pool is100000..3fffff, with entry stack top400000.
+Complete bounded E820 enumeration must prove this whole pool is usable RAM;
+enabled reserved overlap, missing coverage, invalid/oversized map, or relevant
+64-bit range overflow stops boot. Adjacent or unordered usable intervals are
+merged. At most256 intervals fit4000..47ff and are discarded before that
+space becomes a page directory. E8206600, VBE6200/6400, locals6f00 and BIOS
+code7c00..bbff remain separate. The real-mode local count fits its256-byte
+bank. The compiled BIOS fits before the fourth page directory atc000.
+VBE now rejects a framebuffer below4MiB so graphics cannot alias the new pool.
+The existing first4GiB identity map and text fallback are retained.
+
+Both EFI paths retain short-read accumulation, zero-progress refusal, exact
+status checks, separate completion flags and dedicated allocated stacks.
+GOP validation is completed before the final memory map; after the first exit
+attempt only GetMemoryMap/ExitBootServices call firmware, with four attempts.
+The map is bounded to64KiB. Returned IA32 UINTN values use cleared high halves.
+
+FAT kernel chains are260..1027 and1028..1795,768 clusters each; EFI chains are
+unchanged. Both FATs derive from the same rules. All four file sizes/extents,
+input EOF boundaries and ISO paired-endian fields were checked. PE reads are
+within the first sector; all validated raw section ends fit the64KiB slot.
+Streaming readers/writers retain partial-I/O handling and EINTR retry.
+build.sh rejects oversized binaries before padding, checks final image sizes,
+and replaces only named generated artifacts; it never creates or formats
+persistent data disks. bash -n passed for the build and both new test scripts.
+
+Four complete-slot runtime probes: PASS
+Source: review-tests/boot-growth/slot-tail.zero.
+Orchestration: review-tests/boot-growth/run-tail.sh.
+Each architecture's unique string offset is discovered in its compiled raw
+binary, substituted into the source and verified unchanged after recompiling.
+The runtime checks markers at byte offsets131071,131072,262143,262144,393215.
+Thus reaching the entry instruction alone cannot pass this test. It also
+checks handoff code-pages96, stack-pool size/base, the full64KiB reserve range,
+and writes/reads both arena ends and the pool's lower end.
+
+BIOS32: QEMU pc/TCG, qemu64,-lm,-pae,128MiB, SeaBIOS.
+BIOS64: QEMU pc/TCG, qemu64,128MiB, SeaBIOS.
+UEFI32: QEMU pc/TCG, qemu64,-lm,128MiB, IA32 OVMF4M.
+UEFI64: QEMU pc/TCG, qemu64,128MiB, AMD64 OVMF4M.
+Every final serial log contains BOOT384 TAIL/ARENA/POOL PASS and every QEMU
+debug-exit status is1, the expected successful exit encoding.
+Evidence: bios32-tail.*, bios64-tail.*, uefi32-tail.*, uefi64-tail.*.
+Private OVMF variable stores were used. These four probe VMs all exited.
+
+Before the final audit hardening, the enlarged containers also booted frozen
+0.6 kernels to the complete ZeroFS/terminal prompt on all four paths. The
+saved bios32.serial, bios64.serial, uefi32.serial and uefi64.serial show this
+compatibility smoke. They are not final integrated0.7 kernel evidence.
+
+Low-memory refusal: PASS
+The final BIOS with QEMU pc/TCG, qemu64,-lm,-pae and3MiB guest RAM prints
+ZERO BIOS: stack pool overlaps reserved memory
+before any entering-kernel message. The halted VM was stopped by a12-second
+test timeout. Evidence: bios-lowram.serial, .qemu and .status.
+
+Container inspection and failure cases: PASS
+Orchestration: review-tests/boot-growth/check-containers.sh.
+fsck.fat reports7 files,1794/32479 clusters with no error. xorriso recognizes
+8616 sectors and BIOSLBA32/load32 plus EFILBA424/load32768. Four ISO-extracted
+payloads exactly match inputs; four FAT-extracted payloads also exactly match.
+The FAT copies match each other. Final inputs have exact917504-byte FAT and
+17580032-byte ISO input lengths. Each writer passes all six outcomes:
+exact input0, one-byte short2, one-byte excess3, malformed header2,
+unreadable input1, /dev/full output4. See container-results.txt and format logs.
+
+Data preservation and limits
+data.img SHA256 c730241fb30f5516867c751006951a2878f360319195ee975411a05f040f27e8
+data.vdi SHA256 7f58fb36c934405757da797ca65f2dddef3858e69107f43e2cae59d14c89bc5f
+Both match their pre-task hashes. There are no live test QEMU processes.
+The native VirtualBox executable and physical hardware were not tested.
+The BIOS layout remains a fixed PC optical-boot contract, not an MBR/USB
+installer or a general RAM allocator. These probes establish boot/container
+capacity and ownership; filesystem-driver correctness and the final combined
+kernel are separate integration work owned by the parent task.

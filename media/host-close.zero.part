@@ -1,0 +1,22 @@
+# Releases locks on every outcome. Preserve an earlier error during cleanup.
+? :load64[@mh+96] == 2 [
+ 0 -> @mh0.
+ ?? @mh0 < :load64[@mh+176] [
+  :hostcall12[:load64[@mh+264]|:load64[@mh+6400+@mh0*8]|0|0|0|0|0|0|0|0|0|0|0] -> @mh1.
+  ? (@mh1 == 0) * (:load64[@mh+40] == 0) [ !store64[@mh+40|74]. !store64[@mh+48|"Cannot release a USB volume lock.\n"]. ]
+  @mh0+1 -> @mh0.
+ ]
+ !store64[@mh+176|0].
+]
+? :load64[@mh+16] != -1 [
+ ? :load64[@mh+96] == 1 [
+  :hostsyscall[3|:load64[@mh+16]|0|0|0|0|0] -> @mh0.
+  ? (@mh0 != 0) * (:load64[@mh+40] == 0) [ !store64[@mh+40|74]. !store64[@mh+48|"Cannot close USB disk.\n"]. ]
+ ]
+ ? :load64[@mh+96] == 2 [
+  :hostcall12[:load64[@mh+264]|:load64[@mh+16]|0|0|0|0|0|0|0|0|0|0|0] -> @mh0.
+  ? (@mh0 == 0) * (:load64[@mh+40] == 0) [ !store64[@mh+40|74]. !store64[@mh+48|"Cannot close USB disk.\n"]. ]
+ ]
+ !store64[@mh+16|-1].
+]
+!store64[@mh+112|0].

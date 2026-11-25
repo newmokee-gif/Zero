@@ -1,0 +1,33 @@
+ZTEXT001000007ab7b6cd63e0000000
+Zero compiler filesystem additions0.12: final evidence
+
+Canonical compiler.zero114494 bytes
+SHA25658c293eb4aaa6aabbe9026b24059508d7e652f0b5510d91a913413f2ccdd38ad
+Native ELF119229 bytes
+SHA256b9b807fa14b4aab9f2f5b52f676df5201be812acd973ef9aa5a5b9dbf9ad3d7a
+Guest app64 compiler120581 bytes; app32 compiler153659 bytes.
+Both remain below159744-byte guest application slots.
+Self-hosted native stages1 and2 reproduce exactly.
+Windows native compiler PE125440 bytes reproduces itself exactly under Wine.
+PE SHA2563d8e7aba2a8d3c72e490ad3bc935d28dd6f0c7a9eb84cd6d9c9d9658304c800d
+
+Nine operations: create, del, readfile, save, writefile, watch, search, go, disks.
+Native Linux original Zero smoke14/14 passed.
+Native Windows original Zero probe25/25 and16 boundary assertions passed in Wine.
+Independent Ezero final integration Linux58/58 and Windows46/46 passed in Wine.
+Guest BIOS64 and BIOS32 repeated create/save/read/watch/search/go/disks/del requests
+and subsequent shell operation passed. Ezero guest sequence passed in BIOS64,
+BIOS32, UEFI64 and UEFI32 according to the separate guest service validation.
+Windows host hardware was not available; Windows host evidence uses Wine.
+
+Compiler output capacity524288 bytes; compiler arena reservation4055648 bytes.
+Optional ZEROFS01 guest service uses a versioned descriptor. IA32 application
+continuation version2 preserves the4MiB arena; legacy raw continuation version1
+retains64KiB geometry. Both architectures restore the fork return value.
+Independent boot-slot review found no production bounds mismatch. Stale installer
+review parser and README were updated;6 parser cases accept current/legacy slots
+and reject mixed endian or invalid sizes. See boot-review.ztext.
+
+Source ownership: canonical compiler.zero and portability/host/files12 source
+fragments/tests are original Zero. Validation orchestration is outside the project.
+No bootstrap/build binary was promoted by this filesystem implementation task.

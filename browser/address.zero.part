@@ -1,0 +1,121 @@
+# Input pointer: NUL-terminated address, <=255 ASCII bytes.
+# state+104: relative link; +112: add history; +80: redirect count.
+# Output is bounded at state+3072, then atomically publishes the request.
+:load64[@console+2400] -> @c0. @c0+163840 -> @c5.
+1 -> @valid. 0 -> @i. 0 -> @j. 0 -> @k.
+?? (:load8[@pointer+@i] != 0)*(@i < 256) [
+ :load8[@pointer+@i] -> @character.
+ ? (@character <= 32)+(@character >= 127)+(@character == 92) [ 0 -> @valid. ]
+ ? (@character == 58)*(@k == 0) [ @i+1 -> @k. ]
+ ? ((@character == 47)+(@character == 63)+(@character == 35))*(@k == 0) [ 512 -> @k. ]
+ @i+1 -> @i.
+]
+? (@i == 0)+(@i > 255) [ 0 -> @valid. ]
+0 -> @c1. "http://" -> @text. 0 -> @j. 1 -> @equal.
+?? @j < 7 [
+ :load8[@pointer+@j] -> @character. ? (@character >= 65)*(@character <= 90) [ @character+32 -> @character. ]
+ ? @character != :load8[@text+@j] [ 0 -> @equal. ] @j+1 -> @j.
+]
+? @equal [ 1 -> @c1. ]
+? (@k > 0)*(@k < 512)*(@c1 == 0) [
+ # A bare host:port is permitted in the address field, never as a link scheme.
+ ? :load64[@c5+104] [ 0 -> @valid. ] ~ [
+  @k -> @j. 0 -> @equal.
+  ?? (@j < @i)*(:load8[@pointer+@j] >= 48)*(:load8[@pointer+@j] <= 57) [ @j+1 -> @j. 1 -> @equal. ]
+  ? (@equal == 0)+((@j < @i)*(:load8[@pointer+@j] != 47)*(:load8[@pointer+@j] != 63)*(:load8[@pointer+@j] != 35)) [ 0 -> @valid. ]
+ ]
+]
+0 -> @j. 0 -> @c2.
+? @valid*(@c1 == 0) [
+ ? (:load8[@pointer] == 47)*(:load8[@pointer+1] == 47) [
+  "http:" -> @text. 5 -> @c2.
+ ] ~ [
+  ? :load64[@c5+104] [
+   @c5+128 -> @text. 7 -> @c2.
+   ?? (:load8[@text+@c2] != 0)*(:load8[@text+@c2] != 47)*(:load8[@text+@c2] != 63)*(:load8[@text+@c2] != 35)*(@c2 < 255) [ @c2+1 -> @c2. ]
+   ? :load8[@pointer] != 47 [
+    @c2 -> @c3. @c2 -> @c4.
+    ?? (:load8[@text+@c3] != 0)*(:load8[@text+@c3] != 63)*(:load8[@text+@c3] != 35)*(@c3 < 255) [
+     ? :load8[@text+@c3] == 47 [ @c3+1 -> @c4. ] @c3+1 -> @c3.
+    ]
+    @c4 -> @c2.
+    ? (:load8[@pointer] == 63)+(:load8[@pointer] == 35) [ @c3 -> @c2. ]
+    ? :load8[@pointer] == 35 [
+     ?? (:load8[@text+@c3] != 0)*(:load8[@text+@c3] != 35)*(@c3 < 255) [ @c3+1 -> @c3. ] @c3 -> @c2.
+    ]
+   ]
+  ] ~ [ "http://" -> @text. 7 -> @c2. ]
+ ]
+ ?? @j < @c2 [ !store8[@c5+3072+@j|:load8[@text+@j]]. @j+1 -> @j. ]
+ ? :load64[@c5+104]*(@c2 > 7)*(:load8[@pointer] != 47)*(:load8[@pointer] != 63)*(:load8[@pointer] != 35) [
+  ? :load8[@c5+3072+@j-1] != 47 [
+   ? @j >= 255 [ 0 -> @valid. ] ~ [ !store8[@c5+3072+@j|47]. @j+1 -> @j. ]
+  ]
+ ]
+]
+0 -> @i.
+?? @valid*(:load8[@pointer+@i] != 0)*(:load8[@pointer+@i] != 35) [
+ ? @j >= 255 [ 0 -> @valid. ] ~ [ !store8[@c5+3072+@j|:load8[@pointer+@i]]. @j+1 -> @j. ] @i+1 -> @i.
+]
+!store8[@c5+3072+@j|0].
+# Normalize only URL syntax. Percent-encoded bytes and query bytes stay literal.
+? @valid [
+ "http://" -> @text. 0 -> @i.
+ ?? @i < 7 [ !store8[@c5+3072+@i|:load8[@text+@i]]. @i+1 -> @i. ]
+ 7 -> @k.
+ ?? (@k < @j)*(:load8[@c5+3072+@k] != 47)*(:load8[@c5+3072+@k] != 63) [ @k+1 -> @k. ]
+ ? @k == 7 [ 0 -> @valid. ]
+ ? (@k < @j)*(:load8[@c5+3072+@k] == 63) [
+  ? @j >= 255 [ 0 -> @valid. ] ~ [
+   @j+1 -> @i. ?? @i > @k [ !store8[@c5+3072+@i|:load8[@c5+3072+@i-1]]. @i-1 -> @i. ]
+   !store8[@c5+3072+@k|47]. @j+1 -> @j.
+  ]
+ ]
+ ? @valid*(@k < @j) [
+  @k -> @i. @k -> @c2.
+  ?? (@i < @j)*(:load8[@c5+3072+@i] != 63) [
+   @i -> @temporary. @i+1 -> @c3. @c3 -> @c4.
+   ?? (@c4 < @j)*(:load8[@c5+3072+@c4] != 47)*(:load8[@c5+3072+@c4] != 63) [ @c4+1 -> @c4. ]
+   0 -> @equal.
+   ? (@c4-@c3 == 1)*(:load8[@c5+3072+@c3] == 46) [ 1 -> @equal. ]
+   ? (@c4-@c3 == 2)*(:load16[@c5+3072+@c3] == 0x2e2e) [ 2 -> @equal. ]
+   ? @equal [
+    ? @equal == 2 [
+     ?? (@c2 > @k)*(:load8[@c5+3072+@c2-1] != 47) [ @c2-1 -> @c2. ]
+     ? @c2 > @k [ @c2-1 -> @c2. ]
+    ]
+    ? (@c4 == @j)+(:load8[@c5+3072+@c4] == 63) [
+     ? (@c2 == @k)+(:load8[@c5+3072+@c2-1] != 47) [ !store8[@c5+3072+@c2|47]. @c2+1 -> @c2. ]
+    ]
+   ] ~ [
+    @temporary -> @i. ?? @i < @c4 [ !store8[@c5+3072+@c2|:load8[@c5+3072+@i]]. @i+1 -> @i. @c2+1 -> @c2. ]
+   ]
+   @c4 -> @i.
+  ]
+  ?? @i < @j [ !store8[@c5+3072+@c2|:load8[@c5+3072+@i]]. @i+1 -> @i. @c2+1 -> @c2. ]
+  @c2 -> @j. !store8[@c5+3072+@j|0].
+ ]
+]
+? @valid [
+ ? :load64[@c0+32] != 4 [ 0 -> @valid. "Network is not connected. DHCP continues automatically." -> @text. ]
+] ~ [ "Unsupported or invalid address. HTTP only; no HTTPS or active schemes." -> @text. ]
+? @valid [
+ 0 -> @i. ?? @i <= @j [
+  :load8[@c5+3072+@i] -> @character.
+  !store8[@c5+128+@i|@character]. !store8[@c0+16384+@i|@character]. @i+1 -> @i.
+ ]
+ ? :load64[@c5+112] [
+  :load64[@c5+72] -> @k. ? @k >= 8 [
+   0 -> @i. ?? @i < 1792 [ !store8[@c5+768+@i|:load8[@c5+1024+@i]]. @i+1 -> @i. ] 7 -> @k.
+  ]
+  0 -> @i. ?? @i < 256 [ !store8[@c5+768+@k*256+@i|:load8[@c5+128+@i]]. @i+1 -> @i. ]
+  !store64[@c5+64|@k+1]. !store64[@c5+72|@k+1].
+ ]
+ :load64[@c0+384]+1 -> @c1. ? @c1 == 0 [ 1 -> @c1. ]
+ !store64[@c5+48|@c1]. !store64[@c5+8|2]. !store64[@c5+16|0].
+ !store64[@c5+56|1]. !store64[@c0+384|@c1].
+] ~ [
+ !store64[@c5+8|4]. 0 -> @i.
+ ?? (:load8[@text+@i] != 0)*(@i < 127) [ !store8[@c5+640+@i|:load8[@text+@i]]. @i+1 -> @i. ]
+ !store8[@c5+640+@i|0]. !store64[@c5+56|1].
+]

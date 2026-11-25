@@ -1,0 +1,117 @@
+# Own Zero source-data formatter and rel32 label resolver for original encodings.
+# This does not invoke an assembler, linker, foreign compiler or foreign backend.
+# Input: Tddd: opens template ddd; hex bytes; (dd) label; [dd] rel32; ; end.
+:reserve[131072] => @source.
+:reserve[65536] => @code.
+:reserve[800] => @labels.
+:reserve[16000] => @patches.
+0 => @length.
+0 => @count.
+0 => @position.
+0 => @id.
+0 => @used.
+0 => @patch_count.
+0 => @i.
+0 => @j.
+0 => @a.
+0 => @b.
+0 => @c.
+0 => @value.
+0 => @place.
+0 => @digit.
+0 => @started.
+0 => @phase.
+0 => @text.
+0 => @offset.
+"0123456789abcdef" => @hex.
+0 => @done.
+?? @done == 0 [
+ :read[@source + @length | 131072 - @length] -> @count.
+ ? @count == 0 [ 1 -> @done. ] ~ [
+  ? @count > 131072 - @length [ !exit[1]. ]
+  @length + @count -> @length.
+  ? @length == 131072 [ !exit[1]. ]
+ ]
+]
+"# Original Windows host API encodings, emitted by windows-author.zero.\n? @mode == 7 [\n" -> @text.
+0 -> @i. ?? :load8[@text + @i] [ !put[:load8[@text + @i]]. @i + 1 -> @i. ]
+?? @position < @length [
+ :load8[@source + @position] -> @c.
+ ? @c <= 32 [ @position + 1 -> @position. ] ~ [
+  ? @c != 84 [ !exit[2]. ]
+  0 -> @id. 1 -> @i.
+  ?? @i < 4 [
+   :load8[@source + @position + @i] -> @c.
+   ? (@c < 48) + (@c > 57) [ !exit[2]. ]
+   @id * 10 + @c - 48 -> @id. @i + 1 -> @i.
+  ]
+  ? :load8[@source + @position + 4] != 58 [ !exit[2]. ]
+  ? @id >= 128 [ !exit[2]. ]
+  @position + 5 -> @position. 0 -> @used. 0 -> @patch_count. 0 -> @i.
+  ?? @i < 100 [ !store64[@labels + @i * 8 | 18446744073709551615]. @i + 1 -> @i. ]
+  0 -> @done.
+  ?? (@position < @length) * (@done == 0) [
+   :load8[@source + @position] -> @c.
+   ? @c <= 32 [ @position + 1 -> @position. ] ~ [
+    ? @c == 59 [ 1 -> @done. @position + 1 -> @position. ] ~ [
+     ? (@c == 40) + (@c == 91) [
+      :load8[@source + @position + 1] -> @a. :load8[@source + @position + 2] -> @b.
+      ? (@a < 48) + (@a > 57) + (@b < 48) + (@b > 57) [ !exit[3]. ]
+      (@a - 48) * 10 + @b - 48 -> @a.
+      ? @c == 40 [
+       ? :load8[@source + @position + 3] != 41 [ !exit[3]. ]
+       ? :load64[@labels + @a * 8] != 18446744073709551615 [ !exit[3]. ]
+       !store64[@labels + @a * 8 | @used].
+      ] ~ [
+       ? :load8[@source + @position + 3] != 93 [ !exit[3]. ]
+       ? (@patch_count >= 1000) + (@used > 65532) [ !exit[3]. ]
+       !store64[@patches + @patch_count * 16 | @used].
+       !store64[@patches + @patch_count * 16 + 8 | @a].
+       @patch_count + 1 -> @patch_count. @used + 4 -> @used.
+      ]
+      @position + 4 -> @position.
+     ] ~ [
+      0 -> @value. 0 -> @i.
+      ?? @i < 2 [
+       :load8[@source + @position + @i] -> @c. 99 -> @a.
+       ? (@c >= 48) * (@c <= 57) [ @c - 48 -> @a. ]
+       ? (@c >= 97) * (@c <= 102) [ @c - 87 -> @a. ]
+       ? @a >= 16 [ !exit[4]. ]
+       @value * 16 + @a -> @value. @i + 1 -> @i.
+      ]
+      ? @used >= 65536 [ !exit[4]. ]
+      !store8[@code + @used | @value]. @used + 1 -> @used. @position + 2 -> @position.
+     ]
+    ]
+   ]
+  ]
+  ? @done == 0 [ !exit[5]. ]
+  0 -> @i.
+  ?? @i < @patch_count [
+   :load64[@patches + @i * 16] -> @a.
+   :load64[@labels + :load64[@patches + @i * 16 + 8] * 8] -> @b.
+   ? @b == 18446744073709551615 [ !exit[5]. ]
+   !store32[@code + @a | @b - @a - 4]. @i + 1 -> @i.
+  ]
+  0 -> @phase.
+  ?? @phase < 3 [
+   ? @phase < 2 [ " !store64[@templates + " -> @text. ] ~ [ " | " -> @text. ]
+   0 -> @i. ?? :load8[@text + @i] [ !put[:load8[@text + @i]]. @i + 1 -> @i. ]
+   @id * 16 -> @value. ? @phase == 1 [ @value + 8 -> @value. ] ? @phase == 2 [ @used -> @value. ]
+   100000 -> @place. 0 -> @started.
+   ?? @place [
+    0 -> @digit. ?? @value >= @place [ @value - @place -> @value. @digit + 1 -> @digit. ]
+    ? (@digit != 0) + @started + (@place == 1) [ !put[48 + @digit]. 1 -> @started. ]
+    ? @place == 100000 [ 10000 -> @place. ] ~ [ ? @place == 10000 [ 1000 -> @place. ] ~ [ ? @place == 1000 [ 100 -> @place. ] ~ [ ? @place == 100 [ 10 -> @place. ] ~ [ ? @place == 10 [ 1 -> @place. ] ~ [ 0 -> @place. ] ] ] ] ]
+   ]
+   ? @phase == 0 [
+    " | \"" -> @text. 0 -> @i. ?? :load8[@text + @i] [ !put[:load8[@text + @i]]. @i + 1 -> @i. ]
+    0 -> @i. ?? @i < @used [ :load8[@code + @i] -> @a. !put[:load8[@hex + :shr[@a | 4]]]. !put[:load8[@hex + :bitand[@a | 15]]]. @i + 1 -> @i. ]
+    "\"].\n" -> @text. 0 -> @i. ?? :load8[@text + @i] [ !put[:load8[@text + @i]]. @i + 1 -> @i. ]
+   ]
+   ? @phase == 2 [ "].\n" -> @text. 0 -> @i. ?? :load8[@text + @i] [ !put[:load8[@text + @i]]. @i + 1 -> @i. ] ]
+   @phase + 1 -> @phase.
+  ]
+ ]
+]
+!put[93]. !put[10].

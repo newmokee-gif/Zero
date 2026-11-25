@@ -1,0 +1,79 @@
+ZTEXT0010000142d05e40b1c0000000
+Private Linux host API backend candidate
+
+linux-tables.zero.part contains original x86-64 encoding data expressed in Zero.
+It introduces no assembler, C library, external runtime or foreign source code.
+The common parser/metadata integration belongs to compiler-host.zero; this part
+overrides template IDs 86..101 only for Linux targets 0/1. It also extends the
+Linux hosted prologue to preserve the original argc/argv frame in R14, which
+existing cooperative contexts already save and restore. The established frame
+offsets remain unchanged. Windows and guest templates are separate backends.
+
+All paths are NUL-terminated byte strings. UTF-8 names are passed to Linux
+unchanged. Kernel pathname copying bounds every path to 4096 bytes including
+the terminator; a longer or inaccessible path returns -1. As with other Zero
+pointer primitives, argument[] returns a process-owned pointer, not a copy.
+fileopen uses O_CLOEXEC and O_NOFOLLOW: a final symlink is rejected, while
+symlinks in parent path components retain normal Linux resolution semantics.
+It also uses O_NONBLOCK and verifies S_IFREG through fstat: directories,
+devices, sockets and FIFOs are rejected, without blocking on a FIFO open.
+Mode 2 truncates only after this validation succeeds. A failed validation
+closes the newly opened descriptor. All later I/O remains regular-file I/O.
+This is not a directory sandbox or a file-permission elevation mechanism.
+
+host[] = 1. argcount[] excludes the executable name. argument[i] is one-based;
+zero or out-of-range indices return zero. Arguments remain available after
+cooperative fork/switch because R14 preserves the original process vector.
+
+fileopen[path | mode] returns a nonnegative descriptor or unsigned u64 -1.
+0: existing read-only; 1: exclusive create/write; 2: create/truncate/write;
+3: existing read/write; 4: exclusive create/write executable. Create modes
+1/2 use 0600 and mode 4 uses 0700, each reduced by the caller's umask. Mode 2
+does not alter the permissions of an existing file.
+No unknown mode is accepted, and no failure falls back to destructive opening.
+
+fileread/ filewrite[handle | buffer | count] retry EINTR and otherwise return
+the actual count or -1. Short transfers are exposed; callers must loop to
+complete a whole-file operation. A zero read denotes EOF. The file offset is
+advanced by the successful count. Descriptor values above INT_MAX are rejected
+instead of truncated to another descriptor. Buffer validation is performed by
+the kernel. Existing pread/pwrite positioned APIs remain separate and unchanged.
+
+filesize[handle] uses fstat and leaves the offset unchanged. fileclose[handle]
+returns 0 or -1; it does not retry EINTR because Linux can release the descriptor
+before reporting a later close error. The caller must not reuse a closed handle.
+filesync[handle] calls fsync(74), retrying EINTR and normalizing other errors
+to -1. It rejects descriptors greater than INT_MAX. The open file offset and
+ownership remain unchanged. This requests file flushing only; it does not
+flush parent directory entries or guarantee atomic crash-safe publication.
+hostwait[milliseconds] uses nanosleep(35) with a private timespec on the native
+stack. Values0..86400000 are accepted; other u64 values return -1 immediately.
+An EINTR retry uses the remaining timespec. Other failures return -1 and
+restore the original stack. This suspends the current native thread, not a
+cooperative Zero task. Scheduler latency may extend the requested interval.
+filedelete[path] unlinks the named file/link. makedir[path] creates one directory
+with mode 0777 reduced by umask. dirempty[path] removes an empty directory.
+These namespace operations return 0 or -1.
+
+filemove[source | destination] uses renameat2 with RENAME_NOREPLACE. It never
+overwrites an existing destination. Same-filesystem moves are supported;
+cross-filesystem moves fail without an implicit copy. Linux must support
+renameat2 (introduced in Linux 3.15), and the filesystem must support NOREPLACE.
+An unsupported operation returns -1 without an overwrite fallback.
+
+No fd table or hidden global allocator is added. Every native template restores
+its stack and preserves the Zero frame, arena and cooperative-context registers.
+
+hostalloc[bytes] uses a private anonymous RW mapping and returns its pointer,
+or 0 on failure. hostprotect[pointer | bytes | execute] switches whole pages
+to RX when execute=1, or back to RW when execute=0. Other values are rejected;
+RWX is never requested. hostfree[pointer | bytes] unmaps. Protection/free return
+0/-1; pointers must be page-aligned as required by Linux. The caller owns the
+mapping lifetime and must not execute unmapped or writable image memory.
+
+program[] reads /proc/self/exe into a fresh 4096-byte reservation in the current
+Zero arena. It returns a NUL-terminated path or 0 for missing procfs, inaccessible
+data, truncation or insufficient arena capacity. Successful calls consume one
+reservation; failed calls do not advance the arena. A deleted executable can
+have Linux's " (deleted)" suffix; callers must handle inaccessible companion
+files rather than treating the path as proof that its directory still exists.

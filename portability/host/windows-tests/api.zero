@@ -1,0 +1,98 @@
+:argument[1] => @directory.
+:argument[2] => @label.
+:reserve[8192] => @paths.
+:reserve[1024] => @data.
+0 => @i.
+0 => @j.
+0 => @handle.
+0 => @second.
+0 => @memory.
+0 => @result.
+0 => @program_path.
+:reserve[32] => @expected.
+!store8[@expected | 195]. !store8[@expected + 1 | 169].
+!store8[@expected + 2 | 45]. !store8[@expected + 3 | 231].
+!store8[@expected + 4 | 140]. !store8[@expected + 5 | 171].
+!store8[@expected + 6 | 0].
+? :host[] != 2 [ !exit[1]. ]
+? :argcount[] != 2 [ !exit[2]. ]
+? :argument[0] [ !exit[3]. ]
+? :argument[3] [ !exit[4]. ]
+? @directory == 0 [ !exit[5]. ]
+?? :load8[@expected + @i] [ ? :load8[@expected + @i] != :load8[@label + @i] [ !exit[6]. ] @i + 1 -> @i. ]
+? :load8[@label + @i] [ !exit[7]. ]
+:program[] -> @program_path.
+? @program_path == 0 [ !exit[8]. ]
+? :load8[@program_path + 1] != 58 [ !exit[9]. ]
+? :makedir[@directory] != 0 [ !exit[10]. ]
+? :makedir[@directory] != 18446744073709551615 [ !exit[11]. ]
+? :fileopen[@directory | 0] != 18446744073709551615 [ !exit[12]. ]
+0 -> @i. ?? :load8[@directory + @i] [ !store8[@paths + @i | :load8[@directory + @i]]. !store8[@paths + 4096 + @i | :load8[@directory + @i]]. @i + 1 -> @i. ]
+!store8[@paths + @i | 47]. 0 -> @j.
+?? :load8[@label + @j] [ !store8[@paths + @i + 1 + @j | :load8[@label + @j]]. @j + 1 -> @j. ]
+!store8[@paths + @i + 1 + @j | 0].
+"/moved.bin" -> @expected. 0 -> @j.
+?? :load8[@expected + @j] [ !store8[@paths + 4096 + @i + @j | :load8[@expected + @j]]. @j + 1 -> @j. ]
+!store8[@paths + 4096 + @i + @j | 0].
+? :fileopen[@paths | 0] != 18446744073709551615 [ !exit[13]. ]
+? :fileopen[@paths | 5] != 18446744073709551615 [ !exit[14]. ]
+:fileopen[@paths | 1] -> @handle.
+? @handle == 18446744073709551615 [ !exit[15]. ]
+? :fileopen[@paths | 1] != 18446744073709551615 [ !exit[16]. ]
+? :filesize[@handle] != 0 [ !exit[17]. ]
+0 -> @i. ?? @i < 512 [ !store8[@data + @i | @i]. @i + 1 -> @i. ]
+? :filewrite[@handle | @data | 512] != 512 [ !exit[18]. ]
+? :filesize[@handle] != 512 [ !exit[19]. ]
+? :fileclose[@handle] != 0 [ !exit[20]. ]
+? :fileclose[@handle] != 18446744073709551615 [ !exit[21]. ]
+:fileopen[@paths | 0] -> @handle.
+? @handle == 18446744073709551615 [ !exit[22]. ]
+? :fileread[@handle | @data + 512 | 512] != 512 [ !exit[23]. ]
+0 -> @i. ?? @i < 512 [ ? :load8[@data + @i] != :load8[@data + 512 + @i] [ !exit[24]. ] @i + 1 -> @i. ]
+? :fileread[@handle | @data | 1] != 0 [ !exit[25]. ]
+? :filewrite[@handle | @data | 1] != 18446744073709551615 [ !exit[26]. ]
+? :fileclose[@handle] != 0 [ !exit[27]. ]
+? :dirempty[@directory] != 18446744073709551615 [ !exit[28]. ]
+:fileopen[@paths + 4096 | 4] -> @second.
+? @second == 18446744073709551615 [ !exit[29]. ]
+? :fileclose[@second] != 0 [ !exit[30]. ]
+? :filemove[@paths | @paths + 4096] != 18446744073709551615 [ !exit[31]. ]
+? :filedelete[@paths + 4096] != 0 [ !exit[32]. ]
+? :filemove[@paths | @paths + 4096] != 0 [ !exit[33]. ]
+? :fileopen[@paths | 0] != 18446744073709551615 [ !exit[34]. ]
+:fileopen[@paths + 4096 | 3] -> @handle.
+? @handle == 18446744073709551615 [ !exit[35]. ]
+!store8[@data | 77].
+? :filewrite[@handle | @data | 1] != 1 [ !exit[36]. ]
+? :filesize[@handle] != 512 [ !exit[37]. ]
+? :fileclose[@handle] != 0 [ !exit[38]. ]
+:fileopen[@paths + 4096 | 2] -> @handle.
+? @handle == 18446744073709551615 [ !exit[39]. ]
+? :filesize[@handle] != 0 [ !exit[40]. ]
+? :fileclose[@handle] != 0 [ !exit[41]. ]
+? :filedelete[@paths + 4096] != 0 [ !exit[42]. ]
+? :filedelete[@paths + 4096] != 18446744073709551615 [ !exit[43]. ]
+? :filedelete[@directory] != 18446744073709551615 [ !exit[44]. ]
+? :dirempty[@directory] != 0 [ !exit[45]. ]
+? :dirempty[@directory] != 18446744073709551615 [ !exit[46]. ]
+!store8[@data | 192]. !store8[@data + 1 | 175]. !store8[@data + 2 | 0].
+? :fileopen[@data | 1] != 18446744073709551615 [ !exit[47]. ]
+? :makedir[@data] != 18446744073709551615 [ !exit[48]. ]
+!store8[@data | 0].
+? :fileopen[@data | 0] != 18446744073709551615 [ !exit[49]. ]
+? :fileopen["NUL" | 0] != 18446744073709551615 [ !exit[50]. ]
+? :fileread[18446744073709551615 | @data | 1] != 18446744073709551615 [ !exit[51]. ]
+? :filewrite[18446744073709551615 | @data | 1] != 18446744073709551615 [ !exit[52]. ]
+? :filesize[18446744073709551615] != 18446744073709551615 [ !exit[53]. ]
+? :fileread[18446744073709551615 | @data | 2147483648] != 18446744073709551615 [ !exit[54]. ]
+:hostalloc[4096] -> @memory.
+? @memory == 0 [ !exit[55]. ]
+!store8[@memory | 184]. !store32[@memory + 1 | 123]. !store8[@memory + 5 | 195].
+? :hostprotect[@memory | 4096 | 2] != 18446744073709551615 [ !exit[56]. ]
+? :hostprotect[@memory | 4096 | 1] != 0 [ !exit[57]. ]
+? :call[@memory | 0 | 0 | 0 | 0 | 0] != 123 [ !exit[58]. ]
+? :hostprotect[@memory | 4096 | 0] != 0 [ !exit[59]. ]
+? :hostfree[@memory | 4096] != 0 [ !exit[60]. ]
+? :hostfree[@memory | 4096] != 18446744073709551615 [ !exit[61]. ]
+"WINDOWS API PASS\n" -> @expected. 0 -> @i.
+?? :load8[@expected + @i] [ !put[:load8[@expected + @i]]. @i + 1 -> @i. ]

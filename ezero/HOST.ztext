@@ -1,0 +1,103 @@
+ZTEXT001000016ed34cd0ebd0000000
+Ezero files, volumes and process arguments
+
+These functions call original Zero platform adapters. They do not launch a
+shell or execute filenames, file contents or argument text as code.
+
+Expressions
+  host()                    1 Linux, 2 Windows, 0 Zero OS
+  arguments()               one-based list of native user arguments
+  read(path)                read complete text; readfile is the same operation
+  save(path | text)         create or replace text; return UTF-8 byte count
+  writefile(path | text)    exclusively create new text; return byte count
+  create(path)              create empty file; preserve existing file; return 1
+  del(path)                 delete an existing regular file; return 1
+  rm(path)                  alias for del
+  watch(root)               one-based list of regular filenames in that root
+  search(patternpath)       one-based list of matching regular filenames
+  go(root)                  change the current root/directory; return 1
+  disks()                   one-based list of available volume roots
+  fileexists(path)          1 for a readable regular file, otherwise 0
+
+Lists contain filenames, not full paths, and have no guaranteed order. search
+matches the final component: * means any number of Unicode scalars, ? means one scalar;
+without wildcards the name must match exactly. Matching is case-sensitive.
+There is no recursive traversal, environment expansion or home expansion.
+watch(.) uses the current directory. An unmatched search returns an empty list.
+A failed listing is an error, not an empty result. Results must fit 65536 bytes
+including internal terminators and at most 2048 names. UTF-8 names are validated
+before becoming managed text; invalid names cause a source-line error.
+
+File contents and the system container
+read/readfile and save/writefile work with raw UTF-8 file contents. A filename
+has no implicit format: save(notes | Hello) stores the five bytes Hello.
+It does not produce a ZTEXT001 document or decode a container automatically.
+Use the original zero-text make/read/verify commands for the checked ZTEXT001
+format. Ezero currently has no high-level Ztext encoder/decoder builtin.
+
+Native paths and data
+Linux and Windows use their native filesystem paths. Paths are nonempty strict
+UTF-8 text without NUL, at most 4095 bytes; platforms may impose stricter limits.
+Files contain at most 65536 bytes of strict UTF-8 without NUL. Newlines and
+Unicode are preserved. size(read(path)) counts Unicode scalars; save/writefile
+return bytes. Missing, unreadable, nonregular and final-symlink file paths fail.
+No parent directories are created automatically. Native go changes this
+process's working directory. Linux disks() currently returns [/], not a list
+of physical devices or mounted filesystems. Windows returns available drive
+roots; these are volume roots, not a physical-disk inventory.
+
+save validates text and size before opening the destination, then writes,
+synchronizes and closes it. It deliberately replaces existing content.
+A failed native save can leave a truncated or partially written destination;
+it is not an atomic replacement or rollback operation.
+
+Native writefile never replaces an existing file, directory or link. It creates
+an exclusive sibling temporary file, handles partial writes, closes it and
+publishes with same-filesystem NOREPLACE rename. A failed publish preserves the
+existing destination and attempts to remove its own staging file. Up to 64
+exclusive staging names are tried; pre-existing staging names are preserved.
+The staging basename uses 31 ASCII bytes; the parent prefix must fit 4064 bytes.
+This is atomic publication, not a crash-durability guarantee. An interrupted
+process can leave its unpublished staging file behind.
+
+create preserves an existing regular file's contents. del errors if the file
+is missing. fileexists cannot distinguish absent from inaccessible; it is not
+a reservation or proof that a later operation will succeed. The actual
+operation enforces its own rules. Paths and external state may change between
+calls. Successful create/del/go return the Ezero number 1; errors stop the
+program with the Ezero source line and exit 65.
+
+Zero OS profile
+The same functions use the kernel's file service in a guest; host()==0 does
+not disable them. Zero OS uses roots such as A:| and flat filenames up to 31
+ASCII bytes. Bare paths such as A:|note are accepted directly by Ezero. The
+current writable ZeroFS profile stores at most 400 printable ASCII bytes per
+file. Native Unicode/newline text support does not expand that disk format.
+Unsupported paths, content, read-only volumes, unavailable service and failed
+operations report a source-line error. The native filesystem adapter's
+publication rules do not imply identical crash behavior on a ZeroFS disk.
+Other mounted formats keep the kernel's existing support limits. Formatting is
+a separate explicit administrative terminal operation, not part of this API.
+
+Process arguments
+arguments() is available on native Linux/Windows only. It returns up to 63
+items excluding the executable name, preserving empty arguments and Unicode.
+Each item is at most 4095 UTF-8 bytes and the total at most 65536 bytes. Windows
+currently bounds the complete converted command line to 4095 UTF-8 bytes.
+arguments()[1] is the first item; index 0 errors. Zero OS reports that process
+arguments are unavailable; optional native argument handling can use host().
+
+Examples
+  create(notes) => created
+  save(notes | Hello from Ezero) => bytes
+  read(notes) => show
+  search("note*") => each name [ name => show ]
+  del(notes) => removed
+
+  go(A:|) => selected
+  create(A:|note) => created
+  save(A:|note | Three bananas) => bytes
+  watch(A:|) => show
+
+Quotes are optional for ordinary text and Zero paths. Wildcards and native
+paths containing syntax characters use optional quotes or a text binding.

@@ -1,0 +1,16 @@
+# Positioned writes must preserve64-bit file offsets and all four arguments.
+:reserve[32] => @buffer.
+"ZERO" => @message.
+:pwrite[3 | @message | 4 | 4294967313] => @status.
+? @status != 4 [ !exit[11]. ]
+:pread[3 | @buffer | 4 | 4294967313] -> @status.
+? @status != 4 [ !exit[12]. ]
+? :load32[@buffer] != 0x4f52455a [ !exit[13]. ]
+:pread[3 | @buffer | 8 | 4294967317] -> @status.
+? @status != 0 [ !exit[14]. ]
+:pread[-1 | @buffer | 4 | 0] -> @status.
+? @status != -9 [ !exit[15]. ]
+:pwrite[-1 | @message | 4 | 0] -> @status.
+? @status != -9 [ !exit[16]. ]
+!put[73]. !put[79]. !put[32]. !put[79]. !put[75]. !put[10].
+!exit[0].

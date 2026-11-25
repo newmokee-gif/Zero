@@ -1,0 +1,22 @@
+# Independent native mutation/read checks, without listing dependencies.
+check :: value [
+ value => when [ 1 => return ]
+ 0 - 1 => return
+]
+arguments()[1] => root
+go(root) => ready
+check(create(данные.txt) == 1) => ready
+check(read(данные.txt) == empty) => ready
+check(save(данные.txt | Привет мир) == 19) => ready
+check(create(данные.txt) == 1) => ready
+check(readfile(данные.txt) == Привет мир) => ready
+check(save(данные.txt | Changed) == 7) => ready
+check(read(данные.txt) == Changed) => ready
+check(writefile(second.txt | Exclusive) == 9) => ready
+check(read(second.txt) == Exclusive) => ready
+check(save(данные.txt | empty) == 0) => ready
+check(read(данные.txt) == empty) => ready
+check(del(данные.txt) == 1) => ready
+check(rm(second.txt) == 1) => ready
+check(fileexists(данные.txt) == 0) => ready
+Mutations passed => show

@@ -1,0 +1,1 @@
+:reserve[32] => @buffer. :fsync[3] => @status. ? @status != 0 [ !exit[11]. ] :fsync[-1] -> @status. ? @status != -9 [ !exit[12]. ] !exit[0].

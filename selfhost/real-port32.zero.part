@@ -1,0 +1,3 @@
+# Original dword I/O; port low16, value low32; input is zero-extended.
+!store64[@templates + 1312 | "6689c266ed"]. !store64[@templates + 1320 | 5].
+!store64[@templates + 1328 | "6689ca66ef"]. !store64[@templates + 1336 | 5].

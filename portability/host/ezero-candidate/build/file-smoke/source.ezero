@@ -1,0 +1,4 @@
+arguments() => args
+writefile(args[1] | Привет 🌍) => show
+readfile(args[1]) => show
+fileexists(args[1]) => show

@@ -1,0 +1,22 @@
+:load64[@console+2408] -> @c0.
+? @character == 27 [ !store64[@c0+16|0]. !store64[@console+2472|0]. ] ~ [
+ ? @character == 8 [ !store64[@console+2472|1]. !store64[@console+2480|1]. ]
+ :load64[@console+2472] -> @c4. 1 -> @c5.
+ ? @c4 == 1 [ 4 -> @c5. ]
+ ? @c4 == 3 [ :load64[@memory+24704] -> @c5. ]
+ :load64[@console+2480] -> @i.
+ ? (@character == 256)*(@i > 1) [ @i-1 -> @i. ]
+ ? (@character == 257)*(@i < @c5) [ @i+1 -> @i. ]
+ !store64[@console+2480|@i].
+ ? (@character == 10)+(@character == 13) [
+  ? @c4 == 1 [ !store64[@console+2472|@i+1]. !store64[@console+2480|1]. ]
+  ? @c4 == 2 [ !store64[@console+272|3-:load64[@console+272]]. ]
+  ? (@c4 == 3)*(@i <= @c5) [ !store64[@memory+24688|@i-1]. ]
+  ? (@c4 == 4)+((@c4 == 1)*(@i == 4)) [
+   !store64[@console+2472|0]. !store64[@c0+16|7].
+  ]
+ ]
+ ? (@character != 0)+(:load64[@console+2488] != :shr[:load64[@console+440]|3]) [
+  !store64[@c0+72|1]. !store64[@console+2488|:shr[:load64[@console+440]|3]].
+ ]
+]

@@ -1,0 +1,37 @@
+# Insert immediately after the shared 8042 data read: c0=status, c1=byte.
+# Preserve both c0/c1 and character; keyboard consumes only non-AUX bytes.
+? :bitand[@c0|32] * :load64[@console + 2520] [
+ ? :bitand[@c0|192] [ !store64[@console + 2528|0]. ] ~ [
+  :load64[@console + 2528] -> @c2.
+  ? @c2 == 0 [
+   ? :bitand[@c1|8] [ !store64[@console + 2536|@c1]. !store64[@console + 2528|1]. ]
+  ]
+  ? @c2 == 1 [ !store64[@console + 2544|@c1]. !store64[@console + 2528|2]. ]
+  ? @c2 == 2 [
+   !store64[@console + 2528|0]. :load64[@console + 2536] -> @c3.
+   # Overflow packets still update buttons, but do not move the pointer.
+   ? :bitand[@c3|192] == 0 [
+    :load64[@console + 2544] -> @c4. :load64[@console + 2552] -> @c5.
+    ? :bitand[@c3|16] [
+     256 - @c4 -> @c4. ? @c4 > @c5 [ 0 -> @c5. ] ~ [ @c5 - @c4 -> @c5. ]
+    ] ~ [ @c5 + @c4 -> @c5. ]
+    ? @c5 >= :load64[@console + 16] [ :load64[@console + 16] - 1 -> @c5. ]
+    !store64[@console + 2552|@c5].
+    :load64[@console + 2560] -> @c5.
+    ? :bitand[@c3|32] [ @c5 + 256 - @c1 -> @c5. ] ~ [
+     ? @c1 > @c5 [ 0 -> @c5. ] ~ [ @c5 - @c1 -> @c5. ]
+    ]
+    ? @c5 >= :load64[@console + 24] [ :load64[@console + 24] - 1 -> @c5. ]
+    !store64[@console + 2560|@c5].
+   ]
+   :load64[@console + 2568] -> @c2.
+   !store64[@console + 2568|:bitand[@c3|7]].
+   !store64[@console + 2576|:load64[@console + 2576] + 1].
+   ? :bitand[@c3|1] * (:bitand[@c2|1] == 0) [
+    !store64[@console + 2632|:load64[@console + 2552]].
+    !store64[@console + 2640|:load64[@console + 2560]].
+    !store64[@console + 2624|:load64[@console + 2624] + 1].
+   ]
+  ]
+ ]
+]

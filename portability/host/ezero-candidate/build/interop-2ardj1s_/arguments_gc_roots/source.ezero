@@ -1,0 +1,5 @@
+arguments() => retained
+10000 => repeat [
+ arguments() => trash
+]
+retained => show

@@ -1,0 +1,5 @@
+host() => when [
+ readfile(example.txt) => show
+] ~ [
+ Guest works => show
+]

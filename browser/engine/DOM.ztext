@@ -1,0 +1,73 @@
+ZTEXT001000010026adb182e0000000
+ZERO WEB DOM PROFILE 0.15 (EXPERIMENTAL)
+
+Original implementation in Zero. This is a bounded tree builder used by the
+experimental browser engine, not Chromium or a complete HTML5 parser.
+
+Input and output
+
+The caller provides the engine/declarations.zero.part ABI, a zeroed 4 MiB arena,
+and a valid immutable disjoint input buffer of 0..65536 bytes. Literal NUL and
+invalid UTF-8 are rejected before parsing. Pointer wrap is rejected; the worker
+cannot establish that an arbitrary caller-supplied address is mapped memory.
+
+At most 512 nodes are emitted in document order. Parents are earlier one-based
+node numbers; zero means no parent. Nodes have a 15-byte lowercase ASCII tag,
+63-byte id, 127-byte class and 255-byte inline-style field. The script type uses
+the class field for script nodes. Ordinary text is split into at most 511-byte
+UTF-8 chunks, never inside a scalar. Raw script/style spans refer to input bytes
+and remain valid only while the caller retains that input.
+
+Element and attribute handling
+
+Names are ASCII-insensitive. Quoted and unquoted attribute values are accepted.
+The first id/class/style/type occurrence wins, including a boolean occurrence
+with an empty value. Supported attribute values decode the same entity subset
+as text. Unknown attributes are ignored; href, events, async/defer and resource
+loading attributes are not represented by this tree ABI. Every script src
+attribute is explicitly rejected with error 65, including empty and boolean
+forms, so fallback text is never executed as an inline script.
+
+Comments and declarations are skipped. Void HTML elements do not become
+parents. A slash on a nonvoid HTML tag does not close it. Closing tags pop
+through the matching ancestor; unmatched closing tags are ignored. There is no
+optional-end-tag insertion, adoption-agency repair, foster parenting or implied
+html/head/body element creation. Such malformed or abbreviated HTML can produce
+a tree different from a standards browser.
+
+Raw script/style contents are scanned only for their own case-insensitive end
+tag with a valid delimiter. Unterminated raw contents extend to EOF. Title and
+textarea use RCDATA: their contents become entity-decoded child text, and tags
+such as script remain literal text until the matching title/textarea close.
+
+The contexts template, svg, math, iframe, xmp, noembed, noframes, plaintext and
+noscript are rejected with error 65. Their inert, foreign or raw-text behavior
+needs dedicated algorithms before scripting in those contexts is safe to claim.
+This deliberately limited profile is not support for SVG, MathML or subframes.
+
+Entities and errors
+
+Text and supported attributes recognize lt, gt, amp, quot, apos and nbsp with
+semicolons, plus decimal/hexadecimal numeric references. Zero and surrogate
+references become U+FFFD. Unknown/invalid references remain literal and set
+warning bit 1. There is no full HTML named-character-reference table or legacy
+numeric control-code remapping. CRLF/CR normalize to LF outside raw bodies.
+
+Error 65 means invalid encoding/syntax, an oversized supported field or a
+rejected context. Error 28 means node capacity. On any parse error node count is
+zero and partial nodes must not be published. A nonzero incoming error is left
+unchanged and the worker does no work. Caller-owned buffers must not overlap
+node storage, scratch, stacks or execution contexts.
+
+Invocation and validation
+
+The worker is created with fork. Switch to it once to prime its initial yield,
+then once per document request. It uses no host services itself. Native test
+wrappers allocate the arena with the original Zero host API.
+
+dom-check.zero is composed from declarations.zero.part, dom-check-head.zero.part,
+dom.zero.part and dom-check-tail.zero.part. Its 170 original Zero tests include
+70 semantic/boundary cases and 100 deterministic malformed-input cases. Guards,
+unchanged input checksums, node hierarchy and text bounds are checked each run.
+The suite passed on Linux x64 and Windows x64 execution through Wine;
+physical operating-system integration and full HTML5 conformance are not claimed.

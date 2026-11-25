@@ -1,0 +1,220 @@
+# Original native Zero BIOS/UEFI disk-image builder. No ISO container is used.
+# RELEASE_DIR BOOTSTRAP_BINARY DISK_BIOS_BINARY NEW_DISK_IMAGE
+# All executable inputs must be artifacts built from this project's Zero code.
+0 => @work.
+0 => @root.
+0 => @rootlen.
+0 => @path.
+0 => @name.
+0 => @destination.
+0 => @stage.
+0 => @buffer.
+0 => @limit.
+0 => @minimum.
+0 => @size.
+0 => @used.
+0 => @n.
+0 => @i.
+0 => @j.
+0 => @status.
+0 => @error.
+0 => @created.
+0 => @bootstrap.
+0 => @bootstrapbytes.
+0 => @bioscode.
+0 => @input.
+0 => @image.
+0 => @code.
+0 => @context.
+0 => @copyfrom.
+0 => @copyto.
+0 => @copybytes.
+0 => @message.
+0 => @peoffset.
+0 => @sectiontable.
+0 => @rawbytes.
+0 => @rawstart.
+0 => @machine.
+0 => @magic.
+0 => @optionbytes.
+-1 => @handle.
+
+"Usage: zero-disk RELEASE_DIR BOOTSTRAP_BINARY DISK_BIOS_BINARY NEW_DISK_IMAGE\nThe output must not exist.\n" -> @message.
+? :argcount[] != 4 [ 64 -> @error. ]
+? (:host[] != 1)*(:host[] != 2) [ 64 -> @error. ]
+? @error == 0 [
+ :argument[1] -> @root. :argument[4] -> @destination.
+ ?? (:load8[@root+@rootlen] != 0)*(@rootlen < 3800) [ @rootlen+1 -> @rootlen. ]
+ ? (@rootlen == 0)+(@rootlen >= 3800) [ 64 -> @error. ]
+]
+? @error == 0 [
+ :hostalloc[67108864] -> @work.
+ ? @work == 0 [ "Cannot allocate disk-build workspace.\n" -> @message. 71 -> @error. ]
+ @work -> @context. @work+4096 -> @path.
+ @work+8388608 -> @input. @work+11534336 -> @code.
+ @work+12582912 -> @bootstrap. @work+12648448 -> @bioscode.
+ @work+16777216 -> @image.
+]
+?? (@stage < 12)*(@error == 0) [
+ 0 -> @name. 1 -> @minimum.
+ ? @stage == 0 [ :argument[2] -> @name. @bootstrap -> @buffer. 946 -> @limit. 580 -> @minimum. ]
+ ? @stage == 1 [ :argument[3] -> @name. @bioscode -> @buffer. 16384 -> @limit. 1024 -> @minimum. ]
+ ? @stage == 2 [ "BOOTX64.EFI" -> @name. @input -> @buffer. 65536 -> @limit. ]
+ ? @stage == 3 [ "BOOTIA32.EFI" -> @name. @input+65536 -> @buffer. 65536 -> @limit. ]
+ ? @stage == 4 [ "kernel.bin" -> @name. @input+131072 -> @buffer. 475136 -> @limit. ]
+ ? @stage == 5 [ "kernel32.bin" -> @name. @input+606208 -> @buffer. 507904 -> @limit. ]
+ ? @stage == 6 [ "tools.bin" -> @name. @input+1114112 -> @buffer. 1048576 -> @limit. 1048576 -> @minimum. ]
+ ? @stage == 7 [ "media-fat64.app" -> @name. @code -> @buffer. 65536 -> @limit. 65 -> @minimum. ]
+ ? @stage == 8 [ "MENU64.EFI" -> @name. @input+2162688 -> @buffer. 65536 -> @limit. ]
+ ? @stage == 9 [ "MENU32.EFI" -> @name. @input+2228224 -> @buffer. 65536 -> @limit. ]
+ ? @stage == 10 [ "FLASHX64.EFI" -> @name. @input+2293760 -> @buffer. 131072 -> @limit. ]
+ ? @stage == 11 [ "FLASHIA32.EFI" -> @name. @input+2424832 -> @buffer. 131072 -> @limit. ]
+ 0 -> @i.
+ ? @stage >= 2 [
+  ?? @i < @rootlen [ !store8[@path+@i|:load8[@root+@i]]. @i+1 -> @i. ]
+  !store8[@path+@i|47]. @i+1 -> @i.
+ ]
+ 0 -> @j.
+ ?? (:load8[@name+@j] != 0)*(@i < 4095) [ !store8[@path+@i|:load8[@name+@j]]. @i+1 -> @i. @j+1 -> @j. ]
+ !store8[@path+@i|0].
+ ? :load8[@name+@j] != 0 [ "Input path is too long.\n" -> @message. 65 -> @error. ]
+ ? @error == 0 [
+  :fileopen[@path|0] -> @handle.
+  ? @handle == -1 [ "Cannot open disk-build input.\n" -> @message. 66 -> @error. ]
+ ]
+ ? @error == 0 [
+  :filesize[@handle] -> @size.
+  ? (@size < @minimum)+(@size > @limit) [ "Disk-build input size is invalid.\n" -> @message. 65 -> @error. ]
+ ]
+ 0 -> @used.
+ ?? (@used < @size)*(@error == 0) [
+  :fileread[@handle|@buffer+@used|@size-@used] -> @n.
+  ? (@n == 0)+(@n > @size-@used) [ "Incomplete disk-build input.\n" -> @message. 74 -> @error. ] ~ [ @used+@n -> @used. ]
+ ]
+ ? @error == 0 [
+  :fileread[@handle|@work+256|1] -> @n.
+  ? (@n != 0)+(:filesize[@handle] != @size) [ "Disk-build input changed while reading.\n" -> @message. 74 -> @error. ]
+ ]
+ ? @handle != -1 [
+  :fileclose[@handle] -> @status. -1 -> @handle.
+  ? (@status != 0)*(@error == 0) [ "Cannot close disk-build input.\n" -> @message. 74 -> @error. ]
+ ]
+ ? ((@stage == 2)+(@stage == 3)+(@stage >= 8))*(@error == 0) [
+  # EFI section bounds must fit the actual file, not just its padded slot.
+  # Otherwise a header-only truncated executable could appear to be valid.
+  0x8664 -> @machine. 0x20b -> @magic. 240 -> @optionbytes.
+  ? (@stage == 3)+(@stage == 9)+(@stage == 11) [ 0x014c -> @machine. 0x010b -> @magic. 224 -> @optionbytes. ]
+  ? @size < 512 [ 65 -> @error. ] ~ [
+   :load32[@buffer+60] -> @peoffset.
+   ? (:load16[@buffer] != 0x5a4d)+(@peoffset > 168) [ 65 -> @error. ] ~ [
+    ? (:load32[@buffer+@peoffset] != 0x00004550)+(:load16[@buffer+@peoffset+4] != @machine)+(:load16[@buffer+@peoffset+6] != 2)+(:load16[@buffer+@peoffset+20] != @optionbytes)+(:load16[@buffer+@peoffset+24] != @magic) [ 65 -> @error. ]
+    @peoffset+24+@optionbytes -> @sectiontable.
+    0 -> @i.
+    ?? (@i < 2)*(@error == 0) [
+     :load32[@buffer+@sectiontable+@i*40+16] -> @rawbytes.
+     :load32[@buffer+@sectiontable+@i*40+20] -> @rawstart.
+     ? (@rawstart < 512)+(@rawbytes == 0)+(@rawstart > @size)+(@rawbytes > @size-@rawstart) [ 65 -> @error. ]
+     @i+1 -> @i.
+    ]
+   ]
+  ]
+  ? @error [ "EFI input is malformed or its executable sections are truncated.\n" -> @message. ]
+ ]
+ ? (@stage == 0)*(@error == 0) [
+  @size -> @bootstrapbytes.
+  ? (:load8[@bootstrap] != 234)+(:load16[@bootstrap+1] != 32256)+(:load16[@bootstrap+3] != 0)+(:load16[@bootstrap+510] != 43605)+(:load32[@bootstrap+@size-4] != 0xfcebf4fa) [ "Bootstrap is not an original Zero real-mode artifact.\n" -> @message. 65 -> @error. ]
+ ]
+ ? (@stage == 1)*(@error == 0) [
+  ? (:load8[@bioscode] != 234)+(:load16[@bioscode+1] != 32256)+(:load16[@bioscode+3] != 0)+(:load16[@bioscode+510] != 43605) [ "BIOS loader is not an original Zero real-mode artifact.\n" -> @message. 65 -> @error. ]
+ ]
+ ? (@stage == 7)*(@error == 0) [
+  ? (:load64[@code] != 0x315050414f52455a)+(:load64[@code+8] != 64)+(:load64[@code+16] != @size)+(:load64[@code+24] != 64)+(:load64[@code+32] != 4198400)+(:load64[@code+40] != 1)+(:load64[@code+48] != 0)+(:load64[@code+56] != 0) [ "Invalid own FAT builder.\n" -> @message. 65 -> @error. ]
+ ]
+ @stage+1 -> @stage.
+]
+? @error == 0 [
+ ? :hostprotect[@code|1048576|1] != 0 [ "Cannot protect original FAT builder.\n" -> @message. 71 -> @error. ]
+]
+? @error == 0 [
+ !store64[@context|1]. !store64[@context+8|@work+7340032].
+ !store64[@context+16|@input]. !store64[@context+24|2555904].
+ !store64[@context+40|@image+2097152]. !store64[@context+48|16777216].
+ !store64[@context+64|1]. !store64[@context+72|"zero-disk"].
+ !store64[@context+168|@work+1048576]. !store64[@context+176|6291456].
+ :call[@code+64|@context|0|0|0|0] -> @status.
+ ? (@status != 0)+(:load64[@context+88] != 0)+(:load64[@context+56] != 16777216)+(:load64[@context+32] != 2555904) [ "Original FAT builder rejected its inputs.\n" -> @message. 65 -> @error. ]
+]
+? @error == 0 [
+ # Four fixed, disjoint regions. No payload is derived from an ISO image.
+ 0 -> @stage.
+ ?? @stage < 4 [
+  @bioscode+512 -> @copyfrom. @image+512 -> @copyto. 15872 -> @copybytes.
+  ? @stage == 1 [ @input+131072 -> @copyfrom. @image+16384 -> @copyto. 475136 -> @copybytes. ]
+  ? @stage == 2 [ @input+606208 -> @copyfrom. @image+491520 -> @copyto. 507904 -> @copybytes. ]
+  ? @stage == 3 [ @input+1114112 -> @copyfrom. @image+999424 -> @copyto. 1048576 -> @copybytes. ]
+  0 -> @i.
+  ?? @i < @copybytes [ !store64[@copyto+@i|:load64[@copyfrom+@i]]. @i+8 -> @i. ]
+  @stage+1 -> @stage.
+ ]
+ # Link compiler-produced real-mode code. The bootstrap source has no string
+ # addresses or mode transitions; its branches and frame addresses are position
+ # independent. The original canonical jump is reused at both entry points.
+ 0 -> @i.
+ ?? @i < 5 [ !store8[@image+@i|:load8[@bioscode+@i]]. @i+1 -> @i. ]
+ !store16[@image+1|31749].
+ 0 -> @i.
+ ?? @i < @bootstrapbytes-516 [ !store8[@image+5+@i|:load8[@bootstrap+512+@i]]. @i+1 -> @i. ]
+ 0 -> @j.
+ ?? @j < 5 [ !store8[@image+5+@i+@j|:load8[@bioscode+@j]]. @j+1 -> @j. ]
+ !store32[@image+440|0x5a4d0001].
+ # MBR ESP entry: active, saturated CHS, FAT16 EFI system partition.
+ !store32[@image+446|0xfffffe80]. !store32[@image+450|0xfffffeef].
+ !store32[@image+454|4096]. !store32[@image+458|32768].
+ !store16[@image+510|43605].
+ !store32[@image+2097152+28|4096].
+ :fileopen[@destination|1] -> @handle.
+ ? @handle == -1 [ "Output exists or cannot be created. Nothing was replaced.\n" -> @message. 73 -> @error. ] ~ [ 1 -> @created. ]
+]
+0 -> @used.
+?? (@used < 18874368)*(@error == 0) [
+ :filewrite[@handle|@image+@used|18874368-@used] -> @n.
+ ? (@n == 0)+(@n > 18874368-@used) [ "Disk image write failed.\n" -> @message. 74 -> @error. ] ~ [ @used+@n -> @used. ]
+]
+? @handle != -1 [
+ ? @error == 0 [ ? :filesync[@handle] != 0 [ "Disk image flush failed.\n" -> @message. 74 -> @error. ] ]
+ :fileclose[@handle] -> @status. -1 -> @handle.
+ ? (@status != 0)*(@error == 0) [ "Disk image close failed.\n" -> @message. 74 -> @error. ]
+]
+? @error == 0 [
+ :fileopen[@destination|0] -> @handle.
+ ? @handle == -1 [ "Cannot verify new disk image.\n" -> @message. 74 -> @error. ]
+ ? @error == 0 [ ? :filesize[@handle] != 18874368 [ "Disk image length changed.\n" -> @message. 74 -> @error. ] ]
+]
+0 -> @used.
+?? (@used < 18874368)*(@error == 0) [
+ 65536 -> @limit. ? 18874368-@used < @limit [ 18874368-@used -> @limit. ]
+ :fileread[@handle|@input|@limit] -> @n.
+ ? (@n == 0)+(@n > @limit) [ "Disk image readback failed.\n" -> @message. 74 -> @error. ] ~ [
+  0 -> @i. ?? (@i < @n)*(@error == 0) [
+   ? :load8[@input+@i] != :load8[@image+@used+@i] [ "Disk image readback differs.\n" -> @message. 74 -> @error. ]
+   @i+1 -> @i.
+  ]
+  @used+@n -> @used.
+ ]
+]
+? @error == 0 [
+ :fileread[@handle|@input|1] -> @n.
+ ? (@n != 0)+(:filesize[@handle] != 18874368) [ "Disk image changed during readback.\n" -> @message. 74 -> @error. ]
+]
+? @handle != -1 [ :fileclose[@handle] -> @status. -1 -> @handle. ? (@status != 0)*(@error == 0) [ "Verification close failed.\n" -> @message. 74 -> @error. ] ]
+? @error [
+ # The pathname may have been replaced after close. Keep a failed new output
+ # for inspection instead of unlinking a possibly different file by name.
+ ? @created [
+  "The new output may be incomplete; it was retained for inspection.\n" -> @name.
+  0 -> @i. ?? :load8[@name+@i] [ !put[:load8[@name+@i]]. @i+1 -> @i. ]
+ ]
+] ~ [ "Original Zero disk image built and readback verified:18874368 bytes.\n" -> @message. ]
+? @work [ :hostfree[@work|67108864] -> @status. ]
+0 -> @i. ?? :load8[@message+@i] [ !put[:load8[@message+@i]]. @i+1 -> @i. ]
+!exit[@error].

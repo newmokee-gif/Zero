@@ -1,0 +1,177 @@
+"Cannot read the complete image into an immutable snapshot.\n" -> @fmessage.
+:fileopen[@fpath|0] -> @ffile. ? @ffile == -1 [ 66 -> @ferror. ]
+? @ferror == 0 [
+ :filesize[@ffile] -> @fbytes.
+ ? (@fbytes < 4608) + (@fbytes > 268439552) [ 65 -> @ferror. ]
+]
+? @ferror == 0 [
+ :hostalloc[@fbytes] -> @fimage. ? @fimage == 0 [ 70 -> @ferror. ]
+]
+0 -> @fpos.
+?? (@fpos < @fbytes) * (@ferror == 0) [
+ @fbytes-@fpos -> @fcount. ? @fcount > 65536 [ 65536 -> @fcount. ]
+ :fileread[@ffile|@fimage+@fpos|@fcount] -> @fn.
+ ? (@fn == 0) + (@fn > @fcount) [ 74 -> @ferror. ] ~ [ @fpos+@fn -> @fpos. ]
+]
+? @ferror == 0 [
+ ? :fileread[@ffile|@fwork+147456|1] != 0 [ 74 -> @ferror. ]
+ ? :filesize[@ffile] != @fbytes [ 74 -> @ferror. ]
+]
+? @ffile != -1 [ ? :fileclose[@ffile] != 0 [ 74 -> @ferror. ] -1 -> @ffile. ]
+? @ferror == 0 [
+ !store64[@zm|@fimage]. !store64[@zm+8|@fbytes]. !store64[@zm+16|0].
+ !switch[@zm+128|@zm+224].
+ :load64[@zm+24] -> @ferror.
+ "Invalid ZMEDIA01 header, length or SHA-256. No target was opened.\n" -> @fmessage.
+ ? @ferror == 0 [ :load64[@zm+32] -> @fpayload. :load64[@zm+40] -> @flength. ]
+]
+? @ferror == 0 [
+ "Image verified (SHA-256): " -> @flit. 0 -> @fi. ?? :load8[@flit+@fi] [ !put[:load8[@flit+@fi]]. @fi+1 -> @fi. ]
+ "0123456789abcdef" -> @flit. 0 -> @fi.
+ ?? @fi < 32 [ :load8[@zm+48+@fi] -> @fn. !put[:load8[@flit+:shr[@fn|4]]]. !put[:load8[@flit+:bitand[@fn|15]]]. @fi+1 -> @fi. ] !put[10].
+]
+# Probe only after the complete image has been validated. The regular-file test
+# path cannot open a device: the compiler's fileopen requires a regular file.
+? (@ferror == 0) * ((@fmode == 2) + (@fmode == 3)) [
+ !store64[@mh|1]. !store64[@mh+8|@ftarget]. !store64[@mh+200|1].
+ !switch[@fwork+130000|@fwork+130128].
+ :load64[@mh+40] -> @ferror. :load64[@mh+48] -> @fmessage.
+ ? @ferror == 0 [
+  !store64[@mh+136|:load64[@mh+128]]. !store64[@mh+144|:load64[@mh+24]]. !store64[@mh+152|:load64[@mh+104]].
+  ? :load64[@mh+24] < @flength [ 65 -> @ferror. "Target is smaller than the image.\n" -> @fmessage. ]
+  ? :load64[@mh+24] > @flength [
+   @flength -> @ftrailer.
+   ? :load64[@mh+24]-@flength > 16896 [ :load64[@mh+24]-16896 -> @ftrailer. ]
+  ]
+ ]
+]
+? (@ferror == 0) * (@fmode != 1) [
+ "Target: " -> @flit. 0 -> @fi. ?? :load8[@flit+@fi] [ !put[:load8[@flit+@fi]]. @fi+1 -> @fi. ]
+ 0 -> @fi. ?? :load8[@ftarget+@fi] [ !put[:load8[@ftarget+@fi]]. @fi+1 -> @fi. ] !put[10].
+ 0 -> @fphase. ?? @fphase < 2 [
+  "Image bytes: " -> @flit. @flength -> @fvalue.
+  ? @fphase == 1 [ "Device bytes: " -> @flit. :load64[@mh+24] -> @fvalue. ]
+  ? (@fphase == 0) + (@fmode < 4) [
+   0 -> @fi. ?? :load8[@flit+@fi] [ !put[:load8[@flit+@fi]]. @fi+1 -> @fi. ]
+   10000000000000000000 -> @fpower. 0 -> @fstarted.
+   ?? @fpower != 0 [
+    0 -> @fdigit. ?? @fvalue >= @fpower [ @fvalue-@fpower -> @fvalue. @fdigit+1 -> @fdigit. ]
+    ? @fdigit + @fstarted + (@fpower == 1) [ !put[48+@fdigit]. 1 -> @fstarted. ]
+    # Divide the decimal place by ten using a bounded search over powers.
+    ? @fpower == 1 [ 0 -> @fpower. ] ~ [
+     1 -> @fn. ?? @fn*10 < @fpower [ @fn*10 -> @fn. ] @fn -> @fpower.
+    ]
+   ] !put[10].
+  ] @fphase+1 -> @fphase.
+ ]
+]
+# Close the probe before the confirmation. Reopen checks the captured stable
+# device identity and capacity again, then holds the exclusive write handle.
+? @fmode == 2 [
+ !store64[@mh+200|3]. !switch[@fwork+130000|@fwork+130128].
+ ? (@ferror == 0) * (:load64[@mh+40] != 0) [ :load64[@mh+40] -> @ferror. :load64[@mh+48] -> @fmessage. ]
+]
+? (@ferror == 0) * (@fmode == 2) [
+ "Existing partitions on this target will be replaced. Type ERASE followed by a space and the exact target path, then Enter:\n" -> @flit.
+ 0 -> @fi. ?? :load8[@flit+@fi] [ !put[:load8[@flit+@fi]]. @fi+1 -> @fi. ]
+ "ERASE " -> @flit. 0 -> @fi. ?? @fi < 6 [ !store8[@fwork+220000+@fi|:load8[@flit+@fi]]. @fi+1 -> @fi. ]
+ 0 -> @fj. ?? (:load8[@ftarget+@fj] != 0) * (@fj < 4095) [ !store8[@fwork+220006+@fj|:load8[@ftarget+@fj]]. @fj+1 -> @fj. ]
+ @fj+6 -> @ftotal. 0 -> @fpos. 0 -> @fstarted. 1 -> @fsame.
+ ?? (@fstarted == 0) * (@fpos < 8192) [
+  :read[@fwork+230000|1] -> @fn.
+  ? @fn != 1 [ 1 -> @fstarted. 0 -> @fsame. ] ~ [
+   :load8[@fwork+230000] -> @fn.
+   ? @fn == 10 [ 1 -> @fstarted. ] ~ [
+    ? @fn == 13 [
+     :read[@fwork+230000|1] -> @fn.
+     ? (@fn != 1) + (:load8[@fwork+230000] != 10) [ 0 -> @fsame. ] 1 -> @fstarted.
+    ] ~ [
+     ? @fpos >= @ftotal [ 0 -> @fsame. ] ~ [ ? @fn != :load8[@fwork+220000+@fpos] [ 0 -> @fsame. ] ]
+     @fpos+1 -> @fpos.
+    ]
+   ]
+  ]
+ ]
+ ? (@fsame == 0) + (@fpos != @ftotal) + (@fstarted == 0) [ 64 -> @ferror. "Confirmation did not match. Nothing was written.\n" -> @fmessage. ]
+ ? @ferror == 0 [
+  !store64[@mh|2]. !store64[@mh+200|1]. !switch[@fwork+130000|@fwork+130128].
+  :load64[@mh+40] -> @ferror. :load64[@mh+48] -> @fmessage.
+ ]
+]
+? (@ferror == 0) * (@fmode == 4) [
+ :fileopen[@ftarget|1] -> @fout. ? @fout == -1 [ 73 -> @ferror. "Test output must be a new regular file.\n" -> @fmessage. ] ~ [ 1 -> @fcreated. ]
+]
+# Stage1 writes the image, stage2 clears obsolete backup-GPT sectors when they
+# lie outside the image, stage3 flushes, stage4 reads every image byte back,
+# stage5 reads the cleared tail back. check starts at stage4 and never writes.
+1 -> @fphase. ? @fmode == 3 [ 4 -> @fphase. ]
+? @fmode == 1 [ 6 -> @fphase. ]
+?? (@fphase <= 5) * (@ferror == 0) [
+ ? @fphase == 3 [
+  ? @fmode == 4 [
+   ? :filesync[@fout] != 0 [ 74 -> @ferror. ]
+   ? :fileclose[@fout] != 0 [ 74 -> @ferror. ] -1 -> @fout.
+   ? @ferror == 0 [ :fileopen[@ftarget|0] -> @fout. ? @fout == -1 [ 74 -> @ferror. ] ]
+  ] ~ [
+   !store64[@mh+56|3]. !store64[@mh+200|2]. !switch[@fwork+130000|@fwork+130128]. :load64[@mh+40] -> @ferror.
+  ]
+  "Flush failed. The target may contain an incomplete image.\n" -> @fmessage.
+ ] ~ [
+  @flength -> @ftotal. 0 -> @fjob.
+  ? (@fphase == 2) + (@fphase == 5) [
+   0 -> @ftotal.
+   ? (@ftrailer != 0) * (@fmode != 4) [ :load64[@mh+24]-@ftrailer -> @ftotal. @ftrailer -> @fjob. ]
+   # A read-only check promises the image range only, not unrelated drive tail.
+   ? (@fmode == 3) * (@fphase == 5) [ 0 -> @ftotal. ]
+  ]
+  0 -> @fpos.
+  ?? (@fpos < @ftotal) * (@ferror == 0) [
+   @ftotal-@fpos -> @fcount. ? @fcount > 65536 [ 65536 -> @fcount. ]
+   @fpayload+@fpos -> @flit.
+   ? @fphase != 1 [ @fwork+147456 -> @flit. ]
+   ? @fphase == 2 [ 0 -> @fi. ?? @fi < @fcount [ !store64[@flit+@fi|0]. @fi+8 -> @fi. ] ]
+   ? @fmode == 4 [
+    0 -> @fi. ?? (@fi < @fcount) * (@ferror == 0) [
+     ? @fphase == 1 [ :filewrite[@fout|@flit+@fi|@fcount-@fi] -> @fn. ] ~ [ :fileread[@fout|@flit+@fi|@fcount-@fi] -> @fn. ]
+     ? (@fn == 0) + (@fn > @fcount-@fi) [ 74 -> @ferror. ] ~ [ @fi+@fn -> @fi. ]
+    ]
+   ] ~ [
+    1 -> @fn. ? @fphase < 3 [ 2 -> @fn. ]
+    !store64[@mh+56|@fn]. !store64[@mh+64|@flit]. !store64[@mh+72|@fcount]. !store64[@mh+80|@fjob+@fpos].
+    !store64[@mh+200|2]. !switch[@fwork+130000|@fwork+130128]. :load64[@mh+40] -> @ferror.
+    ? :load64[@mh+88] != @fcount [ 74 -> @ferror. ]
+   ]
+   "Write or readback failed. The target may contain an incomplete image.\n" -> @fmessage.
+   ? (@fphase >= 4) * (@ferror == 0) [
+    0 -> @fi. ?? (@fi < @fcount) * (@ferror == 0) [
+     0 -> @fn. ? @fphase == 4 [ :load64[@fpayload+@fpos+@fi] -> @fn. ]
+     ? :load64[@flit+@fi] != @fn [ 74 -> @ferror. "Readback mismatch. The target is not verified.\n" -> @fmessage. ]
+     @fi+8 -> @fi.
+    ]
+   ]
+   @fpos+@fcount -> @fpos.
+  ]
+ ]
+ @fphase+1 -> @fphase.
+]
+? @fout != -1 [
+ ? (@ferror == 0) * (@fmode == 4) [ ? :filesize[@fout] != @flength [ 74 -> @ferror. ] ]
+ ? :fileclose[@fout] != 0 [ 74 -> @ferror. ] -1 -> @fout.
+]
+? :load64[@mh+16] != -1 [
+ !store64[@mh+200|3]. !switch[@fwork+130000|@fwork+130128].
+ ? (@ferror == 0) * (:load64[@mh+40] != 0) [ :load64[@mh+40] -> @ferror. :load64[@mh+48] -> @fmessage. ]
+]
+# A failed test keeps its uniquely created file for diagnosis. Never unlink a
+# path after close: another process could have substituted a different file.
+? @ferror == 0 [
+ "Image validation complete.\n" -> @fmessage.
+ ? @fmode == 2 [ "Write, flush and full readback complete.\n" -> @fmessage. ]
+ ? @fmode == 3 [ "All image bytes match the target.\n" -> @fmessage. ]
+ ? @fmode == 4 [ "Regular-file write, flush and full readback complete.\n" -> @fmessage. ]
+]
+? @fmessage == 0 [ "Device operation failed.\n" -> @fmessage. ]
+0 -> @fi. ?? :load8[@fmessage+@fi] [ !put[:load8[@fmessage+@fi]]. @fi+1 -> @fi. ]
+? @fimage != 0 [ :hostfree[@fimage|@fbytes] -> @fn. ]
+:hostfree[@fwork|524288] -> @fn.
+!exit[@ferror].

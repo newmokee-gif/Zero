@@ -1,0 +1,4 @@
+# Hosted programs reserve a 4 MiB arena. Raw/EFI and child arenas remain 64 KiB.
+# Only the allocation immediate changes; argc/argv stay above the512-byte frame.
+!store64[@templates + 1120 | "4883e4f04889e54881ec000200004889e731c0b940000000fcf348ab4881ec000040004989e54989e4"].
+!store64[@templates + 1128 | 41].

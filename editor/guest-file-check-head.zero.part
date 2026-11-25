@@ -1,0 +1,68 @@
+# Real service-coroutine client checks. No disk writes or simulated success.
+:reserve[65536] => @memory.
+@memory+16384 => @console.
+@memory+9216 => @work.
+@memory+14336 => @listing.
+:reserve[229376] => @network.
+@network+163840 => @editor.
+:reserve[256] => @boot_information.
+:hostalloc[8388608] => @workspace.
+0 => @c1.
+0 => @c2.
+0 => @c5.
+0 => @i.
+0 => @j.
+0 => @k.
+0 => @character.
+0 => @text.
+0 => @pointer.
+1 => @state.
+0 => @current.
+0 => @message.
+0 => @operation.
+0 => @ready.
+0 => @valid.
+0 => @status.
+0 => @name.
+0 => @name_length.
+0 => @text_length.
+0 => @file.
+0 => @free_file.
+0 => @slot.
+0 => @equal.
+0 => @temporary.
+0 => @disk_select.
+0 => @wanted.
+0 => @done.
+1 => @fs_ready.
+0 => @active_bank.
+1 => @check.
+0 => @failure.
+0 => @position.
+0 => @fixture.
+0 => @result.
+? @workspace == 0 [ !exit[71]. ]
+!store64[@boot_information+144|@workspace]. !store64[@boot_information+152|8388608].
+!store64[@console+2400|@network]. !store64[@memory+24704|1].
+!store8[@memory+24832+17|4].
+?? @check <= 7 [
+ @state -> @current.
+ ? @boot_information*(@current == 1) [
+  @editor -> @c5. 0 -> @position.
+  ?? @position < 8192 [ !store64[@editor+@position|0]. @position+8 -> @position. ]
+  0 -> @position. ?? @position < 4608 [ !store64[@work+@position|0]. @position+8 -> @position. ]
+  "KEEP" -> @fixture. 0 -> @position. ?? @position < 4 [ !store8[@editor+512+@position|:load8[@fixture+@position]]. @position+1 -> @position. ]
+  !store64[@editor+16|4]. !store64[@editor+24|4]. !store64[@editor+40|1].
+  "test.zero" -> @fixture. 0 -> @position.
+  ?? :load8[@fixture+@position] [ !store8[@editor+192+@position|:load8[@fixture+@position]]. !store8[@work+513+@position|:load8[@fixture+@position]]. @position+1 -> @position. ]
+  !store8[@work+512|1]. !store16[@work+546|9]. "!put[65]." -> @fixture. 0 -> @position.
+  ?? @position < 9 [ !store8[@work+548+@position|:load8[@fixture+@position]]. @position+1 -> @position. ]
+  !store64[@editor+80|1]. 1 -> @fs_ready.
+  ? @check == 2 [ !store8[@editor+192|120]. ]
+  ? @check == 3 [ !store8[@editor+192|47]. ]
+  ? (@check == 4)+(@check == 5) [
+   0 -> @position. ?? @position < 401 [ !store8[@work+548+@position|65]. @position+1 -> @position. ]
+   !store16[@work+546|396+@check].
+  ]
+  ? @check == 6 [ !store8[@work+549|0]. ]
+  ? @check == 7 [ !store64[@editor+80|2]. 0 -> @fs_ready. ]

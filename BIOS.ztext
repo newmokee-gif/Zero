@@ -1,0 +1,155 @@
+ZTEXT001000023fd8a808ac10000000
+Zero BIOS optical loader
+
+bios.zero contains the BIOS boot policy in our own Zero language. The unified
+compiler.zero --real target implements a restricted real-mode u32 subset and
+hardware/BIOS ABI primitives; it does not contain a disk loader, page-table
+builder, kernel layout policy or filesystem. See REAL.ztext for exact
+language/ABI limits.
+
+Compile after rebuilding the Zero compiler:
+build/zero --real < bios.zero > build/bios.bin
+
+Boot contract
+The shared ISO contains a BIOS El Torito no-emulation entry at LBA 32 with
+load segment zero and load count 32 in 512-byte units. Firmware loads the
+16 KiB boot file at physical 0x7c00. The compiler emits an executable header
+with a far jump to 0000:7e00 and the conventional 55AA boot signature.
+The same ISO also contains an EFI El Torito entry; see ISO.ztext.
+
+The loader preserves the firmware's DL boot-device value, configures optional
+COM1 and attempts validated VBE true-color graphics, with VGA text mode 3
+as fallback. It starts with the 32-bit protected-mode
+kernel as its default. If extended CPUID reports long mode and basic CPUID
+reports PAE, it chooses the 64-bit kernel instead. Missing long mode or PAE
+therefore selects a working 32-bit path rather than stopping boot. CPUID is
+part of the PC processor contract; this is a Pentium-class-or-newer target,
+not an 8086/286/386 compatibility loader.
+
+INT13 extended-read support is required for both paths. BIOS firmware calls
+finish before entering either protected mode or long mode. Disk/read errors
+print a diagnostic and stop; they never execute a partial kernel.
+
+Native compiler bundle
+Before the kernel, the loader reads the 1 MiB TOOLS.BIN extent at ISO LBA8712
+in thirty-two 32 KiB requests. Each request uses a bounce buffer at20000 and
+INT15/AH87 (:biosmove) copies it to400000+chunk*32768. The48-byte descriptor
+table at6800 is cleared and reconstructed for every copy. A read or copy
+failure stops boot. The first chunk must contain the ZRBNDL01 magic; kernel
+application dispatch validates individual records before execution. The
+kernel subsequently replaces the bounce area. Firmware A20 changes during
+copying are harmless because the loader reenables A20 before mode entry.
+
+Kernel reads
+The ISO stores two independent kernels, each padded to exactly 480 KiB:
+the 64-bit kernel at LBA40..279 and the 32-bit kernel at LBA280..519. The EFI
+FAT image starts at LBA520. The selected kernel is read by fifteen INT13/AH42
+requests, each for 16 optical sectors (32 KiB). Destination segments start
+at2000 and increase by0800, ending at9000; every request has offset0000.
+These do not cross a 64 KiB segment boundary and fill20000..97fff exactly.
+The DAP is rebuilt for each of up to three attempts, because firmware can
+modify its count. Failed requests issue a BIOS disk reset. No data-disk
+writes occur here; the unselected kernel is not loaded or executed.
+
+Memory ownership before the transition
+0000..04ff    BIOS IVT and data area; not overwritten by our source
+0800..0817    GDT: null, selected 32/64-bit code, flat data
+0820..0825    GDT descriptor
+0900..09ff    cleared handoff header
+1000..1fff    PML4, constructed only for the 64-bit path
+2000..2fff    PDPT, constructed only for the 64-bit path
+3000..3fff    first page directory, only for the 64-bit path
+3900..390f    DAP during reads; reused by the 64-bit page directory afterwards
+4000..47ff    temporary E820 interval bank before kernel reads
+4000..5fff    second/third page directories after reads; no reserve allocation
+6200..63ff    VBE controller buffer
+6400..64ff    VBE mode-info buffer
+6600..661f    E820 descriptor, returned size and cleared scratch
+6800..682f    INT15/AH87 source/destination descriptor table
+6e00..6eff    compiler ABI scratch slots
+6f00..6fff    real-mode Zero variables
+7c00..bbff    BIOS boot file; temporary stack grows down from 7c00
+c000..cfff    fourth page directory, only for the 64-bit path
+20000..97fff  selected padded kernel
+100000..3fffff E820-validated kernel stack pool; entry top400000 for both paths
+400000..4fffff native Zero/Ezero tool bundle (1 MiB)
+800000..ffffff native tool workspace, including application stack (8 MiB)
+
+Before reading the enlarged kernel, the BIOS Data Area must report at least
+608 KiB conventional RAM. A nonzero EBDA segment must start at or above98000.
+An incompatible boundary produces a diagnostic before any payload read.
+
+Before using high RAM, :memmap[continuation|buffer] invokes INT15/E820 through
+the compiler's narrow firmware ABI primitive. The source enumerates the whole
+map, with a256-call limit, and requires successful completion. It accepts
+20..24-byte descriptors, honors the enabled bit when24 bytes are present,
+ignores empty ranges and rejects enabled non-RAM overlap with1..16MiB. Relevant
+64-bit range overflow is rejected. Usable intersections are clipped without
+u32 overflow and merged even when the firmware's entries are unordered or
+adjacent. The entire1..16MiB region must be covered. Missing E820, gaps, reserved
+overlap or excessive entries stop boot; they do not silently assume free RAM.
+The reserved region covers the kernel pool, bundle and guest workspace.
+This is fixed-region validation, not a general physical-memory allocator.
+
+The loader constructs all tables in Zero. Both paths disable maskable
+interrupts, mask both PICs and NMI, enable A20 through port92 without asserting
+reset, and load the source-defined GDT.
+
+For 64-bit entry, the first 4 GiB are identity mapped with 2 MiB pages. This
+covers a selected framebuffer above the first GiB as well as kernel memory.
+Four page directories are at 3000,4000,5000,c000. All table writes remain
+below the real-mode 64 KiB segment limit. The loader never calls reserve,
+so its 4000..5fff arena is available for these tables. The loader
+sets PAE, loads CR3, enables EFER.LME and CR0.PE/PG/WP, then immediately uses
+the compiler's architectural longjump primitive. That primitive supplies
+only the far transfer and x64 entry ABI, not the surrounding boot policy.
+
+For 32-bit entry, GDT selector 8 describes a flat 4 GiB 32-bit code segment and
+selector 16 a flat data segment. The loader sets CR0.PE/WP while leaving
+paging disabled, then immediately uses protectedjump. It does not access
+CR3, CR4 or EFER on that path. The compiler primitive performs the far
+transfer, loads flat data/stack selectors and supplies the cdecl entry ABI;
+it does not implement kernel selection, disk reads, tables or CPU policy.
+
+VBE discovery accepts supported 32-bit direct-color linear modes with RGB
+or BGR8-bit component masks, first preferring1920x1080, then800x600, then
+compatible640..800 by480..600 modes. Firmware far pointers, pitch, video-memory size
+and full framebuffer extent are validated. Failure keeps VGA text mode 3.
+The detailed service, layout and fallback rules are in BIOS-GRAPHICS.ztext.
+
+The handoff display kind is framebuffer (2) with validated VBE metadata, or
+VGA text (1) with framebuffer address B8000. Boot kind is BIOS (1). The loader
+clears 256 bytes; all handoff fields are u64 with upper 32 bits zeroed.
+The kernel allocation field at +24 is 120 pages. Architecture at +104 is 32 or64.
+Stack-pool base at +112 is100000 and size at +120 is300000 (hexadecimal).
+Bundle base/size at +128/+136 are400000/100000; workspace base/size at
++144/+152 are800000/800000 (hexadecimal). See portability/guest/BUNDLE.ztext.
+Two child stacks occupy the lower pool; the main kernel frame stays at its top.
+The 64-bit kernel receives the handoff in RCX. The 32-bit kernel receives it
+as cdecl arg0 at [ESP+4], with a halt-return address at [ESP] and zero arg1 at
+[ESP+8]. Each kernel owns display, keyboard, serial and ATA I/O after entry;
+neither calls BIOS from its protected/long mode.
+
+Target and limits
+This is a 32/64-bit x86 virtual-machine optical boot path with at least 128 MiB
+RAM and a CPUID-capable processor. Firmware boot mode and CPU execution width
+are independent: BIOS can launch either kernel, and long mode is not required
+for the 32-bit selection. This is not an 8-bit CPU image.
+The fixed low-memory layout assumes the conventional PC memory model, checks
+the BDA/EBDA boundary and validates its high pool with E820. It does not allocate
+arbitrary firmware memory. It does not install to a hard disk, implement a
+legacy MBR, or turn the optical ISO into a hybrid USB image. CPU/firmware
+requirements and fixed binary-size bounds are checked by the build/loader.
+Physical hardware compatibility is not established by VM tests.
+
+Historical384KiB layout probes and low-RAM refusal are recorded in
+verification/boot-growth-0.7.0/results.ztext. The full384KiB slot was tested on
+BIOS32 without LM/PAE and BIOS64, including its final byte and64KiB arena.
+
+The historical 448 KiB capacity-only probes remain in
+verification/boot-capacity-448k/. Current 480 KiB slots and the native compiler
+bundle are checked in verification/guest-bundle-480k/; the probe verifies the
+whole 1 MiB loaded bundle, every 8 MiB workspace page and the final kernel
+byte on BIOS/UEFI, both 32- and 64-bit. Native compiler execution evidence is
+separate in verification/guest-app/bundle/. Final OS integration results
+remain separate in verification.ztext.

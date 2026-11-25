@@ -1,0 +1,75 @@
+ZTEXT001000010f9ded1f6d40000000
+Kernel audit for Zero OS 0.2.2
+
+Scope and implementation
+Only kernel.zero was changed. All implementation remains in Zero. The
+ZeroFS layout, checksums, generation ordering, command names and explicit
+formatting policy are unchanged. Existing data.img was not modified.
+
+Fixed: commands with no arguments silently accepted extra input.
+help, info, clear and watch now report an argument error before acting.
+
+Fixed: structurally invalid snapshots could contain duplicate used names.
+Lookup previously selected the last matching record, and deleting it could
+expose a different record under the same name. Validation now compares each
+used name with earlier used records and rejects the entire duplicate bank.
+The existing highest-valid-generation selection then permits recovery from
+the other bank without writing to disk.
+
+Fixed: ATA transfers assumed a compatible 512-byte disk before identification.
+Startup now sends read-only IDENTIFY DEVICE and requires an ATA disk, LBA28,
+at least 18 sectors, 512-byte logical sectors, and valid FLUSH CACHE support.
+All sector reads, writes and flushes are gated on this result. Incompatible
+or absent disks leave the terminal usable and format ZERO reports that
+nothing changed. A valid word 106 advertising larger logical sectors is
+rejected; older devices without that field retain ATA's 512-byte default.
+
+Fixed: the driver issued commands when DRQ could still be asserted, and
+immediately failed a completed transfer if DRQ took time to clear. Idle and
+post-transfer waits now poll until both BSY and DRQ clear, with the existing
+bounded timeout. Post-command ERR/DF still terminate the request as errors.
+
+Clarified: format's token comparison now compares bytes through the NUL.
+The former load32 did not actually permit short tokens to match ZERO:
+their NUL necessarily differed from the required byte, and the input buffer
+had sufficient space. This is clarity/hardening, not a demonstrated erasure
+bug. The exact token and no-extra-arguments requirement are retained.
+
+Validation performed
+./build/zero --raw < kernel.zero > build/kernel-audit.bin succeeded.
+The resulting candidate kernel is 22511 bytes. It was booted with the
+existing Zero loader/image builder in QEMU 10.0.13, OVMF, pc/TCG, 128 MiB,
+using separate test disks. build/kernel.bin and build/system.img were not
+overwritten by this audit.
+
+Passed in the candidate VM:
+- Mount of the existing filesystem format on a copied data disk.
+- create/save/read/watch and create preserving existing nonempty content.
+- Separate QEMU process restart preserving saved text.
+- help/info/clear/watch reject extra arguments; write still prints text.
+- format Z, format ZER and format ZERO extra preserve the existing file.
+- Explicit format ZERO empties the filesystem; create/read/rm then work.
+- A 17-sector disk stays unavailable. format ZERO is refused, the terminal
+  still accepts write, and the test disk's SHA-256 is unchanged.
+- No primary-master disk: unavailable filesystem, refused format, usable
+  terminal. The boot medium remained a separate primary-slave disk.
+- Primary-master ATAPI CD device: unavailable filesystem, refused format,
+  usable terminal; the medium's SHA-256 is unchanged.
+- Duplicate-name fixture: bank A generation 3 held a=one and b=two. Changed
+  the second name b to a at byte 1025, then subtracted 1026 from both the
+  data checksum at byte 16 and header sum at byte 24. Independently
+  recomputed the weighted checksum: 700273, equal to the stored checksum.
+  Bank B generation 2 held only a=one. Boot selected bank B: watch printed
+  a once, read a printed one, and read b reported File not found. Thus the
+  newer bank was rejected for structure despite valid checksums.
+
+Compact captured serial logs are in verification/kernel-audit-0.2.2.ztext.
+Fixture images and firmware variable copies were temporary audit artifacts.
+
+Remaining targeted validation
+Physical hardware, large-logical-sector ATA devices, devices lacking FLUSH
+CACHE, and artificial delayed-DRQ/error injection are not tested. QEMU's IDE
+device rejected a requested 4096-byte logical size because its discard
+granularity restrictions require 512 bytes; that case was not boot-tested.
+The code paths were independently reviewed. A future device-level harness
+could exercise these responses without expanding OS language dependencies.

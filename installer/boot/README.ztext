@@ -1,0 +1,101 @@
+ZTEXT00100001810020326dd0000000
+Current original Zero workflow (0.12)
+
+Use the native tools on Linux or their .exe versions on Windows:
+  zero-integrate PROJECT_DIRECTORY NEW_KERNEL.zero
+  zero-build PROJECT_DIRECTORY NEW_OUTPUT_DIRECTORY NEW_KERNEL.zero
+  zero-check PROJECT_DIRECTORY NEW_TEST_DIRECTORY
+All destination paths must be new. The integrator preserves authored sources;
+the builder checks its compiler fixed point and builds the original targets;
+the verifier checks language behavior and host file operations in process.
+See tools/integrate.ztext, tools/build.ztext and checks/README.ztext.
+Read these documents with zero-text read FILE.
+
+The notes below preserve earlier implementation and test history. Any old
+shell/Python runner names, generated artifacts, JSON reports or commands are
+historical references: they were removed from the active project and are not
+current runnable instructions or current-release validation. Native host
+checks do not replace BIOS/UEFI, persistence or physical-hardware testing.
+
+Historical implementation notes
+
+Zero 0.11 installed-folder UEFI loader
+
+loader.zero is an original Zero UEFI x64 application. It reuses the project's
+own established GOP, memory-map and kernel-handoff implementation, with a new
+bounded path and ISO reader in load-iso.zero.part. No assembler, foreign
+compiler, foreign bootloader or runtime is used to implement this application.
+
+Place ZEROX64.EFI beside system.iso in a directory readable by the UEFI
+firmware. Launch ZEROX64.EFI through the firmware's existing file browser or
+an already configured firmware boot entry. The application obtains its own
+device and UTF-16 file path from EFI_LOADED_IMAGE_PROTOCOL, replaces only its
+filename with system.iso, and opens that sibling using firmware Simple File
+System. The loader's filename and directory name are not hardcoded. Normally
+the readable filesystem is FAT on an EFI system partition or a test volume.
+
+Native preparation example (Linux or Windows toolkit):
+  zero-setup deploy zero.iso ZEROX64.EFI NEW_DIRECTORY
+  zero-setup status NEW_DIRECTORY
+Windows uses zero-setup.exe. This creates an owned folder; it does not copy it
+to a system partition, install a firmware entry or change existing boot files.
+The prepared folder can be inspected before a user chooses boot integration.
+
+The loader supports the current exact 18890752-byte Zero ISO format. It reads
+16KiB of bounded metadata at byte32768 and verifies the PVD identity, volume
+length, block size, root location, El Torito catalog checksum/entries and the
+paired-endian kernel/tools directory extents. Each selected member must occur
+exactly once. Unsupported ISO layouts and malformed entries are rejected.
+It then reads the x64 kernel directly from ISO byte81920 (475136 bytes; legacy491520-byte slot also accepted) and
+the native compiler bundle from byte17842176 (1048576 bytes). Partial firmware
+reads are completed; premature EOF, oversized reads, any EFI warning/error,
+bad tool-bundle magic/version/length/count or failed seek stops before firmware
+exit. The complete ISO is not copied into RAM and no ISO loop device is used.
+
+Successful boot uses the same original kernel, compiler bundle, 1080p GOP
+selection, allocated stack/workspace, checked memory map and bounded
+ExitBootServices retry path as the ordinary optical UEFI loader. Existing
+BIOS and IA32 UEFI sources and the optical ISO are unchanged by this loader.
+After firmware exit, the kernel uses its normal hardware drivers.
+
+Limits and unfinished installation features
+- UEFI x64 only. This additional loader does not add BIOS directory boot,
+  IA32 directory boot, Secure Boot signing or a universal host filesystem.
+- A Linux ext4/Btrfs or Windows NTFS directory is not automatically readable
+  by firmware. No new ext4/NTFS/Btrfs early driver is supplied here.
+- storage.data remains an ordinary host file. The kernel does not map it as
+  a writable block device; this loader does not claim installed persistence.
+  A separately attached physical/virtual data disk is a different mechanism.
+- No BCD, GRUB, firmware boot entry, boot sector or partition table is changed.
+  Full Wubi-style installation and uninstall boot-menu rollback remain open.
+- Metadata validation is structural, not publisher authentication or complete
+  payload integrity verification. The ISO must be trusted. Firmware Secure
+  Boot is not implemented by this unsigned application.
+- Loaded-image device paths are limited to4096 bytes and accepted FILEPATH
+  strings to2036 UTF-16 code units. Only ordinary FILEPATH nodes followed by
+  an END_ENTIRE node are accepted; ambiguous device paths fail closed. The
+  generated sibling path fits an owned4096-byte UTF-16 buffer.
+- Failure halts before ExitBootServices and emits a serial stage diagnostic.
+  A graphical recovery menu and unattended recovery are not implemented.
+
+Build and verification
+  python3 installer/boot/build.py
+  python3 installer/boot/test-vm.py
+Those scripts are external host orchestration, not delivered runtime logic.
+build.py invokes the project's own compiler --efi directly. The actual binary
+is installer/boot/build/ZEROX64.EFI; its source is loader.zero.
+
+The QEMU/OVMF fixture uses a private FAT volume containing EFI/BOOT/system.iso
+and the loader renamed to the standard EFI/BOOT/BOOTX64.EFI fallback name.
+No CD-ROM is attached. The native deploy tool creates that folder when it is
+available; the fixture adds only the fallback filename for firmware discovery.
+The real unmodified kernel reaches its terminal and executes Zero/Ezero from
+the ISO bundle. Five separate malformed ISO cases stop before firmware exit.
+Original data.img/data.vdi/zero.iso are hash-checked and never attached for
+writing. The private FAT backing is read-only with a private QEMU snapshot.
+
+review/check-parser.py independently compiles the exact authored Zero path and ISO
+parser blocks and exercises valid/invalid UTF-16 paths, multiple nodes,
+capacity edges, buffer canaries, metadata lengths and paired-endian extents.
+These are host parser tests, not a claim of booting native Windows/VirtualBox.
+Verification files distinguish actual firmware tests and native parser tests.

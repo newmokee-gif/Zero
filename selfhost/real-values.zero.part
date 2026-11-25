@@ -1,0 +1,10 @@
+# Original value-operation encodings, authored directly as Zero data.
+# 77 bitxor: EAX = ECX XOR EAX.
+!store64[@templates + 1232 | "6631c8"].
+!store64[@templates + 1240 | 3].
+# 78 bitand: EAX = ECX AND EAX.
+!store64[@templates + 1248 | "6621c8"].
+!store64[@templates + 1256 | 3].
+# 79 shr: logical u32 shift; count >=32 returns0.
+!store64[@templates + 1264 | "66916683f920730566d3e8eb036631c0"].
+!store64[@templates + 1272 | 16].

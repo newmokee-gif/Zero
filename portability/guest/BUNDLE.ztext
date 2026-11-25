@@ -1,0 +1,55 @@
+ZTEXT00100000bcc416b2eb90000000
+ZERO guest compiler bundle v1
+
+TOOLS.BIN is exactly1048576 bytes, constructed by our bundle.zero writer.
+Header occupies4096 bytes. All fields below are little-endian u64.
+0 magic0x31304c444e42525a (ZRBNDL01)
+8 version1
+16 total bytes1048576
+24 app record count6
+32 Ezero runtime-prefix offset962560
+40 runtime-prefix source byte length (1..4095)
+48 Ezero runtime-body offset966656
+56 runtime-body source byte length (1..65535)
+64..127 reserved0
+
+Six32-byte application records begin at128. Each contains:
+0 image offset;8 actual image byte length;16 architecture64/32;
+24 kind1 Zero compiler,2 Ezero frontend,3 Ezero packer.
+Record order:Zero64,frontend64,packer64,Zero32,frontend32,packer32.
+Image slots begin at4096+i*159744; each slot is159744 bytes, zero-padded.
+The actual image begins with the validated64-byte ZEROAPP1 header described
+in ABI.ztext. Its complete image size must match the record's actual byte length.
+
+Runtime source storage follows the six application slots. Prefix has its
+own4096-byte padded slot at962560; body has65536 bytes at966656. These are
+separate source pieces because generated program initialization goes between
+them. The caller uses exact lengths, not NUL padding. Remaining bundle bytes
+1032192..1048575 are zero. No executable/data region overlaps the header.
+
+bundle.zero input: six padded159744-byte apps, then padded4096-byte prefix,
+then padded65536-byte runtime body; total1028096 bytes. The writer checks all
+headers, sizes, architecture/order, reserved fields and zero padding, then
+publishes one complete1MiB bundle. Error1=input I/O;2=short/invalid input;
+3=excess input;4=output I/O. No output is emitted before validation completes.
+
+Loader handoff extends the existing header to256 zero-initialized bytes:
++128 bundle base;+136 bundle bytes1048576;
++144 workspace base;+152 workspace bytes8388608.
+BIOS validates usable E820 RAM across1..16MiB, keeps the old stack pool1..4MiB,
+loads the bundle at4..5MiB and reserves8..16MiB as application workspace.
+Each32KiB optical read uses the low bounce region20000..27fff, then an owned
+INT15/AH87 descriptor table at6800 copies it upward. The selected kernel is
+loaded at20000 only after the entire bundle has been copied. The64-bit slot
+ends at93fff (475136 bytes); the32-bit slot ends at9bfff (507904 bytes).
+UEFI loads TOOLS.BIN from the same FAT root and allocates its bundle/workspace
+with boot services; IA32 requires all end addresses below its4GiB guard.
+The kernel validates this handoff and every selected application before entry.
+
+Bundle storage revision for0.12
+Application slots grow to156KiB (159744 bytes) for native file services.
+Six slots, the4096-byte runtime prefix and65536-byte runtime body still fit
+inside the original1MiB bundle. Actual offsets are recorded in the header;
+the current kernel validates the new arrangement before calling any image.
+The native Zero builder assembles streams directly; no intermediate disk
+images or shell/Python builder is required. ISO/FAT extents are unchanged.

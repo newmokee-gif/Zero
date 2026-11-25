@@ -1,0 +1,12 @@
+[10 | 20 | 30] => numbers
+0 => total
+
+numbers => each number [
+    number * 2 => show
+    total + number => total
+]
+
+Total total => show
+size(numbers) => show
+numbers[2] => show
+[Mira | 7 | [8 | 9]] => show

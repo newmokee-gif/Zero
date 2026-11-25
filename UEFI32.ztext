@@ -1,0 +1,128 @@
+ZTEXT00100001da87d1e1a8d0000000
+Zero IA32 UEFI loader
+
+loader32.zero is original Zero source compiled to PE32 by compiler.zero's
+IA32 UEFI target: build/zero --efi32 < loader32.zero > build/BOOTIA32.EFI.
+It opens KERNEL32.BIN from the filesystem that supplied
+EFI/BOOT/BOOTIA32.EFI, allocates executable kernel pages and a separate stack,
+copies display metadata, exits boot services and enters our 32-bit kernel.
+No foreign loader, library or implementation is linked into this image.
+
+IA32 ABI facts
+Reference interfaces: UEFI Specification 2.10, sections 2.3.2, 4, 7, 9 and 13:
+https://uefi.org/specs/UEFI/2.10/02_Overview.html#ia-32-platforms
+https://uefi.org/specs/UEFI/2.10/04_EFI_System_Table.html
+https://uefi.org/specs/UEFI/2.10/07_Services_Boot_Services.html
+https://uefi.org/specs/UEFI/2.10/09_Protocols_EFI_Loaded_Image.html
+https://uefi.org/specs/UEFI/2.10/13_Protocols_Media_Access.html
+
+EFI_HANDLE, pointers, UINTN and EFI_STATUS are 32 bits. EFI_PHYSICAL_ADDRESS,
+EFI_FILE_INFO sizes, File.Open modes/attributes and our own handoff fields
+remain 64 bits. The compiler keeps full unsigned u64 expression semantics;
+the IA32 firmware-call primitives marshal explicit 32-bit stack words.
+
+Firmware uses cdecl with caller stack aligned to 16 bytes. EAX/ECX/EDX are
+volatile; other general registers are preserved. Image entry receives its
+handle and system-table pointer at entry ESP+4 and ESP+8. Kernel entry uses
+the same stack convention for arg0, its handoff pointer. The compiler's enter
+primitive installs the stack and disables interrupts before the transfer.
+
+File.Open has seven stack words: This, NewHandle**, UTF16Path*, OpenMode low,
+OpenMode high, Attributes low, Attributes high. It therefore uses call7 with
+values This, output, path, 1, 0, 0, 0. SetWatchdogTimer uses five words because
+its WatchdogCode is u64: timeout, code low, code high, data size, data pointer.
+Every call requires exact EFI_SUCCESS (zero); positive warnings never stand
+for completion. IA32 EFI_INVALID_PARAMETER is 80000002, not the x64 value.
+
+Offsets, in bytes
+SystemTable BootServices60.
+BootServices AllocatePages32, GetMemoryMap40, FreePool48, HandleProtocol88,
+ExitBootServices128, SetWatchdogTimer140, LocateProtocol172.
+LoadedImage DeviceHandle12. SimpleFileSystem OpenVolume8.
+FileProtocol Open8, Close12, Read20, GetInfo36.
+GOP QueryMode0, SetMode4, Mode12.
+GOP mode MaxMode0, Mode4, Info8, SizeOfInfo12, FrameBufferBase16 (u64),
+FrameBufferSize24 (UINTN/u32).
+EFI_FILE_INFO FileSize8 is u64 on both architectures.
+
+Native compiler bundle
+After loading the kernel, the loader opens TOOLS.BIN from the same root.
+GetInfo must report exactly1MiB; bounded partial reads fill256 LoaderCode
+pages. The ZRBNDL01/version1/size1048576/count6 header is checked before exit.
+It then allocates2048 LoaderCode pages (8MiB) for native compiler buffers,
+stack and generated executable code. The bundle may start no higher than
+ffeff000 and workspace no higher thanff7ff000; both obey the sameffffefff
+allocation ceiling. Source/runtime/app layout is in portability/guest/BUNDLE.ztext.
+
+Allocation and handoff
+AllocatePages uses AllocateMaxAddress with maximum address ffffefff so the
+code, stack, map and all their end addresses are representable by 32-bit
+pointers. Kernel code has120 pages (480KiB), stack pool256 pages (1MiB), and
+handoff/map 17 pages (68 KiB). Failed allocations retain their firmware
+status; output-address bounds are validated only after success, and failed
+allocation outputs are never used as pointers.
+The120-page code allocation must start no higher thanfff87000; its end is
+at mostfffff000, leaving the same top4KiB guard as the other allocations.
+
+The handoff is cleared for 256 bytes. All fields remain u64 for compatibility
+with the shared kernel source and BIOS loader: memory-map size0, stride8,
+map pointer16, code pages24, map key32, descriptor version40; display kind48,
+framebuffer56, width64, height72, stride pixels80, pixel format88, boot kind96
+(2 for UEFI), architecture104 (32 for this loader), stack-pool base112 and
+pool size120 (1048576), bundle base128/size136 (1048576), workspace
+base144/size152 (8388608). The main stack starts at the top of this allocation;
+the kernel carves two child stacks from its lower end. Firmware writes only
+the low 32 bits of UINTN outputs; cleared high halves remain zero.
+
+Display and errors
+GOP mode choice prefers1920x1080, then800x600/640x480 or another compatible
+mode, with the bounded selection and fallback policy described
+in UEFI-CONSOLE.ztext. Validation and QueryMode buffer release happen before
+the final GetMemoryMap/ExitBootServices loop. RGB/BGR 32-bit pixel layouts are
+supported. The framebuffer must start below 4 GiB and its full claimed range
+must end no higher than 4 GiB; the kernel never truncates a high framebuffer
+address into an unrelated low address. Unsupported display leaves kind0
+for serial use. COM1 is optional; absence or timeout disables diagnostics.
+
+After the first exit attempt only GetMemoryMap and ExitBootServices may call
+firmware. The preallocated map is bounded to 64 KiB. Only invalid-key errors
+are retried, at most four attempts. Failure diagnostics use direct UART I/O.
+Read completion is a separate flag, short reads are accumulated, zero-progress
+reads fail, and no code beyond the validated480KiB size is read. Successful
+GetInfo must report80..512 bytes before FileSize is examined.
+
+Historical 0.4.0 integration evidence
+An independent source/ABI review checked the offsets, argument widths,
+address bounds and exit discipline. The migrated source compiled to a
+20480-byte PE32 IA32 EFI application using the earlier bootstrap compiler.
+The current build command is the unified --efi32 command above; self-hosted
+compiler and current release checks are recorded in verification.ztext.
+
+A real IA32 OVMF boot under QEMU pc/TCG, -cpu qemu32, 128 MiB RAM loaded that
+application from our own multi-file FAT16 image. It opened KERNEL32.BIN,
+finished ExitBootServices, entered the shared kernel compiled for 32-bit x86,
+mounted ZeroFS and reached the visible GOP terminal. PS/2 key injection typed
+save ia32 works and read ia32; the kernel reported a disk save and read works.
+COM1 mirrored these messages. A captured screen independently shows them.
+This is a firmware/loader integration test; final combined-ISO regression
+results are recorded in verification.ztext. Physical hardware and native
+VirtualBox execution are separate, unverified environments.
+
+Test inputs/results are in /workspace/uefi32-test/boot for this workspace:
+normal.serial, normal.png and the private boot/data/firmware-variable copies.
+The test VM was stopped. Existing packaged data.img was not modified.
+IA32 OVMF (Debian ovmf-ia32 2025.02-8+deb13u1) is an external firmware test
+dependency and is not part of our OS or distributed as our implementation.
+
+Historical384KiB growth validation is recorded in
+verification/boot-growth-0.7.0/results.ztext. An IA32 OVMF boot loaded markers
+through the final byte393215, verified code-pages96, wrote the full64KiB arena
+and its allocated stack pool, then signaled success after ExitBootServices.
+
+The historical 448 KiB capacity-only probes remain in
+verification/boot-capacity-448k/. Current 480 KiB slots and the native compiler
+bundle are checked in verification/guest-bundle-480k/; the probe verifies the
+whole 1 MiB loaded bundle, every 8 MiB workspace page and the final kernel
+byte on BIOS/UEFI, both 32- and 64-bit. Native compiler execution evidence is
+separate in verification/guest-app/bundle/. Final OS integration results
+remain separate in verification.ztext.

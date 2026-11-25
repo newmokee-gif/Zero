@@ -1,0 +1,64 @@
+ZTEXT00100000e7d53b9805b0000000
+Current original Zero workflow (0.12)
+
+Use the native tools on Linux or their .exe versions on Windows:
+  zero-integrate PROJECT_DIRECTORY NEW_KERNEL.zero
+  zero-build PROJECT_DIRECTORY NEW_OUTPUT_DIRECTORY NEW_KERNEL.zero
+  zero-check PROJECT_DIRECTORY NEW_TEST_DIRECTORY
+All destination paths must be new. The integrator preserves authored sources;
+the builder checks its compiler fixed point and builds the original targets;
+the verifier checks language behavior and host file operations in process.
+See tools/integrate.ztext, tools/build.ztext and checks/README.ztext.
+Read these documents with zero-text read FILE.
+
+The notes below preserve earlier implementation and test history. Any old
+shell/Python runner names, generated artifacts, JSON reports or commands are
+historical references: they were removed from the active project and are not
+current runnable instructions or current-release validation. Native host
+checks do not replace BIOS/UEFI, persistence or physical-hardware testing.
+
+Historical implementation notes
+
+Zero original dword I/O primitives
+
+:in32[port] returns the 32-bit I/O word zero-extended to the language value.
+!out32[port | value]. writes the low 32 value bits. Both use only the low 16
+port bits, just like existing in8/in16/out8/out16. No implicit PCI discovery
+or register policy is embedded in these primitives; drivers implement it.
+Supported targets: raw64, raw32, EFI64, EFI32, and 386+ real mode.
+Linux ELF, Windows PE and ZEROAPP1 application targets reject them before
+producing output.
+
+Metadata indices 54 and 55 append the names in32/out32, without renumbering any
+old operation. Tokens 554/555 point to templates 82/83. Names are reserved in
+all targets, including those rejecting I/O. Arity/effect forms remain strict.
+Template 83 uses the existing binary operand-pop preparation. The port
+primitives alone do not change arena sizes or parser limits.
+The current merged compiler has 59 variables and a 491520-byte output buffer;
+selfhost/CORE.ztext records the full current layout.
+
+Original direct instruction encodings (not assembler input)
+X64 in32: 89c2 ed              mov EDX,EAX; IN EAX,DX
+X64 out32:89ca ef              mov EDX,ECX; OUT DX,EAX
+IA32 in32:89c2 ed 31d2         read EAX, then clear high result EDX
+IA32 out32:89ca ef             ignore high port/value pair words
+Real in32:6689c2 66ed          move/read32 with operand-size prefixes
+Real out32:6689ca 66ef         move/write32 with operand-size prefixes
+The x64 IN EAX write zeroes the high 32 result bits. Tests independently read
+0xffffffff from an absent PCI function and require the full u64 result to be
+exactly 4294967295. IA32 explicitly clears EDX after consuming DX as the port.
+
+Three actual QEMU probes exercise PCI mechanism 1 at CF8/CFC, not just emitted
+byte patterns. A high-bit CF8 write/read roundtrip verifies dword width; a
+440FX vendor/device read verifies all 32 data bits; high port bits are ignored.
+The BIOS32 probe disables long mode and PAE. Real-mode high-port tests stay
+within its u32 source contract. EFI variants compile the same reviewed native
+instruction templates; no separate EFI execution claim is made by this test.
+
+review-tests/network-ports/run.py records the original 384/448 KiB optical
+probe layouts; it is not a current image-layout integration runner. Final
+compiler-only target/parity checks are in review-tests/compiler-0.9/check.py,
+with evidence in verification/compiler-0.9. Earlier actual VM probes used
+private ISO copies; their emitted probe bytes are checked for exact parity.
+No user disk is opened. No assembler, linker, borrowed compiler backend or
+foreign guest runtime is involved. Python/QEMU are external test infrastructure.
