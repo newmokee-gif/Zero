@@ -1,4 +1,4 @@
-ZTEXT0010000069c6e85d9580000000
+ZTEXT0010000069c7f831d2d0000000
 ZERO PUBLIC RELEASE DOWNLOAD INVENTORY
 GPL-3.0-only. SHA-256 from the original Zero implementation.
 CHECKSUMS.ztext excludes itself.
@@ -24,12 +24,12 @@ bytes 36352
 sha256 9aa8e5a82af7daf0b666efb959afb3b8ba4efd61c14a32a6a1bf0698a15bacb4
 
 file zero-native-linux-x64-0.15.zpack
-bytes 1208090
-sha256 d9c1aee7a6a9d4393dab868f65c21c3a9df99347d431a6c8db30b1cc7c342e62
+bytes 1208100
+sha256 caad9c6dc9830b901bc5ba9c02618f063fc50d2d8868e6d667a947a08113a4a6
 
 file zero-native-windows-x64-0.15.zpack
-bytes 1403779
-sha256 093461ad2a038bbe67fb9aaa7178ae45cc7d0ce1b33f971e5711fe244a0b3fdc
+bytes 1403789
+sha256 63ff88cc9112447ed3e164e76012170f969ad1f57351b01181b45aa9e52bf447
 
 file zero-os-0.14.iso
 bytes 18890752
